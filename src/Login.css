@@ -1,0 +1,213 @@
+/* Prefix único: pi-login- */
+.pi-login-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background-color: #f4f7f6;
+  font-family: Arial, sans-serif;
+  padding: 20px;
+}
+
+.pi-login-card {
+  background: white;
+  padding: 40px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 400px;
+}
+
+.pi-login-title {
+  font-size: 24px;
+  color: #1a202c;
+  margin-bottom: 8px;
+  margin-top: 0;
+}
+
+.pi-login-subtitle {
+  color: #718096;
+  font-size: 14px;
+  margin-bottom: 24px;
+}
+
+.pi-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pi-login-input-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: bold;
+  color: #4a5568;
+  margin-bottom: 8px;
+}
+
+.pi-login-input-wrapper {
+  display: flex;
+  align-items: center;
+  background: #edf2f7;
+  border-radius: 6px;
+  padding: 0 12px;
+}
+
+.pi-login-icon {
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+.pi-login-input-wrapper input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 12px 0;
+  outline: none;
+  color: #2d3748;
+}
+
+.pi-login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.pi-login-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #718096;
+}
+
+.pi-login-forgot {
+  color: #3182ce;
+  text-decoration: none;
+}
+
+.pi-login-error {
+  color: #e53e3e;
+  font-size: 13px;
+  margin: 0;
+}
+
+.pi-login-btn-enter {
+  background-color: #0d3b8e;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.pi-login-btn-enter:hover {
+  background-color: #092c6b;
+}
+
+.pi-login-divider {
+  text-align: center;
+  position: relative;
+  margin: 10px 0;
+}
+
+.pi-login-divider span {
+  background: white;
+  padding: 0 10px;
+  color: #a0aec0;
+  font-size: 14px;
+  position: relative;
+  z-index: 1;
+}
+
+.pi-login-divider::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px solid #e2e8f0;
+  z-index: 0;
+}
+
+.pi-login-btn-register {
+  background-color: white;
+  color: #0d3b8e;
+  border: 1px solid #0d3b8e;
+  padding: 12px;
+  border-radius: 6px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Acordeón */
+.pi-login-dev-accordion {
+  margin-top: 24px;
+  width: 100%;
+  max-width: 480px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
+}
+
+.pi-login-dev-btn {
+  width: 100%;
+  padding: 16px;
+  background: white;
+  border: none;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: space-between;
+  cursor: pointer;
+  color: #0d3b8e;
+}
+
+.pi-login-dev-content {
+  padding: 16px;
+}
+
+.pi-login-dev-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.pi-login-dev-table th, .pi-login-dev-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.pi-login-dev-table th {
+  color: #4a5568;
+}
+/* Botón Volver al Inicio */
+.pi-login-top-bar {
+  width: 100%;
+  max-width: 400px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.pi-login-btn-back {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: #4a5568;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 0;
+  transition: color 0.2s;
+}
+
+.pi-login-btn-back:hover {
+  color: #0d3b8e; /* Azul oscuro al pasar el mouse */
+}

@@ -1,0 +1,227 @@
+/* Prefix único: pi-layout- */
+.pi-layout-contenedor {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  background-color: #f4f6f9; /* Fondo gris claro para el contenido */
+  font-family: 'Segoe UI', Roboto, Arial, sans-serif;
+  overflow: hidden;
+}
+
+/* SIDEBAR OSCURO */
+.pi-layout-sidebar {
+  width: 260px;
+  background-color: #0b2559; /* Azul muy oscuro estilo SEDES */
+  color: white;
+  display: flex;
+  flex-direction: column;
+  transition: width 0.3s;
+}
+
+.pi-layout-logo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 25px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.pi-layout-logo h2 {
+  margin: 0;
+  font-size: 18px;
+  letter-spacing: 1px;
+}
+
+.pi-layout-logo p {
+  margin: 0;
+  font-size: 12px;
+  color: #90a4ae;
+}
+
+.pi-layout-nav {
+  padding: 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pi-layout-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 12px 25px;
+  cursor: pointer;
+  color: #cfd8dc;
+  transition: all 0.2s ease;
+  border-left: 4px solid transparent;
+}
+
+.pi-layout-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: white;
+}
+
+.pi-layout-nav-item.activo {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border-left: 4px solid #4dabf5; /* Borde azul claro al lado izquierdo */
+}
+
+.pi-layout-nav-icon {
+  font-size: 18px;
+}
+
+/* ÁREA PRINCIPAL Y HEADER */
+.pi-layout-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pi-layout-header {
+  height: 70px;
+  background-color: white;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 10;
+}
+
+.pi-layout-header-left h3 {
+  margin: 0;
+  color: #333;
+  font-weight: 600;
+}
+
+.pi-layout-header-right {
+  position: relative;
+}
+
+/* BOTÓN DEL PERFIL */
+.pi-layout-perfil-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 8px;
+  transition: background 0.2s;
+}
+
+.pi-layout-perfil-btn:hover {
+  background-color: #f1f5f9;
+}
+
+.pi-layout-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #6366f1; /* Morado claro moderno */
+  color: white;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.pi-layout-info-perfil {
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+}
+
+.pi-layout-nombre {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.pi-layout-rol-header {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* MENÚ DESPLEGABLE (DROPDOWN) */
+.pi-layout-dropdown {
+  position: absolute;
+  top: 60px;
+  right: 0;
+  width: 250px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.pi-layout-dropdown-header {
+  padding: 15px;
+  background-color: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pi-layout-dropdown-header strong {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.pi-layout-dropdown-header span {
+  font-size: 12px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.pi-layout-dropdown-body {
+  padding: 10px 0;
+}
+
+.pi-layout-dropdown-body button {
+  width: 100%;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  color: #475569;
+  transition: background 0.2s;
+}
+
+.pi-layout-dropdown-body button:hover {
+  background-color: #f1f5f9;
+  color: #1e293b;
+}
+
+.pi-layout-dropdown-body button.btn-logout {
+  color: #e11d48; /* Rojo para cerrar sesión */
+  border-top: 1px solid #e2e8f0;
+  margin-top: 5px;
+  padding-top: 15px;
+}
+
+.pi-layout-dropdown-body button.btn-logout:hover {
+  background-color: #fff1f2;
+}
+
+/* CONTENIDO PRINCIPAL */
+.pi-layout-content {
+  padding: 30px;
+  flex: 1;
+  overflow-y: auto;
+}

@@ -1,0 +1,22 @@
+/* Reseteo global para eliminar márgenes y paddings por defecto */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f4f6f9; /* Color de fondo general */
+  
+  /* Evitamos estrictamente el scroll horizontal */
+  overflow-x: hidden; 
+}
+
+/* El contenedor principal de React debe ocupar el 100% de la pantalla */
+#root {
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
