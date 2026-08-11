@@ -54,7 +54,8 @@ export default function MenuLateral({ children }) {
 
   const handleCerrarSesion = () => {
     localStorage.removeItem('usuarioProyectoIngresos');
-    navigate('/login');
+    // CAMBIO AQUÍ: Ahora redirige a la raíz (Landing Page) en lugar de '/login'
+    navigate('/');
   };
 
   const opcionesMenu = menuConfig[usuario.rol] || [];
