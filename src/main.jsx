@@ -14,6 +14,7 @@ import Devolucion from './Devolucion.jsx'
 import UsuarioNormal from './UsuarioNormal.jsx'
 import UsuarioNegocio from './UsuarioNegocio.jsx'
 import Ayudante from './Ayudante.jsx'
+import Perfil from './Perfil.jsx'
 
 const router = createBrowserRouter([
   { path: "/", element: <App /> },
@@ -45,12 +46,20 @@ const router = createBrowserRouter([
     element: <MenuLateral><UsuarioNormal /></MenuLateral>,
   },
   {
+    path: "/usuarionormal/saldo",
+    element: <MenuLateral><UsuarioNormal /></MenuLateral>,
+  },
+  {
     path: "/usuarionegocio",
     element: <MenuLateral><UsuarioNegocio /></MenuLateral>,
   },
   {
     path: "/ayudante",
     element: <MenuLateral><Ayudante /></MenuLateral>,
+  },
+  {
+    path: "/perfil",
+    element: <MenuLateral><Perfil /></MenuLateral>,
   }
 ]);
 

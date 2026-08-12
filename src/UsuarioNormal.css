@@ -1,0 +1,541 @@
+/* Prefix único: pi-usr- */
+.pi-usr-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pi-usr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pi-usr-header h2 {
+  color: var(--texto-principal);
+  font-size: 22px;
+}
+
+.pi-usr-tabs {
+  display: flex;
+  gap: 6px;
+  background-color: var(--gris-niebla);
+  padding: 4px;
+  border-radius: 10px;
+}
+
+.pi-usr-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-secundario);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-usr-tabs button.activo {
+  background-color: var(--blanco);
+  color: var(--indigo-profundo);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* --- TARJETA GENÉRICA --- */
+.pi-usr-comprar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pi-usr-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-usr-card h3 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--texto-principal);
+  font-size: 17px;
+  margin-bottom: 18px;
+}
+
+/* --- STEPPER DE CANTIDAD --- */
+.pi-usr-stepper-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--borde-suave);
+  margin-bottom: 18px;
+}
+
+.pi-usr-stepper-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.pi-usr-stepper-precio {
+  display: block;
+  font-size: 13px;
+  color: var(--gris-medio);
+  margin-top: 2px;
+}
+
+.pi-usr-stepper {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background-color: var(--gris-niebla);
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+
+.pi-usr-stepper button {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: none;
+  background-color: var(--blanco);
+  color: var(--indigo-profundo);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+}
+
+.pi-usr-stepper button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pi-usr-stepper span {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--texto-principal);
+  min-width: 20px;
+  text-align: center;
+}
+
+/* --- ENTRADAS ADICIONALES --- */
+.pi-usr-invitados {
+  margin-bottom: 18px;
+}
+
+.pi-usr-invitados-nota {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  background-color: var(--cian-digital-suave);
+  color: var(--cian-digital-texto);
+  padding: 10px 12px;
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.pi-usr-invitado-card {
+  background-color: var(--gris-niebla);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+
+.pi-usr-invitado-titulo {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+  margin-bottom: 10px;
+}
+
+.pi-usr-invitado-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.pi-usr-invitado-grid input {
+  padding: 10px 12px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.pi-usr-invitado-grid input:focus {
+  border-color: var(--cian-digital);
+}
+
+/* --- COMPROBANTE --- */
+.pi-usr-comprobante {
+  margin-bottom: 16px;
+}
+
+.pi-usr-form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  margin-bottom: 8px;
+}
+
+.pi-usr-btn-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--gris-niebla);
+  color: var(--texto-principal);
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--borde-medio);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.pi-usr-btn-upload:hover {
+  background-color: var(--borde-suave);
+}
+
+.pi-usr-comprobante-preview {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pi-usr-comprobante-preview img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--borde-medio);
+}
+
+.pi-usr-comprobante-preview span {
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+/* --- ALERTA / TOTAL / ENVÍO --- */
+.pi-usr-alerta-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.pi-usr-total-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--texto-principal);
+  margin-bottom: 16px;
+}
+
+.pi-usr-total-fila strong {
+  font-size: 20px;
+  color: var(--indigo-profundo);
+}
+
+.pi-usr-btn-enviar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: var(--coral-compra);
+  color: var(--texto-sobre-vivo);
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pi-usr-btn-enviar:hover {
+  background-color: var(--coral-compra-hover);
+}
+
+/* --- SOLICITUDES DE COMPRA --- */
+.pi-usr-solicitudes {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pi-usr-solicitud {
+  display: flex;
+  gap: 14px;
+  background-color: var(--gris-niebla);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.pi-usr-solicitud-img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--borde-medio);
+}
+
+.pi-usr-solicitud-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pi-usr-solicitud-cabecera {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pi-usr-solicitud-titulo {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.pi-usr-solicitud-fecha {
+  font-size: 12px;
+  color: var(--gris-medio);
+}
+
+.pi-usr-btn-demo {
+  align-self: flex-start;
+  margin-top: 8px;
+  background-color: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+  border: 1px dashed var(--ambar-aviso);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pi-usr-btn-demo:hover {
+  background-color: rgba(255, 176, 32, 0.25);
+}
+
+/* --- CREDENCIALES GENERADAS --- */
+.pi-usr-credenciales {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.pi-usr-credencial {
+  display: flex;
+  gap: 12px;
+  background-color: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-radius: 10px;
+  padding: 12px;
+  align-items: center;
+}
+
+.pi-usr-credencial img {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+}
+
+.pi-usr-credencial > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pi-usr-credencial-nombre {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.pi-usr-credencial-linea {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+
+.pi-usr-credencial-nota {
+  font-size: 11px;
+  color: var(--verde-recarga-texto);
+  margin-top: 4px;
+}
+
+/* --- BADGES --- */
+.pi-usr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.pi-usr-badge-ok {
+  background-color: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
+}
+
+.pi-usr-badge-pend {
+  background-color: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+}
+
+/* --- MI SALDO --- */
+.pi-usr-saldo {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pi-usr-saldo-top {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+}
+
+.pi-usr-saldo-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-usr-saldo-numero {
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.pi-usr-saldo-label {
+  font-size: 13px;
+  color: var(--texto-secundario);
+  max-width: 220px;
+}
+
+.pi-usr-qr-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 26px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-usr-qr-card img {
+  width: 140px;
+  height: 140px;
+  border-radius: 12px;
+  border: 6px solid var(--cian-digital-suave);
+  margin-bottom: 8px;
+}
+
+.pi-usr-qr-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.pi-usr-qr-nota {
+  font-size: 12px;
+  color: var(--gris-medio);
+  max-width: 220px;
+}
+
+.pi-usr-qr-usuario {
+  font-size: 12px;
+  color: var(--texto-secundario);
+  margin-top: 6px;
+}
+
+/* --- TABLA DE HISTORIAL --- */
+.pi-usr-tabla-wrapper {
+  overflow-x: auto;
+}
+
+.pi-usr-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pi-usr-tabla th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+.pi-usr-tabla td {
+  padding: 12px;
+  border-bottom: 1px solid var(--borde-suave);
+  font-size: 14px;
+  color: var(--texto-principal);
+}
+
+.pi-usr-tipo-celda {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.pi-usr-monto-positivo {
+  color: var(--verde-recarga-texto);
+  font-weight: 700;
+}
