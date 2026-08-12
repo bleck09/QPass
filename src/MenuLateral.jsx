@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
-import { 
-  FaChartPie, FaUsers, FaCog, FaSignOutAlt, FaUserCircle, 
-  FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown 
+import {
+  FaChartPie, FaUsers, FaCog, FaSignOutAlt, FaUserCircle,
+  FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet
 } from 'react-icons/fa';
 import { MdAccountBalance } from 'react-icons/md';
 import './MenuLateral.css';
@@ -27,7 +27,9 @@ const menuConfig = {
     { titulo: 'Gestión Devoluciones', ruta: '/devolucion', icono: <FaBoxOpen /> }
   ],
   'Usuario Normal': [
-    { titulo: 'Mi Estado', ruta: '/usuarionormal', icono: <FaUserCircle /> }
+    { titulo: 'Comprar Entradas', ruta: '/usuarionormal', icono: <FaFileInvoiceDollar /> },
+    { titulo: 'Mi Saldo', ruta: '/usuarionormal/saldo', icono: <FaWallet /> },
+    { titulo: 'Mi Perfil', ruta: '/perfil', icono: <FaUserCircle /> }
   ],
   'Usuario Negocio': [
     { titulo: 'Mi Negocio', ruta: '/usuarionegocio', icono: <FaFileInvoiceDollar /> }
@@ -37,18 +39,31 @@ const menuConfig = {
   ]
 };
 
+// Evento que dispara la página de Perfil al guardar cambios, para que el
+// sidebar/avatar se actualice en el acto sin recargar la página.
+export const EVENTO_USUARIO_ACTUALIZADO = 'qpass-usuario-actualizado';
+
+const leerUsuarioGuardado = () => {
+  const userGuardado = localStorage.getItem('usuarioProyectoIngresos');
+  return userGuardado ? JSON.parse(userGuardado) : null;
+};
+
 export default function MenuLateral({ children }) {
   // 1. Leemos el localStorage directamente al iniciar el estado
-  const [usuario] = useState(() => {
-    const userGuardado = localStorage.getItem('usuarioProyectoIngresos');
-    return userGuardado ? JSON.parse(userGuardado) : null;
-  });
+  const [usuario, setUsuario] = useState(leerUsuarioGuardado);
 
   const [menuPerfilAbierto, setMenuPerfilAbierto] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 2. Si no hay usuario, lo redirigimos inmediatamente sin usar useEffect
+  // 2. Si el perfil se actualiza en otra vista, refrescamos avatar/nombre aquí mismo
+  useEffect(() => {
+    const actualizar = () => setUsuario(leerUsuarioGuardado());
+    window.addEventListener(EVENTO_USUARIO_ACTUALIZADO, actualizar);
+    return () => window.removeEventListener(EVENTO_USUARIO_ACTUALIZADO, actualizar);
+  }, []);
+
+  // 3. Si no hay usuario, lo redirigimos inmediatamente
   if (!usuario) {
     return <Navigate to="/login" replace />;
   }
@@ -110,7 +125,9 @@ export default function MenuLateral({ children }) {
               onClick={() => setMenuPerfilAbierto(!menuPerfilAbierto)}
             >
               <div className="pi-layout-avatar">
-                {getIniciales(usuario.nombre || usuario.email)}
+                {usuario.foto
+                  ? <img src={usuario.foto} alt={usuario.nombre} className="pi-layout-avatar-img" />
+                  : getIniciales(usuario.nombre || usuario.email)}
               </div>
               <div className="pi-layout-info-perfil">
                 <span className="pi-layout-nombre">{usuario.nombre || 'Usuario'}</span>
@@ -127,7 +144,7 @@ export default function MenuLateral({ children }) {
                   <span>{usuario.email}</span>
                 </div>
                 <div className="pi-layout-dropdown-body">
-                  <button onClick={() => navigate('#')}>
+                  <button onClick={() => { setMenuPerfilAbierto(false); navigate('/perfil'); }}>
                     <FaUserCircle /> Mi Perfil
                   </button>
                   <button className="btn-logout" onClick={handleCerrarSesion}>
