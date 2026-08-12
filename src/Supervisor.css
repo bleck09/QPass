@@ -74,7 +74,7 @@
 }
 
 .pi-sup-icon-total { background-color: var(--indigo-profundo); }
-.pi-sup-icon-ok { background-color: var(--verde-recarga); }
+.pi-sup-icon-ok { background-color: var(--verde-recarga); color: var(--texto-sobre-vivo); }
 .pi-sup-icon-pend { background-color: var(--ambar-aviso); color: var(--texto-sobre-vivo); }
 
 .pi-sup-stat-info {

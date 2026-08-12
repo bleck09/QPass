@@ -3,7 +3,7 @@ import {
   FaPlus, FaTrash, FaSave, FaEye, FaImage, FaUpload, 
   FaPalette, FaTextHeight, FaListUl, FaRegCalendarAlt, FaUndo 
 } from 'react-icons/fa';
-import './Admin.css';
+import './AdminConfigurarPagina.css';
 
 // Configuración extendida con la paleta de colores de alto contraste por defecto
 const defaultLandingConfig = {
@@ -25,7 +25,7 @@ const defaultLandingConfig = {
   ]
 };
 
-export default function Admin() {
+export default function AdminConfigurarPagina() {
   const [config, setConfig] = useState(() => {
     const dataGuardada = localStorage.getItem('pi_landing_config');
     return dataGuardada ? JSON.parse(dataGuardada) : defaultLandingConfig;

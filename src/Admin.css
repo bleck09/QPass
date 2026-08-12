@@ -1,0 +1,504 @@
+/* Prefix único: pi-dash- (Dashboard General del Admin) */
+.pi-dash-container {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.pi-dash-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.pi-dash-header h2 {
+  color: var(--texto-principal);
+  font-size: 22px;
+}
+
+.pi-dash-selector-evento {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--blanco);
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  padding: 8px 14px;
+  color: var(--indigo-profundo);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-dash-selector-evento select {
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  cursor: pointer;
+}
+
+/* --- SECCIONES --- */
+.pi-dash-seccion {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 22px 24px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-dash-seccion-titulo {
+  font-size: 17px;
+  color: var(--texto-principal);
+  margin-bottom: 18px;
+}
+
+.pi-dash-subtitulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto-principal);
+  margin-bottom: 12px;
+}
+
+.pi-dash-subtitulo-espaciado {
+  margin-top: 28px;
+}
+
+/* --- STATS DE ENTRADAS --- */
+.pi-dash-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.pi-dash-stat-card {
+  background: var(--gris-niebla);
+  border-radius: 12px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  position: relative;
+}
+
+.pi-dash-stat-icon {
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--texto-sobre-oscuro);
+}
+
+.pi-dash-icon-total { background-color: var(--indigo-profundo); }
+.pi-dash-icon-ok { background-color: var(--verde-recarga); color: var(--texto-sobre-vivo); }
+.pi-dash-icon-pend { background-color: var(--ambar-aviso); color: var(--texto-sobre-vivo); }
+
+.pi-dash-stat-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.pi-dash-stat-info .numero {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.pi-dash-stat-info .label {
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+.pi-dash-porcentaje {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.pi-dash-progreso-barra {
+  width: 100%;
+  height: 10px;
+  background-color: var(--borde-suave);
+  border-radius: 20px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.pi-dash-progreso-relleno {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cian-digital), var(--indigo-profundo));
+  border-radius: 20px;
+  transition: width 0.5s ease;
+}
+
+.pi-dash-btn-detalle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--coral-compra);
+  color: var(--texto-sobre-vivo);
+  border: none;
+  padding: 11px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pi-dash-btn-detalle:hover {
+  background-color: var(--coral-compra-hover);
+}
+
+/* --- ROLES (PERSONAL DEL EVENTO) --- */
+.pi-dash-roles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.pi-dash-rol-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--gris-niebla);
+  border: 1px solid var(--borde-suave);
+  border-radius: 12px;
+  padding: 20px 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-dash-rol-card:hover {
+  background-color: var(--indigo-profundo-suave);
+  border-color: var(--indigo-profundo);
+  transform: translateY(-2px);
+}
+
+.pi-dash-rol-icon {
+  font-size: 22px;
+  color: var(--indigo-profundo);
+  margin-bottom: 4px;
+}
+
+.pi-dash-rol-card .numero {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.pi-dash-rol-card .label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-secundario);
+  text-align: center;
+}
+
+/* --- NAVEGACIÓN DE DETALLE --- */
+.pi-dash-btn-volver {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--indigo-profundo);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 18px;
+}
+
+.pi-dash-btn-volver:hover {
+  text-decoration: underline;
+}
+
+/* --- BUSCADOR --- */
+.pi-dash-buscador {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--gris-niebla);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: var(--gris-medio);
+  max-width: 320px;
+  margin-bottom: 16px;
+}
+
+.pi-dash-buscador input {
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 13px;
+  color: var(--texto-principal);
+  width: 100%;
+}
+
+/* --- TABLA --- */
+.pi-dash-tabla-wrapper {
+  overflow-x: auto;
+}
+
+.pi-dash-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pi-dash-tabla th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+.pi-dash-tabla td {
+  padding: 12px;
+  border-bottom: 1px solid var(--borde-suave);
+  font-size: 14px;
+  color: var(--texto-principal);
+}
+
+.pi-dash-fila-persona {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.pi-dash-mini-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.pi-dash-monto-celda {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.pi-dash-sin-resultados {
+  text-align: center;
+  color: var(--gris-medio);
+  padding: 30px 0 !important;
+}
+
+/* --- BADGES --- */
+.pi-dash-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.pi-dash-badge-ok {
+  background-color: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
+}
+
+.pi-dash-badge-pend {
+  background-color: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+}
+
+/* --- PODIO (TOP 3) --- */
+.pi-dash-podio {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.pi-dash-podio-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  background-color: var(--gris-niebla);
+  border-radius: 12px;
+  padding: 18px 14px;
+  text-align: center;
+}
+
+.pi-dash-podio-puesto {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  color: var(--texto-sobre-oscuro);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.pi-dash-podio-nombre {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.pi-dash-podio-valor {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--indigo-profundo);
+}
+
+/* --- RESUMEN FINANCIERO --- */
+.pi-dash-resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.pi-dash-resumen-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background-color: var(--gris-niebla);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.pi-dash-resumen-card .numero {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--texto-principal);
+  margin-top: 4px;
+}
+
+.pi-dash-resumen-card .label {
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+
+/* --- ACTIVIDAD RECIENTE --- */
+.pi-dash-actividad-lista {
+  display: flex;
+  flex-direction: column;
+}
+
+.pi-dash-actividad-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--borde-suave);
+  font-size: 13px;
+}
+
+.pi-dash-actividad-item:last-child {
+  border-bottom: none;
+}
+
+.pi-dash-actividad-icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
+  background-color: var(--gris-niebla);
+}
+
+.pi-dash-actividad-detalle {
+  flex: 1;
+  color: var(--texto-principal);
+}
+
+.pi-dash-actividad-monto {
+  font-weight: 700;
+  color: var(--indigo-profundo);
+}
+
+.pi-dash-actividad-hora {
+  color: var(--gris-medio);
+  font-size: 12px;
+  min-width: 42px;
+  text-align: right;
+}
+
+/* --- ENCABEZADO DE DETALLE (persona/negocio seleccionado) --- */
+.pi-dash-detalle-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.pi-dash-detalle-header .pi-dash-seccion-titulo {
+  margin-bottom: 0;
+}
+
+.pi-dash-detalle-total {
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+.pi-dash-detalle-total strong {
+  color: var(--indigo-profundo);
+}
+
+.pi-dash-total-destacado {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background-color: var(--verde-recarga-suave);
+  color: var(--texto-principal);
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+
+.pi-dash-total-destacado strong {
+  color: var(--verde-recarga-texto);
+}
+
+.pi-dash-btn-ver {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--borde-medio);
+  background: var(--blanco);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-dash-btn-ver:hover {
+  background-color: var(--indigo-profundo);
+  border-color: var(--indigo-profundo);
+  color: var(--texto-sobre-oscuro);
+}
