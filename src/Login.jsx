@@ -4,7 +4,7 @@ import { MdEmail, MdLock, MdKeyboardArrowDown, MdKeyboardArrowUp, MdArrowBack } 
 import { FaBuilding } from 'react-icons/fa';
 import './Login.css';
 
-// 1. Credenciales con los 7 roles y el campo 'nombre' agregado para el MenuLateral
+// 1. Credenciales de prueba
 const testCredentials = [
   { rol: 'Admin', nombre: 'Carlos Admin', email: 'admin@QPass.com', pass: '123456', path: '/admin' },
   { rol: 'Cliente', nombre: 'Erick Cliente', email: 'cliente@QPass.com', pass: '123456', path: '/Cliente' },
@@ -23,6 +23,16 @@ export default function Login() {
   const [showDevCredentials, setShowDevCredentials] = useState(false);
   const navigate = useNavigate();
 
+  // Leemos la configuración de la Landing Page para que el Login herede los colores de la marca
+  const [theme] = useState(() => {
+    const dataGuardada = localStorage.getItem('pi_landing_config');
+    return dataGuardada ? JSON.parse(dataGuardada) : {
+      colorPrimario: '#00B4D8',
+      colorFondo: '#0b1120',
+      colorBoton: '#FFFFFF'
+    };
+  });
+
   const handleLogin = (e) => {
     e.preventDefault();
     setError('');
@@ -32,7 +42,6 @@ export default function Login() {
     );
 
     if (user) {
-      // Guardamos al usuario en localStorage para que el MenuLateral lo pueda leer
       localStorage.setItem('usuarioProyectoIngresos', JSON.stringify(user));
       navigate(user.path);
     } else {
@@ -40,111 +49,121 @@ export default function Login() {
     }
   };
 
+  // Aplicamos los colores dinámicamente
+  const estiloDinamico = {
+    '--color-primario': theme.colorPrimario,
+    '--color-fondo': theme.colorFondo,
+    '--color-boton': theme.colorBoton
+  };
+
   return (
-    <div className="pi-login-wrapper">
+    <div className="pi-login-wrapper" style={estiloDinamico}>
       
-      {/* Botón de volver al inicio que queda fuera de la tarjeta blanca o en la parte superior */}
+      {/* Luces de fondo (Glow Effect) */}
+      <div className="bg-glow glow-top-left"></div>
+      <div className="bg-glow glow-bottom-right"></div>
+
+      {/* Botón de volver */}
       <div className="pi-login-top-bar">
-        <button 
-          className="pi-login-btn-back" 
-          onClick={() => navigate('/')}
-        >
+        <button className="pi-login-btn-back" onClick={() => navigate('/')}>
           <MdArrowBack size={20} />
           Volver al inicio
         </button>
       </div>
 
-      <div className="pi-login-card">
-        <h2 className="pi-login-title">Iniciar Sesión</h2>
-        <p className="pi-login-subtitle">Ingrese sus credenciales para acceder al portal.</p>
+      <div className="pi-login-content">
+        <div className="pi-login-card glass-panel">
+          <h2 className="pi-login-title">Iniciar Sesión</h2>
+          <p className="pi-login-subtitle">Ingrese sus credenciales para acceder al portal de QPass.</p>
 
-        <form onSubmit={handleLogin} className="pi-login-form">
-          <div className="pi-login-input-group">
-            <label>CORREO ELECTRÓNICO</label>
-            <div className="pi-login-input-wrapper">
-              <span className="pi-login-icon">
-                <MdEmail size={20} color="var(--gris-medio)" />
-              </span>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="usuario@proyectodeingresos.com"
-                required
-              />
+          <form onSubmit={handleLogin} className="pi-login-form">
+            <div className="pi-login-input-group">
+              <label>CORREO ELECTRÓNICO</label>
+              <div className="pi-login-input-wrapper">
+                <span className="pi-login-icon">
+                  <MdEmail size={20} />
+                </span>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="usuario@qpass.com"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="pi-login-input-group">
-            <label>CONTRASEÑA</label>
-            <div className="pi-login-input-wrapper">
-              <span className="pi-login-icon">
-                <MdLock size={20} color="var(--gris-medio)" />
-              </span>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                required
-              />
+            <div className="pi-login-input-group">
+              <label>CONTRASEÑA</label>
+              <div className="pi-login-input-wrapper">
+                <span className="pi-login-icon">
+                  <MdLock size={20} />
+                </span>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="pi-login-options">
-            <label className="pi-login-checkbox">
-              <input type="checkbox" /> Recordarme
-            </label>
-            <a href="#" className="pi-login-forgot">¿Olvidó su contraseña?</a>
-          </div>
+            <div className="pi-login-options">
+              <label className="pi-login-checkbox">
+                <input type="checkbox" /> Recordarme
+              </label>
+              <a href="#" className="pi-login-forgot">¿Olvidó su contraseña?</a>
+            </div>
 
-          {error && <p className="pi-login-error">{error}</p>}
+            {error && <p className="pi-login-error">{error}</p>}
 
-          <button type="submit" className="pi-login-btn-enter">ENTRAR →</button>
-          
-          <div className="pi-login-divider"><span>o</span></div>
+            <button type="submit" className="pi-login-btn-enter">ENTRAR →</button>
+            
+            <div className="pi-login-divider"><span>o</span></div>
 
-          <button type="button" className="pi-login-btn-register">
-            REGISTRARME <FaBuilding style={{ marginLeft: '8px' }} />
+            <button type="button" className="pi-login-btn-register">
+              REGISTRARME <FaBuilding style={{ marginLeft: '8px' }} />
+            </button>
+          </form>
+        </div>
+
+        {/* Acordeón de credenciales (Dev) adaptado al Glassmorphism */}
+        <div className="pi-login-dev-accordion">
+          <button
+            type="button"
+            className="pi-login-dev-btn glass-panel"
+            onClick={() => setShowDevCredentials(!showDevCredentials)}
+          >
+            <b>Ver credenciales de prueba (Dev)</b>
+            <span>
+              {showDevCredentials ? <MdKeyboardArrowUp size={24} /> : <MdKeyboardArrowDown size={24} />}
+            </span>
           </button>
-        </form>
-      </div>
 
-      {/* Acordeón de credenciales (Dev) */}
-      <div className="pi-login-dev-accordion">
-        <button
-          type="button"
-          className="pi-login-dev-btn"
-          onClick={() => setShowDevCredentials(!showDevCredentials)}
-        >
-          <b>Ver credenciales de prueba (Dev)</b>
-          <span>
-            {showDevCredentials ? <MdKeyboardArrowUp size={24} /> : <MdKeyboardArrowDown size={24} />}
-          </span>
-        </button>
-
-        {showDevCredentials && (
-          <div className="pi-login-dev-content">
-            <table className="pi-login-dev-table">
-              <thead>
-                <tr>
-                  <th>Rol</th>
-                  <th>Usuario</th>
-                  <th>Contraseña</th>
-                </tr>
-              </thead>
-              <tbody>
-                {testCredentials.map((cred, index) => (
-                  <tr key={index}>
-                    <td>{cred.rol}</td>
-                    <td>{cred.email}</td>
-                    <td>{cred.pass}</td>
+          {showDevCredentials && (
+            <div className="pi-login-dev-content glass-panel">
+              <table className="pi-login-dev-table">
+                <thead>
+                  <tr>
+                    <th>Rol</th>
+                    <th>Usuario</th>
+                    <th>Contraseña</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody>
+                  {testCredentials.map((cred, index) => (
+                    <tr key={index}>
+                      <td>{cred.rol}</td>
+                      <td>{cred.email}</td>
+                      <td>{cred.pass}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

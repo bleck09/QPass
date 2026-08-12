@@ -1,74 +1,166 @@
-/* Prefix único: pi-login- */
+/* =======================================================
+   MÓDULO: LOGIN (MODO DARK / GLASSMORPHISM)
+======================================================= */
+
 .pi-login-wrapper {
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--color-fondo, #0b1120);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  color: #fff;
+}
+
+/* --- EFECTOS DE LUCES (GLOW) --- */
+.bg-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: var(--color-primario, #00B4D8);
+  filter: blur(150px);
+  border-radius: 50%;
+  opacity: 0.2;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.glow-top-left { top: -200px; left: -200px; }
+.glow-bottom-right { bottom: -200px; right: -200px; background: #6366f1; /* Tono morado sutil */ }
+
+/* Todo el contenido por encima del glow */
+.pi-login-top-bar, .pi-login-content {
+  position: relative;
+  z-index: 10;
+}
+
+/* --- BARRA SUPERIOR --- */
+.pi-login-top-bar {
+  padding: 20px 5%;
+}
+
+.pi-login-btn-back {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.pi-login-btn-back:hover {
+  background: rgba(255,255,255,0.1);
+  border-color: #fff;
+}
+
+/* --- CONTENEDOR CENTRAL --- */
+.pi-login-content {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 100vh;
-  background-color: var(--gris-niebla);
-  font-family: Arial, sans-serif;
   padding: 20px;
 }
 
+/* --- EFECTO CRISTAL (GLASSMORPHISM) --- */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.6); /* Azul oscuro muy transparente */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
 .pi-login-card {
-  background: var(--blanco);
-  padding: 40px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   width: 100%;
-  max-width: 400px;
+  max-width: 420px;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  margin-bottom: 20px;
 }
 
 .pi-login-title {
-  font-size: 24px;
-  color: var(--texto-principal);
-  margin-bottom: 8px;
-  margin-top: 0;
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: #ffffff;
 }
 
 .pi-login-subtitle {
-  color: var(--texto-secundario);
   font-size: 14px;
-  margin-bottom: 24px;
+  color: #94A3B8;
+  margin: 0 0 30px 0;
+  line-height: 1.5;
 }
 
+/* --- FORMULARIO --- */
 .pi-login-form {
   display: flex;
   flex-direction: column;
   gap: 20px;
+  text-align: left;
 }
 
 .pi-login-input-group label {
-  display: block;
   font-size: 12px;
-  font-weight: bold;
-  color: var(--texto-principal);
-  margin-bottom: 8px;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+  display: block;
+  letter-spacing: 1px;
 }
 
 .pi-login-input-wrapper {
+  position: relative;
   display: flex;
   align-items: center;
-  background: var(--gris-niebla);
-  border-radius: 6px;
-  padding: 0 12px;
 }
 
 .pi-login-icon {
-  margin-right: 8px;
-  font-size: 14px;
-  color: var(--gris-medio);
+  position: absolute;
+  left: 14px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
 }
 
 .pi-login-input-wrapper input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  padding: 12px 0;
+  width: 100%;
+  padding: 14px 14px 14px 45px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
   outline: none;
-  color: var(--texto-principal);
+  transition: all 0.3s;
 }
 
+.pi-login-input-wrapper input::placeholder {
+  color: #475569;
+}
+
+.pi-login-input-wrapper input:focus {
+  border-color: var(--color-primario, #00B4D8);
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.pi-login-input-wrapper input:focus + .pi-login-icon {
+  color: var(--color-primario, #00B4D8); /* El icono se pinta al hacer focus */
+}
+
+/* --- OPCIONES DE LOGIN --- */
 .pi-login-options {
   display: flex;
   justify-content: space-between;
@@ -79,96 +171,122 @@
 .pi-login-checkbox {
   display: flex;
   align-items: center;
-  gap: 6px;
-  color: var(--texto-secundario);
+  gap: 8px;
+  color: #cbd5e1;
+  cursor: pointer;
 }
 
 .pi-login-forgot {
-  color: var(--cian-digital-texto);
+  color: var(--color-primario, #00B4D8);
   text-decoration: none;
+  font-weight: 600;
+  transition: color 0.3s;
+}
+
+.pi-login-forgot:hover {
+  color: #fff;
 }
 
 .pi-login-error {
-  color: var(--rojo-error-texto);
+  color: #fca5a5;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 10px;
+  border-radius: 8px;
   font-size: 13px;
-  margin: 0;
+  text-align: center;
+  font-weight: 600;
 }
 
+/* --- BOTONES --- */
 .pi-login-btn-enter {
-  background-color: var(--indigo-profundo);
-  color: var(--blanco);
+  width: 100%;
+  padding: 14px;
+  background-color: var(--color-primario, #00B4D8);
+  color: #fff;
   border: none;
-  padding: 12px;
-  border-radius: 6px;
-  font-weight: bold;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
   cursor: pointer;
-  transition: background 0.3s;
+  letter-spacing: 1px;
+  box-shadow: 0 4px 15px rgba(0, 180, 216, 0.3);
+  transition: all 0.3s;
 }
 
 .pi-login-btn-enter:hover {
-  background-color: var(--indigo-profundo-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 180, 216, 0.5);
 }
 
 .pi-login-divider {
+  display: flex;
+  align-items: center;
   text-align: center;
-  position: relative;
+  color: #64748b;
+  font-size: 13px;
   margin: 10px 0;
 }
 
-.pi-login-divider span {
-  background: var(--blanco);
-  padding: 0 10px;
-  color: var(--gris-medio);
-  font-size: 14px;
-  position: relative;
-  z-index: 1;
+.pi-login-divider::before,
+.pi-login-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.pi-login-divider::before {
-  content: "";
-  position: absolute;
-  top: 50%;
-  left: 0;
-  right: 0;
-  border-top: 1px solid var(--borde-suave);
-  z-index: 0;
+.pi-login-divider span {
+  padding: 0 10px;
 }
 
 .pi-login-btn-register {
-  background-color: var(--blanco);
-  color: var(--indigo-profundo);
-  border: 1px solid var(--indigo-profundo);
-  padding: 12px;
-  border-radius: 6px;
-  font-weight: bold;
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.3s;
 }
 
-/* Acordeón */
+.pi-login-btn-register:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #fff;
+}
+
+/* --- MODO DESARROLLADOR (DEV ACCORDION) --- */
 .pi-login-dev-accordion {
-  margin-top: 24px;
   width: 100%;
-  max-width: 480px;
-  background: var(--blanco);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
+  max-width: 420px;
 }
 
 .pi-login-dev-btn {
   width: 100%;
-  padding: 16px;
-  background: var(--blanco);
+  padding: 15px 20px;
+  border-radius: 12px;
+  color: #fff;
   border: none;
-  border-bottom: 1px solid var(--borde-suave);
+  cursor: pointer;
   display: flex;
   justify-content: space-between;
-  cursor: pointer;
-  color: var(--indigo-profundo);
+  align-items: center;
+  transition: background 0.3s;
+}
+
+.pi-login-dev-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .pi-login-dev-content {
-  padding: 16px;
+  margin-top: 10px;
+  padding: 20px;
+  border-radius: 12px;
 }
 
 .pi-login-dev-table {
@@ -177,38 +295,22 @@
   font-size: 13px;
 }
 
-.pi-login-dev-table th, .pi-login-dev-table td {
+.pi-login-dev-table th, 
+.pi-login-dev-table td {
   padding: 10px;
   text-align: left;
-  border-bottom: 1px solid var(--borde-suave);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .pi-login-dev-table th {
-  color: var(--texto-principal);
-}
-/* Botón Volver al Inicio */
-.pi-login-top-bar {
-  width: 100%;
-  max-width: 400px;
-  margin-bottom: 20px;
-  display: flex;
-  justify-content: flex-start;
+  color: #cbd5e1;
+  font-weight: 700;
 }
 
-.pi-login-btn-back {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: none;
-  color: var(--texto-secundario);
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  padding: 8px 0;
-  transition: color 0.2s;
+.pi-login-dev-table td {
+  color: #94a3b8;
 }
 
-.pi-login-btn-back:hover {
-  color: var(--indigo-profundo);
+.pi-login-dev-table tbody tr:last-child td {
+  border-bottom: none;
 }
