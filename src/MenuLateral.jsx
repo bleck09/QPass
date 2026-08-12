@@ -115,7 +115,7 @@ export default function MenuLateral({ children }) {
                 <span className="pi-layout-nombre">{usuario.nombre || 'Usuario'}</span>
                 <span className="pi-layout-rol-header">{usuario.rol}</span>
               </div>
-              <FaChevronDown size={12} color="#666" />
+              <FaChevronDown size={12} color="var(--gris-medio)" />
             </div>
 
             {/* Menú Desplegable del Perfil */}

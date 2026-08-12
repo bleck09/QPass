@@ -9,11 +9,11 @@
   align-items: center;
   margin-bottom: 24px;
   padding-bottom: 15px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--borde-suave);
 }
 
 .pi-admin-header h2 {
-  color: #1e293b;
+  color: var(--texto-principal);
   margin: 0;
 }
 
@@ -23,17 +23,17 @@
 }
 
 .pi-admin-alert {
-  background-color: #dcfce7;
-  color: #166534;
+  background-color: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
   padding: 12px;
   border-radius: 8px;
   margin-bottom: 20px;
   font-weight: 500;
-  border: 1px solid #bbf7d0;
+  border: 1px solid rgba(0, 196, 140, 0.35);
 }
 
-.pi-admin-btn-save, .pi-admin-btn-preview {
-  color: white;
+.pi-admin-btn-save, .pi-admin-btn-preview, .pi-admin-btn-reset {
+  color: var(--texto-sobre-oscuro);
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
@@ -45,11 +45,18 @@
   transition: background 0.2s;
 }
 
-.pi-admin-btn-save { background-color: #2563eb; }
-.pi-admin-btn-save:hover { background-color: #1d4ed8; }
+.pi-admin-btn-save { background-color: var(--indigo-profundo); }
+.pi-admin-btn-save:hover { background-color: var(--indigo-profundo-hover); }
 
-.pi-admin-btn-preview { background-color: #0f172a; }
-.pi-admin-btn-preview:hover { background-color: #1e293b; }
+.pi-admin-btn-preview { background-color: var(--azul-noche); }
+.pi-admin-btn-preview:hover { background-color: var(--indigo-profundo); }
+
+/* Botón Restablecer */
+.pi-admin-btn-reset {
+  background-color: var(--ambar-aviso);
+  color: var(--texto-sobre-vivo);
+}
+.pi-admin-btn-reset:hover { background-color: var(--ambar-aviso-hover); }
 
 .pi-admin-grid {
   display: grid;
@@ -58,7 +65,7 @@
 }
 
 .pi-admin-card {
-  background: white;
+  background: var(--blanco);
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -66,7 +73,7 @@
 
 .pi-admin-card h3 {
   margin-top: 0;
-  color: #334155;
+  color: var(--texto-principal);
   margin-bottom: 20px;
   display: flex;
   align-items: center;
@@ -89,7 +96,7 @@
 .pi-admin-form-group label {
   font-size: 14px;
   font-weight: 600;
-  color: #475569;
+  color: var(--texto-principal);
   margin-bottom: 8px;
   display: flex;
   align-items: center;
@@ -99,11 +106,16 @@
 .pi-admin-form-group input[type="text"],
 .pi-admin-form-group textarea {
   padding: 10px 14px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--borde-medio);
   border-radius: 8px;
   font-family: inherit;
   outline: none;
   transition: border-color 0.2s;
+}
+
+.pi-admin-form-group input[type="text"]:focus,
+.pi-admin-form-group textarea:focus {
+  border-color: var(--cian-digital);
 }
 
 .pi-admin-colors-grid {
@@ -113,7 +125,7 @@
 }
 
 .pi-admin-color-picker input[type="color"] {
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--borde-medio);
   width: 100%;
   height: 40px;
   border-radius: 8px;
@@ -129,11 +141,11 @@
 }
 
 .pi-admin-btn-upload {
-  background-color: #f1f5f9;
-  color: #334155;
+  background-color: var(--gris-niebla);
+  color: var(--texto-principal);
   padding: 8px 16px;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--borde-medio);
   cursor: pointer;
   font-size: 13px;
   font-weight: 600;
@@ -144,7 +156,7 @@
 }
 
 .pi-admin-btn-upload:hover {
-  background-color: #e2e8f0;
+  background-color: var(--borde-suave);
 }
 
 .pi-admin-preview-img {
@@ -153,8 +165,8 @@
   max-height: 200px;
   object-fit: contain;
   border-radius: 8px;
-  border: 1px dashed #cbd5e1;
-  background-color: #f8fafc;
+  border: 1px dashed var(--borde-medio);
+  background-color: var(--gris-niebla);
 }
 
 /* Filas dinámicas */
@@ -163,10 +175,10 @@
   gap: 12px;
   margin-bottom: 12px;
   align-items: flex-start;
-  background: #f8fafc;
+  background: var(--gris-niebla);
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--borde-suave);
 }
 
 .pi-admin-dynamic-inputs {
@@ -178,7 +190,7 @@
 
 .pi-admin-dynamic-row input {
   padding: 8px 12px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--borde-medio);
   border-radius: 6px;
   outline: none;
 }
@@ -189,8 +201,8 @@
 }
 
 .pi-admin-btn-add {
-  background: #e0f2fe;
-  color: #0284c7;
+  background: var(--cian-digital-suave);
+  color: var(--cian-digital-texto);
   border: none;
   padding: 6px 12px;
   border-radius: 6px;
@@ -203,8 +215,8 @@
 }
 
 .pi-admin-btn-delete {
-  background: #fee2e2;
-  color: #ef4444;
+  background: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
   border: none;
   padding: 10px;
   border-radius: 6px;
@@ -214,13 +226,13 @@
   justify-content: center;
 }
 
-.pi-admin-btn-delete:hover { background: #fecaca; }
+.pi-admin-btn-delete:hover { background: rgba(229, 72, 77, 0.22); }
 
 /* MODAL VISTA PREVIA */
 .pi-admin-modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(0,0,0,0.6);
+  background-color: rgba(10, 14, 39, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -229,7 +241,7 @@
 }
 
 .pi-admin-modal {
-  background: white;
+  background: var(--blanco);
   width: 100%;
   max-width: 900px;
   border-radius: 12px;
@@ -245,8 +257,8 @@
 
 .pi-admin-modal-header {
   padding: 15px 25px;
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: var(--gris-niebla);
+  border-bottom: 1px solid var(--borde-suave);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -254,16 +266,17 @@
 
 .pi-admin-modal-header h3 {
   margin: 0;
-  color: #0f172a;
+  color: var(--texto-principal);
 }
 
 .pi-admin-btn-close {
-  background: #ef4444;
-  color: white;
+  background: var(--rojo-error);
+  color: var(--texto-sobre-vivo);
   border: none;
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
 }
 
 .pi-admin-modal-body {
@@ -287,48 +300,10 @@
   border-radius: 12px;
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
 }
-.pi-admin-header-actions {
-  display: flex;
-  gap: 12px;
-}
-
-/* Base común para los botones superiores */
-.pi-admin-btn-save, .pi-admin-btn-preview, .pi-admin-btn-reset {
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.2s;
-}
-
-.pi-admin-btn-save { background-color: #2563eb; }
-.pi-admin-btn-save:hover { background-color: #1d4ed8; }
-
-.pi-admin-btn-preview { background-color: #0f172a; }
-.pi-admin-btn-preview:hover { background-color: #1e293b; }
-
-/* Nuevo Botón Restablecer */
-.pi-admin-btn-reset { background-color: #f59e0b; }
-.pi-admin-btn-reset:hover { background-color: #d97706; }
 
 /* Estilos de Alertas */
-.pi-admin-alert {
-  background-color: #dcfce7;
-  color: #166534;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  font-weight: 500;
-  border: 1px solid #bbf7d0;
-}
-
 .pi-admin-alert-aviso {
-  background-color: #fef3c7;
-  color: #92400e;
-  border: 1px solid #fde68a;
+  background-color: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+  border: 1px solid rgba(255, 176, 32, 0.35);
 }

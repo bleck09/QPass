@@ -14,14 +14,14 @@
 }
 
 .pi-rec-header h2 {
-  color: #0f172a;
+  color: var(--texto-principal);
   font-size: 22px;
 }
 
 .pi-rec-tabs {
   display: flex;
   gap: 6px;
-  background-color: #f1f5f9;
+  background-color: var(--gris-niebla);
   padding: 4px;
   border-radius: 10px;
 }
@@ -36,20 +36,20 @@
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #64748b;
+  color: var(--texto-secundario);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .pi-rec-tabs button.activo {
-  background-color: white;
-  color: #2563eb;
+  background-color: var(--blanco);
+  color: var(--indigo-profundo);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* --- PANEL DE ESCANEO --- */
 .pi-rec-escanear-panel {
-  background: white;
+  background: var(--blanco);
   border-radius: 16px;
   padding: 60px 30px;
   display: flex;
@@ -61,13 +61,13 @@
 }
 
 .pi-rec-escanear-panel h3 {
-  color: #0f172a;
+  color: var(--texto-principal);
   font-size: 20px;
   margin-top: 10px;
 }
 
 .pi-rec-escanear-panel p {
-  color: #64748b;
+  color: var(--gris-medio);
   font-size: 14px;
   max-width: 380px;
   margin-bottom: 10px;
@@ -77,20 +77,20 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background-color: #2563eb;
-  color: white;
+  background-color: var(--cian-digital);
+  color: var(--texto-sobre-vivo);
   border: none;
   padding: 14px 26px;
   border-radius: 10px;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 180, 216, 0.35);
   transition: background 0.2s;
 }
 
 .pi-rec-btn-escanear:hover:not(:disabled) {
-  background-color: #1d4ed8;
+  background-color: var(--cian-digital-hover);
 }
 
 .pi-rec-btn-escanear:disabled {
@@ -112,7 +112,7 @@
 }
 
 .pi-rec-historial-stat {
-  background: white;
+  background: var(--blanco);
   border-radius: 14px;
   padding: 18px 20px;
   display: flex;
@@ -124,16 +124,16 @@
 .pi-rec-historial-stat .numero {
   font-size: 22px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--texto-principal);
 }
 
 .pi-rec-historial-stat .label {
   font-size: 13px;
-  color: #64748b;
+  color: var(--texto-secundario);
 }
 
 .pi-rec-tabla-wrapper {
-  background: white;
+  background: var(--blanco);
   border-radius: 14px;
   padding: 18px 20px;
   overflow-x: auto;
@@ -150,16 +150,16 @@
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #94a3b8;
+  color: var(--gris-medio);
   padding: 10px 12px;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid var(--borde-suave);
 }
 
 .pi-rec-tabla td {
   padding: 12px;
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--borde-suave);
   font-size: 14px;
-  color: #334155;
+  color: var(--texto-principal);
 }
 
 .pi-rec-fila-persona {
@@ -167,7 +167,7 @@
   align-items: center;
   gap: 10px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--texto-principal);
 }
 
 .pi-rec-mini-avatar {
@@ -179,12 +179,12 @@
 
 .pi-rec-monto-celda {
   font-weight: 700;
-  color: #16a34a;
+  color: var(--verde-recarga-texto);
 }
 
 .pi-rec-sin-resultados {
   text-align: center;
-  color: #94a3b8;
+  color: var(--gris-medio);
   padding: 30px 0 !important;
 }
 
@@ -192,7 +192,7 @@
 .pi-rec-modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: rgba(10, 14, 39, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -206,7 +206,7 @@
 }
 
 .pi-rec-modal-tarjeta {
-  background: white;
+  background: var(--blanco);
   width: 100%;
   max-width: 420px;
   border-radius: 20px;
@@ -227,8 +227,8 @@
   top: 16px;
   right: 16px;
   border: none;
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: var(--gris-niebla);
+  color: var(--gris-medio);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -247,8 +247,8 @@
   padding: 7px 16px;
   border-radius: 20px;
   margin-bottom: 20px;
-  background-color: #dcfce7;
-  color: #16a34a;
+  background-color: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
 }
 
 .pi-rec-tarjeta-foto {
@@ -256,14 +256,14 @@
   height: 140px;
   border-radius: 50%;
   object-fit: cover;
-  border: 5px solid #eff6ff;
-  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2);
+  border: 5px solid var(--cian-digital-suave);
+  box-shadow: 0 6px 18px rgba(26, 43, 107, 0.2);
 }
 
 .pi-rec-tarjeta-nombre {
   margin-top: 16px;
   font-size: 22px;
-  color: #0f172a;
+  color: var(--texto-principal);
 }
 
 .pi-rec-tarjeta-datos {
@@ -272,7 +272,7 @@
   flex-direction: column;
   gap: 14px;
   text-align: left;
-  background-color: #f8fafc;
+  background-color: var(--gris-niebla);
   border-radius: 12px;
   padding: 16px 18px;
 }
@@ -281,7 +281,7 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  color: #2563eb;
+  color: var(--indigo-profundo);
   font-size: 18px;
 }
 
@@ -294,13 +294,13 @@
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: #94a3b8;
+  color: var(--gris-medio);
 }
 
 .pi-rec-tarjeta-dato .valor {
   font-size: 14px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--texto-principal);
 }
 
 /* --- FORMULARIO DE MONTO --- */
@@ -315,24 +315,24 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #475569;
+  color: var(--texto-principal);
   margin-bottom: 8px;
 }
 
 .pi-rec-form-monto input {
   width: 100%;
   padding: 12px 14px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--borde-medio);
   border-radius: 10px;
   font-size: 18px;
   font-weight: 700;
-  color: #0f172a;
+  color: var(--texto-principal);
   outline: none;
   transition: border-color 0.2s;
 }
 
 .pi-rec-form-monto input:focus {
-  border-color: #2563eb;
+  border-color: var(--cian-digital);
 }
 
 .pi-rec-montos-rapidos {
@@ -344,19 +344,19 @@
 .pi-rec-montos-rapidos button {
   flex: 1;
   padding: 8px;
-  border: 1px solid #e2e8f0;
-  background-color: #f8fafc;
+  border: 1px solid var(--borde-suave);
+  background-color: var(--gris-niebla);
   border-radius: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #2563eb;
+  color: var(--indigo-profundo);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .pi-rec-montos-rapidos button:hover {
-  background-color: #eff6ff;
-  border-color: #2563eb;
+  background-color: var(--cian-digital-suave);
+  border-color: var(--cian-digital);
 }
 
 .pi-rec-tarjeta-acciones {
@@ -380,21 +380,22 @@
 }
 
 .pi-rec-btn-cancelar {
-  background-color: #f1f5f9;
-  color: #475569;
+  background-color: var(--gris-niebla);
+  color: var(--texto-principal);
 }
 
 .pi-rec-btn-cancelar:hover {
-  background-color: #e2e8f0;
+  background-color: var(--borde-suave);
 }
 
+/* Botón de acción principal (confirmar pago / recarga) */
 .pi-rec-btn-confirmar {
-  background-color: #16a34a;
-  color: white;
+  background-color: var(--coral-compra);
+  color: var(--texto-sobre-vivo);
 }
 
 .pi-rec-btn-confirmar:hover:not(:disabled) {
-  background-color: #15803d;
+  background-color: var(--coral-compra-hover);
 }
 
 .pi-rec-btn-confirmar:disabled {
@@ -412,12 +413,12 @@
 }
 
 .pi-rec-exito h3 {
-  color: #0f172a;
+  color: var(--texto-principal);
   margin-top: 6px;
 }
 
 .pi-rec-exito p {
-  color: #64748b;
+  color: var(--gris-medio);
   font-size: 14px;
 }
 
@@ -425,8 +426,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: #eff6ff;
-  color: #2563eb;
+  background-color: var(--indigo-profundo-suave);
+  color: var(--indigo-profundo);
   padding: 10px 18px;
   border-radius: 10px;
   font-size: 14px;

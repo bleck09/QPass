@@ -10,10 +10,10 @@ const defaultLandingConfig = {
   titulo: 'Plataforma de Gestión Financiera',
   informacion: 'Sistema centralizado para el control, monitoreo y auditoría de ingresos diarios. Optimiza los procesos de recarga y devoluciones con total transparencia y eficacia en tiempo real.',
   imagen: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-  colorPrimario: '#2563eb',     // Azul Rey (Botones)
-  colorFondo: '#f8fafc',        // Gris ultra claro
-  colorTextoTitulo: '#0f172a',  // Azul oscuro (Casi negro)
-  colorTextoP: '#334155',       // Gris oscuro
+  colorPrimario: '#1A2B6B',     // Índigo profundo (botones primarios)
+  colorFondo: '#F5F7FB',        // Gris niebla
+  colorTextoTitulo: '#0A0E27',  // Azul noche
+  colorTextoP: '#0A0E27',       // Azul noche
   actividades: [
     { icono: '💵', titulo: 'Recaudación Diaria', descripcion: 'Registro exacto de todos los ingresos generados en los puntos de recarga.' },
     { icono: '📊', titulo: 'Auditoría Continua', descripcion: 'Supervisión de transacciones para garantizar que no existan descuadres.' },
@@ -109,7 +109,7 @@ export default function Admin() {
         
         {/* SECCIÓN 1: COLORES */}
         <div className="pi-admin-card">
-          <h3><FaPalette color="#0284c7" /> Apariencia y Colores</h3>
+          <h3><FaPalette color="var(--cian-digital-texto)" /> Apariencia y Colores</h3>
           <div className="pi-admin-colors-grid">
             <div className="pi-admin-form-group">
               <label>Principal (Botones)</label>
@@ -140,7 +140,7 @@ export default function Admin() {
 
         {/* SECCIÓN 2: TEXTOS E IMAGEN */}
         <div className="pi-admin-card">
-          <h3><FaTextHeight color="#0284c7" /> Textos Principales e Imagen</h3>
+          <h3><FaTextHeight color="var(--cian-digital-texto)" /> Textos Principales e Imagen</h3>
           
           <div className="pi-admin-form-group">
             <label>Título Principal</label>
@@ -160,7 +160,7 @@ export default function Admin() {
               </label>
               <input id="file-upload" type="file" accept="image/*" onChange={handleImageUpload} hidden />
               
-              <span style={{ fontSize: '12px', color: '#64748b', marginLeft: '10px' }}>
+              <span style={{ fontSize: '12px', color: 'var(--gris-medio)', marginLeft: '10px' }}>
                 o pega una URL abajo:
               </span>
             </div>
@@ -178,7 +178,7 @@ export default function Admin() {
         {/* SECCIÓN 3: ACTIVIDADES */}
         <div className="pi-admin-card">
           <div className="pi-admin-card-header">
-            <h3><FaListUl color="#0284c7" /> Actividades</h3>
+            <h3><FaListUl color="var(--cian-digital-texto)" /> Actividades</h3>
             <button className="pi-admin-btn-add" onClick={() => addToArray('actividades', { icono: '📌', titulo: '', descripcion: '' })}>
               <FaPlus /> Añadir
             </button>
@@ -198,7 +198,7 @@ export default function Admin() {
         {/* SECCIÓN 4: CRONOGRAMA */}
         <div className="pi-admin-card">
           <div className="pi-admin-card-header">
-            <h3><FaRegCalendarAlt color="#0284c7" /> Cronograma</h3>
+            <h3><FaRegCalendarAlt color="var(--cian-digital-texto)" /> Cronograma</h3>
             <button className="pi-admin-btn-add" onClick={() => addToArray('cronograma', { hora: '', actividad: '' })}>
               <FaPlus /> Añadir
             </button>

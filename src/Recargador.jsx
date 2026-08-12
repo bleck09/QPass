@@ -118,7 +118,7 @@ export default function Recargador() {
       {/* --- PESTAÑA: ESCANEAR --- */}
       {pestana === 'escanear' && (
         <div className="pi-rec-escanear-panel">
-          <FaQrcode size={70} color="#2563eb" />
+          <FaQrcode size={70} color="var(--cian-digital)" />
           <h3>Escanea el código QR del participante</h3>
           <p>Apunta la cámara al código QR para cargar sus datos y registrar la recarga.</p>
           <button className="pi-rec-btn-escanear" onClick={handleSimularEscaneo} disabled={escaneando}>
@@ -194,7 +194,7 @@ export default function Recargador() {
 
             {recargaExitosa ? (
               <div className="pi-rec-exito">
-                <FaCheckCircle size={60} color="#16a34a" />
+                <FaCheckCircle size={60} color="var(--verde-recarga)" />
                 <h3>¡Recarga exitosa!</h3>
                 <p>Se acreditaron <strong>{recargaExitosa.monto} pts</strong> a {tarjetaQR.nombre}.</p>
                 <div className="pi-rec-exito-saldo">

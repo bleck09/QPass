@@ -8,10 +8,10 @@ const defaultLandingData = {
   titulo: 'Plataforma de Gestión Financiera',
   informacion: 'Sistema centralizado para el control, monitoreo y auditoría de ingresos diarios. Optimiza los procesos de recarga y devoluciones con total transparencia y eficacia en tiempo real.',
   imagen: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-  colorPrimario: '#2563eb',     // Azul Rey (Resalta muy bien en botones y detalles)
-  colorFondo: '#f8fafc',        // Gris ultra claro (Casi blanco, da aspecto limpio)
-  colorTextoTitulo: '#0f172a',  // Azul pizarra muy oscuro (Casi negro, excelente lectura)
-  colorTextoP: '#334155',       // Gris oscuro (Perfecto para párrafos)
+  colorPrimario: '#1A2B6B',     // Índigo profundo (marca, botones primarios)
+  colorFondo: '#F5F7FB',        // Gris niebla (fondo claro general)
+  colorTextoTitulo: '#0A0E27',  // Azul noche (máximo contraste de lectura)
+  colorTextoP: '#0A0E27',       // Azul noche (párrafos)
   actividades: [
     { icono: '💵', titulo: 'Recaudación Diaria', descripcion: 'Registro exacto de todos los ingresos generados en los puntos de recarga.' },
     { icono: '📊', titulo: 'Auditoría Continua', descripcion: 'Supervisión de transacciones para garantizar que no existan descuadres.' },
@@ -110,8 +110,8 @@ export default function App() {
           <table className="pi-landing-table">
             <thead>
               <tr>
-                <th style={{ backgroundColor: 'var(--color-primario)', color: '#ffffff' }}>Hora</th>
-                <th style={{ backgroundColor: 'var(--color-primario)', color: '#ffffff' }}>Actividad Programada</th>
+                <th style={{ backgroundColor: 'var(--color-primario)', color: 'var(--blanco)' }}>Hora</th>
+                <th style={{ backgroundColor: 'var(--color-primario)', color: 'var(--blanco)' }}>Actividad Programada</th>
               </tr>
             </thead>
             <tbody>

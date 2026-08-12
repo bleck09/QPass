@@ -129,8 +129,8 @@ export default function Supervisor() {
           <div className="pi-sup-progreso-relleno" style={{ width: `${stats.pctIngresados}%` }} />
         </div>
         <div className="pi-sup-progreso-footer">
-          <span><FaUserCheck color="#16a34a" /> {stats.ingresados} ingresaron</span>
-          <span><FaHourglassHalf color="#d97706" /> {stats.faltan} pendientes</span>
+          <span><FaUserCheck color="var(--verde-recarga)" /> {stats.ingresados} ingresaron</span>
+          <span><FaHourglassHalf color="var(--ambar-aviso-texto)" /> {stats.faltan} pendientes</span>
         </div>
       </div>
 
@@ -210,7 +210,7 @@ export default function Supervisor() {
 
             {tarjetaQR.todosIngresaron ? (
               <div className="pi-sup-todos-ingresaron">
-                <FaCheckCircle size={60} color="#16a34a" />
+                <FaCheckCircle size={60} color="var(--verde-recarga)" />
                 <h3>¡Todos los participantes ya ingresaron!</h3>
                 <p>No quedan personas pendientes por registrar.</p>
               </div>
