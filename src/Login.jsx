@@ -6,13 +6,14 @@ import './Login.css';
 
 // 1. Credenciales con los 7 roles y el campo 'nombre' agregado para el MenuLateral
 const testCredentials = [
-  { rol: 'Admin', nombre: 'Carlos Admin', email: 'admin@proyectodeingresos.com', pass: '123456', path: '/admin' },
-  { rol: 'Recargador', nombre: 'Juan Recargador', email: 'recargador@proyectodeingresos.com', pass: '123456', path: '/recargador' },
-  { rol: 'Supervisor', nombre: 'Ana Supervisor', email: 'supervisor@proyectodeingresos.com', pass: '123456', path: '/supervisor' },
-  { rol: 'Devolución', nombre: 'Luis Devoluciones', email: 'devolucion@proyectodeingresos.com', pass: '123456', path: '/devolucion' },
-  { rol: 'Usuario Normal', nombre: 'Pedro Normal', email: 'normal@proyectodeingresos.com', pass: '123456', path: '/usuarionormal' },
-  { rol: 'Usuario Negocio', nombre: 'María Negocio', email: 'negocio@proyectodeingresos.com', pass: '123456', path: '/usuarionegocio' },
-  { rol: 'Ayudante', nombre: 'José Ayudante', email: 'ayudante@proyectodeingresos.com', pass: '123456', path: '/ayudante' }
+  { rol: 'Admin', nombre: 'Carlos Admin', email: 'admin@QPass.com', pass: '123456', path: '/admin' },
+  { rol: 'Cliente', nombre: 'Erick Cliente', email: 'cliente@QPass.com', pass: '123456', path: '/Cliente' },
+  { rol: 'Recargador', nombre: 'Juan Recargador', email: 'recargador@QPass.com', pass: '123456', path: '/recargador' },
+  { rol: 'Supervisor', nombre: 'Ana Supervisor', email: 'supervisor@QPass.com', pass: '123456', path: '/supervisor' },
+  { rol: 'Devolución', nombre: 'Luis Devoluciones', email: 'devolucion@QPass.com', pass: '123456', path: '/devolucion' },
+  { rol: 'Usuario Normal', nombre: 'Pedro Normal', email: 'normal@QPass.com', pass: '123456', path: '/usuarionormal' },
+  { rol: 'Usuario Negocio', nombre: 'María Negocio', email: 'negocio@QPass.com', pass: '123456', path: '/usuarionegocio' },
+  { rol: 'Ayudante', nombre: 'José Ayudante', email: 'ayudante@QPass.com', pass: '123456', path: '/ayudante' }
 ];
 
 export default function Login() {

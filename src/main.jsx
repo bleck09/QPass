@@ -9,8 +9,11 @@ import MenuLateral from './MenuLateral.jsx'
 
 import Admin from './Admin.jsx'
 // 1. IMPORTAMOS TU NUEVA HOJA AQUÍ
-import AdCreaUsuarioNegocio from './AdCreaUsuarioNegocio.jsx' 
+import AdCreaUsuarioNegocio from './AdCreaUsuarioNegocio.jsx'
+import UsuNegoCreaAyudante from './UsuNegoCreaAyudante.jsx'
+import UsuNegoDasboar from './UsuNegoDasboar.jsx'
 
+import Cliente from './Cliente.jsx'
 import Recargador from './Recargador.jsx'
 import Supervisor from './Supervisor.jsx'
 import Devolucion from './Devolucion.jsx'
@@ -26,6 +29,10 @@ const router = createBrowserRouter([
   {
     path: "/admin",
     element: <MenuLateral><Admin /></MenuLateral>,
+  },
+  {
+    path: "/Cliente",
+    element: <MenuLateral><Cliente /></MenuLateral>,
   },
   // 2. AGREGAMOS LA NUEVA RUTA AQUÍ (Debe coincidir con la ruta de tu MenuLateral.jsx)
   {
@@ -59,6 +66,14 @@ const router = createBrowserRouter([
   {
     path: "/usuarionegocio",
     element: <MenuLateral><UsuarioNegocio /></MenuLateral>,
+  },
+  {
+    path: "/UsuNegoCreaAyudante",
+    element: <MenuLateral><UsuNegoCreaAyudante /></MenuLateral>,
+  },
+  {
+    path: "/UsuNegoDasboar",
+    element: <MenuLateral><UsuNegoDasboar /></MenuLateral>,
   },
   {
     path: "/ayudante",

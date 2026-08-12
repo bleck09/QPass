@@ -15,6 +15,9 @@ const menuConfig = {
     { titulo: 'Usuario de Negocio', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
     { titulo: 'Configuración', ruta: '/admin/config', icono: <FaCog /> }
   ],
+  Cliente: [
+    { titulo: 'Propuesta', ruta: '/Cliente', icono: <FaCashRegister /> }
+  ],
   Recargador: [
     { titulo: 'Mi Caja', ruta: '/recargador', icono: <FaCashRegister /> },
     { titulo: 'Historial Recargas', ruta: '/recargador/historial', icono: <FaFileInvoiceDollar /> }
@@ -32,7 +35,9 @@ const menuConfig = {
     { titulo: 'Mi Perfil', ruta: '/perfil', icono: <FaUserCircle /> }
   ],
   'Usuario Negocio': [
-    { titulo: 'Mi Negocio', ruta: '/usuarionegocio', icono: <FaFileInvoiceDollar /> }
+    { titulo: 'Dashboard de Negocio', ruta: '/UsuNegoDasboar', icono: <FaChartPie />  },
+    { titulo: 'Mi Negocio', ruta: '/usuarionegocio', icono: <FaFileInvoiceDollar /> },
+    { titulo: 'Crear ayudante', ruta: '/UsuNegoCreaAyudante', icono:<FaWallet /> }
   ],
   Ayudante: [
     { titulo: 'Tareas Asignadas', ruta: '/ayudante', icono: <FaBoxOpen /> }
