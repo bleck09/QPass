@@ -1,3 +1,72 @@
+/* ============================================================
+   PALETA DE MARCA — QPass (gestión de ingresos con manillas QR)
+   Variables globales de color. Todo el proyecto debe consumir
+   estos tokens en vez de valores hex sueltos.
+   ============================================================ */
+:root {
+  /* --- Primarios --- */
+  --indigo-profundo: #1A2B6B;  /* marca, headers, botones primarios */
+  --cian-digital: #00B4D8;     /* acentos de escaneo QR, elementos interactivos, links */
+  --azul-noche: #0A0E27;       /* fondo oscuro / navbar / modo oscuro */
+
+  /* --- Estados funcionales --- */
+  --verde-recarga: #00C48C;    /* éxito, recarga completada */
+  --ambar-aviso: #FFB020;      /* advertencias, saldo bajo */
+  --rojo-error: #E5484D;       /* errores, saldo insuficiente, fallos */
+
+  /* --- Acento y neutros --- */
+  --coral-compra: #FF6B4A;     /* botones de acción: comprar, confirmar pago */
+  --gris-niebla: #F5F7FB;      /* fondo claro general */
+  --gris-medio: #8A94A6;       /* texto secundario, íconos inactivos */
+  --blanco: #FFFFFF;           /* tarjetas, texto sobre fondos oscuros */
+
+  /* --- Hover / interacción (mismo tono, ~15% más oscuro) --- */
+  --indigo-profundo-hover: #12204f;
+  --cian-digital-hover: #0093ad;
+  --verde-recarga-hover: #00a377;
+  --ambar-aviso-hover: #e6a012;
+  --rojo-error-hover: #cf3a3f;
+  --coral-compra-hover: #e8532f;
+
+  /*
+    --- Variantes accesibles para TEXTO sobre fondo claro ---
+    Cian, verde, ámbar, rojo y coral son tonos muy saturados: usados
+    como texto directo sobre blanco/gris-niebla no siempre alcanzan
+    4.5:1 (AA). Estas versiones oscurecidas sí lo hacen y se usan
+    para links, montos y mensajes de estado en texto pequeño.
+  */
+  --cian-digital-texto: #007490;
+  --verde-recarga-texto: #007a54;
+  --ambar-aviso-texto: #9a5b00;
+  --rojo-error-texto: #c22b30;
+
+  /*
+    --- Texto sobre fondos SÓLIDOS y saturados (badges, botones, íconos) ---
+    Blanco falla el contraste AA sobre cian/verde/ámbar/rojo/coral
+    (ratios entre 1.8:1 y 3.9:1). Azul noche sobre esos mismos fondos
+    da entre 4.8:1 y 10.4:1, así que es el texto que se usa ahí.
+    Azul noche e índigo profundo, al ser fondos oscuros, sí usan blanco.
+  */
+  --texto-sobre-oscuro: var(--blanco);
+  --texto-sobre-vivo: var(--azul-noche);
+
+  /* --- Fondos suaves (tints) para chips, alertas y tarjetas de estado --- */
+  --indigo-profundo-suave: #e8eaf4;
+  --cian-digital-suave: #e0f7fc;
+  --verde-recarga-suave: #e1f9f1;
+  --ambar-aviso-suave: #fff4e0;
+  --rojo-error-suave: #fdecec;
+  --coral-compra-suave: #ffece6;
+
+  /* --- Bordes y superficies neutras --- */
+  --borde-suave: #e3e6ee;
+  --borde-medio: #cdd3e0;
+
+  /* --- Texto general --- */
+  --texto-principal: var(--azul-noche);
+  --texto-secundario: var(--gris-medio);
+}
+
 /* Reseteo global para eliminar márgenes y paddings por defecto */
 * {
   margin: 0;
@@ -7,10 +76,20 @@
 
 body {
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: #f4f6f9; /* Color de fondo general */
-  
+  background-color: var(--gris-niebla);
+  color: var(--texto-principal);
+
   /* Evitamos estrictamente el scroll horizontal */
-  overflow-x: hidden; 
+  overflow-x: hidden;
+}
+
+a {
+  color: var(--cian-digital-texto);
+}
+
+::selection {
+  background-color: var(--cian-digital);
+  color: var(--texto-sobre-vivo);
 }
 
 /* El contenedor principal de React debe ocupar el 100% de la pantalla */

@@ -62,7 +62,7 @@ export default function Login() {
             <label>CORREO ELECTRÓNICO</label>
             <div className="pi-login-input-wrapper">
               <span className="pi-login-icon">
-                <MdEmail size={20} color="#718096" />
+                <MdEmail size={20} color="var(--gris-medio)" />
               </span>
               <input
                 type="email"
@@ -78,7 +78,7 @@ export default function Login() {
             <label>CONTRASEÑA</label>
             <div className="pi-login-input-wrapper">
               <span className="pi-login-icon">
-                <MdLock size={20} color="#718096" />
+                <MdLock size={20} color="var(--gris-medio)" />
               </span>
               <input
                 type="password"
