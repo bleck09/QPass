@@ -11,7 +11,7 @@ const defaultLandingData = {
   titulo: 'Innovación. Control. Resultados.',
   informacion: 'Sistema centralizado para el control, monitoreo y auditoría de ingresos diarios. Optimiza los procesos de recarga mediante pulseras QR con total transparencia y datos en tiempo real.',
   // Usamos una imagen de tecnología/abstracta de Unsplash que simule el 3D de la referencia
-  imagen: 'https://images.unsplash.com/photo-1634152962476-4b8a00e1915c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+  imagen: 'https://purovinotinto.com/wp-content/uploads/2022/12/Tomorrowland.jpg',
   colorPrimario: '#00B4D8',     // Cian brillante para acentos
   colorBoton: '#FFFFFF',        // Blanco para el botón principal (como en la foto)
   colorFondo: '#0b1120',        // Azul casi negro (Fondo principal)
