@@ -1,21 +1,24 @@
 import { useState } from 'react';
 import { 
   FaStore, FaUserTie, FaEnvelope, FaLock, FaPlus, 
-  FaTrash, FaSearch, FaTimes, FaUserShield, FaUsersCog
+  FaTrash, FaSearch, FaTimes, FaUserShield, FaUsersCog,
+  FaDollarSign
 } from 'react-icons/fa';
 import './AdCreaUsuarioNegocio.css';
 
 // Lista de roles permitidos
 const ROLES = ['Cliente', 'Recargador', 'Supervisor', 'Devolucion', 'UsuarioNormal', 'UsuarioNegocio'];
 
+// Datos con imágenes de pravatar según la guía
 const mockUsuarios = [
   {
     id: 1,
     nombre: 'María Fernández',
     email: 'maria@fiesta.com',
     rol: 'UsuarioNegocio',
-    extraInfo: 'Pollos Doña María', // Para negocios es el puesto
-    foto: 'https://images.unsplash.com/photo-1626082896492-766af4eb65ed?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80',
+    extraInfo: 'Pollos Doña María',
+    foto: 'https://i.pravatar.cc/300?img=45',
+    recaudado: 1250.50
   },
   {
     id: 2,
@@ -23,7 +26,8 @@ const mockUsuarios = [
     email: 'carlos.r@evento.com',
     rol: 'Supervisor',
     extraInfo: 'Turno Mañana',
-    foto: null,
+    foto: 'https://i.pravatar.cc/300?img=12',
+    recaudado: 0
   },
   {
     id: 3,
@@ -31,7 +35,8 @@ const mockUsuarios = [
     email: 'ana.recarga@evento.com',
     rol: 'Recargador',
     extraInfo: 'Caja Principal 01',
-    foto: null,
+    foto: 'https://i.pravatar.cc/300?img=5',
+    recaudado: 0
   },
   {
     id: 4,
@@ -40,6 +45,7 @@ const mockUsuarios = [
     rol: 'Cliente',
     extraInfo: '',
     foto: null,
+    recaudado: 0
   }
 ];
 
@@ -47,13 +53,13 @@ export default function AdCreaUsuarioNegocio() {
   const [usuarios, setUsuarios] = useState(mockUsuarios);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); 
-  const [filtroRol, setFiltroRol] = useState('Todos'); // 'Todos' o un rol específico
+  const [filtroRol, setFiltroRol] = useState('Todos'); 
   
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     password: '',
-    rol: 'UsuarioNegocio' // Por defecto
+    rol: 'UsuarioNegocio' 
   });
 
   const handleChange = (e) => {
@@ -69,6 +75,7 @@ export default function AdCreaUsuarioNegocio() {
       rol: formData.rol,
       extraInfo: formData.rol === 'UsuarioNegocio' ? 'Pendiente de configurar...' : 'Sin asignar', 
       foto: null, 
+      recaudado: 0
     };
 
     setUsuarios([nuevoUsuario, ...usuarios]);
@@ -82,18 +89,19 @@ export default function AdCreaUsuarioNegocio() {
     }
   };
 
-  // 1. Filtrar por Rol (Pestañas)
+  // Filtrado
   let usuariosFiltrados = filtroRol === 'Todos' 
     ? usuarios 
     : usuarios.filter(u => u.rol === filtroRol);
 
-  // 2. Filtrar por Búsqueda (Texto)
   usuariosFiltrados = usuariosFiltrados.filter(u => 
     u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Función para dar color a la etiqueta del rol
+  // Total recaudado (KPI)
+  const totalGlobal = usuarios.reduce((total, u) => total + (u.recaudado || 0), 0);
+
   const getBadgeColor = (rol) => {
     switch(rol) {
       case 'Supervisor': return 'badge-supervisor';
@@ -109,50 +117,60 @@ export default function AdCreaUsuarioNegocio() {
   return (
     <div className="pi-adnegocio-container">
       
-      {/* Cabecera */}
-      <div className="pi-adnegocio-header">
-        <div>
+      {/* Cabecera y KPI */}
+      <div className="pi-adnegocio-header-wrapper">
+        <div className="pi-adnegocio-header">
           <h2>Gestión Global de Usuarios</h2>
           <p>Administra, crea y filtra todas las cuentas operativas y clientes del sistema.</p>
         </div>
+        
+        {/* KPI Estilo QPass */}
+        <div className="pi-adnegocio-kpi">
+          <span className="micro-etiqueta">Recaudación Global Negocios</span>
+          <div className="kpi-valor">
+            <FaDollarSign className="kpi-icon" />
+            <span className="numero-grande">{totalGlobal.toFixed(2)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="pi-adnegocio-action-bar">
+        {/* Pestañas de Filtro por Rol */}
+        <div className="pi-adnegocio-tabs">
+          <button 
+            className={`tab-btn ${filtroRol === 'Todos' ? 'active' : ''}`}
+            onClick={() => setFiltroRol('Todos')}
+          >
+            Todos ({usuarios.length})
+          </button>
+          {ROLES.map(rol => (
+            <button 
+              key={rol}
+              className={`tab-btn ${filtroRol === rol ? 'active' : ''}`}
+              onClick={() => setFiltroRol(rol)}
+            >
+              {rol}
+            </button>
+          ))}
+        </div>
+
         <button className="pi-adnegocio-btn-add" onClick={() => setShowModal(true)}>
           <FaPlus /> Nuevo Usuario
         </button>
       </div>
 
-      {/* Pestañas de Filtro por Rol */}
-      <div className="pi-adnegocio-tabs">
-        <button 
-          className={`tab-btn ${filtroRol === 'Todos' ? 'active' : ''}`}
-          onClick={() => setFiltroRol('Todos')}
-        >
-          Todos ({usuarios.length})
-        </button>
-        {ROLES.map(rol => (
-          <button 
-            key={rol}
-            className={`tab-btn ${filtroRol === rol ? 'active' : ''}`}
-            onClick={() => setFiltroRol(rol)}
-          >
-            {rol}
-          </button>
-        ))}
-      </div>
-
       {/* Barra de Búsqueda */}
-      <div className="pi-adnegocio-action-bar">
-        <div className="pi-adnegocio-search">
-          <FaSearch className="search-icon" />
-          <input 
-            type="text" 
-            placeholder="Buscar por nombre o correo electrónico..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
+      <div className="pi-adnegocio-search">
+        <FaSearch className="search-icon" />
+        <input 
+          type="text" 
+          placeholder="Buscar por nombre o correo electrónico..." 
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
-      {/* Tabla Principal Dinámica */}
+      {/* Tabla Principal */}
       <div className="pi-adnegocio-card pi-adnegocio-list-section">
         <div className="pi-adnegocio-table-wrapper">
           <table className="pi-adnegocio-table">
@@ -177,13 +195,13 @@ export default function AdCreaUsuarioNegocio() {
                           {user.rol === 'UsuarioNegocio' ? <FaStore /> : <FaUserTie />}
                         </div>
                       )}
-                      <span className="pi-adnegocio-nombre-puesto">
+                      <span className="fila-nombre">
                         {user.nombre}
                       </span>
                     </div>
                   </td>
                   <td>
-                    <span className="pi-adnegocio-email">{user.email}</span>
+                    <span className="celda-normal">{user.email}</span>
                   </td>
                   <td>
                     <span className={`pi-adnegocio-badge ${getBadgeColor(user.rol)}`}>
@@ -191,7 +209,7 @@ export default function AdCreaUsuarioNegocio() {
                     </span>
                   </td>
                   <td>
-                    <span className="pi-adnegocio-extra">
+                    <span className="celda-secundaria">
                       {user.extraInfo || '-'}
                     </span>
                   </td>
@@ -224,7 +242,7 @@ export default function AdCreaUsuarioNegocio() {
           <div className="pi-adnegocio-modal">
             
             <div className="pi-adnegocio-modal-header">
-              <h3><FaUsersCog color="#0284c7" /> Registrar Nuevo Usuario</h3>
+              <h2><FaUsersCog color="var(--indigo-profundo)" /> Registrar Nuevo Usuario</h2>
               <button className="btn-close-modal" onClick={() => setShowModal(false)}>
                 <FaTimes />
               </button>
@@ -232,7 +250,7 @@ export default function AdCreaUsuarioNegocio() {
 
             <div className="pi-adnegocio-modal-body">
               <p className="pi-adnegocio-hint">
-                Asigna el rol correcto. El sistema adaptará los accesos y paneles automáticamente según el tipo de cuenta.
+                Asigna el rol correcto. El sistema adaptará los accesos y paneles automáticamente.
               </p>
 
               <form onSubmit={handleSubmit} className="pi-adnegocio-form">

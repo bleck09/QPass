@@ -1,681 +1,93 @@
-/* Prefix único: pi-adnegocio- */
+/* Prefix único: pi-adnegocio- aplicando la Guía de Tipografía QPass */
 
 .pi-adnegocio-container {
   width: 100%;
 }
 
-.pi-adnegocio-header {
-  margin-bottom: 20px;
-}
-
-.pi-adnegocio-header h2 {
-  color: #1e293b;
-  margin: 0 0 5px 0;
-  font-size: 24px;
-}
-
-.pi-adnegocio-header p {
-  color: #64748b;
-  margin: 0;
-  font-size: 14px;
-}
-
-/* Tarjeta de Resumen */
-.pi-adnegocio-summary {
-  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
-  border-radius: 12px;
-  padding: 20px 25px;
-  color: white;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  margin-bottom: 25px;
-  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.2);
-}
-
-.summary-icon {
-  background: rgba(255, 255, 255, 0.2);
-  width: 60px;
-  height: 60px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 24px;
-}
-
-.summary-info span {
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  opacity: 0.9;
-}
-
-.summary-info h3 {
-  margin: 5px 0 0 0;
-  font-size: 32px;
-}
-
-/* Grilla Formulario y Lista */
-.pi-adnegocio-grid {
-  display: grid;
-  grid-template-columns: 350px 1fr;
-  gap: 25px;
-  align-items: start;
-}
-
-.pi-adnegocio-card {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f1f5f9;
-}
-
-.pi-adnegocio-card h3 {
-  margin-top: 0;
-  color: #334155;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 18px;
-}
-
-.pi-adnegocio-hint {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 20px;
-  line-height: 1.5;
-}
-
-/* Formulario */
-.pi-adnegocio-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.pi-adnegocio-input-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 6px;
-}
-
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 12px;
-  color: #94a3b8;
-}
-
-.input-wrapper input {
-  width: 100%;
-  padding: 10px 10px 10px 35px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  outline: none;
-  font-family: inherit;
-  transition: border-color 0.2s;
-}
-
-.input-wrapper input:focus {
-  border-color: #0284c7;
-}
-
-.pi-adnegocio-btn-submit {
-  background-color: #0284c7;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-weight: bold;
-  cursor: pointer;
-  margin-top: 10px;
-  transition: background 0.2s;
-}
-
-.pi-adnegocio-btn-submit:hover {
-  background-color: #0369a1;
-}
-
-/* Tabla de Lista */
-.pi-adnegocio-table-wrapper {
-  overflow-x: auto;
-}
-
-.pi-adnegocio-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.pi-adnegocio-table th, .pi-adnegocio-table td {
-  padding: 15px 10px;
-  border-bottom: 1px solid #e2e8f0;
-  text-align: left;
-}
-
-.pi-adnegocio-table th {
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.pi-adnegocio-item-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.pi-adnegocio-img {
-  width: 45px;
-  height: 45px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid #e2e8f0;
-}
-
-.pi-adnegocio-no-img {
-  width: 45px;
-  height: 45px;
-  border-radius: 8px;
-  background-color: #f1f5f9;
-  color: #94a3b8;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 18px;
-}
-
-.pi-adnegocio-nombre-puesto {
-  font-weight: 600;
-  color: #1e293b;
-}
-
-.pi-adnegocio-encargado-box {
-  display: flex;
-  flex-direction: column;
-}
-
-.pi-adnegocio-encargado-box strong {
-  color: #334155;
-  font-size: 14px;
-}
-
-.pi-adnegocio-email {
-  color: #64748b;
-  font-size: 12px;
-}
-
-.pi-adnegocio-badge-money {
-  background-color: #dcfce7;
-  color: #166534;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-weight: bold;
-  font-size: 13px;
-}
-
-.pi-adnegocio-btn-delete {
-  background-color: #fee2e2;
-  color: #ef4444;
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: 6px;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: background 0.2s;
-}
-
-.pi-adnegocio-btn-delete:hover {
-  background-color: #fecaca;
-}
-
-/* Responsivo */
-@media (max-width: 900px) {
-  .pi-adnegocio-grid {
-    grid-template-columns: 1fr; /* Una sola columna en pantallas pequeñas */
-  }
-}
-/* Prefix único: pi-adnegocio- */
-
-.pi-adnegocio-container {
-  width: 100%;
-}
-
-.pi-adnegocio-header {
+.pi-adnegocio-header-wrapper {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 25px;
+  align-items: flex-start;
+  margin-bottom: 24px;
   flex-wrap: wrap;
   gap: 20px;
 }
 
+/* 2. Encabezados: Título de página (h2) 22px bold */
 .pi-adnegocio-header h2 {
-  color: #1e293b;
+  color: var(--texto-principal);
+  font-size: 22px;
+  font-weight: 700;
   margin: 0 0 5px 0;
-  font-size: 24px;
 }
 
 .pi-adnegocio-header p {
-  color: #64748b;
-  margin: 0;
+  color: var(--texto-secundario);
   font-size: 14px;
+  font-weight: 400;
+  margin: 0;
 }
 
-/* Tarjeta de Resumen */
-.pi-adnegocio-summary {
-  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+/* 7. Números Grandes (KPI) */
+.pi-adnegocio-kpi {
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
   border-radius: 12px;
-  padding: 15px 25px;
-  color: white;
+  padding: 16px 24px;
   display: flex;
-  align-items: center;
-  gap: 20px;
-  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.2);
+  flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
 }
 
-.summary-icon {
-  background: rgba(255, 255, 255, 0.2);
-  width: 50px;
-  height: 50px;
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 22px;
-}
-
-.summary-info span {
-  font-size: 12px;
+/* 6. Micro-etiqueta */
+.micro-etiqueta {
+  font-size: 11px;
+  font-weight: 400;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  opacity: 0.9;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+  margin-bottom: 4px;
 }
 
-.summary-info h3 {
-  margin: 5px 0 0 0;
-  font-size: 26px;
+.kpi-valor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--texto-principal);
 }
 
-/* Barra de Acciones (Buscador y Botón) */
+.kpi-icon {
+  font-size: 18px;
+  color: var(--verde-recarga);
+}
+
+.numero-grande {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* 5. Pestañas / Filtros */
 .pi-adnegocio-action-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
-  gap: 15px;
-}
-
-.pi-adnegocio-search {
-  position: relative;
-  flex: 1;
-  max-width: 400px;
-}
-
-.search-icon {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #94a3b8;
-}
-
-.pi-adnegocio-search input {
-  width: 100%;
-  padding: 12px 15px 12px 40px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  outline: none;
-  font-size: 14px;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.pi-adnegocio-search input:focus {
-  border-color: #0284c7;
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.1);
-}
-
-.pi-adnegocio-btn-add {
-  background-color: #0284c7;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.2s;
-}
-
-.pi-adnegocio-btn-add:hover {
-  background-color: #0369a1;
-}
-
-/* Tarjeta Principal y Tabla */
-.pi-adnegocio-card {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f1f5f9;
-}
-
-.pi-adnegocio-table-wrapper {
-  overflow-x: auto;
-}
-
-.pi-adnegocio-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.pi-adnegocio-table th, .pi-adnegocio-table td {
-  padding: 16px 12px;
-  border-bottom: 1px solid #e2e8f0;
-  text-align: left;
-}
-
-.pi-adnegocio-table th {
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.pi-adnegocio-table tbody tr:hover {
-  background-color: #f8fafc;
-}
-
-.pi-adnegocio-item-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.pi-adnegocio-img {
-  width: 50px;
-  height: 50px;
-  border-radius: 8px;
-  object-fit: cover;
-  border: 1px solid #e2e8f0;
-}
-
-.pi-adnegocio-no-img {
-  width: 50px;
-  height: 50px;
-  border-radius: 8px;
-  background-color: #f1f5f9;
-  color: #94a3b8;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 18px;
-}
-
-.pi-adnegocio-nombre-puesto {
-  font-weight: 600;
-  color: #1e293b;
-  font-size: 15px;
-}
-
-.pi-adnegocio-encargado-box {
-  display: flex;
-  flex-direction: column;
-}
-
-.pi-adnegocio-encargado-box strong {
-  color: #334155;
-  font-size: 14px;
-}
-
-.pi-adnegocio-email {
-  color: #64748b;
-  font-size: 12px;
-}
-
-.pi-adnegocio-badge-money {
-  background-color: #dcfce7;
-  color: #166534;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: bold;
-  font-size: 13px;
-}
-
-.pi-adnegocio-btn-delete {
-  background-color: #fee2e2;
-  color: #ef4444;
-  border: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  cursor: pointer;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  transition: background 0.2s;
-}
-
-.pi-adnegocio-btn-delete:hover {
-  background-color: #fecaca;
-}
-
-.pi-adnegocio-empty {
-  text-align: center;
-  padding: 30px !important;
-  color: #64748b;
-  font-style: italic;
-}
-
-/* --- MODAL (VENTANA EMERGENTE) --- */
-.pi-adnegocio-modal-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 9999;
-  padding: 20px;
-  backdrop-filter: blur(4px);
-}
-
-.pi-adnegocio-modal {
-  background: white;
-  width: 100%;
-  max-width: 450px;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  animation: slideDown 0.3s ease-out;
-}
-
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-20px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.pi-adnegocio-modal-header {
-  padding: 18px 24px;
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.pi-adnegocio-modal-header h3 {
-  margin: 0;
-  color: #0f172a;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 18px;
-}
-
-.btn-close-modal {
-  background: none;
-  border: none;
-  color: #94a3b8;
-  font-size: 20px;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.btn-close-modal:hover {
-  color: #ef4444;
-}
-
-.pi-adnegocio-modal-body {
-  padding: 24px;
-}
-
-.pi-adnegocio-hint {
-  font-size: 13px;
-  color: #64748b;
-  margin-bottom: 20px;
-  line-height: 1.5;
-}
-
-/* Formulario dentro del Modal */
-.pi-adnegocio-form {
-  display: flex;
-  flex-direction: column;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
   gap: 16px;
 }
 
-.pi-adnegocio-input-group label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: #475569;
-  margin-bottom: 6px;
-}
-
-.input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.input-icon {
-  position: absolute;
-  left: 12px;
-  color: #94a3b8;
-}
-
-.input-wrapper input {
-  width: 100%;
-  padding: 10px 10px 10px 38px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  outline: none;
-  font-family: inherit;
-  transition: border-color 0.2s;
-}
-
-.input-wrapper input:focus {
-  border-color: #0284c7;
-}
-
-.pi-adnegocio-modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.btn-cancelar {
-  background: white;
-  border: 1px solid #cbd5e1;
-  color: #475569;
-  padding: 10px 18px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-guardar {
-  background: #0284c7;
-  border: none;
-  color: white;
-  padding: 10px 18px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.btn-guardar:hover {
-  background: #0369a1;
-}
-
-@media (max-width: 600px) {
-  .pi-adnegocio-action-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-  .pi-adnegocio-search {
-    max-width: 100%;
-  }
-}
-/* Prefix único: pi-adnegocio- */
-
-.pi-adnegocio-container {
-  width: 100%;
-}
-
-.pi-adnegocio-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-.pi-adnegocio-header h2 {
-  color: #1e293b;
-  margin: 0 0 5px 0;
-  font-size: 24px;
-}
-
-.pi-adnegocio-header p {
-  color: #64748b;
-  margin: 0;
-  font-size: 14px;
-}
-
-/* Sistema de Pestañas (Tabs) */
 .pi-adnegocio-tabs {
   display: flex;
   gap: 10px;
-  margin-bottom: 20px;
-  border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 10px;
-  overflow-x: auto; /* Para móviles */
+  overflow-x: auto; 
 }
 
 .tab-btn {
   background: none;
   border: none;
-  color: #64748b;
+  color: var(--texto-secundario);
+  font-size: 13px;
   font-weight: 600;
-  font-size: 14px;
   padding: 8px 16px;
   border-radius: 20px;
   cursor: pointer;
@@ -684,26 +96,20 @@
 }
 
 .tab-btn:hover {
-  background-color: #f1f5f9;
-  color: #334155;
+  background-color: var(--gris-niebla);
+  color: var(--texto-principal);
 }
 
 .tab-btn.active {
-  background-color: #0284c7;
-  color: white;
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
 }
 
 /* Barra de Búsqueda */
-.pi-adnegocio-action-bar {
-  display: flex;
-  justify-content: flex-start;
-  margin-bottom: 20px;
-}
-
 .pi-adnegocio-search {
   position: relative;
   width: 100%;
-  max-width: 400px;
+  margin-bottom: 24px;
 }
 
 .search-icon {
@@ -711,30 +117,44 @@
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
-  color: #94a3b8;
+  color: var(--gris-medio);
 }
 
+/* 4. Inputs normales y placeholders */
 .pi-adnegocio-search input {
   width: 100%;
   padding: 12px 15px 12px 40px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--borde-medio);
   border-radius: 8px;
   outline: none;
   font-size: 14px;
-  transition: border-color 0.2s;
+  font-weight: 400;
+  background-color: var(--blanco);
+  color: var(--texto-principal);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.pi-adnegocio-search input::placeholder,
+.input-wrapper input::placeholder {
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--gris-medio);
 }
 
 .pi-adnegocio-search input:focus {
-  border-color: #0284c7;
+  border-color: var(--cian-digital);
+  box-shadow: 0 0 0 3px var(--cian-digital-suave);
 }
 
+/* 5. Botones */
 .pi-adnegocio-btn-add {
-  background-color: #0284c7;
-  color: white;
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -743,16 +163,16 @@
 }
 
 .pi-adnegocio-btn-add:hover {
-  background-color: #0369a1;
+  background-color: var(--indigo-profundo-hover);
 }
 
 /* Tarjeta Principal y Tabla */
 .pi-adnegocio-card {
-  background: white;
+  background: var(--blanco);
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border: 1px solid #f1f5f9;
+  border: 1px solid var(--borde-suave);
 }
 
 .pi-adnegocio-table-wrapper {
@@ -764,21 +184,29 @@
   border-collapse: collapse;
 }
 
-.pi-adnegocio-table th, .pi-adnegocio-table td {
-  padding: 16px 12px;
-  border-bottom: 1px solid #e2e8f0;
+/* 3. Tablas */
+.pi-adnegocio-table th {
+  padding: 12px;
+  border-bottom: 1px solid var(--borde-suave);
   text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
 }
 
-.pi-adnegocio-table th {
-  color: #64748b;
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
+.pi-adnegocio-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--borde-suave);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--texto-principal);
 }
 
 .pi-adnegocio-table tbody tr:hover {
-  background-color: #f8fafc;
+  background-color: var(--gris-niebla);
 }
 
 .pi-adnegocio-item-info {
@@ -792,58 +220,60 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--borde-suave);
 }
 
 .pi-adnegocio-no-img {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background-color: #f1f5f9;
-  color: #64748b;
+  background-color: var(--gris-niebla);
+  color: var(--texto-secundario);
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: 16px;
 }
 
-.pi-adnegocio-nombre-puesto {
-  font-weight: 600;
-  color: #1e293b;
+/* Nombre de fila (persona/participante) */
+.fila-nombre {
   font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
 }
 
-.pi-adnegocio-email {
-  color: #64748b;
-  font-size: 13px;
+.celda-normal {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--texto-principal);
 }
 
-.pi-adnegocio-extra {
-  font-size: 13px;
-  color: #475569;
-  font-style: italic;
+.celda-secundaria {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--texto-secundario);
 }
 
-/* --- BADGES (Etiquetas de Colores para Roles) --- */
+/* 6. Badges (Etiquetas de estado) */
 .pi-adnegocio-badge {
-  padding: 6px 12px;
+  padding: 4px 12px;
   border-radius: 20px;
   font-size: 12px;
   font-weight: 700;
   display: inline-block;
 }
 
-.badge-supervisor { background: #e0e7ff; color: #4338ca; } /* Indigo */
-.badge-recargador { background: #dcfce7; color: #166534; } /* Verde */
-.badge-negocio { background: #fae8ff; color: #a21caf; } /* Morado */
-.badge-devolucion { background: #ffedd5; color: #c2410c; } /* Naranja */
-.badge-cliente { background: #f1f5f9; color: #475569; } /* Gris */
-.badge-default { background: #e2e8f0; color: #334155; }
+.badge-supervisor { background: var(--indigo-profundo-suave); color: var(--indigo-profundo); } 
+.badge-recargador { background: var(--verde-recarga-suave); color: var(--verde-recarga-texto); } 
+.badge-negocio { background: var(--cian-digital-suave); color: var(--cian-digital-texto); } 
+.badge-devolucion { background: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); } 
+.badge-cliente { background: var(--gris-niebla); color: var(--texto-secundario); } 
+.badge-default { background: var(--borde-suave); color: var(--texto-principal); }
 
 /* Botones de acción tabla */
 .pi-adnegocio-btn-delete {
-  background-color: #fee2e2;
-  color: #ef4444;
+  background-color: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
   border: none;
   width: 32px;
   height: 32px;
@@ -852,24 +282,25 @@
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  transition: background 0.2s;
+  transition: all 0.2s;
 }
 
 .pi-adnegocio-btn-delete:hover {
-  background-color: #fecaca;
+  background-color: var(--rojo-error);
+  color: var(--blanco);
 }
 
 .pi-adnegocio-empty {
   text-align: center;
   padding: 30px !important;
-  color: #64748b;
+  color: var(--texto-secundario);
 }
 
 /* --- MODAL (VENTANA EMERGENTE) --- */
 .pi-adnegocio-modal-overlay {
   position: fixed;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: rgba(10, 14, 39, 0.7); 
   display: flex;
   justify-content: center;
   align-items: center;
@@ -879,12 +310,12 @@
 }
 
 .pi-adnegocio-modal {
-  background: white;
+  background: var(--blanco);
   width: 100%;
   max-width: 450px;
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
   animation: slideDown 0.3s ease-out;
 }
 
@@ -895,31 +326,33 @@
 
 .pi-adnegocio-modal-header {
   padding: 18px 24px;
-  background-color: #f8fafc;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: var(--gris-niebla);
+  border-bottom: 1px solid var(--borde-suave);
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.pi-adnegocio-modal-header h3 {
+/* Título Modal h2 22px bold */
+.pi-adnegocio-modal-header h2 {
   margin: 0;
-  color: #0f172a;
+  color: var(--texto-principal);
+  font-size: 22px;
+  font-weight: 700;
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 18px;
 }
 
 .btn-close-modal {
   background: none;
   border: none;
-  color: #94a3b8;
+  color: var(--gris-medio);
   font-size: 20px;
   cursor: pointer;
 }
 
-.btn-close-modal:hover { color: #ef4444; }
+.btn-close-modal:hover { color: var(--rojo-error); }
 
 .pi-adnegocio-modal-body {
   padding: 24px;
@@ -927,24 +360,26 @@
 
 .pi-adnegocio-hint {
   font-size: 13px;
-  color: #64748b;
+  color: var(--texto-secundario);
   margin-bottom: 20px;
   line-height: 1.5;
 }
 
-/* Formulario */
+/* 4. Formularios */
 .pi-adnegocio-form {
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
+/* Label: 14px, semibold, normal case */
 .pi-adnegocio-input-group label {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
-  color: #475569;
+  color: var(--texto-principal);
   margin-bottom: 6px;
+  text-transform: none;
 }
 
 .input-wrapper {
@@ -956,24 +391,25 @@
 .input-icon {
   position: absolute;
   left: 12px;
-  color: #94a3b8;
+  color: var(--gris-medio);
 }
 
 .input-wrapper input, .pi-select-rol {
   width: 100%;
   padding: 10px 10px 10px 38px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--borde-medio);
   border-radius: 8px;
   outline: none;
   font-family: inherit;
   font-size: 14px;
-  color: #1e293b;
-  background-color: white;
+  font-weight: 400;
+  color: var(--texto-principal);
+  background-color: var(--blanco);
   transition: border-color 0.2s;
 }
 
 .input-wrapper input:focus, .pi-select-rol:focus {
-  border-color: #0284c7;
+  border-color: var(--cian-digital);
 }
 
 .pi-adnegocio-modal-actions {
@@ -983,24 +419,33 @@
   margin-top: 10px;
 }
 
+/* Botones secundario y primario (14px, 700) */
 .btn-cancelar {
-  background: white;
-  border: 1px solid #cbd5e1;
-  color: #475569;
+  background: var(--blanco);
+  border: 1px solid var(--borde-medio);
+  color: var(--texto-principal);
+  font-size: 14px;
+  font-weight: 700;
   padding: 10px 18px;
   border-radius: 8px;
-  font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancelar:hover {
+  background: var(--gris-niebla);
 }
 
 .btn-guardar {
-  background: #0284c7;
+  background: var(--indigo-profundo);
   border: none;
-  color: white;
+  color: var(--blanco);
+  font-size: 14px;
+  font-weight: 700;
   padding: 10px 18px;
   border-radius: 8px;
-  font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s;
 }
 
-.btn-guardar:hover { background: #0369a1; }
+.btn-guardar:hover { background: var(--indigo-profundo-hover); }

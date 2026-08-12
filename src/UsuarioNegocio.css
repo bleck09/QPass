@@ -1,0 +1,654 @@
+/* Prefix único: pi-unegocio- y estilos de modales genéricos */
+
+.pi-unegocio-container {
+  width: 100%;
+}
+
+.pi-unegocio-header-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+/* Encabezados h2: 22px bold */
+.pi-unegocio-header h2 {
+  color: var(--texto-principal);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 5px 0;
+}
+
+.pi-unegocio-header p {
+  color: var(--texto-secundario);
+  font-size: 14px;
+  font-weight: 400;
+  margin: 0;
+}
+
+/* KPI Estilo QPass */
+.pi-unegocio-kpi {
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-radius: 12px;
+  padding: 16px 24px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.micro-etiqueta {
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+  margin-bottom: 4px;
+}
+
+.kpi-valor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--texto-principal);
+}
+
+.kpi-icon {
+  font-size: 18px;
+  color: var(--cian-digital);
+}
+
+.numero-grande {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* Botones Superiores */
+.pi-unegocio-action-bar {
+  margin-bottom: 16px;
+}
+
+/* Botón Principal (14px, 700) */
+.btn-primario {
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.btn-primario:hover {
+  background-color: var(--indigo-profundo-hover);
+}
+
+/* Botón Secundario / Cancelar (14px, 700) */
+.btn-cancelar {
+  background: var(--blanco);
+  border: 1px solid var(--borde-medio);
+  color: var(--texto-principal);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancelar:hover {
+  background: var(--gris-niebla);
+}
+
+/* Botón secundario pequeño (para acciones de tabla) */
+.btn-secundario-sm {
+  background: var(--gris-niebla);
+  border: 1px solid var(--borde-suave);
+  color: var(--texto-principal);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-secundario-sm:hover {
+  background: var(--borde-suave);
+  color: var(--indigo-profundo);
+}
+
+/* Tarjeta Principal */
+.pi-unegocio-card {
+  background: var(--blanco);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--borde-suave);
+}
+
+.no-margin {
+  padding: 0;
+  box-shadow: none;
+}
+
+/* Tabla */
+.pi-unegocio-table-wrapper {
+  overflow-x: auto;
+}
+
+.pi-unegocio-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* th: 12px, bold, uppercase */
+.pi-unegocio-table th {
+  padding: 12px;
+  border-bottom: 1px solid var(--borde-suave);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+}
+
+/* td: 14px, normal */
+.pi-unegocio-table td {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--borde-suave);
+  text-align: left;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--texto-principal);
+  vertical-align: middle;
+}
+
+.pi-unegocio-table tbody tr:hover {
+  background-color: var(--gris-niebla);
+}
+
+/* Info del Puesto en la Tabla */
+.item-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--borde-suave);
+}
+
+.item-no-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  background-color: var(--gris-niebla);
+  color: var(--texto-secundario);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+}
+
+/* Fila Nombre: 14px, 600 */
+.fila-nombre {
+  font-weight: 600 !important;
+  color: var(--texto-principal);
+}
+
+.celda-secundaria {
+  font-size: 13px;
+  color: var(--texto-secundario);
+  margin-top: 2px;
+}
+
+.info-catalogo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+/* Badge simple */
+.badge-info {
+  background-color: var(--cian-digital-suave);
+  color: var(--cian-digital-texto);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badge-precio {
+  background-color: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
+  padding: 6px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Botón Eliminar (Rojo Suave) */
+.btn-eliminar {
+  background-color: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.btn-eliminar:hover {
+  background-color: var(--rojo-error);
+  color: var(--blanco);
+}
+
+.tabla-vacia {
+  text-align: center;
+  padding: 30px !important;
+  color: var(--texto-secundario);
+  font-style: italic;
+}
+
+/* --- MODALES GENERALES --- */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(10, 14, 39, 0.7); 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  padding: 20px;
+  backdrop-filter: blur(4px);
+}
+
+.modal {
+  background: var(--blanco);
+  width: 100%;
+  max-width: 450px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh; /* Para que no se pase de la pantalla */
+}
+
+.modal-grande {
+  max-width: 700px;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-header {
+  padding: 18px 24px;
+  background-color: var(--gris-niebla);
+  border-bottom: 1px solid var(--borde-suave);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  color: var(--texto-principal);
+  font-size: 22px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-close-modal {
+  background: none;
+  border: none;
+  color: var(--gris-medio);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.btn-close-modal:hover { color: var(--rojo-error); }
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto; /* Permite scroll interno si la tabla crece mucho */
+}
+
+.bg-gris {
+  background-color: var(--gris-niebla);
+  padding: 20px;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+/* --- FORMULARIOS --- */
+.formulario {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Formularios en línea (Para añadir productos) */
+.form-añadir-producto {
+  background: var(--blanco);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--borde-suave);
+  margin-bottom: 20px;
+}
+
+.form-inline {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+
+.flex-1 { flex: 1; min-width: 200px; }
+.width-precio { width: 140px; }
+.btn-bottom { margin-bottom: 0 !important; }
+
+/* Labels: 14px, semibold */
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-group label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--texto-principal);
+  background-color: var(--blanco);
+  transition: border-color 0.2s;
+}
+
+.input-group input:focus {
+  border-color: var(--cian-digital);
+}
+
+/* Regla Guía QPass #4: INPUT DE MONTO (18px, 700) */
+.input-monto-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.icon-monto {
+  position: absolute;
+  left: 12px;
+  color: var(--gris-medio);
+  font-size: 16px;
+}
+
+.input-monto {
+  padding-left: 32px !important;
+  font-size: 18px !important;
+  font-weight: 700 !important;
+}
+
+@media (max-width: 600px) {
+  .form-inline { flex-direction: column; align-items: stretch; }
+  .width-precio { width: 100%; }
+}
+/* =========================================
+   NUEVOS ESTILOS: UPLOAD DE IMÁGENES
+========================================= */
+
+.upload-zone {
+  position: relative;
+  width: 100%;
+  padding: 30px 20px;
+  border: 2px dashed var(--borde-medio);
+  border-radius: 12px;
+  background-color: var(--gris-niebla);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.upload-zone:hover {
+  background-color: var(--cian-digital-suave);
+  border-color: var(--cian-digital);
+}
+
+.upload-icon {
+  font-size: 30px;
+  color: var(--cian-digital);
+  margin-bottom: 10px;
+}
+
+.upload-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  margin-bottom: 4px;
+}
+
+.upload-subtext {
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+
+.upload-input-hidden {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.preview-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid var(--borde-suave);
+  border-radius: 12px;
+  background-color: var(--blanco);
+}
+
+.img-preview {
+  width: 100%;
+  max-width: 200px;
+  height: auto;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.btn-quitar-imagen {
+  background: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-quitar-imagen:hover {
+  background: var(--rojo-error);
+  color: var(--blanco);
+}
+
+/* --- BADGES NUEVOS --- */
+.badge-ayudantes {
+  background-color: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.texto-ayuda {
+  font-size: 14px;
+  color: var(--texto-secundario);
+  line-height: 1.5;
+}
+/* =========================================
+   NUEVOS ESTILOS: PRODUCTOS E IMÁGENES
+========================================= */
+
+.titulo-seccion-pequeño {
+  margin: 0 0 16px 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.form-añadir-producto {
+  background: var(--blanco);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid var(--borde-suave);
+  margin-bottom: 24px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.producto-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 16px;
+  align-items: start;
+}
+
+.producto-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--borde-suave);
+}
+
+/* Botón pequeño para subir foto de producto */
+.btn-upload-small {
+  background-color: var(--gris-niebla);
+  color: var(--texto-principal);
+  border: 1px solid var(--borde-medio);
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+  height: 44px; /* Para alinearse con los inputs normales */
+}
+
+.btn-upload-small:hover {
+  background-color: var(--borde-suave);
+  color: var(--indigo-profundo);
+  border-color: var(--indigo-profundo);
+}
+
+/* Previsualización pequeña del producto */
+.preview-small {
+  position: relative;
+  width: 100%;
+  height: 44px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--borde-medio);
+}
+
+.preview-small img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-small button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(229, 72, 77, 0.9); /* Rojo error de QPass con opacidad */
+  color: white;
+  border: none;
+  width: 35px;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.2s;
+}
+
+.preview-small button:hover {
+  background: var(--rojo-error);
+}
+
+/* Variación para las imágenes de productos en tabla */
+.img-cuadrada {
+  border-radius: 8px; /* En vez de redondas, las fotos de comida se ven mejor cuadradas/redondeadas */
+}
+
+/* Responsivo para el modal de productos */
+@media (max-width: 650px) {
+  .producto-grid {
+    grid-template-columns: 1fr;
+  }
+  .input-monto-wrapper .input-monto {
+    height: 44px; /* Ajuste para móviles */
+  }
+}
