@@ -29,6 +29,10 @@ const router = createBrowserRouter([
     element: <MenuLateral><Recargador /></MenuLateral>,
   },
   {
+    path: "/recargador/historial",
+    element: <MenuLateral><Recargador /></MenuLateral>,
+  },
+  {
     path: "/supervisor",
     element: <MenuLateral><Supervisor /></MenuLateral>,
   },
