@@ -8,10 +8,9 @@ import Login from './Login.jsx'
 import MenuLateral from './MenuLateral.jsx' 
 
 import Admin from './Admin.jsx'
+import AdminConfigurarPagina from './AdminConfigurarPagina.jsx'
 // 1. IMPORTAMOS TU NUEVA HOJA AQUÍ
-import AdCreaUsuarioNegocio from './AdCreaUsuarioNegocio.jsx'
-import UsuNegoCreaAyudante from './UsuNegoCreaAyudante.jsx'
-import UsuNegoDasboar from './UsuNegoDasboar.jsx'
+import AdCreaUsuarioNegocio from './AdCreaUsuarioNegocio.jsx' 
 
 import Cliente from './Cliente.jsx'
 import Recargador from './Recargador.jsx'
@@ -29,10 +28,6 @@ const router = createBrowserRouter([
   {
     path: "/admin",
     element: <MenuLateral><Admin /></MenuLateral>,
-  },
-  {
-    path: "/Cliente",
-    element: <MenuLateral><Cliente /></MenuLateral>,
   },
   // 2. AGREGAMOS LA NUEVA RUTA AQUÍ (Debe coincidir con la ruta de tu MenuLateral.jsx)
   {
