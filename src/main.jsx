@@ -13,6 +13,7 @@ import UsuNegoDasboar from './UsuNegoDasboar.jsx'
 // 1. IMPORTAMOS TU NUEVA HOJA AQUÍ
 import AdCreaUsuarioNegocio from './AdCreaUsuarioNegocio.jsx' 
 import UsuNegoCreaAyudante from './UsuNegoCreaAyudante.jsx'
+import Mapa from './Mapa.jsx'
 
 import Cliente from './Cliente.jsx'
 import Recargador from './Recargador.jsx'
@@ -51,6 +52,10 @@ const router = createBrowserRouter([
   {
     path: "/recargador/historial",
     element: <MenuLateral><Recargador /></MenuLateral>,
+  },
+  {
+    path: "/Mapa",
+    element: <MenuLateral><Mapa /></MenuLateral>,
   },
   {
     path: "/supervisor",

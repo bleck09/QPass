@@ -1,0 +1,390 @@
+/* =======================================================
+   MÓDULO: DISEÑADOR DE PLANOS (MAPA)
+   Guía de Tipografía y Colores: QPass
+======================================================= */
+
+.pi-mapa-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.pi-mapa-header-flex {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.pi-mapa-header-flex h2 {
+  color: var(--texto-principal);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0 0 5px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pi-mapa-header-flex p {
+  color: var(--texto-secundario);
+  font-size: 14px;
+  margin: 0;
+}
+
+/* --- TABS (Diseño Visual / Tabla) --- */
+.pi-mapa-tabs-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pi-mapa-tabs {
+  display: flex;
+  background-color: var(--blanco);
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.pi-mapa-tabs button {
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: var(--texto-secundario);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+}
+
+.pi-mapa-tabs button.active {
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
+}
+
+/* --- ALERTAS --- */
+.alerta-exito {
+  background-color: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
+  border: 1px solid rgba(0, 196, 140, 0.2);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* --- BOTONES GLOBALES --- */
+.btn-primario {
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.btn-primario:hover { 
+  background-color: var(--indigo-profundo-hover); 
+}
+
+.btn-secundario {
+  background-color: var(--blanco);
+  color: var(--texto-principal);
+  border: 1px solid var(--borde-medio);
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+}
+
+.btn-secundario:hover { 
+  background-color: var(--gris-niebla); 
+}
+
+/* =======================================================
+   VISTA 1: TABLA Y LISTADO DE ELEMENTOS
+======================================================= */
+.pi-mapa-tabla-vista {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pi-mapa-card {
+  background: var(--blanco);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  border: 1px solid var(--borde-suave);
+}
+
+.no-margin { padding: 0; }
+
+.table-wrapper { overflow-x: auto; }
+.pi-mapa-table { width: 100%; border-collapse: collapse; }
+
+.pi-mapa-table th {
+  padding: 14px;
+  border-bottom: 1px solid var(--borde-suave);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--gris-medio);
+}
+
+.pi-mapa-table td {
+  padding: 14px;
+  border-bottom: 1px solid var(--borde-suave);
+  font-size: 14px;
+  color: var(--texto-principal);
+  vertical-align: middle;
+}
+
+.pi-mapa-table tbody tr:hover { background-color: var(--gris-niebla); }
+
+.item-info-mapa {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.img-miniatura {
+  width: 40px; height: 40px; border-radius: 8px; object-fit: cover; border: 1px solid var(--borde-suave);
+}
+
+.no-img-miniatura {
+  width: 40px; height: 40px; border-radius: 8px; background-color: var(--gris-niebla);
+  display: flex; justify-content: center; align-items: center; color: var(--gris-medio);
+}
+
+.fila-nombre { font-weight: 600 !important; }
+
+/* Badges de Estado */
+.badge-visible { background-color: var(--verde-recarga-suave); color: var(--verde-recarga-texto); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+.badge-oculto { background-color: var(--rojo-error-suave); color: var(--rojo-error-texto); padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; }
+
+/* Botones de acción en tabla */
+.btn-icon-editar, .btn-icon-ocultar, .btn-icon-visible {
+  background: transparent; border: 1px solid; padding: 6px 10px; border-radius: 6px; cursor: pointer; margin-right: 8px; transition: all 0.2s;
+}
+
+.btn-icon-editar { border-color: var(--cian-digital); color: var(--cian-digital-texto); }
+.btn-icon-editar:hover { background: var(--cian-digital-suave); }
+
+.btn-icon-ocultar { border-color: var(--rojo-error); color: var(--rojo-error); }
+.btn-icon-ocultar:hover { background: var(--rojo-error-suave); }
+
+.btn-icon-visible { border-color: var(--verde-recarga); color: var(--verde-recarga); }
+.btn-icon-visible:hover { background: var(--verde-recarga-suave); }
+
+
+/* =======================================================
+   VISTA 2: PLANO VISUAL INTERACTIVO (DRAG & RESIZE)
+======================================================= */
+.pi-mapa-plano-vista {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.plano-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--blanco);
+  padding: 16px 20px;
+  border-radius: 12px;
+  border: 1px solid var(--borde-suave);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: all 0.3s;
+}
+
+.plano-toolbar.diseno-activo { border-color: var(--cian-digital); background-color: var(--cian-digital-suave); }
+
+.toolbar-actions { display: flex; align-items: center; gap: 16px; }
+
+.info-text { font-size: 14px; color: var(--gris-medio); display: flex; align-items: center; gap: 8px; }
+.info-text-verde { font-size: 14px; font-weight: 600; color: var(--cian-digital-texto); display: flex; align-items: center; gap: 8px; }
+
+.btn-guardar-plano {
+  background-color: var(--verde-recarga); color: var(--blanco); border: none; padding: 10px 20px;
+  border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px;
+}
+.btn-guardar-plano:hover { background-color: var(--verde-recarga-hover); }
+
+/* --- EL LIENZO (CANVAS) --- */
+.canvas-plano {
+  width: 100%;
+  height: 600px;
+  background-color: var(--blanco);
+  background-image: radial-gradient(var(--borde-medio) 1.5px, transparent 1.5px);
+  background-size: 20px 20px;
+  border: 2px solid var(--borde-suave);
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+  transition: border-color 0.3s;
+}
+
+.canvas-plano.canvas-activo { border-color: var(--cian-digital); }
+
+/* CAJAS DINÁMICAS (Puestos/Elementos en el plano) */
+.puesto-box-dinamico {
+  position: absolute;
+  border-radius: 12px;
+  overflow: hidden; /* Clave para que la imagen no se desborde al achicar */
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  user-select: none;
+  cursor: default;
+  transition: box-shadow 0.2s;
+  background-color: var(--blanco);
+  border: 2px solid var(--indigo-profundo);
+  z-index: 1; /* z-index base */
+}
+
+/* Al moverse o redimensionarse, la caja sube al frente */
+.puesto-box-dinamico.activo-top {
+  z-index: 10 !important; 
+  border-color: var(--cian-digital);
+  box-shadow: 0 10px 25px rgba(0, 180, 216, 0.4);
+}
+
+.puesto-box-dinamico.arrastrable { cursor: grab; border-style: dashed; }
+.puesto-box-dinamico.arrastrando { cursor: grabbing; }
+
+/* Estado 1: Caja con Imagen Escalable */
+.box-fondo-img {
+  width: 100%; height: 100%;
+  background-size: cover; 
+  background-position: center; 
+  background-repeat: no-repeat;
+  position: relative;
+}
+
+.box-overlay-texto {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: rgba(10, 14, 39, 0.8); 
+  padding: 6px 12px;
+  color: var(--blanco); text-align: center;
+  padding-right: 20px; /* Evita que el texto pise el botón de redimensionar */
+}
+
+.box-overlay-texto strong { 
+  font-size: 13px; font-weight: 700; line-height: 1.1; display: block; 
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Estado 2: Caja sin Imagen (Color Corporativo) */
+.box-fondo-color {
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  text-align: center; padding: 10px; background-color: var(--blanco);
+}
+
+.puesto-icon-dinamico { font-size: 24px; color: var(--indigo-profundo); margin-bottom: 4px; }
+.puesto-box-dinamico.activo-top .puesto-icon-dinamico { color: var(--cian-digital); }
+
+.box-fondo-color strong { color: var(--texto-principal); font-size: 13px; font-weight: 700; line-height: 1.2; }
+.box-fondo-color span { color: var(--texto-secundario); font-size: 11px; margin-top: 4px; }
+
+/* --- TIRADOR PARA REDIMENSIONAR (RESIZE) --- */
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: var(--cian-digital);
+  cursor: se-resize; /* Cursor de doble flecha diagonal */
+  z-index: 20;
+  /* Dibuja un triángulo en la esquina inferior derecha */
+  clip-path: polygon(100% 0, 0% 100%, 100% 100%);
+  transition: background 0.2s, transform 0.2s;
+}
+
+.resize-handle:hover {
+  background: var(--rojo-error); /* Feedback visual al pasar el mouse */
+  transform: scale(1.2);
+  transform-origin: bottom right;
+}
+
+
+/* =======================================================
+   MODAL GENERAL (Formulario de añadir/editar)
+======================================================= */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(10, 14, 39, 0.7); 
+  display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px;
+}
+
+.modal {
+  background: var(--blanco); width: 100%; max-width: 500px; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+
+.modal-header {
+  padding: 18px 24px; background-color: var(--gris-niebla); border-bottom: 1px solid var(--borde-suave);
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.modal-header h2 { margin: 0; color: var(--texto-principal); font-size: 22px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+
+.btn-close-modal { background: none; border: none; color: var(--gris-medio); font-size: 20px; cursor: pointer; }
+.btn-close-modal:hover { color: var(--rojo-error); }
+
+.modal-body { padding: 24px; max-height: 80vh; overflow-y: auto;}
+
+.formulario { display: flex; flex-direction: column; gap: 16px; }
+
+.form-inline { display: flex; gap: 16px; width: 100%; }
+.flex-1 { flex: 1; }
+
+.input-group { display: flex; flex-direction: column; gap: 6px;}
+.input-group label { font-size: 14px; font-weight: 600; color: var(--texto-principal); }
+
+.input-group input, .pi-select-rol {
+  width: 100%; padding: 10px 14px; border: 1px solid var(--borde-medio); border-radius: 8px; outline: none; font-family: inherit;
+  font-size: 14px; color: var(--texto-principal); background-color: var(--blanco); transition: border-color 0.2s;
+}
+.input-group input:focus, .pi-select-rol:focus { border-color: var(--cian-digital); }
+
+.upload-zone-pequeña {
+  width: 100%; padding: 15px; border: 2px dashed var(--borde-medio); border-radius: 8px; background-color: var(--gris-niebla);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; position: relative; transition: all 0.2s;
+}
+.upload-zone-pequeña:hover { background-color: var(--cian-digital-suave); border-color: var(--cian-digital); }
+.upload-icon { font-size: 20px; color: var(--cian-digital); margin-bottom: 5px; }
+.upload-text { font-size: 13px; font-weight: 600; color: var(--texto-principal); }
+.upload-input-hidden { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+.preview-zone { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 10px; border: 1px solid var(--borde-suave); border-radius: 8px; background-color: var(--blanco); }
+.img-preview-rect { width: 100%; object-fit: contain; border-radius: 6px; }
+.btn-quitar-imagen { background: var(--rojo-error-suave); color: var(--rojo-error-texto); border: none; padding: 6px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.btn-quitar-imagen:hover { background: var(--rojo-error); color: var(--blanco); }
+
+.modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px; padding-top: 16px; border-top: 1px solid var(--borde-suave);}
+.btn-cancelar { background: var(--blanco); border: 1px solid var(--borde-medio); color: var(--texto-principal); padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 14px;}
+.btn-cancelar:hover { background: var(--gris-niebla); }

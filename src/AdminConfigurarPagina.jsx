@@ -1,37 +1,55 @@
 import { useState } from 'react';
 import { 
   FaPlus, FaTrash, FaSave, FaEye, FaImage, FaUpload, 
-  FaPalette, FaTextHeight, FaListUl, FaRegCalendarAlt, FaUndo 
+  FaPalette, FaTextHeight, FaListUl, FaRegCalendarAlt, FaUndo,
+  FaTicketAlt, FaChartLine, FaExchangeAlt, FaStore, FaQrcode, 
+  FaTimes, FaClock // <-- ¡Aquí está el FaTimes corregido y FaClock añadido!
 } from 'react-icons/fa';
 import './AdminConfigurarPagina.css';
 
-// Configuración extendida con la paleta de colores de alto contraste por defecto
+// Configuración por defecto (Estilo Dark / Glassmorphism)
 const defaultLandingConfig = {
-  titulo: 'Plataforma de Gestión Financiera',
-  informacion: 'Sistema centralizado para el control, monitoreo y auditoría de ingresos diarios. Optimiza los procesos de recarga y devoluciones con total transparencia y eficacia en tiempo real.',
-  imagen: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-  colorPrimario: '#1A2B6B',     // Índigo profundo (botones primarios)
-  colorFondo: '#F5F7FB',        // Gris niebla
-  colorTextoTitulo: '#0A0E27',  // Azul noche
-  colorTextoP: '#0A0E27',       // Azul noche
+  titulo: 'Innovación. Control. Resultados.',
+  informacion: 'Sistema centralizado para el control, monitoreo y auditoría de ingresos diarios. Optimiza los procesos de recarga mediante pulseras QR con total transparencia y datos en tiempo real.',
+  imagen: 'https://images.unsplash.com/photo-1634152962476-4b8a00e1915c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+  colorPrimario: '#00B4D8',     
+  colorBoton: '#FFFFFF',        
+  colorFondo: '#0b1120',        
+  colorTextoTitulo: '#FFFFFF',  
+  colorTextoP: '#94A3B8',       
   actividades: [
-    { icono: '💵', titulo: 'Recaudación Diaria', descripcion: 'Registro exacto de todos los ingresos generados en los puntos de recarga.' },
-    { icono: '📊', titulo: 'Auditoría Continua', descripcion: 'Supervisión de transacciones para garantizar que no existan descuadres.' },
-    { icono: '🔁', titulo: 'Gestión de Devoluciones', descripcion: 'Proceso rápido y documentado para cualquier ajuste o reembolso necesario.' }
+    { icono: 'ticket', titulo: 'Recaudación Diaria', descripcion: 'Registro exacto de ingresos.' },
+    { icono: 'chart', titulo: 'Auditoría Continua', descripcion: 'Supervisión en tiempo real.' },
+    { icono: 'sync', titulo: 'Devoluciones', descripcion: 'Reembolsos rápidos y seguros.' },
+    { icono: 'store', titulo: 'Gestión de Puestos', descripcion: 'Control total de inventario.' }
   ],
   cronograma: [
-    { hora: '08:00', actividad: 'Apertura del sistema y asignación de saldos iniciales' },
-    { hora: '13:00', actividad: 'Arqueo de caja y revisión de medio turno' }
+    { hora: '08:00', actividad: 'Apertura de puertas y entrega de pulseras QR' },
+    { hora: '13:00', actividad: 'Inicio de shows en vivo y apertura de patios de comida' },
+    { hora: '23:30', actividad: 'Cierre del evento y balance de cajas' }
   ]
 };
+
+const opcionesIconos = [
+  { valor: 'ticket', etiqueta: 'Ticket / Entrada' },
+  { valor: 'chart', etiqueta: 'Gráfico / Finanzas' },
+  { valor: 'sync', etiqueta: 'Sincronizar / Devolución' },
+  { valor: 'store', etiqueta: 'Tienda / Puesto' },
+  { valor: 'qrcode', etiqueta: 'Código QR' }
+];
 
 export default function AdminConfigurarPagina() {
   const [config, setConfig] = useState(() => {
     const dataGuardada = localStorage.getItem('pi_landing_config');
-    return dataGuardada ? JSON.parse(dataGuardada) : defaultLandingConfig;
+    if (dataGuardada) {
+      const parsed = JSON.parse(dataGuardada);
+      if(!parsed.colorBoton) parsed.colorBoton = defaultLandingConfig.colorBoton;
+      return parsed;
+    }
+    return defaultLandingConfig;
   });
   
-  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' }); // Mejor manejo de mensajes (éxito o aviso)
+  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [showPreview, setShowPreview] = useState(false);
 
   const handleChange = (e) => {
@@ -69,13 +87,22 @@ export default function AdminConfigurarPagina() {
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000); 
   };
 
-  // --- NUEVA FUNCIÓN: RESTABLECER VALORES POR DEFECTO ---
   const restablecerValores = () => {
-    if (window.confirm("¿Estás seguro de que deseas volver a los valores originales? Esto sobrescribirá tus cambios actuales.")) {
+    if (window.confirm("¿Estás seguro de que deseas volver a los valores originales del diseño moderno?")) {
       setConfig(defaultLandingConfig);
       localStorage.setItem('pi_landing_config', JSON.stringify(defaultLandingConfig));
       setMensaje({ texto: 'Se han restaurado los valores por defecto.', tipo: 'aviso' });
       setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000); 
+    }
+  };
+
+  const renderIconoPrevio = (valor) => {
+    switch(valor) {
+      case 'ticket': return <FaTicketAlt />;
+      case 'chart': return <FaChartLine />;
+      case 'sync': return <FaExchangeAlt />;
+      case 'store': return <FaStore />;
+      default: return <FaQrcode />;
     }
   };
 
@@ -85,13 +112,12 @@ export default function AdminConfigurarPagina() {
       <div className="pi-admin-header">
         <h2>Gestión de la Landing Page</h2>
         <div className="pi-admin-header-actions">
-          {/* NUEVO BOTÓN: RESTABLECER */}
           <button className="pi-admin-btn-reset" onClick={restablecerValores}>
             <FaUndo /> Restablecer
           </button>
           
           <button className="pi-admin-btn-preview" onClick={() => setShowPreview(true)}>
-            <FaEye /> Vista Previa
+            <FaEye /> Vista Previa Completa
           </button>
           <button className="pi-admin-btn-save" onClick={guardarConfiguracion}>
             <FaSave /> Guardar Cambios
@@ -110,29 +136,41 @@ export default function AdminConfigurarPagina() {
         {/* SECCIÓN 1: COLORES */}
         <div className="pi-admin-card">
           <h3><FaPalette color="var(--cian-digital-texto)" /> Apariencia y Colores</h3>
+          <p className="texto-ayuda">Edita la paleta de colores de tu página principal.</p>
           <div className="pi-admin-colors-grid">
             <div className="pi-admin-form-group">
-              <label>Principal (Botones)</label>
+              <label>Color de Acento (Detalles)</label>
               <div className="pi-admin-color-picker">
                 <input type="color" name="colorPrimario" value={config.colorPrimario} onChange={handleChange} />
+                <span className="hex-label">{config.colorPrimario.toUpperCase()}</span>
               </div>
             </div>
             <div className="pi-admin-form-group">
-              <label>Fondo Superior</label>
+              <label>Botón Principal</label>
+              <div className="pi-admin-color-picker">
+                <input type="color" name="colorBoton" value={config.colorBoton} onChange={handleChange} />
+                <span className="hex-label">{config.colorBoton.toUpperCase()}</span>
+              </div>
+            </div>
+            <div className="pi-admin-form-group">
+              <label>Fondo de la Página</label>
               <div className="pi-admin-color-picker">
                 <input type="color" name="colorFondo" value={config.colorFondo} onChange={handleChange} />
+                <span className="hex-label">{config.colorFondo.toUpperCase()}</span>
               </div>
             </div>
             <div className="pi-admin-form-group">
-              <label>Color del Título</label>
+              <label>Textos de Títulos</label>
               <div className="pi-admin-color-picker">
                 <input type="color" name="colorTextoTitulo" value={config.colorTextoTitulo} onChange={handleChange} />
+                <span className="hex-label">{config.colorTextoTitulo.toUpperCase()}</span>
               </div>
             </div>
             <div className="pi-admin-form-group">
-              <label>Color de Párrafos</label>
+              <label>Textos Generales</label>
               <div className="pi-admin-color-picker">
                 <input type="color" name="colorTextoP" value={config.colorTextoP} onChange={handleChange} />
+                <span className="hex-label">{config.colorTextoP.toUpperCase()}</span>
               </div>
             </div>
           </div>
@@ -156,36 +194,32 @@ export default function AdminConfigurarPagina() {
             <label><FaImage /> Imagen de Portada</label>
             <div className="pi-admin-image-upload-wrapper">
               <label htmlFor="file-upload" className="pi-admin-btn-upload">
-                <FaUpload /> Subir imagen desde la PC
+                <FaUpload /> Subir imagen
               </label>
               <input id="file-upload" type="file" accept="image/*" onChange={handleImageUpload} hidden />
-              
-              <span style={{ fontSize: '12px', color: 'var(--gris-medio)', marginLeft: '10px' }}>
-                o pega una URL abajo:
-              </span>
+              <span className="texto-ayuda" style={{ marginLeft: '10px' }}>o pega una URL abajo:</span>
             </div>
-            
-            <input 
-              type="text" name="imagen" value={config.imagen} onChange={handleChange} 
-              placeholder="https://..." style={{ marginTop: '8px' }}
-            />
-            {config.imagen && (
-              <img src={config.imagen} alt="Vista previa" className="pi-admin-preview-img" />
-            )}
+            <input type="text" name="imagen" value={config.imagen} onChange={handleChange} placeholder="https://..." style={{ marginTop: '8px' }} />
+            {config.imagen && <img src={config.imagen} alt="Vista previa" className="pi-admin-preview-img" />}
           </div>
         </div>
 
         {/* SECCIÓN 3: ACTIVIDADES */}
         <div className="pi-admin-card">
           <div className="pi-admin-card-header">
-            <h3><FaListUl color="var(--cian-digital-texto)" /> Actividades</h3>
-            <button className="pi-admin-btn-add" onClick={() => addToArray('actividades', { icono: '📌', titulo: '', descripcion: '' })}>
-              <FaPlus /> Añadir
+            <h3><FaListUl color="var(--cian-digital-texto)" /> Actividades Destacadas</h3>
+            <button className="pi-admin-btn-add" onClick={() => addToArray('actividades', { icono: 'ticket', titulo: '', descripcion: '' })}>
+              <FaPlus /> Añadir Fila
             </button>
           </div>
           {config.actividades.map((act, index) => (
             <div key={index} className="pi-admin-dynamic-row">
-              <input type="text" value={act.icono} onChange={(e) => updateArray('actividades', index, 'icono', e.target.value)} className="pi-admin-input-small" />
+              <div className="icon-selector-wrapper">
+                <span className="icon-preview" style={{ color: config.colorPrimario }}>{renderIconoPrevio(act.icono)}</span>
+                <select value={act.icono} onChange={(e) => updateArray('actividades', index, 'icono', e.target.value)} className="pi-admin-select-icon">
+                  {opcionesIconos.map(opc => <option key={opc.valor} value={opc.valor}>{opc.etiqueta}</option>)}
+                </select>
+              </div>
               <div className="pi-admin-dynamic-inputs">
                 <input type="text" placeholder="Título" value={act.titulo} onChange={(e) => updateArray('actividades', index, 'titulo', e.target.value)} />
                 <input type="text" placeholder="Descripción" value={act.descripcion} onChange={(e) => updateArray('actividades', index, 'descripcion', e.target.value)} />
@@ -200,13 +234,13 @@ export default function AdminConfigurarPagina() {
           <div className="pi-admin-card-header">
             <h3><FaRegCalendarAlt color="var(--cian-digital-texto)" /> Cronograma</h3>
             <button className="pi-admin-btn-add" onClick={() => addToArray('cronograma', { hora: '', actividad: '' })}>
-              <FaPlus /> Añadir
+              <FaPlus /> Añadir Fila
             </button>
           </div>
           {config.cronograma.map((item, index) => (
             <div key={index} className="pi-admin-dynamic-row">
-              <input type="time" value={item.hora} onChange={(e) => updateArray('cronograma', index, 'hora', e.target.value)} />
-              <input type="text" placeholder="Actividad" value={item.actividad} style={{ flex: 1 }} onChange={(e) => updateArray('cronograma', index, 'actividad', e.target.value)} />
+              <input type="time" value={item.hora} onChange={(e) => updateArray('cronograma', index, 'hora', e.target.value)} className="pi-admin-time-input" />
+              <input type="text" placeholder="¿Qué sucederá a esta hora?" value={item.actividad} style={{ flex: 1 }} onChange={(e) => updateArray('cronograma', index, 'actividad', e.target.value)} />
               <button className="pi-admin-btn-delete" onClick={() => removeFromArray('cronograma', index)}><FaTrash /></button>
             </div>
           ))}
@@ -214,30 +248,75 @@ export default function AdminConfigurarPagina() {
 
       </div>
 
-      {/* --- MODAL DE VISTA PREVIA --- */}
+      {/* --- MODAL DE VISTA PREVIA COMPLETA --- */}
       {showPreview && (
         <div className="pi-admin-modal-overlay">
-          <div className="pi-admin-modal">
-            <div className="pi-admin-modal-header">
-              <h3>👀 Así se verá tu página</h3>
-              <button className="pi-admin-btn-close" onClick={() => setShowPreview(false)}>Cerrar</button>
+          <div className="pi-admin-modal dark-glass-preview">
+            
+            <div className="pi-admin-modal-header dark-header">
+              <h3 style={{color: 'white', margin: 0}}>👀 Vista Previa (Modo Real)</h3>
+              <button className="pi-admin-btn-close-dark" onClick={() => setShowPreview(false)}><FaTimes /></button>
             </div>
             
-            <div className="pi-admin-modal-body" style={{ backgroundColor: config.colorFondo }}>
-              <div className="pi-admin-modal-text">
-                <h1 style={{ color: config.colorTextoTitulo, fontSize: '28px', marginBottom: '15px' }}>
-                  {config.titulo}
-                </h1>
-                <p style={{ color: config.colorTextoP, fontSize: '14px', marginBottom: '20px', lineHeight: '1.6' }}>
-                  {config.informacion}
-                </p>
-                <button style={{ backgroundColor: config.colorPrimario, color: 'white', padding: '10px 20px', border: 'none', borderRadius: '6px' }}>
-                  Ingresar al Portal
-                </button>
+            <div className="pi-admin-modal-body modal-scrollable" style={{ backgroundColor: config.colorFondo }}>
+              
+              {/* 1. SECCIÓN HERO PREVIEW */}
+              <div className="pi-admin-modal-content-flex">
+                <div className="pi-admin-modal-text">
+                  <h1 style={{ color: config.colorTextoTitulo, fontSize: '32px', fontWeight: '800', marginBottom: '20px', lineHeight: '1.2' }}>
+                    {config.titulo}
+                  </h1>
+                  <p style={{ color: config.colorTextoP, fontSize: '15px', marginBottom: '30px', lineHeight: '1.6' }}>
+                    {config.informacion}
+                  </p>
+                  <button style={{ 
+                    backgroundColor: config.colorBoton, 
+                    color: config.colorFondo, 
+                    padding: '12px 28px', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '15px'
+                  }}>
+                    Ingresar al Portal
+                  </button>
+                </div>
+                <div className="pi-admin-modal-image">
+                  {config.imagen ? (
+                    <img src={config.imagen} alt="Preview" style={{ borderRadius: '16px', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }} />
+                  ) : (
+                    <div className="no-img">Sin imagen</div>
+                  )}
+                </div>
               </div>
-              <div className="pi-admin-modal-image">
-                {config.imagen ? <img src={config.imagen} alt="Preview" /> : <div className="no-img">Sin imagen</div>}
+
+              <div className="preview-divider"></div>
+
+              {/* 2. SECCIÓN ACTIVIDADES PREVIEW */}
+              <h3 style={{ color: config.colorTextoTitulo, fontSize: '22px', textAlign: 'center', margin: '40px 0 20px 0' }}>Servicios Destacados</h3>
+              <div className="preview-grid-actividades">
+                {config.actividades.map((act, idx) => (
+                  <div key={idx} className="preview-glass-card">
+                    <div className="preview-icon-box" style={{ color: config.colorPrimario }}>
+                      {renderIconoPrevio(act.icono)}
+                    </div>
+                    <h4 style={{ color: config.colorTextoTitulo, margin: '10px 0' }}>{act.titulo}</h4>
+                    <p style={{ color: config.colorTextoP, fontSize: '13px', lineHeight: '1.4' }}>{act.descripcion}</p>
+                  </div>
+                ))}
               </div>
+
+              <div className="preview-divider"></div>
+
+              {/* 3. SECCIÓN CRONOGRAMA PREVIEW */}
+              <h3 style={{ color: config.colorTextoTitulo, fontSize: '22px', textAlign: 'center', margin: '40px 0 20px 0' }}>Cronograma</h3>
+              <div className="preview-cronograma-box">
+                {config.cronograma.map((item, idx) => (
+                  <div key={idx} className="preview-cronograma-item">
+                    <span className="preview-badge-hora" style={{ color: config.colorPrimario }}>
+                      <FaClock /> {item.hora}
+                    </span>
+                    <span style={{ color: config.colorTextoTitulo, fontWeight: '600' }}>{item.actividad}</span>
+                  </div>
+                ))}
+              </div>
+
             </div>
           </div>
         </div>

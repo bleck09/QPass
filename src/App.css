@@ -1,11 +1,41 @@
-/* Prefix único: pi-landing- para evitar conflictos con otras páginas */
+/* =======================================================
+   LANDING PAGE - DISEÑO PREMIUM GLASSMORPHISM
+======================================================= */
+
+/* Permite que los enlaces del menú se deslicen suavemente */
+html {
+  scroll-behavior: smooth;
+}
 
 .pi-landing-container {
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  color: var(--texto-principal);
-  margin: 0;
-  padding: 0;
-  background-color: var(--gris-niebla);
+  background-color: var(--color-fondo);
+  color: var(--color-texto-p);
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden; /* Para que las luces de fondo no generen scroll */
+}
+
+/* --- EFECTOS DE LUCES (GLOW) --- */
+.bg-glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  background: var(--color-primario);
+  filter: blur(150px);
+  border-radius: 50%;
+  opacity: 0.15;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.glow-top-left { top: -200px; left: -200px; }
+.glow-bottom-right { bottom: -200px; right: -200px; background: #6366f1; /* Morado sutil secundario */ }
+
+/* Todo el contenido debe estar por encima de las luces */
+.pi-landing-navbar, .pi-landing-hero, .pi-landing-section, .pi-landing-footer {
+  position: relative;
+  z-index: 1;
 }
 
 /* --- BARRA DE NAVEGACIÓN --- */
@@ -14,197 +44,308 @@
   justify-content: space-between;
   align-items: center;
   padding: 1rem 5%;
-  background-color: var(--azul-noche);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+  background: rgba(11, 17, 32, 0.7); /* Azul oscuro transparente */
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   position: sticky;
   top: 0;
   z-index: 1000;
 }
 
 .pi-landing-logo {
-  font-size: 1.5rem;
+  font-size: 1.6rem;
   font-weight: 800;
   display: flex;
   align-items: center;
   gap: 10px;
-  color: var(--blanco);
+  color: var(--color-texto-titulo);
+}
+
+.logo-icon { color: var(--color-primario); }
+
+.pi-landing-nav-links {
+  display: flex;
+  gap: 30px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pi-landing-nav-links a {
+  text-decoration: none;
+  color: var(--color-texto-p);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: color 0.3s;
+}
+
+.pi-landing-nav-links a:hover {
+  color: var(--color-texto-titulo);
 }
 
 .pi-landing-btn-nav {
-  /* El fondo lo controla dinámicamente App.jsx vía --color-primario (por defecto indigo-profundo) */
-  color: var(--texto-sobre-oscuro);
-  border: none;
+  background: transparent;
+  color: var(--color-texto-titulo);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   padding: 10px 24px;
-  border-radius: 6px;
+  border-radius: 20px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 1rem;
-  transition: opacity 0.3s ease;
+  transition: all 0.3s ease;
 }
 
 .pi-landing-btn-nav:hover {
-  opacity: 0.9;
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--color-texto-titulo);
 }
 
-/* --- SECCIÓN PRINCIPAL (HERO) --- */
+/* --- SECCIÓN HERO --- */
 .pi-landing-hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 5rem 5%;
-  min-height: 70vh;
-  /* Nota: El color de fondo ahora es controlado dinámicamente desde App.jsx */
+  padding: 6rem 5% 4rem 5%;
+  min-height: 80vh;
 }
 
-.pi-landing-hero-content {
-  flex: 1;
-  padding-right: 3rem;
+.pi-landing-hero-content { flex: 1; padding-right: 4rem; }
+
+.pi-landing-hero-content h1 { 
+  font-size: 4.5rem; 
+  font-weight: 800;
+  color: var(--color-texto-titulo);
+  margin-bottom: 1.5rem; 
+  line-height: 1.1; 
+  letter-spacing: -1px;
 }
 
-.pi-landing-hero-content h1 {
-  font-size: 3.5rem;
-  margin-bottom: 1.5rem;
-  line-height: 1.2;
-}
-
-.pi-landing-hero-content p {
-  font-size: 1.2rem;
-  line-height: 1.7;
-  margin-bottom: 2.5rem;
+.pi-landing-hero-content p { 
+  font-size: 1.2rem; 
+  line-height: 1.7; 
+  margin-bottom: 2.5rem; 
+  color: var(--color-texto-p);
+  max-width: 90%;
 }
 
 .pi-landing-btn-primary {
-  /* El fondo lo controla dinámicamente App.jsx vía --color-primario (por defecto indigo-profundo) */
-  color: var(--texto-sobre-oscuro);
-  border: none;
-  padding: 14px 32px;
+  background-color: var(--color-boton);
+  color: var(--color-fondo); /* El texto del botón toma el color del fondo para contraste */
+  border: none; 
+  padding: 16px 36px; 
   font-size: 1.1rem;
-  font-weight: 600;
-  border-radius: 8px;
+  font-weight: 700; 
+  border-radius: 30px; 
   cursor: pointer;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2); 
   transition: all 0.3s ease;
 }
 
-.pi-landing-btn-primary:hover {
-  opacity: 0.9;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+.pi-landing-btn-primary:hover { 
+  transform: translateY(-3px); 
+  box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2); 
 }
 
-.pi-landing-hero-image {
-  flex: 1;
-  text-align: right;
-}
+.pi-landing-hero-image { flex: 1; text-align: right; }
 
-.pi-landing-hero-image img {
-  max-width: 100%;
-  border-radius: 16px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+.floating-img { 
+  max-width: 100%; 
+  border-radius: 24px; 
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4); 
   object-fit: cover;
+  animation: float 6s ease-in-out infinite; /* Animación flotante */
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-20px); }
+  100% { transform: translateY(0px); }
 }
 
 /* --- SECCIONES GENERALES --- */
-.pi-landing-section {
-  padding: 5rem 5%;
+.pi-landing-section { 
+  padding: 5rem 5%; 
 }
 
-.pi-landing-bg-white { background-color: var(--blanco); }
-.pi-landing-bg-gray { background-color: var(--gris-niebla); }
+.pi-landing-section-header {
+  text-align: center;
+  margin-bottom: 3.5rem;
+}
 
 .pi-landing-section-title {
-  text-align: center;
-  font-size: 2.5rem;
-  margin-bottom: 3.5rem;
+  color: var(--color-texto-titulo);
+  font-size: 2.5rem; 
   font-weight: 700;
+  display: flex; justify-content: center; align-items: center; gap: 12px;
+  margin: 0 0 10px 0;
 }
 
-/* --- ACTIVIDADES (CARDS) --- */
+.pi-landing-subtitle {
+  color: var(--color-texto-p);
+  font-size: 1.1rem;
+}
+
+/* --- TARJETAS GLASSMORPHISM (Actividades) --- */
 .pi-landing-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 2.5rem;
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem;
 }
 
-.pi-landing-card {
-  background: var(--blanco);
-  padding: 2.5rem 2rem;
-  border-radius: 12px;
-  text-align: center;
-  border-top: 5px solid; /* El color exacto se inyecta por estilo en App.jsx */
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+.pi-landing-glass-card {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 2rem; 
+  border-radius: 20px;
+  transition: transform 0.3s, background 0.3s;
 }
 
-.pi-landing-card-icon {
-  font-size: 3rem;
-  margin-bottom: 1.5rem;
+.pi-landing-glass-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.06);
 }
 
-.pi-landing-card h3 {
-  margin-bottom: 10px;
-  color: var(--texto-principal);
+.pi-landing-card-header {
+  display: flex; justify-content: flex-start; margin-bottom: 1.5rem;
 }
 
-.pi-landing-card p {
-  color: var(--texto-principal);
-  line-height: 1.5;
+.pi-landing-card-icon { 
+  width: 50px; height: 50px; border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex; justify-content: center; align-items: center;
+  font-size: 24px; color: var(--color-primario);
 }
 
-/* --- CRONOGRAMA (TABLA) --- */
+.pi-landing-glass-card h3 { 
+  color: var(--color-texto-titulo); margin: 0 0 10px 0; font-size: 1.2rem; font-weight: 700; 
+}
+.pi-landing-glass-card p { 
+  color: var(--color-texto-p); line-height: 1.6; margin: 0; font-size: 0.95rem;
+}
+
+/* --- PANELES GLASS (Para Mapa y Tablas) --- */
+.glass-panel {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 20px;
+}
+
+/* --- MAPA INTERACTIVO PÚBLICO --- */
+.pi-landing-mapa-wrapper {
+  width: 100%; max-width: 1000px; margin: 0 auto; overflow-x: auto; 
+}
+
+.pi-landing-mapa-canvas {
+  width: 100%; min-width: 800px; height: 550px;
+  background-color: rgba(0, 0, 0, 0.2);
+  background-image: radial-gradient(rgba(255,255,255,0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+  position: relative; overflow: hidden; border-radius: 12px;
+}
+
+.pi-landing-puesto-box {
+  position: absolute; border-radius: 12px; overflow: hidden;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.5); cursor: pointer; 
+  transition: transform 0.2s, box-shadow 0.2s;
+  background-color: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.2);
+  backdrop-filter: blur(5px);
+}
+
+.pi-landing-puesto-box:hover {
+  transform: scale(1.05); box-shadow: 0 15px 30px rgba(0,0,0,0.8); z-index: 50; border-color: var(--color-primario);
+}
+
+.box-fondo-img { width: 100%; height: 100%; background-size: cover; background-position: center; position: relative; }
+.box-overlay-texto { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.8); padding: 8px; color: #ffffff; text-align: center; }
+.box-overlay-texto strong { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
+
+.box-fondo-color { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 10px; }
+.puesto-icon-dinamico { font-size: 28px; color: var(--color-primario); margin-bottom: 8px; }
+.box-fondo-color strong { color: #ffffff; font-size: 13px; font-weight: 700; line-height: 1.2; }
+.box-fondo-color span { color: #94A3B8; font-size: 11px; margin-top: 4px; text-transform: uppercase; }
+
+/* --- TABLA (Cronograma) --- */
 .pi-landing-table-wrapper {
-  max-width: 900px;
-  margin: 0 auto;
-  background: var(--blanco);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  max-width: 900px; margin: 0 auto; overflow: hidden;
 }
 
-.pi-landing-table {
-  width: 100%;
-  border-collapse: collapse;
+.pi-landing-table { width: 100%; border-collapse: collapse; }
+.pi-landing-table th, .pi-landing-table td { padding: 1.5rem; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+
+.pi-landing-table th { 
+  font-weight: 600; text-transform: uppercase; font-size: 12px; color: var(--color-texto-p); letter-spacing: 1px;
 }
 
-.pi-landing-table th, .pi-landing-table td {
-  padding: 1.5rem;
-  text-align: left;
-  border-bottom: 1px solid var(--borde-suave);
-}
+.pi-landing-table tbody tr:hover { background-color: rgba(255,255,255,0.02); }
+.pi-landing-table tr:last-child td { border-bottom: none; }
 
-.pi-landing-table th {
-  color: var(--blanco);
-  font-weight: 600;
+.col-hora { width: 150px; }
+.badge-hora {
+  background: rgba(255,255,255,0.05); color: var(--color-primario); border: 1px solid rgba(255,255,255,0.1);
+  padding: 8px 16px; border-radius: 20px; font-weight: 700; display: inline-block; font-size: 14px;
 }
-
-.pi-landing-table tr:last-child td {
-  border-bottom: none;
-}
-
-.pi-landing-table tbody tr:hover {
-  background-color: var(--gris-niebla);
-}
+.col-actividad { color: var(--color-texto-titulo); font-size: 1.1rem; font-weight: 600; }
 
 /* --- FOOTER --- */
-.pi-landing-footer {
-  background-color: var(--azul-noche);
-  color: var(--gris-medio);
-  text-align: center;
-  padding: 2rem;
-  font-size: 0.95rem;
+.glass-footer {
+  background: rgba(0, 0, 0, 0.3); border-top: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--color-texto-p); text-align: center; padding: 3rem; font-size: 0.95rem;
+}
+.footer-logo { display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 15px; color: var(--color-texto-titulo); font-size: 1.2rem;}
+
+/* =========================================
+   MODAL GLASSMORPHISM (CATÁLOGO PUESTO)
+========================================= */
+.pi-landing-modal-overlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.6);
+  display: flex; justify-content: center; align-items: center; z-index: 9999; padding: 20px; backdrop-filter: blur(10px);
 }
 
-/* --- DISEÑO RESPONSIVO (MÓVILES) --- */
-@media (max-width: 768px) {
-  .pi-landing-hero {
-    flex-direction: column;
-    text-align: center;
-    padding: 3rem 5%;
-  }
-  .pi-landing-hero-content {
-    padding-right: 0;
-    margin-bottom: 3rem;
-  }
-  .pi-landing-hero-image {
-    text-align: center;
-  }
+.glass-modal {
+  background: rgba(15, 23, 42, 0.85); /* Azul noche translúcido */
+  border: 1px solid rgba(255,255,255,0.1);
+  width: 100%; max-width: 500px; border-radius: 20px; overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5); animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.pi-landing-modal-header {
+  padding: 24px; display: flex; justify-content: space-between; align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.05); background: rgba(0,0,0,0.2);
+}
+
+.modal-header-info { display: flex; align-items: center; gap: 16px; }
+.modal-puesto-img { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--color-primario); }
+.modal-puesto-no-img { width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: center; align-items: center; font-size: 24px; color: var(--color-texto-titulo);}
+
+.pi-landing-modal-header h2 { margin: 0; color: var(--color-texto-titulo); font-size: 1.5rem;}
+.btn-close-modal { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--color-texto-p); width: 40px; height: 40px; border-radius: 50%; font-size: 18px; cursor: pointer; transition: all 0.2s; display: flex; justify-content: center; align-items: center;}
+.btn-close-modal:hover { background: rgba(255,255,255,0.1); color: #fff; }
+
+.pi-landing-modal-body { padding: 24px; }
+.modal-categoria-badge { background: rgba(255,255,255,0.05); color: var(--color-primario); border: 1px solid rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;}
+
+.modal-menu-title { margin-top: 24px; margin-bottom: 20px; color: var(--color-texto-titulo); display: flex; align-items: center; gap: 10px; font-size: 1.2rem;}
+
+.inner-table { background: transparent; padding: 0; border-radius: 0; border: none;}
+.inner-table .pi-landing-table th { background-color: rgba(0,0,0,0.2); color: var(--color-texto-p); }
+.prod-nombre { font-weight: 600; color: var(--color-texto-titulo); font-size: 1rem;}
+.prod-precio { background-color: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: var(--color-texto-titulo); padding: 8px 14px; border-radius: 12px; font-weight: 700; }
+
+.modal-empty-state { text-align: center; padding: 40px 20px; background: rgba(255,255,255,0.02); border-radius: 16px; border: 1px dashed rgba(255,255,255,0.1); color: var(--color-texto-p); font-size: 1rem;}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .pi-landing-nav-links { display: none; /* En móviles ocultamos los links por espacio */ }
+  .pi-landing-hero { flex-direction: column; text-align: center; padding: 4rem 5%; }
+  .pi-landing-hero-content { padding-right: 0; margin-bottom: 3rem; }
+  .pi-landing-hero-content h1 { font-size: 3rem; }
+  .pi-landing-hero-content p { max-width: 100%; margin: 0 auto 2.5rem auto; }
 }

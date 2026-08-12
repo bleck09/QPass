@@ -13,7 +13,8 @@ const menuConfig = {
   Admin: [
     { titulo: 'Dashboard General', ruta: '/admin', icono: <FaChartPie /> },
     { titulo: 'Usuario de Negocio', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
-    { titulo: 'Configurar Página', ruta: '/admin/config', icono: <FaCog /> }
+    { titulo: 'Configurar Página', ruta: '/admin/config', icono: <FaCog /> },
+    { titulo: 'Mapa', ruta: '/Mapa', icono: <FaCog /> }
   ],
   Cliente: [
     { titulo: 'Propuesta', ruta: '/Cliente', icono: <FaCashRegister /> }

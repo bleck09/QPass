@@ -1,128 +1,211 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FaChartLine, FaClock } from 'react-icons/fa';
+import { 
+  FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt, 
+  FaQrcode, FaMapMarkedAlt, FaStore, FaTimes, FaHamburger 
+} from 'react-icons/fa';
 import './App.css'; 
 
-// PALETA DE COLORES ELEGANTE Y DE ALTO CONTRASTE
+// NUEVA PALETA POR DEFECTO (Estilo Dark / Glassmorphism)
 const defaultLandingData = {
-  titulo: 'Plataforma de Gestión Financiera',
-  informacion: 'Sistema centralizado para el control, monitoreo y auditoría de ingresos diarios. Optimiza los procesos de recarga y devoluciones con total transparencia y eficacia en tiempo real.',
-  imagen: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-  colorPrimario: '#1A2B6B',     // Índigo profundo (marca, botones primarios)
-  colorFondo: '#F5F7FB',        // Gris niebla (fondo claro general)
-  colorTextoTitulo: '#0A0E27',  // Azul noche (máximo contraste de lectura)
-  colorTextoP: '#0A0E27',       // Azul noche (párrafos)
+  titulo: 'Innovación. Control. Resultados.',
+  informacion: 'Sistema centralizado para el control, monitoreo y auditoría de ingresos diarios. Optimiza los procesos de recarga mediante pulseras QR con total transparencia y datos en tiempo real.',
+  // Usamos una imagen de tecnología/abstracta de Unsplash que simule el 3D de la referencia
+  imagen: 'https://images.unsplash.com/photo-1634152962476-4b8a00e1915c?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
+  colorPrimario: '#00B4D8',     // Cian brillante para acentos
+  colorBoton: '#FFFFFF',        // Blanco para el botón principal (como en la foto)
+  colorFondo: '#0b1120',        // Azul casi negro (Fondo principal)
+  colorTextoTitulo: '#FFFFFF',  // Blanco puro para títulos
+  colorTextoP: '#94A3B8',       // Gris azulado para párrafos
   actividades: [
-    { icono: '💵', titulo: 'Recaudación Diaria', descripcion: 'Registro exacto de todos los ingresos generados en los puntos de recarga.' },
-    { icono: '📊', titulo: 'Auditoría Continua', descripcion: 'Supervisión de transacciones para garantizar que no existan descuadres.' },
-    { icono: '🔁', titulo: 'Gestión de Devoluciones', descripcion: 'Proceso rápido y documentado para cualquier ajuste o reembolso necesario.' }
+    { icono: 'ticket', titulo: 'Recaudación Diaria', descripcion: 'Registro exacto de ingresos.' },
+    { icono: 'chart', titulo: 'Auditoría Continua', descripcion: 'Supervisión en tiempo real.' },
+    { icono: 'sync', titulo: 'Devoluciones', descripcion: 'Reembolsos rápidos y seguros.' },
+    { icono: 'store', titulo: 'Gestión de Puestos', descripcion: 'Control total de inventario.' }
   ],
   cronograma: [
-    { hora: '08:00', actividad: 'Apertura del sistema y asignación de saldos iniciales' },
-    { hora: '13:00', actividad: 'Arqueo de caja y revisión de medio turno' },
-    { hora: '18:30', actividad: 'Cierre general, conciliación y envío de reportes finales' }
+    { hora: '08:00', actividad: 'Apertura de puertas y entrega de pulseras QR' },
+    { hora: '13:00', actividad: 'Inicio de shows en vivo y apertura de patios de comida' },
+    { hora: '23:30', actividad: 'Cierre del evento y balance de cajas' }
   ]
 };
+
+// Datos del mapa
+const mockMapa = [
+  { id: '1', numero: 'Pizzas El Paso', foto: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&w=150&q=80', categoria: 'Comida', estadoActivo: true, x: 50, y: 50, ancho: 120, alto: 100 },
+  { id: '2', numero: 'Pollos Doña María', foto: 'https://images.unsplash.com/photo-1626082896492-766af4eb65ed?ixlib=rb-4.0.3&w=150&q=80', categoria: 'Comida', estadoActivo: true, x: 200, y: 150, ancho: 120, alto: 100 },
+  { id: '3', numero: 'Escenario Principal', foto: null, categoria: 'Entretenimiento', estadoActivo: true, x: 400, y: 50, ancho: 250, alto: 120 }
+];
 
 export default function App() {
   const navigate = useNavigate();
 
-  // Leemos el localStorage
   const [data] = useState(() => {
     const dataGuardada = localStorage.getItem('pi_landing_config');
     return dataGuardada ? JSON.parse(dataGuardada) : defaultLandingData;
   });
 
-  const handleLoginClick = () => {
-    navigate('/login');
-  };
+  const [mapaPuestos] = useState(() => {
+    const mapaGuardado = localStorage.getItem('pi_mapa_puestos');
+    return mapaGuardado ? JSON.parse(mapaGuardado) : mockMapa;
+  });
 
-  // Inyectamos TODOS los colores dinámicamente con la protección de fallbacks
+  const [puestoModal, setPuestoModal] = useState(null);
+
+  const handleLoginClick = () => navigate('/login');
+
+  // Aplicamos los colores dinámicos al contenedor principal
   const estiloDinamico = {
     '--color-primario': data.colorPrimario || defaultLandingData.colorPrimario,
+    '--color-boton': data.colorBoton || defaultLandingData.colorBoton,
     '--color-fondo': data.colorFondo || defaultLandingData.colorFondo,
     '--color-texto-titulo': data.colorTextoTitulo || defaultLandingData.colorTextoTitulo,
     '--color-texto-p': data.colorTextoP || defaultLandingData.colorTextoP,
   };
 
+  const renderIcono = (nombreIcono) => {
+    switch(nombreIcono) {
+      case 'ticket': return <FaTicketAlt />;
+      case 'chart': return <FaChartLine />;
+      case 'sync': return <FaExchangeAlt />;
+      case 'store': return <FaStore />;
+      default: return <FaQrcode />;
+    }
+  };
+
+  const obtenerProductosMock = (categoria) => {
+    if (categoria === 'Comida') {
+      return [
+        { id: 1, nombre: 'Combo Especial', precio: 35.00 },
+        { id: 2, nombre: 'Porción Personal', precio: 15.00 },
+        { id: 3, nombre: 'Gaseosa 500ml', precio: 10.00 }
+      ];
+    }
+    return []; 
+  };
+
+  const abrirModalPuesto = (puesto) => {
+    setPuestoModal({ ...puesto, productos: puesto.productos || obtenerProductosMock(puesto.categoria) });
+  };
+
   return (
     <div className="pi-landing-container" style={estiloDinamico}>
       
-      {/* Barra de Navegación */}
+      {/* BARRA DE NAVEGACIÓN (Estilo Moderno Fija) */}
       <nav className="pi-landing-navbar">
-        <div className="pi-landing-logo" style={{ color: 'var(--color-primario)' }}>
-          <FaChartLine size={28} />
-          Proyecto de Ingresos
+        <div className="pi-landing-logo">
+          <FaQrcode className="logo-icon" />
+          <span>QPass</span>
         </div>
-        <button 
-          className="pi-landing-btn-nav" 
-          style={{ backgroundColor: 'var(--color-primario)' }}
-          onClick={handleLoginClick}
-        >
+        
+        {/* Enlaces con anclas para el Scroll Suave */}
+        <ul className="pi-landing-nav-links">
+          <li><a href="#inicio">Inicio</a></li>
+          <li><a href="#actividades">Actividades</a></li>
+          <li><a href="#mapa">Mapa del Evento</a></li>
+          <li><a href="#cronograma">Cronograma</a></li>
+        </ul>
+
+        <button className="pi-landing-btn-nav" onClick={handleLoginClick}>
           Iniciar Sesión
         </button>
       </nav>
 
-      {/* Sección Principal (Hero) - Aplicando colores de fondo y texto */}
-      <header className="pi-landing-hero" style={{ backgroundColor: 'var(--color-fondo)' }}>
+      {/* EFECTOS DE LUCES DE FONDO (Glow) */}
+      <div className="bg-glow glow-top-left"></div>
+      <div className="bg-glow glow-bottom-right"></div>
+
+      {/* SECCIÓN HERO */}
+      <header id="inicio" className="pi-landing-hero">
         <div className="pi-landing-hero-content">
-          <h1 style={{ color: 'var(--color-texto-titulo)' }}>{data.titulo}</h1>
-          <p style={{ color: 'var(--color-texto-p)' }}>{data.informacion}</p>
-          <button 
-            className="pi-landing-btn-primary" 
-            style={{ backgroundColor: 'var(--color-primario)' }}
-            onClick={handleLoginClick}
-          >
+          <h1>{data.titulo}</h1>
+          <p>{data.informacion}</p>
+          <button className="pi-landing-btn-primary" onClick={handleLoginClick}>
             Ingresar al Portal
           </button>
         </div>
         <div className="pi-landing-hero-image">
-          <img src={data.imagen} alt="Dashboard de Gestión" />
+          {/* Añadimos una clase para hacer que la imagen "flote" */}
+          <img src={data.imagen} alt="Evento QPass" className="floating-img" />
         </div>
       </header>
 
-      {/* Sección de Actividades Dinámica */}
-      <section className="pi-landing-section pi-landing-bg-white">
-        <h2 className="pi-landing-section-title" style={{ color: 'var(--color-primario)' }}>
-          Nuestras Actividades Clave
-        </h2>
+      {/* SECCIÓN ACTIVIDADES (Efecto Cristal) */}
+      <section id="actividades" className="pi-landing-section">
+        <h2 className="pi-landing-section-title">Servicios Destacados</h2>
         <div className="pi-landing-grid">
           {data.actividades.map((actividad, index) => (
-            <div 
-              key={index} 
-              className="pi-landing-card" 
-              style={{ borderTopColor: 'var(--color-primario)' }}
-            >
-              <div className="pi-landing-card-icon">{actividad.icono}</div>
-              <h3 style={{ color: 'var(--color-texto-titulo)' }}>{actividad.titulo}</h3>
-              <p style={{ color: 'var(--color-texto-p)' }}>{actividad.descripcion}</p>
+            <div key={index} className="pi-landing-glass-card">
+              <div className="pi-landing-card-header">
+                <div className="pi-landing-card-icon">
+                  {renderIcono(actividad.icono || 'ticket')}
+                </div>
+              </div>
+              <h3>{actividad.titulo}</h3>
+              <p>{actividad.descripcion}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* Sección de Cronograma Dinámica */}
-      <section className="pi-landing-section pi-landing-bg-gray">
-        <h2 className="pi-landing-section-title" style={{ color: 'var(--color-primario)' }}>
-          Cronograma Diario
-        </h2>
-        <div className="pi-landing-table-wrapper">
+      {/* SECCIÓN MAPA INTERACTIVO */}
+      <section id="mapa" className="pi-landing-section">
+        <div className="pi-landing-section-header">
+          <h2 className="pi-landing-section-title"><FaMapMarkedAlt /> Mapa del Evento</h2>
+          <p className="pi-landing-subtitle">
+            Explora la distribución del evento. Haz clic en los puestos para ver su menú y precios.
+          </p>
+        </div>
+
+        <div className="pi-landing-mapa-wrapper glass-panel">
+          <div className="pi-landing-mapa-canvas">
+            {mapaPuestos.filter(p => p.estadoActivo).map((puesto) => (
+              <div 
+                key={puesto.id}
+                className="pi-landing-puesto-box"
+                style={{
+                  left: `${puesto.x}px`, top: `${puesto.y}px`,
+                  width: `${puesto.ancho}px`, height: `${puesto.alto}px`
+                }}
+                onClick={() => abrirModalPuesto(puesto)}
+              >
+                {puesto.foto ? (
+                  <div className="box-fondo-img" style={{ backgroundImage: `url(${puesto.foto})` }}>
+                    <div className="box-overlay-texto"><strong>{puesto.numero}</strong></div>
+                  </div>
+                ) : (
+                  <div className="box-fondo-color">
+                    <FaStore className="puesto-icon-dinamico" />
+                    <strong>{puesto.numero}</strong>
+                    <span>{puesto.categoria}</span>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SECCIÓN CRONOGRAMA */}
+      <section id="cronograma" className="pi-landing-section">
+        <div className="pi-landing-section-header">
+          <h2 className="pi-landing-section-title"><FaClock /> Cronograma Oficial</h2>
+        </div>
+        <div className="pi-landing-table-wrapper glass-panel">
           <table className="pi-landing-table">
             <thead>
               <tr>
-                <th style={{ backgroundColor: 'var(--color-primario)', color: 'var(--blanco)' }}>Hora</th>
-                <th style={{ backgroundColor: 'var(--color-primario)', color: 'var(--blanco)' }}>Actividad Programada</th>
+                <th>Hora</th>
+                <th>Actividad Programada</th>
               </tr>
             </thead>
             <tbody>
               {data.cronograma.map((item, index) => (
                 <tr key={index}>
-                  <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 'bold', color: 'var(--color-texto-titulo)' }}>
-                      <FaClock color="var(--color-primario)" /> {item.hora}
-                    </div>
+                  <td className="col-hora">
+                    <div className="badge-hora">{item.hora}</div>
                   </td>
-                  <td style={{ color: 'var(--color-texto-p)' }}>{item.actividad}</td>
+                  <td className="col-actividad">{item.actividad}</td>
                 </tr>
               ))}
             </tbody>
@@ -130,9 +213,75 @@ export default function App() {
         </div>
       </section>
 
-      <footer className="pi-landing-footer">
-        <p>&copy; {new Date().getFullYear()} Proyecto de Ingresos. Todos los derechos reservados.</p>
+      {/* FOOTER */}
+      <footer className="pi-landing-footer glass-footer">
+        <div className="footer-logo">
+          <FaQrcode size={24} />
+          <strong>QPass</strong>
+        </div>
+        <p>&copy; {new Date().getFullYear()} QPass - Gestión de Accesos Inteligente. Todos los derechos reservados.</p>
       </footer>
+
+      {/* --- MODAL DE PRODUCTOS DEL PUESTO --- */}
+      {puestoModal && (
+        <div className="pi-landing-modal-overlay">
+          <div className="pi-landing-modal glass-modal">
+            
+            <div className="pi-landing-modal-header">
+              <div className="modal-header-info">
+                {puestoModal.foto ? (
+                  <img src={puestoModal.foto} alt="Logo" className="modal-puesto-img" />
+                ) : (
+                  <div className="modal-puesto-no-img"><FaStore /></div>
+                )}
+                <h2>{puestoModal.numero}</h2>
+              </div>
+              <button className="btn-close-modal" onClick={() => setPuestoModal(null)}>
+                <FaTimes />
+              </button>
+            </div>
+
+            <div className="pi-landing-modal-body">
+              <span className="modal-categoria-badge">{puestoModal.categoria}</span>
+              
+              <h3 className="modal-menu-title">
+                <FaHamburger /> Menú Disponible
+              </h3>
+
+              {puestoModal.productos && puestoModal.productos.length > 0 ? (
+                <div className="pi-landing-table-wrapper inner-table">
+                  <table className="pi-landing-table">
+                    <thead>
+                      <tr>
+                        <th>Producto</th>
+                        <th style={{ textAlign: 'right' }}>Precio</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {puestoModal.productos.map(prod => (
+                        <tr key={prod.id}>
+                          <td className="prod-nombre">{prod.nombre}</td>
+                          <td style={{ textAlign: 'right' }}>
+                            <span className="prod-precio">
+                              Bs. {prod.precio.toFixed(2)}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="modal-empty-state">
+                  Este lugar no tiene productos a la venta en este momento.
+                </div>
+              )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
