@@ -7,11 +7,12 @@ import {
 import { MdAccountBalance } from 'react-icons/md';
 import './MenuLateral.css';
 
+
 // Configuración de menús según el rol
 const menuConfig = {
   Admin: [
     { titulo: 'Dashboard General', ruta: '/admin', icono: <FaChartPie /> },
-    { titulo: 'Gestión de Usuarios', ruta: '/admin/usuarios', icono: <FaUsers /> },
+    { titulo: 'Usuario de Negocio', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
     { titulo: 'Configuración', ruta: '/admin/config', icono: <FaCog /> }
   ],
   Recargador: [
