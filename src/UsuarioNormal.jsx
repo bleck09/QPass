@@ -7,8 +7,13 @@ import {
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
 
-const PRECIO_ENTRADA = 150; // Bs. por entrada
 const MAX_ENTRADAS = 6;
+
+// --- CATEGORÍAS DE ENTRADA DISPONIBLES PARA EL EVENTO ---
+const categoriasEntradas = [
+  { id: 'general', nombre: 'General', descripcion: 'Acceso general al recinto del evento.', precio: 150 },
+  { id: 'vip', nombre: 'VIP', descripcion: 'Acceso a zona VIP con área preferencial.', precio: 300 },
+];
 
 const generarPassword = () => Math.random().toString(36).slice(-8);
 
@@ -42,6 +47,7 @@ export default function UsuarioNormal() {
   const [historial, setHistorial] = useState(historialInicial);
   const [compras, setCompras] = useState([]);
 
+  const [categoriaId, setCategoriaId] = useState(categoriasEntradas[0].id);
   const [cantidad, setCantidad] = useState(1);
   const [invitados, setInvitados] = useState([]);
   const [comprobante, setComprobante] = useState(null); // { nombreArchivo, previewUrl }
@@ -56,7 +62,8 @@ export default function UsuarioNormal() {
     [historial]
   );
 
-  const montoTotalEntradas = cantidad * PRECIO_ENTRADA;
+  const categoriaSeleccionada = categoriasEntradas.find(c => c.id === categoriaId) ?? categoriasEntradas[0];
+  const montoTotalEntradas = cantidad * categoriaSeleccionada.precio;
 
   const cambiarCantidad = (delta) => {
     const nueva = Math.min(MAX_ENTRADAS, Math.max(1, cantidad + delta));
@@ -100,6 +107,7 @@ export default function UsuarioNormal() {
     setCompras(prev => [
       {
         id: Date.now(),
+        categoria: categoriaSeleccionada.nombre,
         cantidad,
         monto: montoTotalEntradas,
         comprobante,
@@ -136,7 +144,9 @@ export default function UsuarioNormal() {
       {
         id: Date.now(),
         tipo: 'entrada',
-        detalle: compra.cantidad === 1 ? 'Compra de 1 entrada' : `Compra de ${compra.cantidad} entradas`,
+        detalle: compra.cantidad === 1
+          ? `Compra de 1 entrada ${compra.categoria}`
+          : `Compra de ${compra.cantidad} entradas ${compra.categoria}`,
         monto: compra.monto,
         unidad: 'Bs',
         estado: 'confirmado',
@@ -174,10 +184,28 @@ export default function UsuarioNormal() {
           <div className="pi-usr-card">
             <h3><FaTicketAlt color="var(--indigo-profundo)" /> Comprar entradas al evento</h3>
 
+            <div className="pi-usr-categorias">
+              <span className="pi-usr-form-label">Categoría de entrada</span>
+              <div className="pi-usr-categorias-grid">
+                {categoriasEntradas.map(cat => (
+                  <button
+                    type="button"
+                    key={cat.id}
+                    className={`pi-usr-categoria-card ${categoriaId === cat.id ? 'seleccionada' : ''}`}
+                    onClick={() => setCategoriaId(cat.id)}
+                  >
+                    <span className="pi-usr-categoria-nombre">{cat.nombre}</span>
+                    <span className="pi-usr-categoria-descripcion">{cat.descripcion}</span>
+                    <span className="pi-usr-categoria-precio">Bs. {cat.precio}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <div className="pi-usr-stepper-fila">
               <div>
                 <span className="pi-usr-stepper-label">Cantidad de entradas</span>
-                <span className="pi-usr-stepper-precio">Bs. {PRECIO_ENTRADA} por entrada</span>
+                <span className="pi-usr-stepper-precio">Bs. {categoriaSeleccionada.precio} por entrada · {categoriaSeleccionada.nombre}</span>
               </div>
               <div className="pi-usr-stepper">
                 <button type="button" onClick={() => cambiarCantidad(-1)} disabled={cantidad <= 1}>
@@ -264,7 +292,7 @@ export default function UsuarioNormal() {
                     <div className="pi-usr-solicitud-info">
                       <div className="pi-usr-solicitud-cabecera">
                         <span className="pi-usr-solicitud-titulo">
-                          {compra.cantidad === 1 ? '1 entrada' : `${compra.cantidad} entradas`} · Bs. {compra.monto}
+                          {compra.cantidad === 1 ? '1 entrada' : `${compra.cantidad} entradas`} {compra.categoria} · Bs. {compra.monto}
                         </span>
                         {compra.estado === 'pendiente' ? (
                           <span className="pi-usr-badge pi-usr-badge-pend">

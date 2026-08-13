@@ -1,0 +1,719 @@
+/* Prefix único: pi-ayu- */
+.pi-ayu-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* --- CABECERA --- */
+.pi-ayu-header-wrapper {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pi-ayu-header-negocio {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pi-ayu-logo-negocio {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  object-fit: cover;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.pi-ayu-logo-placeholder {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  background-color: var(--indigo-profundo-suave);
+  color: var(--indigo-profundo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+
+.pi-ayu-eyebrow {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--cian-digital-texto);
+}
+
+.pi-ayu-header-negocio h2 {
+  font-size: 22px;
+  color: var(--texto-principal);
+  margin: 2px 0 2px;
+}
+
+.pi-ayu-header-negocio p {
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+.pi-ayu-kpi {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 14px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-ayu-kpi .micro-etiqueta {
+  font-size: 12px;
+  color: var(--texto-secundario);
+  font-weight: 600;
+}
+
+.pi-ayu-kpi .kpi-valor {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pi-ayu-kpi .kpi-icon {
+  color: var(--coral-compra);
+  font-size: 18px;
+}
+
+.pi-ayu-kpi .numero-grande {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+/* --- TABS --- */
+.pi-ayu-tabs {
+  display: flex;
+  gap: 6px;
+  background-color: var(--gris-niebla);
+  padding: 4px;
+  border-radius: 10px;
+  width: fit-content;
+}
+
+.pi-ayu-tabs button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: none;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-secundario);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-ayu-tabs button.activo {
+  background-color: var(--blanco);
+  color: var(--indigo-profundo);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* --- LAYOUT VENDER --- */
+.pi-ayu-vender-layout {
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 20px;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .pi-ayu-vender-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- CATÁLOGO --- */
+.pi-ayu-productos {
+  background: var(--blanco);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-ayu-productos h3 {
+  font-size: 16px;
+  color: var(--texto-principal);
+  margin-bottom: 16px;
+}
+
+.pi-ayu-productos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+}
+
+.pi-ayu-producto-card {
+  border: 1px solid var(--borde-suave);
+  border-radius: 14px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.pi-ayu-producto-img,
+.pi-ayu-producto-img-placeholder {
+  width: 100%;
+  height: 90px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.pi-ayu-producto-img-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--gris-niebla);
+  color: var(--gris-medio);
+  font-size: 26px;
+}
+
+.pi-ayu-producto-nombre {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  min-height: 34px;
+}
+
+.pi-ayu-producto-precio {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--indigo-profundo);
+}
+
+.pi-ayu-btn-agregar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: center;
+  border: none;
+  background-color: var(--cian-digital-suave);
+  color: var(--cian-digital-texto);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.2s;
+}
+
+.pi-ayu-btn-agregar:hover {
+  background-color: var(--cian-digital);
+  color: var(--texto-sobre-vivo);
+}
+
+.pi-ayu-producto-stepper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  margin-top: 4px;
+}
+
+.pi-ayu-producto-stepper button {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--borde-medio);
+  background-color: var(--gris-niebla);
+  color: var(--indigo-profundo);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.pi-ayu-producto-stepper button:hover {
+  background-color: var(--cian-digital-suave);
+  border-color: var(--cian-digital);
+}
+
+.pi-ayu-producto-stepper span {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto-principal);
+  min-width: 16px;
+  text-align: center;
+}
+
+/* --- CARRITO / VENTA ACTUAL --- */
+.pi-ayu-carrito {
+  background: var(--blanco);
+  border-radius: 16px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.pi-ayu-carrito h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  color: var(--texto-principal);
+}
+
+.pi-ayu-carrito-vacio {
+  font-size: 13px;
+  color: var(--gris-medio);
+  text-align: center;
+  padding: 20px 6px;
+}
+
+.pi-ayu-carrito-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.pi-ayu-carrito-item {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.pi-ayu-carrito-item-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pi-ayu-carrito-item-info .nombre {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pi-ayu-carrito-item-info .precio-unit {
+  font-size: 11px;
+  color: var(--gris-medio);
+}
+
+.pi-ayu-carrito-subtotal {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--indigo-profundo);
+  white-space: nowrap;
+}
+
+.pi-ayu-btn-quitar {
+  border: none;
+  background: none;
+  color: var(--rojo-error);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+}
+
+.pi-ayu-carrito-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--borde-suave);
+  font-size: 14px;
+  color: var(--texto-principal);
+}
+
+.pi-ayu-carrito-total strong {
+  font-size: 18px;
+  color: var(--indigo-profundo);
+}
+
+.pi-ayu-btn-vaciar {
+  border: 1px solid var(--borde-suave);
+  background-color: var(--gris-niebla);
+  color: var(--texto-secundario);
+  padding: 8px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pi-ayu-btn-vaciar:hover {
+  background-color: var(--borde-suave);
+}
+
+.pi-ayu-btn-escanear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background-color: var(--cian-digital);
+  color: var(--texto-sobre-vivo);
+  border: none;
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 180, 216, 0.35);
+  transition: background 0.2s;
+}
+
+.pi-ayu-btn-escanear:hover:not(:disabled) {
+  background-color: var(--cian-digital-hover);
+}
+
+.pi-ayu-btn-escanear:disabled {
+  opacity: 0.5;
+  cursor: default;
+  box-shadow: none;
+}
+
+/* --- HISTORIAL --- */
+.pi-ayu-tabla-wrapper {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 18px 20px;
+  overflow-x: auto;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-ayu-tabla {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pi-ayu-tabla th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+.pi-ayu-tabla td {
+  padding: 12px;
+  border-bottom: 1px solid var(--borde-suave);
+  font-size: 14px;
+  color: var(--texto-principal);
+}
+
+.pi-ayu-fila-persona {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+.pi-ayu-mini-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.pi-ayu-badge-items {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background-color: var(--indigo-profundo-suave);
+  color: var(--indigo-profundo);
+}
+
+.pi-ayu-monto-celda {
+  font-weight: 700;
+  color: var(--coral-compra);
+}
+
+.pi-ayu-sin-resultados {
+  text-align: center;
+  color: var(--gris-medio);
+  padding: 30px 0 !important;
+}
+
+/* --- MODAL / TARJETA GRANDE AL ESCANEAR --- */
+.pi-ayu-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(10, 14, 39, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+  animation: pi-ayu-fadeIn 0.15s ease-out;
+}
+
+@keyframes pi-ayu-fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.pi-ayu-modal-tarjeta {
+  background: var(--blanco);
+  width: 100%;
+  max-width: 440px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 20px;
+  padding: 32px 28px 26px;
+  position: relative;
+  text-align: center;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  animation: pi-ayu-slideUp 0.2s ease-out;
+}
+
+@keyframes pi-ayu-slideUp {
+  from { opacity: 0; transform: translateY(20px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.pi-ayu-btn-cerrar {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  border: none;
+  background-color: var(--gris-niebla);
+  color: var(--gris-medio);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pi-ayu-tarjeta-estado {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 16px;
+  border-radius: 20px;
+  margin-bottom: 20px;
+  background-color: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
+}
+
+.pi-ayu-tarjeta-estado.aviso {
+  background-color: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+}
+
+.pi-ayu-tarjeta-foto {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 5px solid var(--cian-digital-suave);
+  box-shadow: 0 6px 18px rgba(26, 43, 107, 0.2);
+}
+
+.pi-ayu-tarjeta-nombre {
+  margin-top: 14px;
+  font-size: 20px;
+  color: var(--texto-principal);
+}
+
+.pi-ayu-tarjeta-datos {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  text-align: left;
+  background-color: var(--gris-niebla);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.pi-ayu-tarjeta-dato {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: var(--indigo-profundo);
+  font-size: 18px;
+}
+
+.pi-ayu-tarjeta-dato > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.pi-ayu-tarjeta-dato .label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+}
+
+.pi-ayu-tarjeta-dato .valor {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
+}
+
+/* --- RESUMEN DE VENTA DENTRO DE LA TARJETA --- */
+.pi-ayu-resumen-venta {
+  margin-top: 18px;
+  text-align: left;
+  border: 1px solid var(--borde-suave);
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+
+.pi-ayu-resumen-titulo {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+  margin-bottom: 10px;
+}
+
+.pi-ayu-resumen-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--texto-principal);
+  padding: 4px 0;
+}
+
+.pi-ayu-resumen-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--borde-suave);
+  font-size: 14px;
+  color: var(--texto-principal);
+}
+
+.pi-ayu-resumen-total strong {
+  font-size: 18px;
+  color: var(--coral-compra);
+}
+
+.pi-ayu-alerta-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 14px;
+  text-align: left;
+}
+
+.pi-ayu-tarjeta-acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.pi-ayu-tarjeta-acciones button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pi-ayu-btn-cancelar {
+  background-color: var(--gris-niebla);
+  color: var(--texto-principal);
+}
+
+.pi-ayu-btn-cancelar:hover {
+  background-color: var(--borde-suave);
+}
+
+.pi-ayu-btn-confirmar {
+  background-color: var(--coral-compra);
+  color: var(--texto-sobre-vivo);
+}
+
+.pi-ayu-btn-confirmar:hover:not(:disabled) {
+  background-color: var(--coral-compra-hover);
+}
+
+.pi-ayu-btn-confirmar:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* --- ESTADO DE ÉXITO --- */
+.pi-ayu-exito {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+}
+
+.pi-ayu-exito h3 {
+  color: var(--texto-principal);
+  margin-top: 6px;
+}
+
+.pi-ayu-exito p {
+  color: var(--gris-medio);
+  font-size: 14px;
+}
+
+.pi-ayu-exito-saldo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--indigo-profundo-suave);
+  color: var(--indigo-profundo);
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin: 8px 0 18px;
+}
+
+.pi-ayu-exito .pi-ayu-btn-confirmar {
+  width: 100%;
+}

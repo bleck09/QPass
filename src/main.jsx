@@ -11,7 +11,8 @@ import Admin from './Admin.jsx'
 import AdminConfigurarPagina from './AdminConfigurarPagina.jsx'
 import UsuNegoDasboar from './UsuNegoDasboar.jsx'
 // 1. IMPORTAMOS TU NUEVA HOJA AQUÍ
-import AdCreaUsuarioNegocio from './AdCreaUsuarioNegocio.jsx' 
+import AdCreaUsuarioNegocio from './AdCreaUsuarioNegocio.jsx'
+import AdminCrearTickets from './AdminCrearTickets.jsx'
 import UsuNegoCreaAyudante from './UsuNegoCreaAyudante.jsx'
 import Mapa from './Mapa.jsx'
 
@@ -40,6 +41,10 @@ const router = createBrowserRouter([
   {
     path: "/admin/config",
     element: <MenuLateral><AdminConfigurarPagina /></MenuLateral>,
+  },
+  {
+    path: "/AdminCrearTickets",
+    element: <MenuLateral><AdminCrearTickets /></MenuLateral>,
   },
   {
     path: "/recargador",

@@ -1,0 +1,240 @@
+/* Prefix único: pi-adtick- */
+.pi-adtick-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pi-adtick-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pi-adtick-header h2 {
+  color: var(--texto-principal);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.pi-adtick-header p {
+  color: var(--texto-secundario);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.pi-adtick-selector-evento {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: var(--indigo-profundo);
+  font-weight: 600;
+}
+
+.pi-adtick-selector-evento select {
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  background: none;
+}
+
+/* --- KPIs --- */
+.pi-adtick-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.pi-adtick-kpi-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-adtick-kpi-card .numero {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.pi-adtick-kpi-card .label {
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+/* --- TARJETAS --- */
+.pi-adtick-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-adtick-subtitulo {
+  font-size: 16px;
+  color: var(--texto-principal);
+  margin-bottom: 16px;
+}
+
+/* --- FORMULARIO --- */
+.pi-adtick-form-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.pi-adtick-input-descripcion {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .pi-adtick-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pi-adtick-input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  margin-bottom: 6px;
+}
+
+.pi-adtick-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pi-adtick-input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--gris-medio);
+  font-size: 14px;
+}
+
+.pi-adtick-input-wrapper input {
+  width: 100%;
+  padding: 10px 10px 10px 38px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--texto-principal);
+  transition: border-color 0.2s;
+}
+
+.pi-adtick-input-wrapper input:focus {
+  border-color: var(--cian-digital);
+}
+
+.pi-adtick-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+}
+
+.pi-adtick-btn-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
+  border: none;
+  padding: 11px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pi-adtick-btn-add:hover {
+  background-color: var(--indigo-profundo-hover);
+}
+
+/* --- TABLA --- */
+.pi-adtick-table-wrapper {
+  overflow-x: auto;
+}
+
+.pi-adtick-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pi-adtick-table th {
+  text-align: left;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--gris-medio);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+.pi-adtick-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--borde-suave);
+  font-size: 14px;
+  color: var(--texto-principal);
+}
+
+.pi-adtick-badge-nombre {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  background-color: var(--indigo-profundo-suave);
+  color: var(--indigo-profundo);
+}
+
+.celda-secundaria {
+  font-size: 14px;
+  color: var(--texto-secundario);
+}
+
+.pi-adtick-precio-celda {
+  font-weight: 700;
+  color: var(--verde-recarga-texto);
+}
+
+.pi-adtick-btn-delete {
+  background-color: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.pi-adtick-btn-delete:hover {
+  background-color: var(--rojo-error);
+  color: var(--blanco);
+}
+
+.pi-adtick-empty {
+  text-align: center;
+  padding: 30px !important;
+  color: var(--texto-secundario);
+}

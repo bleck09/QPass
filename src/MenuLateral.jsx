@@ -13,6 +13,7 @@ const menuConfig = {
   Admin: [
     { titulo: 'Dashboard General', ruta: '/admin', icono: <FaChartPie /> },
     { titulo: 'Usuario de Negocio', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
+    { titulo: 'Tickets del Evento', ruta: '/AdminCrearTickets', icono: <FaFileInvoiceDollar /> },
     { titulo: 'Configurar Página', ruta: '/admin/config', icono: <FaCog /> },
     { titulo: 'Mapa', ruta: '/Mapa', icono: <FaCog /> }
   ],
@@ -41,7 +42,7 @@ const menuConfig = {
     { titulo: 'Crear ayudante', ruta: '/UsuNegoCreaAyudante', icono:<FaWallet /> }
   ],
   Ayudante: [
-    { titulo: 'Tareas Asignadas', ruta: '/ayudante', icono: <FaBoxOpen /> }
+    { titulo: 'Vender / Cobrar', ruta: '/ayudante', icono: <FaCashRegister /> }
   ]
 };
 

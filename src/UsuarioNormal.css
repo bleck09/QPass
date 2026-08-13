@@ -70,6 +70,59 @@
   margin-bottom: 18px;
 }
 
+/* --- CATEGORÍAS DE ENTRADA --- */
+.pi-usr-categorias {
+  margin-bottom: 18px;
+}
+
+.pi-usr-categorias-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.pi-usr-categoria-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  text-align: left;
+  background-color: var(--gris-niebla);
+  border: 2px solid transparent;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-usr-categoria-card:hover {
+  border-color: var(--cian-digital-suave);
+}
+
+.pi-usr-categoria-card.seleccionada {
+  background-color: var(--cian-digital-suave);
+  border-color: var(--cian-digital);
+}
+
+.pi-usr-categoria-nombre {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.pi-usr-categoria-descripcion {
+  font-size: 12px;
+  color: var(--texto-secundario);
+}
+
+.pi-usr-categoria-precio {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--indigo-profundo);
+  margin-top: 4px;
+}
+
 /* --- STEPPER DE CANTIDAD --- */
 .pi-usr-stepper-fila {
   display: flex;
