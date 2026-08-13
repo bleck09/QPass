@@ -1,237 +1,280 @@
-/* Prefix único: pi-layout- */
+/* =======================================================
+   MÓDULO: MENÚ LATERAL (SIDEBAR)
+   FIX: Transición instantánea de forma y Hover suave
+======================================================= */
+
 .pi-layout-contenedor {
   display: flex;
   height: 100vh;
   width: 100vw;
-  background-color: var(--gris-niebla);
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--azul-noche); 
   font-family: 'Segoe UI', Roboto, Arial, sans-serif;
   overflow: hidden;
 }
 
-/* SIDEBAR OSCURO */
+/* --- SIDEBAR MODERNO --- */
 .pi-layout-sidebar {
-  width: 260px;
+  width: 280px;
+  flex-shrink: 0; 
   background-color: var(--azul-noche);
-  color: var(--blanco);
   display: flex;
   flex-direction: column;
-  transition: width 0.3s;
+  transition: width 0.4s cubic-bezier(0.2, 0, 0, 1);
+  position: relative;
+  z-index: 100;
+  padding-top: 10px;
 }
 
-.pi-layout-logo {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 25px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--cian-digital);
+.pi-layout-sidebar.collapsed { width: 90px; }
+
+/* Sección del Logo */
+.pi-layout-logo-section {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 20px 30px 20px; position: relative;
 }
 
-.pi-layout-logo h2 {
-  margin: 0;
-  font-size: 18px;
-  letter-spacing: 1px;
-  color: var(--blanco);
+.pi-layout-logo { display: flex; align-items: center; gap: 15px; overflow: hidden; }
+
+.logo-icon-wrapper {
+  min-width: 40px; height: 40px; border-radius: 12px;
+  background-color: rgba(0, 180, 216, 0.15);
+  display: flex; justify-content: center; align-items: center;
 }
 
-.pi-layout-logo p {
-  margin: 0;
-  font-size: 12px;
-  color: var(--gris-medio);
+.logo-text { white-space: nowrap; }
+.logo-text h2 { margin: 0; font-size: 20px; font-weight: 800; color: var(--blanco); letter-spacing: 0.5px; }
+.logo-text p { margin: 0; font-size: 12px; color: var(--cian-digital); font-weight: 600; }
+
+.pi-btn-collapse {
+  position: absolute; right: -15px; top: 30px; width: 30px; height: 30px;
+  background-color: var(--indigo-profundo); color: var(--blanco);
+  border: 4px solid var(--azul-noche); border-radius: 50%;
+  display: flex; justify-content: center; align-items: center;
+  cursor: pointer; z-index: 10; transition: transform 0.2s, background 0.2s;
 }
 
+.pi-btn-collapse:hover { background-color: var(--cian-digital); transform: scale(1.1); }
+
+/* --- MENÚ DE NAVEGACIÓN --- */
 .pi-layout-nav {
-  padding: 20px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  flex: 1; display: flex; flex-direction: column;
+  padding-left: 20px; padding-top: 20px; padding-bottom: 20px;
+  gap: 8px; overflow-y: auto; overflow-x: visible; 
 }
+
+.pi-layout-nav::-webkit-scrollbar { width: 4px; }
+.pi-layout-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+
+/* =======================================================
+   ESTRUCTURA DEL BOTÓN Y ANIMACIONES INTERNAS
+======================================================= */
 
 .pi-layout-nav-item {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-  padding: 12px 25px;
+  position: relative;
+  border-radius: 30px 0 0 30px;
   cursor: pointer;
+  background-color: transparent;
+  /* CRÍTICO: Sin transición de background para que el cambio sea instantáneo */
+}
+
+/* El contenedor del texto y el icono */
+.pi-layout-nav-content {
+  display: flex; align-items: center; gap: 15px;
+  padding: 14px 20px;
   color: var(--gris-medio);
-  transition: all 0.2s ease;
-  border-left: 4px solid transparent;
-}
-
-.pi-layout-nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  color: var(--blanco);
-}
-
-.pi-layout-nav-item.activo {
-  background-color: rgba(255, 255, 255, 0.1);
-  color: var(--blanco);
-  border-left: 4px solid var(--cian-digital);
+  position: relative;
+  z-index: 2;
+  white-space: nowrap;
+  background-color: transparent !important; 
+  /* Solo animamos el movimiento físico y color del texto */
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), color 0.2s ease-in-out; 
 }
 
 .pi-layout-nav-icon {
-  font-size: 18px;
+  font-size: 20px; min-width: 24px; display: flex; justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), color 0.2s ease-in-out;
 }
 
-/* ÁREA PRINCIPAL Y HEADER */
-.pi-layout-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+.pi-layout-nav-text { font-size: 14px; font-weight: 600; }
+
+/* --- MAGIA MATEMÁTICA: LAS CURVAS --- */
+.curve-top, .curve-bottom {
+  position: absolute; right: 0;
+  width: 40px; height: 40px;
+  border-radius: 50%; /* Círculo perfecto */
+  pointer-events: none;
+  z-index: 1;
+  display: none; /* CRÍTICO: Totalmente apagadas por defecto */
 }
 
-.pi-layout-header {
-  height: 70px;
-  background-color: var(--blanco);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 30px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-  position: relative;
-  z-index: 10;
-}
+.curve-top { top: -40px; box-shadow: 20px 20px 0 0 var(--gris-niebla); }
+.curve-bottom { bottom: -40px; box-shadow: 20px -20px 0 0 var(--gris-niebla); }
 
-.pi-layout-header-left h3 {
-  margin: 0;
-  color: var(--texto-principal);
-  font-weight: 600;
-}
 
-.pi-layout-header-right {
-  position: relative;
-}
+/* =======================================================
+   ESTADOS: HOVER Y ACTIVO (SEPARADOS)
+======================================================= */
 
-/* BOTÓN DEL PERFIL */
-.pi-layout-perfil-btn {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  padding: 5px 10px;
-  border-radius: 8px;
-  transition: background 0.2s;
-}
-
-.pi-layout-perfil-btn:hover {
+/* 1. ESTADO ACTIVO (CLICADO) - APARECE DE GOLPE SIN GLITCH */
+.pi-layout-nav-item.activo {
   background-color: var(--gris-niebla);
+  padding-left: 0;
 }
+
+.pi-layout-nav-item.activo .curve-top,
+.pi-layout-nav-item.activo .curve-bottom {
+  display: block; /* Se muestran en seco, sin fundidos negros */
+}
+
+.pi-layout-nav-item.activo .pi-layout-nav-content {
+  color: var(--indigo-profundo);
+  font-weight: 800;
+  transform: translateX(0); 
+}
+
+.pi-layout-nav-item.activo .pi-layout-nav-icon {
+  color: var(--indigo-profundo);
+  transform: scale(1);
+}
+
+/* 2. ESTADO HOVER (SOLO MOUSE ENCIMA) - NO ACTIVA CURVAS */
+.pi-layout-nav-item:hover:not(.activo) {
+  /* Fondo sutil tipo píldora, no choca con las curvas del activo */
+  background-color: rgba(255, 255, 255, 0.04); 
+}
+
+.pi-layout-nav-item:hover:not(.activo) .pi-layout-nav-content {
+  color: var(--blanco);
+  transform: translateX(8px); /* Deslizamiento suave a la derecha */
+}
+
+.pi-layout-nav-item:hover:not(.activo) .pi-layout-nav-icon {
+  color: var(--cian-digital); /* Ícono brilla en color cyan */
+  transform: scale(1.15); 
+}
+
+/* --- BOTÓN SALIR (LOGOUT) --- */
+.pi-layout-logout-section { padding: 20px 0 20px 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+
+.logout-btn .pi-layout-nav-content { color: var(--rojo-error); }
+
+.logout-btn:hover:not(.activo) .pi-layout-nav-content {
+  color: var(--rojo-error-texto);
+  transform: translateX(8px);
+}
+.logout-btn:hover:not(.activo) .pi-layout-nav-icon {
+  color: var(--rojo-error);
+  transform: scale(1.15);
+}
+
+/* =======================================================
+   ÁREA PRINCIPAL (FIX DE ANCHO COMPLETO - FULL WIDTH)
+======================================================= */
+.pi-layout-main-wrapper {
+  flex: 1; display: flex; flex-direction: column; 
+  background-color: var(--azul-noche); 
+  padding: 15px 15px 15px 0; min-width: 0; 
+}
+
+.pi-layout-main {
+  flex: 1; width: 100%;
+  background-color: var(--gris-niebla);
+  border-radius: 30px; display: flex; flex-direction: column;
+  overflow: hidden; box-shadow: -5px 0 20px rgba(0,0,0,0.15); position: relative;
+}
+
+.pi-layout-sidebar.collapsed + .pi-layout-main-wrapper .pi-layout-main {
+  border-top-left-radius: 30px; border-bottom-left-radius: 30px;
+}
+
+/* HEADER DEL ÁREA PRINCIPAL */
+.pi-layout-header {
+  height: 75px; background-color: transparent; display: flex;
+  justify-content: space-between; align-items: center; padding: 0 30px; position: relative; z-index: 10;
+}
+
+.pi-layout-header-left { display: flex; align-items: center; gap: 15px; }
+.pi-btn-mobile-menu { display: none; background: none; border: none; color: var(--texto-principal); cursor: pointer; }
+.pi-layout-header-left h3 { margin: 0; color: var(--texto-principal); font-size: 20px; font-weight: 700; }
+.pi-layout-header-right { position: relative; }
+
+/* BOTÓN DEL PERFIL SUPERIOR */
+.pi-layout-perfil-btn {
+  display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px 12px;
+  border-radius: 30px; background-color: var(--blanco); border: 1px solid var(--borde-suave);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s;
+}
+.pi-layout-perfil-btn:hover { border-color: var(--cian-digital); box-shadow: 0 2px 8px rgba(0, 180, 216, 0.1); }
 
 .pi-layout-avatar {
-  width: 40px;
-  height: 40px;
-  min-width: 40px;
-  border-radius: 50%;
-  background-color: var(--indigo-profundo);
-  color: var(--blanco);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: bold;
-  font-size: 16px;
-  overflow: hidden;
+  width: 36px; height: 36px; border-radius: 50%; background-color: var(--indigo-profundo);
+  color: var(--blanco); display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; overflow: hidden;
 }
+.pi-layout-avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
-.pi-layout-avatar-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
+.pi-layout-info-perfil { display: flex; flex-direction: column; text-align: left; }
+.pi-layout-nombre { font-size: 13px; font-weight: 700; color: var(--texto-principal); line-height: 1.2; }
+.pi-layout-rol-header { font-size: 11px; color: var(--texto-secundario); text-transform: uppercase; letter-spacing: 0.5px;}
 
-.pi-layout-info-perfil {
-  display: flex;
-  flex-direction: column;
-  text-align: left;
-}
-
-.pi-layout-nombre {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--texto-principal);
-}
-
-.pi-layout-rol-header {
-  font-size: 12px;
-  color: var(--texto-secundario);
-}
-
-/* MENÚ DESPLEGABLE (DROPDOWN) */
+/* MENÚ DESPLEGABLE (DROPDOWN PERFIL) */
 .pi-layout-dropdown {
-  position: absolute;
-  top: 60px;
-  right: 0;
-  width: 250px;
-  background-color: var(--blanco);
-  border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
-  border: 1px solid var(--borde-suave);
-  overflow: hidden;
-  animation: slideDown 0.2s ease-out;
+  position: absolute; top: 55px; right: 0; width: 250px; background-color: var(--blanco);
+  border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); border: 1px solid var(--borde-suave);
+  overflow: hidden; animation: slideDown 0.2s ease-out;
 }
 
-@keyframes slideDown {
-  from { opacity: 0; transform: translateY(-10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
+@keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 .pi-layout-dropdown-header {
-  padding: 15px;
-  background-color: var(--gris-niebla);
-  border-bottom: 1px solid var(--borde-suave);
-  display: flex;
-  flex-direction: column;
+  padding: 15px; background-color: var(--gris-niebla); border-bottom: 1px solid var(--borde-suave); display: flex; flex-direction: column;
 }
+.pi-layout-dropdown-header strong { font-size: 14px; color: var(--texto-principal); }
+.pi-layout-dropdown-header span { font-size: 12px; color: var(--texto-secundario); margin-top: 2px; }
 
-.pi-layout-dropdown-header strong {
-  font-size: 14px;
-  color: var(--texto-principal);
-}
-
-.pi-layout-dropdown-header span {
-  font-size: 12px;
-  color: var(--texto-secundario);
-  margin-top: 2px;
-}
-
-.pi-layout-dropdown-body {
-  padding: 10px 0;
-}
-
+.pi-layout-dropdown-body { padding: 10px 0; }
 .pi-layout-dropdown-body button {
-  width: 100%;
-  padding: 12px 20px;
-  background: none;
-  border: none;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 14px;
-  cursor: pointer;
-  color: var(--texto-principal);
-  transition: background 0.2s;
+  width: 100%; padding: 12px 20px; background: none; border: none; text-align: left;
+  display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+  color: var(--texto-principal); transition: background 0.2s;
 }
-
-.pi-layout-dropdown-body button:hover {
-  background-color: var(--gris-niebla);
-  color: var(--indigo-profundo);
-}
+.pi-layout-dropdown-body button:hover { background-color: var(--gris-niebla); color: var(--indigo-profundo); }
 
 .pi-layout-dropdown-body button.btn-logout {
-  color: var(--rojo-error-texto);
-  border-top: 1px solid var(--borde-suave);
-  margin-top: 5px;
-  padding-top: 15px;
+  color: var(--rojo-error-texto); border-top: 1px solid var(--borde-suave); margin-top: 5px; padding-top: 15px;
 }
-
-.pi-layout-dropdown-body button.btn-logout:hover {
-  background-color: var(--rojo-error-suave);
-}
+.pi-layout-dropdown-body button.btn-logout:hover { background-color: var(--rojo-error-suave); color: var(--rojo-error); }
 
 /* CONTENIDO PRINCIPAL */
-.pi-layout-content {
-  padding: 30px;
-  flex: 1;
-  overflow-y: auto;
+.pi-layout-content { padding: 0 30px 30px 30px; flex: 1; overflow-y: auto; }
+
+/* =======================================================
+   RESPONSIVE DESIGN (MÓVILES)
+======================================================= */
+@media (max-width: 900px) {
+  .pi-layout-main-wrapper { padding: 0; }
+  .pi-layout-main { border-radius: 0; }
+  .pi-btn-collapse, .hide-on-mobile { display: none; }
+  .pi-btn-mobile-menu { display: block; }
+  
+  .pi-layout-sidebar {
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: 9999;
+    transform: translateX(-100%); width: 280px; padding-top: 0;
+  }
+
+  .pi-layout-sidebar.mobile-open { transform: translateX(0); box-shadow: 5px 0 25px rgba(0,0,0,0.5); }
+  .pi-mobile-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(10, 14, 39, 0.7); z-index: 9998; backdrop-filter: blur(3px);
+  }
+
+  .pi-layout-nav { padding-left: 10px; }
+  .pi-layout-nav-item.activo .curve-top, 
+  .pi-layout-nav-item.activo .curve-bottom { display: none; }
+  .pi-layout-nav-item.activo { border-radius: 12px; margin: 0 10px; }
+  
+  .pi-layout-content { padding: 15px; }
+  .pi-layout-header { padding: 0 15px; height: 60px; }
 }

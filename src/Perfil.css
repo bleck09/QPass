@@ -1,61 +1,88 @@
-/* Prefix único: pi-perfil- */
-.pi-perfil-container {
+/* Prefix único: pi-perfil- aplicando Guía de Diseño QPass */
+
+.pi-perfil-page {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-  max-width: 640px;
 }
 
-.pi-perfil-container h2 {
-  color: var(--texto-principal);
-  font-size: 22px;
+/* =======================================================
+   1. PORTADA (COVER)
+======================================================= */
+.pi-perfil-cover {
+  width: 100%;
+  height: 220px;
+  background: linear-gradient(135deg, var(--indigo-profundo) 0%, var(--cian-digital) 100%);
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
 }
 
-.pi-perfil-card {
+/* Patrón geométrico sutil para el fondo (Efecto de la imagen) */
+.pi-perfil-cover-pattern {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  opacity: 0.1;
+  background-image: 
+    linear-gradient(30deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff),
+    linear-gradient(150deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff),
+    linear-gradient(30deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff),
+    linear-gradient(150deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff),
+    linear-gradient(60deg, #ffffff77 25%, transparent 25.5%, transparent 75%, #ffffff77 75%, #ffffff77),
+    linear-gradient(60deg, #ffffff77 25%, transparent 25.5%, transparent 75%, #ffffff77 75%, #ffffff77);
+  background-size: 80px 140px;
+  background-position: 0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px;
+}
+
+/* =======================================================
+   2. CONTENEDOR PRINCIPAL SUPERPUESTO
+======================================================= */
+.pi-perfil-layout {
+  display: flex;
+  gap: 24px;
+  max-width: 1100px;
+  margin: -80px auto 0 auto; /* CRÍTICO: Esto hace que suba y se superponga a la portada */
+  padding: 0 20px;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  align-items: flex-start;
+}
+
+/* --- COLUMNA IZQUIERDA (SIDEBAR DE PERFIL) --- */
+.pi-perfil-sidebar {
+  width: 300px;
   background: var(--blanco);
-  border-radius: 14px;
-  padding: 24px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  padding: 30px 20px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
-.pi-perfil-card h3 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--texto-principal);
-  font-size: 17px;
-  margin-bottom: 6px;
-}
-
-.pi-perfil-nota {
-  font-size: 13px;
-  color: var(--gris-medio);
-  margin-bottom: 18px;
-}
-
-/* --- AVATAR --- */
-.pi-perfil-avatar-seccion {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 24px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--borde-suave);
+/* Avatar y botón flotante */
+.pi-perfil-avatar-wrapper {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 20px auto;
 }
 
 .pi-perfil-avatar {
-  width: 84px;
-  height: 84px;
-  min-width: 84px;
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
-  background-color: var(--indigo-profundo);
-  color: var(--blanco);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  font-weight: 700;
+  background-color: var(--gris-niebla);
+  border: 5px solid var(--blanco);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
   overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--indigo-profundo);
 }
 
 .pi-perfil-avatar img {
@@ -64,110 +91,248 @@
   object-fit: cover;
 }
 
-.pi-perfil-btn-foto {
-  display: inline-flex;
+.pi-perfil-camera-btn {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  width: 36px;
+  height: 36px;
+  background-color: var(--cian-digital);
+  color: var(--blanco);
+  border: 3px solid var(--blanco);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-  background-color: var(--gris-niebla);
-  color: var(--texto-principal);
-  padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--borde-medio);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: background 0.2s;
+  font-size: 14px;
+  transition: transform 0.2s, background 0.2s;
 }
 
-.pi-perfil-btn-foto:hover {
-  background-color: var(--borde-suave);
+.pi-perfil-camera-btn:hover {
+  transform: scale(1.1);
+  background-color: var(--indigo-profundo);
 }
 
-/* --- FORMULARIO --- */
-.pi-perfil-datos {
+.pi-perfil-sidebar-name {
+  margin: 0 0 5px 0;
+  font-size: 20px;
+  color: var(--texto-principal);
+  font-weight: 800;
+}
+
+.pi-perfil-sidebar-role {
+  margin: 0 0 24px 0;
+  font-size: 14px;
+  color: var(--texto-secundario);
+}
+
+/* Estadísticas debajo del perfil */
+.pi-perfil-sidebar-stats {
+  border-top: 1px solid var(--borde-suave);
+  padding-top: 20px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--texto-secundario);
+  font-weight: 600;
+}
+
+.stat-value {
+  color: var(--texto-principal);
+  font-weight: 700;
+}
+.text-green { color: var(--verde-recarga-texto); }
+
+/* --- COLUMNA DERECHA (FORMULARIOS) --- */
+.pi-perfil-main-card {
+  flex: 1;
+  background: var(--blanco);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Para que los tabs respeten los bordes redondos */
+}
+
+/* Navegación (Tabs) */
+.pi-perfil-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--borde-suave);
+  background-color: var(--blanco);
+}
+
+.pi-perfil-tabs button {
+  padding: 20px 30px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto-secundario);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+}
+
+.pi-perfil-tabs button:hover {
+  color: var(--texto-principal);
+}
+
+.pi-perfil-tabs button.active {
+  color: var(--cian-digital-texto);
+  border-bottom-color: var(--cian-digital);
+}
+
+/* Contenido de la Pestaña */
+.pi-perfil-tab-content {
+  padding: 30px;
+}
+
+.pi-perfil-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
 }
 
 .pi-perfil-form-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .pi-perfil-form-group label {
   font-size: 13px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--texto-principal);
 }
 
 .pi-perfil-form-group input {
-  padding: 10px 14px;
+  padding: 12px 16px;
   border: 1px solid var(--borde-medio);
   border-radius: 8px;
   font-size: 14px;
   font-family: inherit;
   color: var(--texto-principal);
+  transition: border-color 0.2s, box-shadow 0.2s;
   outline: none;
-  transition: border-color 0.2s;
 }
 
 .pi-perfil-form-group input:focus {
   border-color: var(--cian-digital);
+  box-shadow: 0 0 0 3px var(--cian-digital-suave);
 }
 
-.pi-perfil-form-group input:disabled {
+.input-disabled {
   background-color: var(--gris-niebla);
-  color: var(--gris-medio);
+  color: var(--gris-medio) !important;
   cursor: not-allowed;
+  border-color: var(--borde-suave) !important;
 }
 
-.pi-perfil-passwords-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
-  margin-top: 16px;
-}
-
-/* --- ALERTA --- */
-.pi-perfil-alerta {
+/* Caja de información (Seguridad) */
+.pi-perfil-info-box {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 14px;
+  align-items: flex-start;
+  gap: 15px;
+  background-color: var(--gris-niebla);
+  border-left: 4px solid var(--indigo-profundo);
+  padding: 16px 20px;
   border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
 }
 
-.pi-perfil-alerta.exito {
-  background-color: var(--verde-recarga-suave);
-  color: var(--verde-recarga-texto);
+.info-icon {
+  font-size: 24px;
+  color: var(--indigo-profundo);
+  flex-shrink: 0;
+  margin-top: 4px;
 }
 
-.pi-perfil-alerta.error {
-  background-color: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
+.pi-perfil-info-box h4 { margin: 0 0 6px 0; font-size: 15px; color: var(--texto-principal); }
+.pi-perfil-info-box p { margin: 0; font-size: 13px; color: var(--texto-secundario); line-height: 1.5; }
+
+/* Alertas */
+.pi-perfil-alerta {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  margin-bottom: 24px;
 }
 
-/* --- GUARDAR --- */
-.pi-perfil-btn-guardar {
-  align-self: flex-start;
+.pi-perfil-alerta.exito { background-color: var(--verde-recarga-suave); color: var(--verde-recarga-texto); border: 1px solid rgba(0, 196, 140, 0.2); }
+.pi-perfil-alerta.error { background-color: var(--rojo-error-suave); color: var(--rojo-error-texto); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+/* Footer de la tarjeta */
+.pi-perfil-footer {
+  padding: 20px 30px;
+  background-color: var(--gris-niebla);
+  border-top: 1px solid var(--borde-suave);
   display: flex;
-  align-items: center;
-  gap: 10px;
-  background-color: var(--coral-compra);
-  color: var(--texto-sobre-vivo);
+  justify-content: flex-end; /* Botón a la derecha */
+}
+
+.pi-perfil-btn-guardar {
+  display: flex; align-items: center; gap: 8px;
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
   border: none;
-  padding: 12px 26px;
-  border-radius: 10px;
+  padding: 12px 24px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background-color 0.2s, transform 0.2s;
 }
 
 .pi-perfil-btn-guardar:hover {
-  background-color: var(--coral-compra-hover);
+  background-color: var(--indigo-profundo-hover);
+  transform: translateY(-2px);
+}
+
+/* Animación simple */
+.animate-fade {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* =======================================================
+   3. RESPONSIVE (MÓVILES)
+======================================================= */
+@media (max-width: 900px) {
+  .pi-perfil-layout {
+    flex-direction: column;
+    margin-top: -100px;
+    align-items: center;
+  }
+  
+  .pi-perfil-sidebar {
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .pi-perfil-main-card {
+    width: 100%;
+  }
+
+  .pi-perfil-form-grid {
+    grid-template-columns: 1fr; /* Una sola columna en móviles */
+  }
+
+  .pi-perfil-tabs button {
+    padding: 16px;
+    flex: 1;
+    text-align: center;
+  }
 }
