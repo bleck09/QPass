@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaTicketAlt, FaWallet, FaQrcode, FaUpload, FaPlus, FaTrash, FaUserPlus,
   FaCheckCircle, FaHourglassHalf, FaEnvelope, FaHistory,
-  FaStore, FaCoins, FaExclamationTriangle, FaKey, FaUserTag, FaIdCard, FaLock, FaUserCheck
+  FaStore, FaCoins, FaExclamationTriangle, FaKey, FaUserTag, FaIdCard, FaLock, FaUserCheck,
+  FaSearch, FaTimes, FaPhoneAlt
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
 
@@ -13,6 +14,30 @@ const categoriasEntradas = [
   { id: 'general', nombre: 'General', descripcion: 'Acceso general al recinto del evento.', precio: 150, color: 'var(--cian-digital)' },
   { id: 'vip', nombre: 'VIP', descripcion: 'Acceso a zona VIP con área preferencial.', precio: 300, color: 'var(--ambar-aviso)' },
 ];
+
+// --- SOLICITUDES DE COMPRA Y REPORTES DE DATOS (compartidos con Admin vía localStorage) ---
+const CLAVE_SOLICITUDES = 'qpass_solicitudes_entradas';
+const CLAVE_REPORTES_ENTRADAS = 'qpass_reportes_entradas';
+
+const leerSolicitudes = () => {
+  const guardado = localStorage.getItem(CLAVE_SOLICITUDES);
+  return guardado ? JSON.parse(guardado) : [];
+};
+
+const guardarSolicitudes = (lista) => {
+  localStorage.setItem(CLAVE_SOLICITUDES, JSON.stringify(lista));
+};
+
+const leerReportesEntradas = () => {
+  const guardado = localStorage.getItem(CLAVE_REPORTES_ENTRADAS);
+  return guardado ? JSON.parse(guardado) : [];
+};
+
+const guardarReportesEntradas = (lista) => {
+  localStorage.setItem(CLAVE_REPORTES_ENTRADAS, JSON.stringify(lista));
+};
+
+const ETIQUETA_CAMPO = { nombre: 'Nombre completo', correo: 'Correo electrónico', celular: 'Celular' };
 
 const generarPassword = () => Math.random().toString(36).slice(-8);
 
@@ -31,6 +56,33 @@ const historialInicial = [
   { id: 1, tipo: 'recarga', detalle: 'Recarga inicial en boletería', monto: 200, unidad: 'pts', fecha: '13/08/2026', hora: '10:00' }
 ];
 
+// --- EVENTO VIGENTE (al que se compra ahora) Y VIGENCIA DE ENTRADAS ---
+const EVENTO_ACTUAL = { nombre: 'Festival QPass 2026', fecha: '2026-09-15' };
+
+const esVigente = (fechaEventoISO) => new Date(fechaEventoISO) >= new Date();
+
+// Entrada de ejemplo de un evento YA PASADO, para mostrar cómo se ve el historial
+// (los datos de entradas de eventos pasados ya no se pueden reportar).
+const comprasSeedPasadas = (usuario) => [
+  {
+    id: 900001,
+    compradorNombre: usuario.nombre,
+    compradorEmail: usuario.email,
+    evento: { nombre: 'Feria Gastronómica La Paz 2025', fecha: '2025-11-20' },
+    entradas: [
+      {
+        id: 900001, isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '71234567',
+        categoriaId: 'general', precio: 50, password: null, qrUrl: qrDe(`QPASS-${usuario.email}`),
+      },
+    ],
+    montoTotal: 50,
+    comprobante: { nombreArchivo: 'comprobante_feria.jpg', previewUrl: 'https://placehold.co/150x150/e3e6ee/1A2B6B?text=Recibo' },
+    estado: 'confirmado',
+    fecha: '15/11/2025',
+    hora: '19:00',
+  },
+];
+
 export default function UsuarioNormal() {
   const [usuario] = useState(() => {
     const guardado = localStorage.getItem('usuarioProyectoIngresos');
@@ -39,15 +91,42 @@ export default function UsuarioNormal() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const pestana = location.pathname.endsWith('/saldo') ? 'saldo' : 'comprar';
+  const pestana = location.pathname.endsWith('/historial')
+    ? 'historial'
+    : location.pathname.endsWith('/saldo') ? 'saldo' : 'comprar';
 
   // --- ESTADOS DE SIMULACIÓN Y LÓGICA DE NEGOCIO ---
   const [yaTieneEntrada, setYaTieneEntrada] = useState(false);
   const [miCuentaActiva, setMiCuentaActiva] = useState(false);
 
-  // --- ESTADOS DE COMPRAS ---
-  const [compras, setCompras] = useState([]);
-  
+  // --- ESTADOS DE COMPRAS (persistidas para que Admin las vea en detalle) ---
+  const [compras, setCompras] = useState(() => {
+    const propias = leerSolicitudes().filter(c => c.compradorEmail === usuario.email);
+    // Primera vez que entra: sembramos una compra de ejemplo de un evento ya pasado,
+    // para que el Historial de Entradas no se vea vacío en el mockup.
+    return propias.length > 0 ? propias : comprasSeedPasadas(usuario);
+  });
+
+  // Sincronizamos cada cambio con el resto de solicitudes guardadas (de otros compradores).
+  useEffect(() => {
+    const otras = leerSolicitudes().filter(c => c.compradorEmail !== usuario.email);
+    guardarSolicitudes([...otras, ...compras]);
+  }, [compras, usuario.email]);
+
+  // --- REVISAR MI SOLICITUD: edición mientras está pendiente, reporte si ya fue aprobada ---
+  const [compraEnRevision, setCompraEnRevision] = useState(null);
+  const [entradasEdicion, setEntradasEdicion] = useState([]);
+  const [errorRevision, setErrorRevision] = useState('');
+
+  // Reporte de datos incorrectos (compartido entre "Revisar mi solicitud" y el Historial de Entradas):
+  // entradaReportando = { compraId, entrada } de la entrada que se está reportando.
+  const [entradaReportando, setEntradaReportando] = useState(null);
+  const [camposReporte, setCamposReporte] = useState([]);
+  const [descripcionReporte, setDescripcionReporte] = useState('');
+  const [entradasReportadas, setEntradasReportadas] = useState(
+    () => leerReportesEntradas().filter(r => r.compradorEmail === usuario.email).map(r => r.entradaId)
+  );
+
   // El carrito inicia asumiendo que NO tiene entrada (el primer ticket es Titular)
   const [entradasCart, setEntradasCart] = useState([
     { id: "12/02/26", isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaId: 'general', precio: 150 }
@@ -70,6 +149,24 @@ export default function UsuarioNormal() {
   );
 
   const montoTotalEntradas = entradasCart.reduce((acc, entrada) => acc + entrada.precio, 0);
+
+  // Aplana todas las compras (pasadas y vigentes) en entradas individuales para el Historial.
+  const entradasHistorial = useMemo(() => {
+    return compras
+      .flatMap(compra => {
+        const evento = compra.evento || EVENTO_ACTUAL;
+        const vigente = esVigente(evento.fecha);
+        return compra.entradas.map(ent => ({
+          ...ent,
+          compraId: compra.id,
+          compraEstado: compra.estado,
+          fechaCompra: compra.fecha,
+          evento,
+          vigente,
+        }));
+      })
+      .sort((a, b) => new Date(b.evento.fecha) - new Date(a.evento.fecha));
+  }, [compras]);
 
   // --- CONTROLADOR DEL MODO SIMULACIÓN ---
   const toggleSimulacionEntradaPropia = () => {
@@ -135,7 +232,18 @@ export default function UsuarioNormal() {
 
     const { fecha, hora } = fechaHoraActual();
     setCompras(prev => [
-      { id: Date.now(), entradas: [...entradasCart], montoTotal: montoTotalEntradas, comprobante, estado: 'pendiente', fecha, hora },
+      {
+        id: Date.now(),
+        compradorNombre: usuario.nombre,
+        compradorEmail: usuario.email,
+        evento: EVENTO_ACTUAL,
+        entradas: [...entradasCart],
+        montoTotal: montoTotalEntradas,
+        comprobante,
+        estado: 'pendiente',
+        fecha,
+        hora,
+      },
       ...prev,
     ]);
 
@@ -160,6 +268,117 @@ export default function UsuarioNormal() {
     }));
   };
 
+  // --- REVISAR MI SOLICITUD ---
+  const abrirRevision = (compra) => {
+    setCompraEnRevision(compra);
+    setEntradasEdicion(compra.entradas.map(ent => ({ ...ent })));
+    setErrorRevision('');
+    cancelarReporte();
+  };
+
+  const cerrarRevision = () => {
+    setCompraEnRevision(null);
+    setEntradasEdicion([]);
+    setErrorRevision('');
+    cancelarReporte();
+  };
+
+  const actualizarEntradaEdicion = (id, campo, valor) => {
+    setEntradasEdicion(prev => prev.map(ent => ent.id === id ? { ...ent, [campo]: valor } : ent));
+  };
+
+  // Solo aplica mientras la solicitud sigue pendiente: aún se puede corregir sin generar un reporte.
+  const guardarRevision = () => {
+    setErrorRevision('');
+    const incompleto = entradasEdicion.some(ent => !ent.nombre.trim() || !ent.correo.trim() || !ent.celular.trim());
+    if (incompleto) return setErrorRevision('Completa nombre, correo y celular de cada entrada.');
+
+    const correos = entradasEdicion.map(ent => ent.correo.toLowerCase());
+    if (correos.length !== new Set(correos).size) return setErrorRevision('Cada entrada necesita un correo electrónico único.');
+
+    setCompras(prev => prev.map(c => c.id === compraEnRevision.id ? { ...c, entradas: entradasEdicion } : c));
+    cerrarRevision();
+  };
+
+  // Una vez aprobada la solicitud ya no se edita directo: se reporta el/los dato(s) mal puestos para que Admin los corrija.
+  const iniciarReporte = (compraId, entrada) => {
+    setEntradaReportando({ compraId, entrada });
+    setCamposReporte([]);
+    setDescripcionReporte('');
+  };
+
+  const cancelarReporte = () => {
+    setEntradaReportando(null);
+    setCamposReporte([]);
+    setDescripcionReporte('');
+  };
+
+  const toggleCampoReporte = (campo) => {
+    setCamposReporte(prev => prev.includes(campo) ? prev.filter(c => c !== campo) : [...prev, campo]);
+  };
+
+  // Genera un reporte por cada dato marcado (nombre, correo y/o celular), así se pueden
+  // reportar varios datos mal puestos de una sola vez en lugar de solo uno.
+  const enviarReporte = () => {
+    if (!entradaReportando || camposReporte.length === 0 || !descripcionReporte.trim()) return;
+
+    const { compraId, entrada } = entradaReportando;
+    const { fecha, hora } = fechaHoraActual();
+
+    const nuevosReportes = camposReporte.map((campo, i) => ({
+      id: Date.now() + i,
+      compraId,
+      entradaId: entrada.id,
+      participanteNombre: entrada.nombre,
+      correoActual: entrada.correo,
+      celularActual: entrada.celular,
+      campo,
+      descripcion: descripcionReporte.trim(),
+      compradorNombre: usuario.nombre,
+      compradorEmail: usuario.email,
+      estado: 'pendiente',
+      fecha,
+      hora,
+    }));
+
+    guardarReportesEntradas([...nuevosReportes, ...leerReportesEntradas()]);
+    setEntradasReportadas(prev => [...prev, entrada.id]);
+    cancelarReporte();
+  };
+
+  // Formulario reutilizado tanto dentro de "Revisar mi solicitud" como en el Historial de Entradas.
+  const formularioReporte = (
+    <div className="pi-usr-form-reporte">
+      <label>¿Qué datos están mal? (puedes marcar varios)</label>
+      <div className="pi-usr-checks-reporte">
+        {Object.keys(ETIQUETA_CAMPO).map(campo => (
+          <label key={campo} className="pi-usr-check-campo">
+            <input type="checkbox" checked={camposReporte.includes(campo)} onChange={() => toggleCampoReporte(campo)} />
+            {ETIQUETA_CAMPO[campo]}
+          </label>
+        ))}
+      </div>
+      <label>Cuéntale a Admin cuáles son los datos correctos</label>
+      <textarea
+        rows={3}
+        placeholder="Ej: el nombre correcto es Juan Pérez y el celular es 71234567"
+        value={descripcionReporte}
+        onChange={(e) => setDescripcionReporte(e.target.value)}
+        autoFocus
+      />
+      <div className="pi-usr-modal-acciones">
+        <button className="btn-cerrar-secundario" onClick={cancelarReporte}>Cancelar</button>
+        <button
+          className="pi-usr-btn-enviar"
+          onClick={enviarReporte}
+          disabled={camposReporte.length === 0 || !descripcionReporte.trim()}
+        >
+          <FaExclamationTriangle /> Enviar Reporte
+        </button>
+      </div>
+    </div>
+  );
+
   return (
     <div className="pi-usr-container">
 
@@ -171,6 +390,9 @@ export default function UsuarioNormal() {
           </button>
           <button className={pestana === 'saldo' ? 'activo' : ''} onClick={() => navigate('/usuarionormal/saldo')}>
             <FaWallet /> Mi Entrada y Saldo
+          </button>
+          <button className={pestana === 'historial' ? 'activo' : ''} onClick={() => navigate('/usuarionormal/historial')}>
+            <FaHistory /> Historial de Entradas
           </button>
         </div>
       </div>
@@ -329,6 +551,10 @@ export default function UsuarioNormal() {
                       </div>
                       <span className="pi-usr-solicitud-fecha">{compra.fecha} · {compra.hora}</span>
 
+                      <button className="pi-usr-btn-revisar" onClick={() => abrirRevision(compra)}>
+                        <FaSearch /> Revisar mi solicitud
+                      </button>
+
                       {compra.estado === 'pendiente' && (
                         <button className="pi-usr-btn-demo" onClick={() => simularConfirmacionAdmin(compra.id)}>
                           Simular Aprobación del Admin (Demo)
@@ -456,6 +682,216 @@ export default function UsuarioNormal() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* =========================================================
+          PESTAÑA 3: HISTORIAL DE ENTRADAS (todas las compras, reportar solo si son vigentes)
+      ========================================================= */}
+      {pestana === 'historial' && (
+        <div className="pi-usr-card">
+          <h3><FaHistory color="var(--indigo-profundo)" /> Historial de Entradas</h3>
+          <p className="texto-ayuda" style={{ marginBottom: '16px' }}>
+            Todas las entradas que has comprado. Solo puedes reportar datos incorrectos de entradas ya aprobadas
+            de un evento vigente; las de eventos pasados quedan como registro histórico.
+          </p>
+
+          <div className="pi-usr-tabla-wrapper">
+            <table className="pi-usr-tabla">
+              <thead>
+                <tr>
+                  <th>Persona</th>
+                  <th>Correo</th>
+                  <th>Celular</th>
+                  <th>Categoría</th>
+                  <th>Evento</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {entradasHistorial.length === 0 ? (
+                  <tr><td colSpan="7" style={{ textAlign: 'center', padding: '30px', color: 'var(--gris-medio)' }}>Aún no has comprado ninguna entrada.</td></tr>
+                ) : (
+                  entradasHistorial.map(ent => (
+                    <tr key={ent.id}>
+                      <td>{ent.nombre} {ent.isTitular && '(Tú)'}</td>
+                      <td>{ent.correo}</td>
+                      <td>{ent.celular || '—'}</td>
+                      <td>{categoriasEntradas.find(c => c.id === ent.categoriaId)?.nombre || ent.categoriaId}</td>
+                      <td>
+                        <div>{ent.evento.nombre}</div>
+                        <span style={{ fontSize: '12px', color: 'var(--gris-medio)' }}>{ent.fechaCompra}</span>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-start' }}>
+                          {ent.compraEstado === 'confirmado' ? (
+                            <span className="pi-usr-badge pi-usr-badge-ok"><FaCheckCircle /> Aprobado</span>
+                          ) : (
+                            <span className="pi-usr-badge pi-usr-badge-pend"><FaHourglassHalf /> En revisión</span>
+                          )}
+                          {ent.vigente
+                            ? <span className="pi-usr-badge pi-usr-badge-vigente">Vigente</span>
+                            : <span className="pi-usr-badge pi-usr-badge-pasado">Evento pasado</span>}
+                        </div>
+                      </td>
+                      <td>
+                        {ent.compraEstado === 'confirmado' && ent.vigente ? (
+                          entradasReportadas.includes(ent.id) ? (
+                            <span className="pi-usr-badge pi-usr-badge-pend"><FaExclamationTriangle /> Reportado</span>
+                          ) : (
+                            <button className="pi-usr-btn-reportar-entrada" onClick={() => iniciarReporte(ent.compraId, ent)}>
+                              <FaExclamationTriangle /> Reportar error
+                            </button>
+                          )
+                        ) : '—'}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* --- REPORTAR ERROR DE DATOS (desde el Historial de Entradas) --- */}
+      {entradaReportando && !compraEnRevision && (
+        <div className="pi-usr-modal-overlay" onClick={cancelarReporte}>
+          <div className="pi-usr-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pi-usr-modal-header">
+              <h3><FaExclamationTriangle color="var(--ambar-aviso-texto)" /> Reportar error de datos</h3>
+              <button className="pi-usr-btn-cerrar-modal" onClick={cancelarReporte}><FaTimes /></button>
+            </div>
+            <div className="pi-usr-modal-body">
+              <p className="texto-ayuda">Entrada de: <strong>{entradaReportando.entrada.nombre}</strong></p>
+              {formularioReporte}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- REVISAR MI SOLICITUD --- */}
+      {compraEnRevision && (
+        <div className="pi-usr-modal-overlay" onClick={cerrarRevision}>
+          <div className="pi-usr-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pi-usr-modal-header">
+              <h3><FaSearch color="var(--indigo-profundo)" /> Revisar mi solicitud</h3>
+              <button className="pi-usr-btn-cerrar-modal" onClick={cerrarRevision}><FaTimes /></button>
+            </div>
+
+            <div className="pi-usr-modal-body">
+              <p className="texto-ayuda">
+                Lote de {compraEnRevision.entradas.length} entrada(s) · {compraEnRevision.fecha} · {compraEnRevision.hora}
+              </p>
+
+              {compraEnRevision.estado === 'pendiente' ? (
+                <>
+                  <p className="texto-ayuda">
+                    Tu solicitud aún está en revisión: puedes corregir el nombre, correo o celular de cada entrada.
+                    El comprobante de pago no se puede modificar.
+                  </p>
+
+                  <div className="pi-usr-cart-list">
+                    {entradasEdicion.map((ent, i) => (
+                      <div key={ent.id} className="pi-usr-revision-entrada">
+                        <span className="pi-usr-revision-titulo">
+                          {ent.isTitular ? <FaUserTag color="var(--indigo-profundo)" /> : <FaUserPlus color="var(--gris-medio)" />}
+                          {ent.isTitular ? ' Tu entrada' : ` Entrada ${i + 1} (Invitado)`}
+                        </span>
+                        <div className="pi-usr-ticket-inputs">
+                          <div className="input-group">
+                            <label>Nombre Completo</label>
+                            <input
+                              type="text"
+                              value={ent.nombre}
+                              onChange={(e) => actualizarEntradaEdicion(ent.id, 'nombre', e.target.value)}
+                              disabled={ent.isTitular}
+                            />
+                          </div>
+                          <div className="input-group">
+                            <label>Correo Electrónico</label>
+                            <input
+                              type="email"
+                              value={ent.correo}
+                              onChange={(e) => actualizarEntradaEdicion(ent.id, 'correo', e.target.value)}
+                              disabled={ent.isTitular}
+                            />
+                          </div>
+                          <div className="input-group">
+                            <label>Celular (WhatsApp)</label>
+                            <input
+                              type="tel"
+                              value={ent.celular}
+                              onChange={(e) => actualizarEntradaEdicion(ent.id, 'celular', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {errorRevision && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorRevision}</div>}
+
+                  <div className="pi-usr-modal-acciones">
+                    <button className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
+                    <button className="pi-usr-btn-enviar" onClick={guardarRevision}>
+                      <FaCheckCircle /> Guardar cambios
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="texto-ayuda">
+                    Tu solicitud ya fue aprobada, así que los datos no se pueden editar directamente. Si el nombre,
+                    correo o celular de alguna entrada está mal, repórtalo para que Admin lo corrija.
+                  </p>
+
+                  {!esVigente((compraEnRevision.evento || EVENTO_ACTUAL).fecha) && (
+                    <div className="pi-usr-alerta-error">
+                      <FaExclamationTriangle /> El evento de esta solicitud ya pasó, así que ya no se pueden reportar datos.
+                    </div>
+                  )}
+
+                  <div className="pi-usr-cart-list">
+                    {compraEnRevision.entradas.map((ent) => {
+                      const vigente = esVigente((compraEnRevision.evento || EVENTO_ACTUAL).fecha);
+                      const reportando = entradaReportando?.entrada?.id === ent.id;
+                      return (
+                        <div key={ent.id} className="pi-usr-revision-entrada">
+                          <div className="pi-usr-revision-cabecera">
+                            <span className="pi-usr-revision-titulo">
+                              {ent.isTitular ? <FaUserTag color="var(--indigo-profundo)" /> : <FaUserPlus color="var(--gris-medio)" />}
+                              {' '}{ent.nombre} {ent.isTitular && '(Tú)'}
+                            </span>
+                            {vigente && (
+                              entradasReportadas.includes(ent.id) ? (
+                                <span className="pi-usr-badge pi-usr-badge-pend"><FaExclamationTriangle /> Reportado</span>
+                              ) : !reportando && (
+                                <button className="pi-usr-btn-reportar-entrada" onClick={() => iniciarReporte(compraEnRevision.id, ent)}>
+                                  <FaExclamationTriangle /> Reportar error
+                                </button>
+                              )
+                            )}
+                          </div>
+                          <div className="pi-usr-revision-datos">
+                            <span><FaEnvelope /> {ent.correo}</span>
+                            <span><FaPhoneAlt /> {ent.celular || '—'}</span>
+                          </div>
+
+                          {reportando && formularioReporte}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="pi-usr-modal-acciones">
+                    <button className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
