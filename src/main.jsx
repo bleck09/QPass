@@ -38,6 +38,11 @@ const router = createBrowserRouter([
     element: <MenuLateral><Admin /></MenuLateral>,
   },
   {
+    path: "/admin/reportes",
+    element: <MenuLateral><Admin /></MenuLateral>,
+  },
+  // 2. AGREGAMOS LA NUEVA RUTA AQUÍ (Debe coincidir con la ruta de tu MenuLateral.jsx)
+  {
     path: "/AdCreaUsuarioNegocio",
     element: <MenuLateral><AdCreaUsuarioNegocio /></MenuLateral>,
   },
@@ -59,6 +64,10 @@ const router = createBrowserRouter([
   },
   {
     path: "/recargador/historial",
+    element: <MenuLateral><Recargador /></MenuLateral>,
+  },
+  {
+    path: "/recargador/incidencias",
     element: <MenuLateral><Recargador /></MenuLateral>,
   },
   {

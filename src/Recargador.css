@@ -251,6 +251,11 @@
   color: var(--verde-recarga-texto);
 }
 
+.pi-rec-tarjeta-estado.aviso {
+  background-color: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+}
+
 .pi-rec-tarjeta-foto {
   width: 140px;
   height: 140px;
@@ -436,4 +441,162 @@
 
 .pi-rec-exito .pi-rec-btn-confirmar {
   width: 100%;
+}
+
+/* --- INCIDENCIAS DE RECARGA INCOMPLETA --- */
+.pi-rec-incidencias-nota {
+  font-size: 13px;
+  color: var(--texto-secundario);
+  max-width: 640px;
+}
+
+.pi-rec-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.pi-rec-badge-pend {
+  background-color: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+}
+
+.pi-rec-badge-ok {
+  background-color: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
+}
+
+.pi-rec-form-incidencia {
+  margin-top: 16px;
+  text-align: left;
+}
+
+.pi-rec-form-incidencia label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  margin-bottom: 8px;
+}
+
+.pi-rec-form-incidencia input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 10px;
+  font-size: 14px;
+  color: var(--texto-principal);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.pi-rec-form-incidencia input:focus {
+  border-color: var(--ambar-aviso);
+}
+
+.pi-rec-alerta-incidencia {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  background-color: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 10px;
+  text-align: left;
+}
+
+.pi-rec-alerta-incidencia-exito {
+  width: 100%;
+  margin: 0 0 6px;
+}
+
+.pi-rec-nota-incidencia {
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--texto-principal);
+  outline: none;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.pi-rec-nota-incidencia:focus {
+  border-color: var(--ambar-aviso);
+}
+
+.pi-rec-label-opcional {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--texto-secundario);
+  margin-top: 12px;
+  margin-bottom: 6px;
+}
+
+.pi-rec-form-incidencia-post {
+  width: 100%;
+  margin-top: 4px;
+  margin-bottom: 6px;
+}
+
+.pi-rec-alerta-info {
+  font-size: 12px;
+  color: var(--gris-medio);
+  margin-top: 8px;
+  text-align: left;
+}
+
+.pi-rec-btn-reportar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: 1px dashed var(--ambar-aviso);
+  color: var(--ambar-aviso-texto);
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background 0.2s;
+}
+
+.pi-rec-btn-reportar:hover {
+  background-color: var(--ambar-aviso-suave);
+}
+
+.pi-rec-btn-reportar-fila {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--ambar-aviso);
+  background: none;
+  color: var(--ambar-aviso-texto);
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.pi-rec-btn-reportar-fila:hover {
+  background-color: var(--ambar-aviso-suave);
 }

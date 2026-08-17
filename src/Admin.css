@@ -502,3 +502,39 @@
   border-color: var(--indigo-profundo);
   color: var(--texto-sobre-oscuro);
 }
+
+/* --- INCIDENCIAS DE RECARGA --- */
+.pi-dash-rol-card-alerta:hover {
+  background-color: var(--ambar-aviso-suave);
+  border-color: var(--ambar-aviso);
+}
+
+.pi-dash-rol-card-alerta .pi-dash-rol-icon {
+  color: var(--ambar-aviso-texto);
+}
+
+.pi-dash-incidencias-nota {
+  font-size: 13px;
+  color: var(--texto-secundario);
+  margin-bottom: 18px;
+  max-width: 640px;
+}
+
+.pi-dash-resolver-form {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pi-dash-resolver-form input {
+  width: 70px;
+  padding: 6px 8px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+}
+
+.pi-dash-resolver-form input:focus {
+  border-color: var(--cian-digital);
+}
