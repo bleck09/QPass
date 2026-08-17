@@ -349,3 +349,104 @@ html {
   .pi-landing-hero-content h1 { font-size: 3rem; }
   .pi-landing-hero-content p { max-width: 100%; margin: 0 auto 2.5rem auto; }
 }
+/* =======================================================
+   NUEVO CRONOGRAMA - Estilo Tarjetas Alternadas
+======================================================= */
+.pi-landing-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 25px; /* Espacio vertical entre tarjetas */
+  margin-top: 40px;
+  width: 100%;
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.timeline-card {
+  position: relative;
+  width: 85%; /* No ocupa todo el ancho para dar el efecto de salto */
+  padding: 25px 35px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s;
+}
+
+.timeline-card:hover {
+  transform: translateY(-5px);
+}
+
+/* Tarjetas a la izquierda (1, 3, 5...) */
+.card-left {
+  align-self: flex-start;
+  /* Fondo oscuro usando el color primario del tema */
+  background: var(--color-primario);
+  color: var(--color-fondo); 
+}
+.card-left .timeline-time { color: var(--color-fondo); opacity: 0.9; }
+.card-left .timeline-actividad { color: var(--color-fondo); font-weight: 600; }
+
+/* Tarjetas a la derecha (2, 4, 6...) */
+.card-right {
+  align-self: flex-end;
+  /* Fondo claro semitransparente como en la imagen */
+  background: rgba(245, 247, 251, 0.95);
+  color: var(--color-fondo);
+}
+.card-right .timeline-time { color: var(--color-primario); }
+.card-right .timeline-actividad { color: var(--color-fondo); font-weight: 600; }
+
+/* Insignia con el número (El círculo) */
+.timeline-badge {
+  position: absolute;
+  top: -15px; /* Sube la mitad del círculo hacia arriba */
+  width: 45px;
+  height: 45px;
+  background-color: var(--color-boton);
+  color: var(--color-primario);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 900;
+  font-size: 18px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.25);
+}
+
+/* Posición de la insignia según el lado */
+.card-left .timeline-badge {
+  left: -20px; /* Sale hacia la izquierda */
+}
+.card-right .timeline-badge {
+  right: -20px; /* Sale hacia la derecha */
+}
+
+/* Textos dentro de la tarjeta */
+.timeline-time {
+  font-size: 26px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.timeline-actividad {
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* =======================================================
+   RESPONSIVE PARA EL CRONOGRAMA
+======================================================= */
+@media (max-width: 768px) {
+  .timeline-card {
+    width: 90%;
+    align-self: flex-end; /* Alineamos todos igual en celular para que no se vea desordenado */
+  }
+  
+  /* En celular, todas las insignias salen a la izquierda por estética */
+  .card-left .timeline-badge, 
+  .card-right .timeline-badge {
+    left: -15px;
+    right: auto;
+  }
+}

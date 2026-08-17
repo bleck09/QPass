@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt, 
@@ -10,10 +10,9 @@ import './App.css';
 const defaultLandingData = {
   titulo: 'Innovación. Control. Resultados.',
   informacion: 'Sistema centralizado para el control, monitoreo y auditoría de ingresos diarios. Optimiza los procesos de recarga mediante pulseras QR con total transparencia y datos en tiempo real.',
-  // Usamos una imagen de tecnología/abstracta de Unsplash que simule el 3D de la referencia
   imagen: 'https://purovinotinto.com/wp-content/uploads/2022/12/Tomorrowland.jpg',
   colorPrimario: '#00B4D8',     // Cian brillante para acentos
-  colorBoton: '#FFFFFF',        // Blanco para el botón principal (como en la foto)
+  colorBoton: '#FFFFFF',        // Blanco para el botón principal
   colorFondo: '#0b1120',        // Azul casi negro (Fondo principal)
   colorTextoTitulo: '#FFFFFF',  // Blanco puro para títulos
   colorTextoP: '#94A3B8',       // Gris azulado para párrafos
@@ -40,6 +39,11 @@ const mockMapa = [
 export default function App() {
   const navigate = useNavigate();
 
+  // FIX DEL SCROLL: Esto garantiza que siempre cargue en la parte superior
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, []);
+
   const [data] = useState(() => {
     const dataGuardada = localStorage.getItem('pi_landing_config');
     return dataGuardada ? JSON.parse(dataGuardada) : defaultLandingData;
@@ -54,7 +58,6 @@ export default function App() {
 
   const handleLoginClick = () => navigate('/login');
 
-  // Aplicamos los colores dinámicos al contenedor principal
   const estiloDinamico = {
     '--color-primario': data.colorPrimario || defaultLandingData.colorPrimario,
     '--color-boton': data.colorBoton || defaultLandingData.colorBoton,
@@ -91,27 +94,23 @@ export default function App() {
   return (
     <div className="pi-landing-container" style={estiloDinamico}>
       
-      {/* BARRA DE NAVEGACIÓN (Estilo Moderno Fija) */}
+      {/* BARRA DE NAVEGACIÓN */}
       <nav className="pi-landing-navbar">
         <div className="pi-landing-logo">
           <FaQrcode className="logo-icon" />
           <span>QPass</span>
         </div>
-        
-        {/* Enlaces con anclas para el Scroll Suave */}
         <ul className="pi-landing-nav-links">
           <li><a href="#inicio">Inicio</a></li>
           <li><a href="#actividades">Actividades</a></li>
           <li><a href="#mapa">Mapa del Evento</a></li>
           <li><a href="#cronograma">Cronograma</a></li>
         </ul>
-
         <button className="pi-landing-btn-nav" onClick={handleLoginClick}>
           Iniciar Sesión
         </button>
       </nav>
 
-      {/* EFECTOS DE LUCES DE FONDO (Glow) */}
       <div className="bg-glow glow-top-left"></div>
       <div className="bg-glow glow-bottom-right"></div>
 
@@ -125,12 +124,11 @@ export default function App() {
           </button>
         </div>
         <div className="pi-landing-hero-image">
-          {/* Añadimos una clase para hacer que la imagen "flote" */}
           <img src={data.imagen} alt="Evento QPass" className="floating-img" />
         </div>
       </header>
 
-      {/* SECCIÓN ACTIVIDADES (Efecto Cristal) */}
+      {/* SECCIÓN ACTIVIDADES */}
       <section id="actividades" className="pi-landing-section">
         <h2 className="pi-landing-section-title">Servicios Destacados</h2>
         <div className="pi-landing-grid">
@@ -186,30 +184,28 @@ export default function App() {
         </div>
       </section>
 
-      {/* SECCIÓN CRONOGRAMA */}
+      {/* SECCIÓN CRONOGRAMA (DISEÑO ACTUALIZADO) */}
       <section id="cronograma" className="pi-landing-section">
         <div className="pi-landing-section-header">
           <h2 className="pi-landing-section-title"><FaClock /> Cronograma Oficial</h2>
         </div>
-        <div className="pi-landing-table-wrapper glass-panel">
-          <table className="pi-landing-table">
-            <thead>
-              <tr>
-                <th>Hora</th>
-                <th>Actividad Programada</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.cronograma.map((item, index) => (
-                <tr key={index}>
-                  <td className="col-hora">
-                    <div className="badge-hora">{item.hora}</div>
-                  </td>
-                  <td className="col-actividad">{item.actividad}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        
+        <div className="pi-landing-timeline">
+          {data.cronograma.map((item, index) => {
+            // Alternamos entre la tarjeta izquierda y derecha
+            const isLeft = index % 2 === 0;
+            return (
+              <div key={index} className={`timeline-card ${isLeft ? 'card-left' : 'card-right'}`}>
+                {/* Insignia del número */}
+                <div className="timeline-badge">{index + 1}</div>
+                
+                <div className="timeline-content">
+                  <div className="timeline-time">{item.hora}</div>
+                  <p className="timeline-actividad">{item.actividad}</p>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
@@ -243,7 +239,6 @@ export default function App() {
 
             <div className="pi-landing-modal-body">
               <span className="modal-categoria-badge">{puestoModal.categoria}</span>
-              
               <h3 className="modal-menu-title">
                 <FaHamburger /> Menú Disponible
               </h3>

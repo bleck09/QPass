@@ -1,85 +1,87 @@
-/* Prefix único: qpass-home- aplicando Guía de Diseño Global */
+/* ============================================================
+   PÁGINA PRINCIPAL - QPASS LANDING (Glassmorphism & 3D)
+============================================================ */
 
 .qpass-home-container {
   width: 100%;
   min-height: 100vh;
-  background-color: #0b1120; /* Azul casi negro */
-  color: #94A3B8; /* Gris azulado */
+  background-color: var(--azul-noche); 
+  color: var(--blanco);
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   position: relative;
 }
 
-/* Efectos de Luces Neón */
-.qpass-home-glow {
-  position: absolute;
-  width: 700px;
-  height: 700px;
-  filter: blur(200px);
-  border-radius: 50%;
-  opacity: 0.15;
+/* Fondo Fijo (Efecto Parallax sutil) */
+.qpass-home-bg-image {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  /* Puedes cambiar esta imagen por una foto de un concierto */
+  background-image: url('https://images.unsplash.com/photo-1459749411175-04bf5292ceea?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+  background-size: cover;
+  background-position: center;
+  opacity: 0.2; /* Lo oscurecemos para que resalten las tarjetas */
   z-index: 0;
   pointer-events: none;
 }
-.glow-1 { top: -200px; left: -300px; background-color: #00B4D8; }
-.glow-2 { top: 40%; right: -300px; background-color: #6366f1; }
 
-/* Panel de Cristal Reutilizable */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+/* Luces Neón de Fondo */
+.qpass-home-glow {
+  position: absolute;
+  width: 600px; height: 600px;
+  filter: blur(150px);
+  border-radius: 50%;
+  opacity: 0.3;
+  z-index: 0;
+  pointer-events: none;
+}
+.glow-1 { top: -100px; left: -200px; background-color: var(--cian-digital); }
+.glow-2 { top: 50%; right: -200px; background-color: var(--indigo-profundo); }
+
+/* Utilidad Glassmorphism (El efecto cristal que pediste) */
+.glass-morphism {
+  background: rgba(10, 14, 39, 0.45);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
 }
 
 /* =======================================================
-   NAVBAR
+   NAVBAR FLOTANTE (ESTILO "DESCARGAR.JFIF")
 ======================================================= */
-.qpass-home-navbar {
+.qpass-floating-navbar {
   position: fixed;
-  top: 0; left: 0; right: 0;
+  top: 25px; left: 50%;
+  transform: translateX(-50%);
+  width: 90%; max-width: 1100px;
   height: 70px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 5%;
+  border-radius: 40px;
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 0 20px 0 10px;
   z-index: 1000;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .qpass-home-logo {
-  display: flex; align-items: center; gap: 10px;
-  font-size: 24px; font-weight: 800; color: #fff;
+  display: flex; align-items: center; gap: 12px;
+  font-size: 22px; font-weight: 800; color: var(--blanco);
+  margin-left: 10px;
 }
-.qpass-home-logo .logo-icon { color: #00B4D8; }
-
-.qpass-home-nav-links {
-  display: flex; gap: 30px; list-style: none; margin: 0; padding: 0;
+.logo-icon-bg {
+  background: var(--cian-digital); width: 40px; height: 40px; border-radius: 50%;
+  display: flex; justify-content: center; align-items: center; color: var(--azul-noche);
+  font-size: 18px;
 }
-.qpass-home-nav-links a {
-  color: #e2e8f0; text-decoration: none; font-weight: 600; font-size: 15px; transition: color 0.2s;
+
+.qpass-home-nav-links { display: flex; gap: 30px; list-style: none; margin: 0; padding: 0; }
+.qpass-home-nav-links a { color: var(--blanco); text-decoration: none; font-weight: 600; font-size: 14px; transition: color 0.2s; }
+.qpass-home-nav-links a:hover { color: var(--cian-digital); }
+
+.qpass-home-nav-actions .btn-solid {
+  background-color: var(--blanco); color: var(--azul-noche); border: none; padding: 12px 24px; border-radius: 30px;
+  font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s;
 }
-.qpass-home-nav-links a:hover { color: #00B4D8; }
-
-.qpass-home-nav-actions { display: flex; gap: 15px; align-items: center; }
-
-/* Botones Genéricos */
-.btn-solid {
-  background-color: #00B4D8; color: #ffffff; border: none; padding: 10px 20px; border-radius: 30px;
-  font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 8px; justify-content: center;
-  transition: all 0.3s; box-shadow: 0 4px 15px rgba(0, 180, 216, 0.3);
-}
-.btn-solid:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0, 180, 216, 0.5); }
-
-.btn-outline {
-  background-color: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.3);
-  padding: 10px 20px; border-radius: 30px; font-weight: 600; cursor: pointer; transition: all 0.3s;
-}
-.btn-outline:hover { background-color: rgba(255,255,255,0.1); border-color: #fff; }
-
-.btn-large { padding: 14px 30px; font-size: 16px; }
-.btn-full { width: 100%; }
-.btn-small { padding: 8px 16px; font-size: 13px; }
+.qpass-home-nav-actions .btn-solid:hover { background-color: var(--cian-digital); color: var(--azul-noche); transform: scale(1.05); }
 
 /* =======================================================
    HERO SECTION
@@ -87,151 +89,180 @@
 .qpass-home-hero {
   position: relative; z-index: 10;
   display: flex; justify-content: center; align-items: center;
-  min-height: 85vh; padding: 100px 5% 50px 5%; text-align: center;
+  min-height: 85vh; padding: 120px 5% 50px 5%; text-align: center;
 }
 
-.hero-content {
-  max-width: 800px; display: flex; flex-direction: column; align-items: center; gap: 24px;
-}
+.hero-content { max-width: 800px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
 
-.badge-tech {
-  background: rgba(0, 180, 216, 0.15); color: #00B4D8; border: 1px solid rgba(0, 180, 216, 0.3);
-  padding: 8px 16px; border-radius: 20px; font-weight: 700; font-size: 13px; letter-spacing: 1px; text-transform: uppercase;
-}
+.badge-tech { padding: 10px 20px; border-radius: 30px; font-weight: 700; font-size: 13px; color: var(--cian-digital); }
 
-.hero-content h1 {
-  font-size: 4.5rem; font-weight: 800; color: #ffffff; margin: 0; line-height: 1.1; letter-spacing: -1px;
-}
-.hero-content p { font-size: 1.25rem; line-height: 1.6; margin: 0; max-width: 700px; }
-.hero-buttons { display: flex; gap: 20px; margin-top: 10px; }
+.hero-content h1 { font-size: 4rem; font-weight: 800; line-height: 1.1; margin: 0; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
+.hero-content p { font-size: 1.2rem; line-height: 1.6; margin: 0; max-width: 650px; color: var(--gris-medio); }
 
+.hero-buttons { margin-top: 10px; }
+.btn-large { padding: 16px 36px; font-size: 16px; border-radius: 30px; background: var(--cian-digital); color: var(--azul-noche); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; font-weight: 800; transition: all 0.3s; }
+.btn-large:hover { background: var(--blanco); transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0, 180, 216, 0.4); }
 
 /* =======================================================
-   SECCIONES Y SERVICIOS
+   SECCIONES GLOBALES
 ======================================================= */
-.qpass-home-section {
-  position: relative; z-index: 10; padding: 80px 5%;
-}
-
-.section-header { text-align: center; margin-bottom: 50px; }
-.section-header h2 { font-size: 2.5rem; color: #fff; margin: 0 0 10px 0; font-weight: 800; }
-.section-header p { font-size: 1.1rem; margin: 0; }
-
-.section-header-row {
-  display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px;
-}
-.section-header-row h2 {
-  font-size: 2.2rem; color: #fff; margin: 0 0 8px 0; font-weight: 800; display: flex; align-items: center; gap: 12px;
-}
-.title-icon { color: #00B4D8; }
-.section-header-row p { margin: 0; font-size: 1.1rem; }
-
-/* Grid de Servicios */
-.qpass-home-services-grid {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px;
-}
-
-.service-card {
-  padding: 40px 30px; border-radius: 20px; text-align: left; transition: transform 0.3s;
-}
-.service-card:hover { transform: translateY(-10px); background: rgba(255, 255, 255, 0.05); }
-
-.service-icon {
-  width: 60px; height: 60px; background: rgba(0, 180, 216, 0.15); color: #00B4D8;
-  border-radius: 16px; display: flex; justify-content: center; align-items: center;
-  font-size: 28px; margin-bottom: 24px; border: 1px solid rgba(0, 180, 216, 0.3);
-}
-
-.service-card h3 { color: #fff; font-size: 1.4rem; margin: 0 0 12px 0; font-weight: 700; }
-.service-card p { margin: 0; line-height: 1.6; font-size: 1rem; }
-
+.qpass-home-section { position: relative; z-index: 10; padding: 80px 5%; max-width: 1200px; margin: 0 auto; }
+.section-header.center { text-align: center; margin-bottom: 50px; }
+.section-header h2 { font-size: 2.5rem; margin: 0 0 10px 0; font-weight: 800; }
+.section-header p { font-size: 1.1rem; color: var(--gris-medio); margin: 0; }
 
 /* =======================================================
-   CARRUSELES DE EVENTOS (SCROLL NATIVO)
+   CARRUSEL 3D COVERFLOW (Estilo ROME APP / TRAVEL2)
 ======================================================= */
-.qpass-home-carousel {
+/* Busca esto en tu PaginaPrincipal.css y reemplázalo: */
+
+.carousel-3d-container {
+  position: relative;
+  height: 550px;
   display: flex;
-  gap: 24px;
-  overflow-x: auto;
-  padding-bottom: 30px; /* Espacio para la sombra */
-  scroll-snap-type: x mandatory;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Ocultar barra de scroll en Webkit (Chrome, Safari) */
-.qpass-home-carousel::-webkit-scrollbar { display: none; }
-.qpass-home-carousel { -ms-overflow-style: none; scrollbar-width: none; }
-
-.carousel-card {
-  min-width: 320px;
-  max-width: 320px;
-  border-radius: 20px;
+  justify-content: center;
+  align-items: center;
+  perspective: 1200px;
   overflow: hidden;
-  scroll-snap-align: start;
-  flex-shrink: 0;
-  transition: transform 0.3s, box-shadow 0.3s;
+  padding: 20px 0;
+  cursor: grab; /* Muestra la manito abierta al pasar el mouse */
 }
 
-.carousel-card:hover {
-  transform: translateY(-8px);
-  box-shadow: 0 15px 30px rgba(0,0,0,0.4);
+.carousel-3d-container:active {
+  cursor: grabbing; /* Muestra la manito cerrada cuando haces clic para arrastrar */
 }
 
-.card-image-wrapper { position: relative; width: 100%; height: 200px; }
-.card-image-wrapper img { width: 100%; height: 100%; object-fit: cover; }
-.card-image-wrapper.grayscale img { filter: grayscale(100%); opacity: 0.6; }
-
-.card-badge {
-  position: absolute; top: 15px; right: 15px; background: rgba(0, 180, 216, 0.9); color: #fff;
-  padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; text-transform: uppercase;
+.card-image-bg img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  /* ESTAS DOS LÍNEAS SON VITALES PARA EL DRAG */
+  pointer-events: none; 
+  user-select: none; 
 }
 
-.card-content { padding: 24px; display: flex; flex-direction: column; gap: 10px; }
-.card-content h3 { margin: 0; color: #fff; font-size: 1.3rem; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
-.card-date { color: #00B4D8; font-weight: 600; font-size: 0.9rem; }
-.card-location { color: #94A3B8; font-size: 0.9rem; margin-bottom: 10px; }
+.carousel-3d-card {
+  position: absolute;
+  width: 320px;
+  height: 480px;
+  border-radius: 24px;
+  background-color: var(--azul-noche);
+  border: 1px solid rgba(255,255,255,0.1);
+  overflow: hidden;
+  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  cursor: pointer;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+  
+  /* LA MAGIA DE LAS MATEMÁTICAS RESPONSIVAS INYECTADAS DESDE REACT */
+  transform: 
+    translateX(calc(var(--offset) * 160px)) 
+    translateZ(calc(var(--abs-offset) * -120px)) 
+    rotateY(calc(var(--dir) * -15deg));
+  opacity: calc(1 - (var(--abs-offset) * 0.3));
+}
 
-/* Ajustes para tarjetas pasadas */
-.past-card { min-width: 280px; max-width: 280px; }
-.past-card .card-image-wrapper { height: 160px; }
+.carousel-3d-card.active { cursor: default; box-shadow: 0 20px 50px rgba(0, 180, 216, 0.3); border-color: rgba(0, 180, 216, 0.5); }
 
+/* Imagen y gradiente del fondo de la tarjeta */
+.card-image-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+.card-image-bg img { width: 100%; height: 100%; object-fit: cover; }
+.card-overlay-gradient {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: linear-gradient(to bottom, rgba(10,14,39,0.1) 0%, rgba(10,14,39,0.8) 50%, rgba(10,14,39,1) 100%);
+}
+
+.btn-expand-icon { position: absolute; top: 15px; right: 15px; width: 36px; height: 36px; border-radius: 50%; border: none; color: var(--blanco); z-index: 10; display: flex; justify-content: center; align-items: center; }
+
+/* Contenido de texto en la tarjeta */
+.card-3d-content { position: absolute; bottom: 0; left: 0; width: 100%; padding: 25px; z-index: 2; display: flex; flex-direction: column; }
+.card-3d-content h3 { margin: 0 0 10px 0; font-size: 24px; font-weight: 800; line-height: 1.1; }
+.card-desc { font-size: 12px; color: var(--gris-medio); margin: 0 0 20px 0; line-height: 1.4; display: none; }
+.carousel-3d-card.active .card-desc { display: block; }
+
+.card-3d-footer { display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+.footer-info { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--gris-medio); }
+.footer-info span { display: flex; align-items: center; gap: 6px; }
+.footer-price { display: flex; flex-direction: column; align-items: flex-end; }
+.footer-price span { font-size: 11px; color: var(--gris-medio); }
+.footer-price strong { font-size: 18px; color: var(--cian-digital); font-weight: 800; }
+
+.btn-full { width: 100%; border: none; padding: 14px; border-radius: 12px; background: var(--cian-digital); color: var(--azul-noche); font-weight: 800; cursor: pointer; transition: background 0.2s; }
+.btn-full:hover { background: var(--blanco); }
+.mt-15 { margin-top: 15px; }
+
+/* Pill Controlador del Carrusel */
+.carousel-control-pill {
+  margin: 20px auto 0 auto; width: max-content; padding: 8px 12px; border-radius: 40px;
+  display: flex; align-items: center; gap: 20px;
+}
+.carousel-control-pill button { background: rgba(255,255,255,0.1); border: none; width: 40px; height: 40px; border-radius: 50%; color: var(--blanco); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
+.carousel-control-pill button:hover { background: var(--cian-digital); color: var(--azul-noche); }
+.pill-info { display: flex; align-items: center; gap: 12px; }
+.pill-info img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.pill-text { display: flex; flex-direction: column; }
+.pill-text strong { font-size: 14px; }
+.pill-text span { font-size: 11px; color: var(--gris-medio); }
+
+/* =======================================================
+   CARACTERÍSTICAS (Estilo Grid "Descargar.jfif")
+======================================================= */
+.feature-section { padding-top: 40px; }
+.feature-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; }
+
+.feature-main-card { padding: 40px; border-radius: 30px; display: flex; flex-direction: column; justify-content: center; }
+.feature-main-card h2 { font-size: 3rem; margin: 0 0 20px 0; line-height: 1.1; font-weight: 800; }
+.feature-main-card p { font-size: 1.1rem; color: var(--gris-medio); line-height: 1.6; margin-bottom: 40px; }
+
+.feature-stats { display: flex; align-items: center; gap: 30px; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 20px; width: max-content; }
+.stat-item { display: flex; flex-direction: column; }
+.stat-item strong { font-size: 2rem; font-weight: 800; color: var(--cian-digital); }
+.stat-item span { font-size: 12px; color: var(--gris-medio); text-transform: uppercase; letter-spacing: 1px;}
+
+.stat-users { display: flex; align-items: center; }
+.stat-users img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--azul-noche); margin-left: -15px; }
+.stat-users img:first-child { margin-left: 0; }
+.more-users { width: 40px; height: 40px; border-radius: 50%; background: var(--blanco); color: var(--azul-noche); display: flex; justify-content: center; align-items: center; margin-left: -15px; z-index: 4; font-size: 12px; }
+
+.feature-side-cards { display: flex; flex-direction: column; gap: 24px; }
+.side-card { padding: 25px; border-radius: 24px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.2s; }
+.side-card:hover { transform: translateX(-10px); border-color: var(--cian-digital); }
+.icon-circle { width: 45px; height: 45px; background: rgba(0, 180, 216, 0.2); color: var(--cian-digital); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-bottom: 5px; }
+.side-card h4 { margin: 0; font-size: 18px; }
+.side-card p { margin: 0; font-size: 13px; color: var(--gris-medio); }
+
+/* =======================================================
+   EVENTOS PASADOS
+======================================================= */
+.past-events-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
+.past-card { border-radius: 24px; display: flex; align-items: center; gap: 20px; padding: 15px; transition: transform 0.2s; cursor: pointer; }
+.past-card:hover { transform: translateY(-5px); border-color: var(--cian-digital); }
+.past-card img { width: 100px; height: 100px; border-radius: 16px; object-fit: cover; filter: grayscale(80%); transition: filter 0.3s; }
+.past-card:hover img { filter: grayscale(0%); }
+.past-card-info { display: flex; flex-direction: column; gap: 8px; }
+.past-card-info h4 { margin: 0; font-size: 18px; }
+.past-card-info span { font-size: 13px; color: var(--gris-medio); display: flex; align-items: center; gap: 6px; }
 
 /* =======================================================
    FOOTER
 ======================================================= */
-.qpass-home-footer {
-  margin-top: 50px; padding: 60px 5% 30px 5%; border-top: 1px solid rgba(255,255,255,0.05);
-  position: relative; z-index: 10; border-radius: 40px 40px 0 0; border-left: none; border-right: none; border-bottom: none;
-}
-
-.footer-top {
-  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 40px; margin-bottom: 40px;
-}
-
-.footer-brand { max-width: 300px; }
-.footer-brand p { margin-top: 15px; line-height: 1.6; }
-
-.footer-links h4 { color: #fff; font-size: 1.1rem; margin: 0 0 20px 0; }
-.footer-links ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
-.footer-links a { color: #94A3B8; text-decoration: none; transition: color 0.2s; }
-.footer-links a:hover { color: #00B4D8; }
-
-.footer-bottom {
-  text-align: center; padding-top: 30px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 0.9rem;
-}
-
+.qpass-home-footer { margin-top: 50px; border-radius: 40px 40px 0 0; border-bottom: none; border-left: none; border-right: none; }
+.footer-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 40px 5%; max-width: 1200px; margin: 0 auto; gap: 20px; }
+.footer-brand p { margin: 10px 0 0 10px; font-size: 14px; color: var(--gris-medio); }
+.copyright { font-size: 13px; color: var(--gris-medio); }
 
 /* =======================================================
-   RESPONSIVE DESIGN
+   RESPONSIVE
 ======================================================= */
 @media (max-width: 900px) {
   .hero-content h1 { font-size: 3rem; }
-  .hero-buttons { flex-direction: column; width: 100%; }
-  .btn-large { width: 100%; text-align: center; }
-  
-  .qpass-home-nav-links { display: none; /* Se ocultan en móvil para simplificar, o se puede hacer menú hamburguesa */ }
-  .qpass-home-nav-actions .btn-outline { display: none; }
-  
-  .section-header-row { flex-direction: column; align-items: flex-start; gap: 15px; }
-  .section-header h2, .section-header-row h2 { font-size: 2rem; }
+  .qpass-home-nav-links { display: none; }
+  .qpass-floating-navbar { width: 95%; padding: 0 15px; }
+  .feature-grid { grid-template-columns: 1fr; }
+  .carousel-3d-card { 
+    /* En móviles acercamos las tarjetas un poco más ajustando las matemáticas */
+    transform: 
+      translateX(calc(var(--offset) * 110px)) 
+      translateZ(calc(var(--abs-offset) * -120px)) 
+      rotateY(calc(var(--dir) * -10deg));
+  }
 }
