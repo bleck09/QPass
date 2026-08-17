@@ -1,43 +1,44 @@
 import { useMemo, useState } from 'react';
 import {
-  FaUsers, FaCheckCircle, FaHourglassHalf, FaQrcode, FaTimes,
-  FaSearch, FaIdCard, FaTicketAlt, FaClock, FaUserCheck, FaExclamationTriangle
+  FaUsers, FaCheckCircle, FaQrcode, FaTimes,
+  FaSearch, FaIdCard, FaTicketAlt,  FaUserCheck, FaExclamationTriangle,
+  FaSignOutAlt, FaCamera, FaHistory, FaSignInAlt, FaUserSecret, FaSyncAlt
 } from 'react-icons/fa';
 import './Supervisor.css';
 
 // --- DATOS SIMULADOS DEL EVENTO ---
 const participantesIniciales = [
-  { id: 1, nombre: 'María Fernanda Rojas', documento: '7451236 LP', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=47', estado: 'ingresado', horaIngreso: '08:12' },
-  { id: 2, nombre: 'Jorge Luis Quispe', documento: '6621345 SC', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=12', estado: 'ingresado', horaIngreso: '08:20' },
-  { id: 3, nombre: 'Ana Belén Castro', documento: '5589214 CB', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=32', estado: 'ingresado', horaIngreso: '08:35' },
-  { id: 4, nombre: 'Ricardo Alanoca Mamani', documento: '4471258 LP', tipoEntrada: 'Staff', foto: 'https://i.pravatar.cc/300?img=51', estado: 'ingresado', horaIngreso: '08:41' },
-  { id: 5, nombre: 'Daniela Vargas Soto', documento: '7789456 SC', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=25', estado: 'pendiente', horaIngreso: null },
-  { id: 6, nombre: 'Sergio Fabián Choque', documento: '3312589 OR', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=15', estado: 'pendiente', horaIngreso: null },
-  { id: 7, nombre: 'Paola Andrea Terrazas', documento: '6654123 CB', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=45', estado: 'pendiente', horaIngreso: null },
-  { id: 8, nombre: 'Luis Fernando Mamani', documento: '5521478 LP', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=13', estado: 'pendiente', horaIngreso: null },
-  { id: 9, nombre: 'Carla Ximena Flores', documento: '4498712 SC', tipoEntrada: 'Staff', foto: 'https://i.pravatar.cc/300?img=44', estado: 'pendiente', horaIngreso: null },
-  { id: 10, nombre: 'Diego Armando Peñaranda', documento: '7712365 TJ', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=59', estado: 'pendiente', horaIngreso: null },
-  { id: 11, nombre: 'Valeria Nicole Guzmán', documento: '3387654 LP', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=48', estado: 'pendiente', horaIngreso: null },
-  { id: 12, nombre: 'Marco Antonio Villca', documento: '6698741 CB', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=14', estado: 'pendiente', horaIngreso: null },
+  // 1. Caso Normal: Adentro y con foto
+  { id: 1, nombre: 'María Fernanda Rojas', documento: '7451236 LP', tipoEntrada: 'VIP', fotoPerfil: 'https://i.pravatar.cc/300?img=47', fotoIngreso: 'https://i.pravatar.cc/300?img=47', estado: 'ingresado', historial: [{ tipo: 'Entrada', hora: '08:12' }] },
+  // 2. Caso Salida: Afuera temporalmente
+  { id: 2, nombre: 'Jorge Luis Quispe', documento: '6621345 SC', tipoEntrada: 'General', fotoPerfil: 'https://i.pravatar.cc/300?img=12', fotoIngreso: 'https://i.pravatar.cc/300?img=12', estado: 'salio', historial: [{ tipo: 'Entrada', hora: '08:20' }, { tipo: 'Salida', hora: '10:15' }] },
+  // 3. Caso Excepción: Adentro pero OMITIÓ la foto al entrar
+  { id: 3, nombre: 'Ana Belén Castro', documento: '5589214 CB', tipoEntrada: 'General', fotoPerfil: 'https://i.pravatar.cc/300?img=32', fotoIngreso: null, estado: 'ingresado', historial: [{ tipo: 'Entrada (Sin Foto)', hora: '08:35' }] },
+  // 4. Casos Pendientes: Nunca han entrado
+  { id: 4, nombre: 'Sergio Fabián Choque', documento: '3312589 OR', tipoEntrada: 'General', fotoPerfil: 'https://i.pravatar.cc/300?img=15', fotoIngreso: null, estado: 'pendiente', historial: [] },
+  { id: 5, nombre: 'Daniela Vargas Soto', documento: '7789456 SC', tipoEntrada: 'VIP', fotoPerfil: 'https://i.pravatar.cc/300?img=25', fotoIngreso: null, estado: 'pendiente', historial: [] },
 ];
 
 const horaActual = () => new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
 
 export default function Supervisor() {
   const [participantes, setParticipantes] = useState(participantesIniciales);
-  const [tarjetaQR, setTarjetaQR] = useState(null); // participante mostrado en la tarjeta grande
-  const [yaHabiaIngresado, setYaHabiaIngresado] = useState(false);
+  
+  const [tarjetaQR, setTarjetaQR] = useState(null); 
+  const [fotoCapturadaTemporal, setFotoCapturadaTemporal] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
-  const [filtro, setFiltro] = useState('todos'); // todos | pendiente | ingresado
+  
+  const [filtro, setFiltro] = useState('todos'); 
   const [busqueda, setBusqueda] = useState('');
+  const [alertaToggle, setAlertaToggle] = useState(''); // Mensaje de error interno del modal
 
   const stats = useMemo(() => {
     const total = participantes.length;
-    const ingresados = participantes.filter(p => p.estado === 'ingresado').length;
-    const faltan = total - ingresados;
-    const pctIngresados = total ? Math.round((ingresados / total) * 1000) / 10 : 0;
-    const pctFaltan = total ? Math.round((faltan / total) * 1000) / 10 : 0;
-    return { total, ingresados, faltan, pctIngresados, pctFaltan };
+    const adentro = participantes.filter(p => p.estado === 'ingresado').length;
+    const afuera = participantes.filter(p => p.estado === 'salio').length;
+    const pendientes = participantes.filter(p => p.estado === 'pendiente').length;
+    const pctAdentro = total ? Math.round((adentro / total) * 1000) / 10 : 0;
+    return { total, adentro, afuera, pendientes, pctAdentro };
   }, [participantes]);
 
   const listaFiltrada = useMemo(() => {
@@ -50,107 +51,162 @@ export default function Supervisor() {
     });
   }, [participantes, filtro, busqueda]);
 
-  const abrirTarjeta = (participante) => {
-    setYaHabiaIngresado(participante.estado === 'ingresado');
-    setTarjetaQR(participante);
-  };
-
-  const handleSimularEscaneo = () => {
-    const pendientes = participantes.filter(p => p.estado === 'pendiente');
-    if (pendientes.length === 0) {
-      setYaHabiaIngresado(false);
-      setTarjetaQR({ todosIngresaron: true });
-      return;
-    }
+  // ========================================================
+  // LÓGICA DE ESCANEO GENERAL
+  // ========================================================
+  const simularEscaneoGeneral = () => {
     setEscaneando(true);
     setTimeout(() => {
-      const elegido = pendientes[Math.floor(Math.random() * pendientes.length)];
+      // Tomamos alguien al azar para simular
+      const elegido = participantes[Math.floor(Math.random() * participantes.length)];
       setEscaneando(false);
-      abrirTarjeta(elegido);
+      setFotoCapturadaTemporal(null);
+      setAlertaToggle('');
+      setTarjetaQR(elegido);
     }, 700);
   };
 
-  const confirmarIngreso = () => {
-    if (!tarjetaQR || tarjetaQR.todosIngresaron) return;
-    setParticipantes(prev => prev.map(p =>
-      p.id === tarjetaQR.id ? { ...p, estado: 'ingresado', horaIngreso: horaActual() } : p
-    ));
-    setTarjetaQR(null);
+  // Botones específicos para tu demostración al Ingeniero
+  const abrirModalEspecifico = (idRequerido) => {
+    const elegido = participantes.find(p => p.id === idRequerido);
+    setFotoCapturadaTemporal(null);
+    setAlertaToggle('');
+    setTarjetaQR(elegido);
   };
 
-  const cerrarTarjeta = () => setTarjetaQR(null);
+  // ========================================================
+  // FUNCIONES DE CÁMARA
+  // ========================================================
+  const tomarFotoPuerta = () => {
+    setFotoCapturadaTemporal('https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80');
+    setAlertaToggle('');
+  };
+
+  const descartarFoto = () => setFotoCapturadaTemporal(null);
+
+  const cerrarTarjeta = () => {
+    setTarjetaQR(null);
+    setFotoCapturadaTemporal(null);
+    setAlertaToggle('');
+  };
+
+  // ========================================================
+  // CAMBIO DE ESTADOS (TOGGLE Y PRIMER INGRESO)
+  // ========================================================
+  
+  // 1. Para cuando es "Pendiente" (Primer ingreso)
+  const registrarPrimerIngreso = (omitirFoto = false) => {
+    if (!omitirFoto && !fotoCapturadaTemporal) return; // Validación de seguridad
+
+    const nuevaHora = horaActual();
+    const tipoMov = omitirFoto ? 'Entrada (Sin foto)' : 'Entrada';
+    const nuevoHistorial = [{ tipo: tipoMov, hora: nuevaHora }];
+
+    const actualizado = {
+      ...tarjetaQR,
+      estado: 'ingresado',
+      historial: nuevoHistorial,
+      fotoIngreso: omitirFoto ? null : fotoCapturadaTemporal
+    };
+
+    setTarjetaQR(actualizado);
+    setParticipantes(prev => prev.map(p => p.id === actualizado.id ? actualizado : p));
+  };
+
+  // 2. Para cuando ya entró alguna vez (Interruptor Adentro/Afuera)
+  const cambiarEstadoToggle = (nuevoEstado) => {
+    // Regla de Negocio: Si quiere salir ('salio') pero NUNCA se tomó foto, bloquearlo.
+    if (nuevoEstado === 'salio' && !tarjetaQR.fotoIngreso && !fotoCapturadaTemporal) {
+      setAlertaToggle('¡FOTO OBLIGATORIA! El participante no tiene foto de seguridad. Tómale una antes de registrar su salida.');
+      return;
+    }
+
+    setAlertaToggle('');
+    const nuevaHora = horaActual();
+    const tipoMov = nuevoEstado === 'ingresado' ? 'Entrada' : 'Salida';
+    
+    // Si acaba de tomar la foto para salir, se la guardamos definitivamente
+    const fotoFinal = tarjetaQR.fotoIngreso || fotoCapturadaTemporal;
+
+    const nuevoHistorial = [...tarjetaQR.historial, { tipo: tipoMov, hora: nuevaHora }];
+
+    const actualizado = {
+      ...tarjetaQR,
+      estado: nuevoEstado,
+      historial: nuevoHistorial,
+      fotoIngreso: fotoFinal
+    };
+
+    // Actualiza la tarjeta en vivo y la base de datos global
+    setTarjetaQR(actualizado);
+    setParticipantes(prev => prev.map(p => p.id === actualizado.id ? actualizado : p));
+  };
+
+  // ========================================================
+  // RENDERIZADO CONDICIONAL DEL MODAL
+  // ========================================================
+  const esPendiente = tarjetaQR && tarjetaQR.estado === 'pendiente';
+  const faltaFotoObligatoria = tarjetaQR && !tarjetaQR.fotoIngreso;
 
   return (
     <div className="pi-sup-container">
 
       <div className="pi-sup-header">
-        <h2>Control de Ingreso al Evento</h2>
-        <button className="pi-sup-btn-escanear" onClick={handleSimularEscaneo} disabled={escaneando}>
-          <FaQrcode /> {escaneando ? 'Escaneando...' : 'Simular Escaneo QR'}
-        </button>
+        <h2>Punto de Control de Accesos</h2>
+        
+        <div className="pi-sup-simuladores">
+          <button className="pi-sup-btn-escanear-general" onClick={simularEscaneoGeneral} disabled={escaneando}>
+            <FaQrcode /> {escaneando ? 'Escaneando...' : 'Escanear Código QR'}
+          </button>
+          
+          <div className="sim-demos">
+            <span className="sim-label">Casos Demo:</span>
+            <button onClick={() => abrirModalEspecifico(4)}>1. Nuevo Ingreso</button>
+            <button onClick={() => abrirModalEspecifico(1)}>2. Cambiar Adentro/Afuera</button>
+            <button onClick={() => abrirModalEspecifico(3)}>3. Adentro (Pero omitió foto)</button>
+          </div>
+        </div>
       </div>
 
-      {/* --- TARJETAS DE ESTADÍSTICAS --- */}
+      {/* --- ESTADÍSTICAS --- */}
       <div className="pi-sup-stats-grid">
         <div className="pi-sup-stat-card">
           <div className="pi-sup-stat-icon pi-sup-icon-total"><FaUsers /></div>
           <div className="pi-sup-stat-info">
             <span className="pi-sup-stat-numero">{stats.total}</span>
-            <span className="pi-sup-stat-label">Total de Participantes</span>
+            <span className="pi-sup-stat-label">Total Participantes</span>
           </div>
         </div>
-
         <div className="pi-sup-stat-card">
-          <div className="pi-sup-stat-icon pi-sup-icon-ok"><FaCheckCircle /></div>
+          <div className="pi-sup-stat-icon pi-sup-icon-ok"><FaUserCheck /></div>
           <div className="pi-sup-stat-info">
-            <span className="pi-sup-stat-numero">{stats.ingresados}</span>
-            <span className="pi-sup-stat-label">Ya Ingresaron</span>
+            <span className="pi-sup-stat-numero">{stats.adentro}</span>
+            <span className="pi-sup-stat-label">Personas Adentro</span>
           </div>
-          <span className="pi-sup-stat-porcentaje pi-sup-badge-ok">{stats.pctIngresados}%</span>
+          <span className="pi-sup-stat-porcentaje pi-sup-badge-ok">{stats.pctAdentro}%</span>
         </div>
-
         <div className="pi-sup-stat-card">
-          <div className="pi-sup-stat-icon pi-sup-icon-pend"><FaHourglassHalf /></div>
+          <div className="pi-sup-stat-icon pi-sup-icon-out"><FaSignOutAlt /></div>
           <div className="pi-sup-stat-info">
-            <span className="pi-sup-stat-numero">{stats.faltan}</span>
-            <span className="pi-sup-stat-label">Faltan por Ingresar</span>
+            <span className="pi-sup-stat-numero">{stats.afuera}</span>
+            <span className="pi-sup-stat-label">Salieron Temporalmente</span>
           </div>
-          <span className="pi-sup-stat-porcentaje pi-sup-badge-pend">{stats.pctFaltan}%</span>
         </div>
       </div>
 
-      {/* --- BARRA DE PROGRESO GENERAL --- */}
-      <div className="pi-sup-progreso-card">
-        <div className="pi-sup-progreso-header">
-          <span>Progreso de Ingreso al Evento</span>
-          <span className="pi-sup-progreso-pct">{stats.pctIngresados}%</span>
-        </div>
-        <div className="pi-sup-progreso-barra">
-          <div className="pi-sup-progreso-relleno" style={{ width: `${stats.pctIngresados}%` }} />
-        </div>
-        <div className="pi-sup-progreso-footer">
-          <span><FaUserCheck color="var(--verde-recarga)" /> {stats.ingresados} ingresaron</span>
-          <span><FaHourglassHalf color="var(--ambar-aviso-texto)" /> {stats.faltan} pendientes</span>
-        </div>
-      </div>
-
-      {/* --- LISTADO DE PARTICIPANTES --- */}
+      {/* --- LISTADO DE AUDITORÍA --- */}
       <div className="pi-sup-lista-card">
         <div className="pi-sup-lista-header">
-          <h3>Listado de Participantes</h3>
+          <h3>Auditoría de Asistentes</h3>
           <div className="pi-sup-lista-controles">
             <div className="pi-sup-buscador">
               <FaSearch />
-              <input
-                type="text"
-                placeholder="Buscar por nombre o documento..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-              />
+              <input type="text" placeholder="Buscar por nombre o CI..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
             </div>
             <div className="pi-sup-filtros">
               <button className={filtro === 'todos' ? 'activo' : ''} onClick={() => setFiltro('todos')}>Todos</button>
-              <button className={filtro === 'ingresado' ? 'activo' : ''} onClick={() => setFiltro('ingresado')}>Ingresaron</button>
+              <button className={filtro === 'ingresado' ? 'activo' : ''} onClick={() => setFiltro('ingresado')}>Adentro</button>
+              <button className={filtro === 'salio' ? 'activo' : ''} onClick={() => setFiltro('salio')}>Afuera</button>
               <button className={filtro === 'pendiente' ? 'activo' : ''} onClick={() => setFiltro('pendiente')}>Pendientes</button>
             </div>
           </div>
@@ -163,106 +219,167 @@ export default function Supervisor() {
                 <th>Participante</th>
                 <th>Documento</th>
                 <th>Entrada</th>
-                <th>Estado</th>
-                <th>Hora</th>
-                <th></th>
+                <th>Estado Actual</th>
+                <th>Último Movimiento</th>
               </tr>
             </thead>
             <tbody>
-              {listaFiltrada.map(p => (
-                <tr key={p.id}>
-                  <td>
-                    <div className="pi-sup-fila-persona">
-                      <img src={p.foto} alt={p.nombre} className="pi-sup-mini-avatar" />
-                      <span>{p.nombre}</span>
-                    </div>
-                  </td>
-                  <td>{p.documento}</td>
-                  <td>{p.tipoEntrada}</td>
-                  <td>
-                    {p.estado === 'ingresado'
-                      ? <span className="pi-sup-badge pi-sup-badge-ok">Ingresó</span>
-                      : <span className="pi-sup-badge pi-sup-badge-pend">Pendiente</span>}
-                  </td>
-                  <td>{p.horaIngreso || '—'}</td>
-                  <td>
-                    <button className="pi-sup-btn-ver" onClick={() => abrirTarjeta(p)}>
-                      Ver tarjeta
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {listaFiltrada.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="pi-sup-sin-resultados">No se encontraron participantes.</td>
-                </tr>
-              )}
+              {listaFiltrada.map(p => {
+                const ultimoHistorial = p.historial.length > 0 ? p.historial[p.historial.length - 1] : null;
+                return (
+                  <tr key={p.id}>
+                    <td>
+                      <div className="pi-sup-fila-persona">
+                        <img src={p.fotoPerfil} alt={p.nombre} className="pi-sup-mini-avatar" />
+                        <span>{p.nombre}</span>
+                      </div>
+                    </td>
+                    <td>{p.documento}</td>
+                    <td>{p.tipoEntrada}</td>
+                    <td>
+                      {p.estado === 'ingresado' && <span className="pi-sup-badge pi-sup-badge-ok">Adentro</span>}
+                      {p.estado === 'salio' && <span className="pi-sup-badge pi-sup-badge-out">Salió</span>}
+                      {p.estado === 'pendiente' && <span className="pi-sup-badge pi-sup-badge-pend">Pendiente</span>}
+                    </td>
+                    <td className="col-historial">
+                      {ultimoHistorial ? `${ultimoHistorial.tipo} a las ${ultimoHistorial.hora}` : '—'}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* --- TARJETA GRANDE AL ESCANEAR QR --- */}
+      {/* =========================================================
+          MODAL DE CONTROL DINÁMICO (INTERRUPTOR)
+      ========================================================= */}
       {tarjetaQR && (
         <div className="pi-sup-modal-overlay" onClick={cerrarTarjeta}>
           <div className="pi-sup-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
+            
             <button className="pi-sup-btn-cerrar" onClick={cerrarTarjeta}><FaTimes /></button>
 
-            {tarjetaQR.todosIngresaron ? (
-              <div className="pi-sup-todos-ingresaron">
-                <FaCheckCircle size={60} color="var(--verde-recarga)" />
-                <h3>¡Todos los participantes ya ingresaron!</h3>
-                <p>No quedan personas pendientes por registrar.</p>
+            {/* HEADER DE ESTADO */}
+            <div className="pi-sup-tarjeta-estado">
+              <div className="estado-badge">
+                <FaCheckCircle /> Lectura Exitosa
               </div>
-            ) : (
-              <>
-                <div className={`pi-sup-tarjeta-estado ${yaHabiaIngresado ? 'aviso' : 'ok'}`}>
-                  {yaHabiaIngresado
-                    ? <><FaExclamationTriangle /> QR ya utilizado</>
-                    : <><FaCheckCircle /> Código QR Válido</>}
-                </div>
+            </div>
 
-                <img src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-sup-tarjeta-foto" />
-                <h2 className="pi-sup-tarjeta-nombre">{tarjetaQR.nombre}</h2>
+            {/* FOTOS SUPERPUESTAS */}
+            <div className={`pi-sup-fotos-comparacion ${faltaFotoObligatoria && !fotoCapturadaTemporal ? 'single-photo' : 'dual-photo'}`}>
+              
+              <div className="foto-box">
+                <img src={tarjetaQR.fotoPerfil} alt="Perfil" className="foto-img" />
+                <span className="foto-label text-gray">FOTO DE PERFIL</span>
+              </div>
 
-                <div className="pi-sup-tarjeta-datos">
-                  <div className="pi-sup-tarjeta-dato">
-                    <FaIdCard />
-                    <div>
-                      <span className="label">Documento</span>
-                      <span className="valor">{tarjetaQR.documento}</span>
-                    </div>
+              {/* Lógica dinámica de la foto de puerta */}
+              <div className="foto-box">
+                {tarjetaQR.fotoIngreso ? (
+                  <>
+                    <img src={tarjetaQR.fotoIngreso} alt="Ingreso" className="foto-img border-cyan" />
+                    <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
+                  </>
+                ) : fotoCapturadaTemporal ? (
+                  <div className="foto-capturada-container">
+                    <img src={fotoCapturadaTemporal} alt="Captura" className="foto-img border-cyan" />
+                    <button className="btn-retake" onClick={descartarFoto} title="Volver a tomar"><FaSyncAlt /></button>
+                    <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
                   </div>
-                  <div className="pi-sup-tarjeta-dato">
-                    <FaTicketAlt />
-                    <div>
-                      <span className="label">Tipo de Entrada</span>
-                      <span className="valor">{tarjetaQR.tipoEntrada}</span>
-                    </div>
+                ) : (
+                  <div className="foto-placeholder" onClick={tomarFotoPuerta}>
+                    <FaCamera size={26}/>
+                    <span>Tomar Foto<br/>Obligatoria</span>
                   </div>
-                  <div className="pi-sup-tarjeta-dato">
-                    <FaClock />
-                    <div>
-                      <span className="label">Hora de Ingreso</span>
-                      <span className="valor">{tarjetaQR.horaIngreso || 'Aún no registrado'}</span>
-                    </div>
-                  </div>
-                </div>
+                )}
+              </div>
 
-                <div className="pi-sup-tarjeta-acciones">
-                  {yaHabiaIngresado ? (
-                    <button className="pi-sup-btn-cancelar" onClick={cerrarTarjeta}>Cerrar</button>
-                  ) : (
-                    <>
-                      <button className="pi-sup-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
-                      <button className="pi-sup-btn-confirmar" onClick={confirmarIngreso}>
-                        <FaCheckCircle /> Confirmar Ingreso
-                      </button>
-                    </>
-                  )}
+            </div>
+
+            <h2 className="pi-sup-tarjeta-nombre">{tarjetaQR.nombre}</h2>
+
+            <div className="pi-sup-info-card">
+              <div className="info-row">
+                <FaIdCard className="info-icon" />
+                <div>
+                  <span className="info-label">DOCUMENTO</span>
+                  <span className="info-valor">{tarjetaQR.documento}</span>
                 </div>
-              </>
+              </div>
+              <div className="info-row">
+                <FaTicketAlt className="info-icon" />
+                <div>
+                  <span className="info-label">TIPO DE ENTRADA</span>
+                  <span className="info-valor">{tarjetaQR.tipoEntrada}</span>
+                </div>
+              </div>
+            </div>
+
+            {alertaToggle && (
+              <div className="pi-sup-alerta-modal">
+                <FaExclamationTriangle /> {alertaToggle}
+              </div>
             )}
+
+            <div className="pi-sup-historial-section">
+              <h4 className="historial-title"><FaHistory /> Historial de Accesos</h4>
+              {tarjetaQR.historial.length === 0 ? (
+                <p className="historial-vacio">Sin registros previos.</p>
+              ) : (
+                <div className="historial-list">
+                  {tarjetaQR.historial.map((mov, idx) => (
+                    <div key={idx} className={`historial-item ${mov.tipo.includes('Entrada') ? 'item-in' : 'item-out'}`}>
+                      {mov.tipo.includes('Entrada') ? <FaSignInAlt/> : <FaSignOutAlt/>}
+                      <span>{mov.tipo} registrada a las {mov.hora}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* =========================================
+                FOOTER DINÁMICO
+            ========================================= */}
+            <div className="pi-sup-modal-footer">
+              
+              {esPendiente ? (
+                // --- FOOTER 1: PRIMER INGRESO ---
+                <>
+                  <button className="btn-omitir" onClick={() => registrarPrimerIngreso(true)}>
+                    Omitir por ahora
+                  </button>
+                  <button 
+                    className="btn-in-primero" 
+                    onClick={() => registrarPrimerIngreso(false)}
+                    disabled={!fotoCapturadaTemporal}
+                  >
+                    <FaSignInAlt /> {fotoCapturadaTemporal ? 'Confirmar Ingreso' : 'Requiere Fotografía'}
+                  </button>
+                </>
+              ) : (
+                // --- FOOTER 2: INTERRUPTOR (ADENTRO / AFUERA) ---
+                <div className="pi-sup-toggle-switch">
+                  <button 
+                    className={`toggle-option ${tarjetaQR.estado === 'salio' ? 'active-out' : ''}`}
+                    onClick={() => cambiarEstadoToggle('salio')}
+                  >
+                    <FaSignOutAlt /> AFUERA
+                  </button>
+                  
+                  <button 
+                    className={`toggle-option ${tarjetaQR.estado === 'ingresado' ? 'active-in' : ''}`}
+                    onClick={() => cambiarEstadoToggle('ingresado')}
+                  >
+                    <FaSignInAlt /> ADENTRO
+                  </button>
+                </div>
+              )}
+
+            </div>
+
           </div>
         </div>
       )}
