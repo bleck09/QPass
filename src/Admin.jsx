@@ -1,11 +1,24 @@
 import { useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaCalendarAlt, FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
   FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends,
   FaArrowLeft, FaSearch, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
-  FaExchangeAlt, FaClock
+  FaExchangeAlt, FaClock, FaExclamationTriangle
 } from 'react-icons/fa';
 import './Admin.css';
+
+// --- INCIDENCIAS DE RECARGA INCOMPLETA (reportadas por Recargador vía localStorage) ---
+const CLAVE_INCIDENCIAS = 'qpass_incidencias_recarga';
+
+const leerIncidencias = () => {
+  const guardado = localStorage.getItem(CLAVE_INCIDENCIAS);
+  return guardado ? JSON.parse(guardado) : [];
+};
+
+const guardarIncidencias = (lista) => {
+  localStorage.setItem(CLAVE_INCIDENCIAS, JSON.stringify(lista));
+};
 
 // --- DATOS SIMULADOS POR EVENTO ---
 const eventosDisponibles = [
@@ -206,10 +219,56 @@ function Podio({ lista, valorKey, unidad }) {
 }
 
 export default function Admin() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  // /admin/reportes abre directamente el apartado de Incidencias (accesible también
+  // desde el menú lateral), sin pasar por la tarjeta del dashboard.
+  const enReportes = location.pathname.endsWith('/reportes');
+
   const [eventoId, setEventoId] = useState(eventosDisponibles[0].id);
-  const [vistaDetalle, setVistaDetalle] = useState(null); // null | entradas | recargadores | devoluciones | negocios | supervisores
+  const [vistaDetalle, setVistaDetalle] = useState(null); // null | entradas | recargadores | devoluciones | negocios | supervisores | incidencias
   const [itemSeleccionado, setItemSeleccionado] = useState(null); // id de la persona/negocio abierto dentro de una vista
   const [busqueda, setBusqueda] = useState('');
+
+  const vistaActual = enReportes ? 'incidencias' : vistaDetalle;
+
+  const [usuarioAdmin] = useState(() => {
+    const guardado = localStorage.getItem('usuarioProyectoIngresos');
+    return guardado ? JSON.parse(guardado) : { nombre: 'Admin' };
+  });
+  const [incidencias, setIncidencias] = useState(leerIncidencias);
+  const [incidenciaEnResolucion, setIncidenciaEnResolucion] = useState(null);
+  const [montoAjuste, setMontoAjuste] = useState('');
+
+  const incidenciasPendientes = useMemo(
+    () => incidencias.filter(i => i.estado === 'pendiente'),
+    [incidencias]
+  );
+
+  const abrirResolucion = (incidencia) => {
+    setIncidenciaEnResolucion(incidencia.id);
+    // Admin decide libremente cuánto acreditar; si el recargador dejó un monto
+    // de referencia lo usamos como punto de partida, si no arranca en blanco.
+    setMontoAjuste(incidencia.montoSolicitado != null ? String(incidencia.montoSolicitado) : '');
+  };
+
+  const cancelarResolucion = () => {
+    setIncidenciaEnResolucion(null);
+    setMontoAjuste('');
+  };
+
+  const confirmarAjuste = (incidencia) => {
+    const valor = Number(montoAjuste);
+    if (montoAjuste === '' || Number.isNaN(valor) || valor < 0) return;
+
+    const listaActualizada = incidencias.map(i => i.id === incidencia.id
+      ? { ...i, estado: 'resuelto', ajusteAplicado: valor, resueltoPor: usuarioAdmin.nombre }
+      : i);
+
+    setIncidencias(listaActualizada);
+    guardarIncidencias(listaActualizada);
+    cancelarResolucion();
+  };
 
   const datos = datosPorEvento[eventoId];
 
@@ -300,23 +359,27 @@ export default function Admin() {
     setBusqueda('');
     setItemSeleccionado(null);
     setVistaDetalle(vista);
+    // Refrescamos por si hay incidencias nuevas reportadas por un Recargador.
+    if (vista === 'incidencias') setIncidencias(leerIncidencias());
   };
 
   const volver = () => {
     setBusqueda('');
     setItemSeleccionado(null);
     setVistaDetalle(null);
+    // Si se entró directo por /admin/reportes, "volver" regresa al dashboard real.
+    if (enReportes) navigate('/admin');
   };
 
   const volverALaLista = () => setItemSeleccionado(null);
 
-  const recargadorAbierto = vistaDetalle === 'recargadores' && itemSeleccionado
+  const recargadorAbierto = vistaActual === 'recargadores' && itemSeleccionado
     ? recargadoresOrdenados.find(r => r.id === itemSeleccionado) : null;
-  const devolucionAbierta = vistaDetalle === 'devoluciones' && itemSeleccionado
+  const devolucionAbierta = vistaActual === 'devoluciones' && itemSeleccionado
     ? devolucionesOrdenadas.find(d => d.id === itemSeleccionado) : null;
-  const negocioAbierto = vistaDetalle === 'negocios' && itemSeleccionado
+  const negocioAbierto = vistaActual === 'negocios' && itemSeleccionado
     ? negociosOrdenados.find(n => n.id === itemSeleccionado) : null;
-  const supervisorAbierto = vistaDetalle === 'supervisores' && itemSeleccionado
+  const supervisorAbierto = vistaActual === 'supervisores' && itemSeleccionado
     ? datos.supervisores.find(s => s.id === itemSeleccionado) : null;
 
   return (
@@ -335,7 +398,7 @@ export default function Admin() {
       </div>
 
       {/* ================= VISTA GENERAL ================= */}
-      {vistaDetalle === null && (
+      {vistaActual === null && (
         <>
           {/* --- RESUMEN FINANCIERO --- */}
           <section className="pi-dash-seccion">
@@ -431,6 +494,11 @@ export default function Admin() {
                 <span className="numero">{totalAyudantes}</span>
                 <span className="label">Ayudantes (total)</span>
               </button>
+              <button className="pi-dash-rol-card pi-dash-rol-card-alerta" onClick={() => abrirDetalle('incidencias')}>
+                <FaExclamationTriangle className="pi-dash-rol-icon" />
+                <span className="numero">{incidenciasPendientes.length}</span>
+                <span className="label">Incidencias de Recarga</span>
+              </button>
             </div>
           </section>
 
@@ -452,7 +520,7 @@ export default function Admin() {
       )}
 
       {/* ================= DETALLE: ENTRADAS ================= */}
-      {vistaDetalle === 'entradas' && (
+      {vistaActual === 'entradas' && (
         <section className="pi-dash-seccion">
           <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
           <h3 className="pi-dash-seccion-titulo">Detalle de Participantes</h3>
@@ -507,7 +575,7 @@ export default function Admin() {
       )}
 
       {/* ================= DETALLE: RECARGADORES ================= */}
-      {vistaDetalle === 'recargadores' && (
+      {vistaActual === 'recargadores' && (
         <section className="pi-dash-seccion">
           {recargadorAbierto ? (
             <>
@@ -565,7 +633,7 @@ export default function Admin() {
       )}
 
       {/* ================= DETALLE: DEVOLUCIONES ================= */}
-      {vistaDetalle === 'devoluciones' && (
+      {vistaActual === 'devoluciones' && (
         <section className="pi-dash-seccion">
           {devolucionAbierta ? (
             <>
@@ -623,7 +691,7 @@ export default function Admin() {
       )}
 
       {/* ================= DETALLE: NEGOCIOS ================= */}
-      {vistaDetalle === 'negocios' && (
+      {vistaActual === 'negocios' && (
         <section className="pi-dash-seccion">
           {negocioAbierto ? (
             <>
@@ -704,7 +772,7 @@ export default function Admin() {
       )}
 
       {/* ================= DETALLE: SUPERVISORES ================= */}
-      {vistaDetalle === 'supervisores' && (
+      {vistaActual === 'supervisores' && (
         <section className="pi-dash-seccion">
           {supervisorAbierto ? (
             <>
@@ -755,6 +823,85 @@ export default function Admin() {
               </div>
             </>
           )}
+        </section>
+      )}
+
+      {/* ================= DETALLE: INCIDENCIAS DE RECARGA ================= */}
+      {vistaActual === 'incidencias' && (
+        <section className="pi-dash-seccion">
+          <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+          <h3 className="pi-dash-seccion-titulo">Incidencias de Recarga</h3>
+          <p className="pi-dash-incidencias-nota">
+            Reportes de un Recargador contando qué pasó con una recarga. Lee cada caso y decide qué hacer
+            (por ejemplo, cuántos puntos acreditar) para cerrarlo.
+          </p>
+
+          <div className="pi-dash-tabla-wrapper">
+            <table className="pi-dash-tabla">
+              <thead>
+                <tr>
+                  <th>Participante</th>
+                  <th>Documento</th>
+                  <th>Se le dio</th>
+                  <th>Dijo que quería</th>
+                  <th>Qué pasó</th>
+                  <th>Recargador</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {incidencias.map(inc => (
+                  <tr key={inc.id}>
+                    <td>
+                      <div className="pi-dash-fila-persona">
+                        <img src={inc.foto} alt={inc.participante} className="pi-dash-mini-avatar" />
+                        <span>{inc.participante}</span>
+                      </div>
+                    </td>
+                    <td>{inc.documento}</td>
+                    <td>{inc.montoEntregado} pts</td>
+                    <td>{inc.montoSolicitado != null ? `${inc.montoSolicitado} pts` : '—'}</td>
+                    <td>{inc.nota || '—'}</td>
+                    <td>{inc.recargador}</td>
+                    <td>
+                      {inc.estado === 'pendiente'
+                        ? <span className="pi-dash-badge pi-dash-badge-pend"><FaExclamationTriangle /> Pendiente</span>
+                        : <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Resuelta (+{inc.ajusteAplicado} pts por {inc.resueltoPor})</span>}
+                    </td>
+                    <td>
+                      {inc.estado === 'pendiente' && (
+                        incidenciaEnResolucion === inc.id ? (
+                          <div className="pi-dash-resolver-form">
+                            <input
+                              type="number"
+                              min="0"
+                              value={montoAjuste}
+                              onChange={(e) => setMontoAjuste(e.target.value)}
+                              autoFocus
+                            />
+                            <button className="pi-dash-btn-ver" onClick={() => confirmarAjuste(inc)}>
+                              <FaCheckCircle /> Aplicar
+                            </button>
+                            <button className="pi-dash-btn-ver" onClick={cancelarResolucion}>Cancelar</button>
+                          </div>
+                        ) : (
+                          <button className="pi-dash-btn-ver" onClick={() => abrirResolucion(inc)}>
+                            <FaCoins /> Resolver
+                          </button>
+                        )
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {incidencias.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="pi-dash-sin-resultados">No hay incidencias de recarga reportadas.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
     </div>

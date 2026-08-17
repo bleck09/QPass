@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   FaChartPie, FaUsers, FaCog, FaSignOutAlt, FaUserCircle,
-  FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet
+  FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet,
+  FaExclamationTriangle
 } from 'react-icons/fa';
 import { MdAccountBalance } from 'react-icons/md';
 import './MenuLateral.css';
@@ -14,6 +15,7 @@ const menuConfig = {
     { titulo: 'Dashboard General', ruta: '/admin', icono: <FaChartPie /> },
     { titulo: 'Usuario de Negocio', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
     { titulo: 'Tickets del Evento', ruta: '/AdminCrearTickets', icono: <FaFileInvoiceDollar /> },
+    { titulo: 'Reportes', ruta: '/admin/reportes', icono: <FaExclamationTriangle /> },
     { titulo: 'Configurar Página', ruta: '/admin/config', icono: <FaCog /> },
     { titulo: 'Mapa', ruta: '/Mapa', icono: <FaCog /> }
   ],
@@ -22,7 +24,8 @@ const menuConfig = {
   ],
   Recargador: [
     { titulo: 'Mi Caja', ruta: '/recargador', icono: <FaCashRegister /> },
-    { titulo: 'Historial Recargas', ruta: '/recargador/historial', icono: <FaFileInvoiceDollar /> }
+    { titulo: 'Historial Recargas', ruta: '/recargador/historial', icono: <FaFileInvoiceDollar /> },
+    { titulo: 'Incidencias', ruta: '/recargador/incidencias', icono: <FaExclamationTriangle /> }
   ],
   Supervisor: [
     { titulo: 'Panel de Control', ruta: '/supervisor', icono: <FaChartPie /> },

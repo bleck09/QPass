@@ -1,9 +1,22 @@
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaQrcode, FaHistory, FaTimes, FaIdCard, FaCoins, FaCheckCircle, FaWallet
+  FaQrcode, FaHistory, FaTimes, FaIdCard, FaCoins, FaCheckCircle, FaWallet,
+  FaExclamationTriangle, FaClipboardList
 } from 'react-icons/fa';
 import './Recargador.css';
+
+// --- INCIDENCIAS DE RECARGA INCOMPLETA (compartidas con Admin vía localStorage) ---
+const CLAVE_INCIDENCIAS = 'qpass_incidencias_recarga';
+
+const leerIncidencias = () => {
+  const guardado = localStorage.getItem(CLAVE_INCIDENCIAS);
+  return guardado ? JSON.parse(guardado) : [];
+};
+
+const guardarIncidencias = (lista) => {
+  localStorage.setItem(CLAVE_INCIDENCIAS, JSON.stringify(lista));
+};
 
 // --- DATOS SIMULADOS DE PARTICIPANTES ---
 const participantesIniciales = [
@@ -35,7 +48,9 @@ export default function Recargador() {
 
   const location = useLocation();
   const navigate = useNavigate();
-  const pestana = location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
+  const pestana = location.pathname.endsWith('/incidencias')
+    ? 'incidencias'
+    : location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
 
   const [participantes, setParticipantes] = useState(participantesIniciales);
   const [tarjetaQR, setTarjetaQR] = useState(null);
@@ -43,6 +58,27 @@ export default function Recargador() {
   const [monto, setMonto] = useState('');
   const [recargaExitosa, setRecargaExitosa] = useState(null);
   const [historial, setHistorial] = useState([]);
+  const [incidencias, setIncidencias] = useState(leerIncidencias);
+
+  // Reporte de incidencia: solo se ofrece DESPUÉS de confirmar la recarga,
+  // cuando el recargador ya entregó lo que pudo y quiere avisar que faltó.
+  const [mostrarFormIncidencia, setMostrarFormIncidencia] = useState(false);
+  const [montoSolicitado, setMontoSolicitado] = useState('');
+  const [notaIncidencia, setNotaIncidencia] = useState('');
+  const [incidenciaReportada, setIncidenciaReportada] = useState(false);
+
+  // Reporte de incidencia desde el Historial: por si el recargador cerró la
+  // tarjeta sin reportar y quiere hacerlo después, para una recarga ya pasada.
+  const [historialAReportar, setHistorialAReportar] = useState(null);
+  const [montoSolicitadoHist, setMontoSolicitadoHist] = useState('');
+  const [notaIncidenciaHist, setNotaIncidenciaHist] = useState('');
+  const [historialReportados, setHistorialReportados] = useState([]);
+
+  const irAIncidencias = () => {
+    // Refrescamos por si Admin resolvió alguna desde su panel.
+    setIncidencias(leerIncidencias());
+    navigate('/recargador/incidencias');
+  };
 
   const totalHistorialHoy = useMemo(
     () => historial.reduce((suma, item) => suma + item.monto, 0),
@@ -64,6 +100,10 @@ export default function Recargador() {
     setTarjetaQR(null);
     setMonto('');
     setRecargaExitosa(null);
+    setMostrarFormIncidencia(false);
+    setMontoSolicitado('');
+    setNotaIncidencia('');
+    setIncidenciaReportada(false);
   };
 
   const confirmarRecarga = () => {
@@ -94,6 +134,70 @@ export default function Recargador() {
     setRecargaExitosa({ monto: valor, saldo: nuevoSaldo });
   };
 
+  // Se dispara aparte, una vez que la recarga ya quedó confirmada: el recargador
+  // cuenta qué pasó, sin condiciones de montos — Admin decide qué hacer con eso.
+  const reportarIncidencia = () => {
+    if (!tarjetaQR || !recargaExitosa || !notaIncidencia.trim()) return;
+
+    const { fecha, hora } = fechaHoraActual();
+    const incidencia = {
+      id: Date.now(),
+      participante: tarjetaQR.nombre,
+      documento: tarjetaQR.documento,
+      foto: tarjetaQR.foto,
+      montoEntregado: recargaExitosa.monto,
+      montoSolicitado: montoSolicitado ? Number(montoSolicitado) : null,
+      nota: notaIncidencia.trim(),
+      recargador: usuario.nombre,
+      estado: 'pendiente',
+      fecha,
+      hora,
+    };
+
+    const listaActualizada = [incidencia, ...incidencias];
+    setIncidencias(listaActualizada);
+    guardarIncidencias(listaActualizada);
+    setIncidenciaReportada(true);
+    setMostrarFormIncidencia(false);
+  };
+
+  const abrirReporteHistorial = (item) => {
+    setHistorialAReportar(item);
+    setMontoSolicitadoHist('');
+    setNotaIncidenciaHist('');
+  };
+
+  const cerrarReporteHistorial = () => {
+    setHistorialAReportar(null);
+    setMontoSolicitadoHist('');
+    setNotaIncidenciaHist('');
+  };
+
+  const reportarIncidenciaHistorial = () => {
+    if (!historialAReportar || !notaIncidenciaHist.trim()) return;
+
+    const { fecha, hora } = fechaHoraActual();
+    const incidencia = {
+      id: Date.now(),
+      participante: historialAReportar.participante,
+      documento: historialAReportar.documento,
+      foto: historialAReportar.foto,
+      montoEntregado: historialAReportar.monto,
+      montoSolicitado: montoSolicitadoHist ? Number(montoSolicitadoHist) : null,
+      nota: notaIncidenciaHist.trim(),
+      recargador: usuario.nombre,
+      estado: 'pendiente',
+      fecha,
+      hora,
+    };
+
+    const listaActualizada = [incidencia, ...incidencias];
+    setIncidencias(listaActualizada);
+    guardarIncidencias(listaActualizada);
+    setHistorialReportados(prev => [...prev, historialAReportar.id]);
+    cerrarReporteHistorial();
+  };
+
   return (
     <div className="pi-rec-container">
 
@@ -111,6 +215,12 @@ export default function Recargador() {
             onClick={() => navigate('/recargador/historial')}
           >
             <FaHistory /> Historial ({historial.length})
+          </button>
+          <button
+            className={pestana === 'incidencias' ? 'activo' : ''}
+            onClick={irAIncidencias}
+          >
+            <FaClipboardList /> Incidencias ({incidencias.filter(i => i.estado === 'pendiente').length})
           </button>
         </div>
       </div>
@@ -155,6 +265,7 @@ export default function Recargador() {
                   <th>Saldo Resultante</th>
                   <th>Fecha</th>
                   <th>Hora</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -171,12 +282,77 @@ export default function Recargador() {
                     <td>{item.saldoResultante} pts</td>
                     <td>{item.fecha}</td>
                     <td>{item.hora}</td>
+                    <td>
+                      {historialReportados.includes(item.id) ? (
+                        <span className="pi-rec-badge pi-rec-badge-pend">
+                          <FaExclamationTriangle /> Reportado
+                        </span>
+                      ) : (
+                        <button className="pi-rec-btn-reportar-fila" onClick={() => abrirReporteHistorial(item)}>
+                          <FaExclamationTriangle /> Reportar
+                        </button>
+                      )}
+                    </td>
                   </tr>
                 ))}
                 {historial.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="pi-rec-sin-resultados">
+                    <td colSpan={7} className="pi-rec-sin-resultados">
                       Aún no has realizado ninguna recarga en esta sesión.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* --- PESTAÑA: INCIDENCIAS --- */}
+      {pestana === 'incidencias' && (
+        <div className="pi-rec-historial">
+          <p className="pi-rec-incidencias-nota">
+            Reportes de recargas con algún problema (el participante pidió más de lo que se le pudo dar, etc.).
+            Quedan pendientes hasta que Admin las revise y decida qué hacer.
+          </p>
+          <div className="pi-rec-tabla-wrapper">
+            <table className="pi-rec-tabla">
+              <thead>
+                <tr>
+                  <th>Participante</th>
+                  <th>Documento</th>
+                  <th>Se le dio</th>
+                  <th>Dijo que quería</th>
+                  <th>Qué pasó</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                {incidencias.map(inc => (
+                  <tr key={inc.id}>
+                    <td>
+                      <div className="pi-rec-fila-persona">
+                        <img src={inc.foto} alt={inc.participante} className="pi-rec-mini-avatar" />
+                        <span>{inc.participante}</span>
+                      </div>
+                    </td>
+                    <td>{inc.documento}</td>
+                    <td>{inc.montoEntregado} pts</td>
+                    <td>{inc.montoSolicitado != null ? `${inc.montoSolicitado} pts` : '—'}</td>
+                    <td>{inc.nota || '—'}</td>
+                    <td>
+                      {inc.estado === 'pendiente'
+                        ? <span className="pi-rec-badge pi-rec-badge-pend"><FaExclamationTriangle /> Pendiente</span>
+                        : <span className="pi-rec-badge pi-rec-badge-ok"><FaCheckCircle /> Resuelta</span>}
+                    </td>
+                    <td>{inc.fecha}</td>
+                  </tr>
+                ))}
+                {incidencias.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="pi-rec-sin-resultados">
+                      No has reportado ninguna incidencia de recarga.
                     </td>
                   </tr>
                 )}
@@ -200,6 +376,54 @@ export default function Recargador() {
                 <div className="pi-rec-exito-saldo">
                   <FaWallet /> Nuevo saldo: <strong>{recargaExitosa.saldo} pts</strong>
                 </div>
+
+                {incidenciaReportada ? (
+                  <div className="pi-rec-alerta-incidencia pi-rec-alerta-incidencia-exito">
+                    <FaExclamationTriangle /> Se reportó a Admin lo que pasó con {tarjetaQR.nombre}. Admin lo revisará y decidirá qué hacer.
+                  </div>
+                ) : mostrarFormIncidencia ? (
+                  <div className="pi-rec-form-incidencia pi-rec-form-incidencia-post">
+                    <label>
+                      <FaExclamationTriangle /> ¿Qué pasó con {tarjetaQR.nombre}?
+                    </label>
+                    <textarea
+                      className="pi-rec-nota-incidencia"
+                      placeholder="Cuéntale a Admin qué pasó (ej: pidió 200 pero solo tenía 50 y no le alcanzó)"
+                      value={notaIncidencia}
+                      onChange={(e) => setNotaIncidencia(e.target.value)}
+                      rows={3}
+                      autoFocus
+                    />
+                    <label className="pi-rec-label-opcional">Monto que dijo que quería (opcional)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="Ej: 200"
+                      value={montoSolicitado}
+                      onChange={(e) => setMontoSolicitado(e.target.value)}
+                    />
+                    <div className="pi-rec-tarjeta-acciones">
+                      <button
+                        className="pi-rec-btn-cancelar"
+                        onClick={() => { setMostrarFormIncidencia(false); setMontoSolicitado(''); setNotaIncidencia(''); }}
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        className="pi-rec-btn-confirmar"
+                        onClick={reportarIncidencia}
+                        disabled={!notaIncidencia.trim()}
+                      >
+                        <FaExclamationTriangle /> Enviar Reporte
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button className="pi-rec-btn-reportar" onClick={() => setMostrarFormIncidencia(true)}>
+                    <FaExclamationTriangle /> ¿Pasó algo con esta recarga? Reportar
+                  </button>
+                )}
+
                 <button className="pi-rec-btn-confirmar" onClick={cerrarTarjeta}>Listo</button>
               </div>
             ) : (
@@ -259,6 +483,72 @@ export default function Recargador() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* --- REPORTAR INCIDENCIA DESDE UNA RECARGA YA PASADA (Historial) --- */}
+      {historialAReportar && (
+        <div className="pi-rec-modal-overlay" onClick={cerrarReporteHistorial}>
+          <div className="pi-rec-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
+            <button className="pi-rec-btn-cerrar" onClick={cerrarReporteHistorial}><FaTimes /></button>
+
+            <div className="pi-rec-tarjeta-estado aviso">
+              <FaExclamationTriangle /> Reportar incidencia
+            </div>
+
+            <img src={historialAReportar.foto} alt={historialAReportar.participante} className="pi-rec-tarjeta-foto" />
+            <h2 className="pi-rec-tarjeta-nombre">{historialAReportar.participante}</h2>
+
+            <div className="pi-rec-tarjeta-datos">
+              <div className="pi-rec-tarjeta-dato">
+                <FaIdCard />
+                <div>
+                  <span className="label">Documento</span>
+                  <span className="valor">{historialAReportar.documento}</span>
+                </div>
+              </div>
+              <div className="pi-rec-tarjeta-dato">
+                <FaWallet />
+                <div>
+                  <span className="label">Se le dio</span>
+                  <span className="valor">{historialAReportar.monto} pts</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pi-rec-form-incidencia pi-rec-form-incidencia-post">
+              <label>
+                <FaExclamationTriangle /> ¿Qué pasó con {historialAReportar.participante}?
+              </label>
+              <textarea
+                className="pi-rec-nota-incidencia"
+                placeholder="Cuéntale a Admin qué pasó (ej: pidió 200 pero solo tenía 50 y no le alcanzó)"
+                value={notaIncidenciaHist}
+                onChange={(e) => setNotaIncidenciaHist(e.target.value)}
+                rows={3}
+                autoFocus
+              />
+              <label className="pi-rec-label-opcional">Monto que dijo que quería (opcional)</label>
+              <input
+                type="number"
+                min="0"
+                placeholder="Ej: 200"
+                value={montoSolicitadoHist}
+                onChange={(e) => setMontoSolicitadoHist(e.target.value)}
+              />
+            </div>
+
+            <div className="pi-rec-tarjeta-acciones">
+              <button className="pi-rec-btn-cancelar" onClick={cerrarReporteHistorial}>Cancelar</button>
+              <button
+                className="pi-rec-btn-confirmar"
+                onClick={reportarIncidenciaHistorial}
+                disabled={!notaIncidenciaHist.trim()}
+              >
+                <FaExclamationTriangle /> Enviar Reporte
+              </button>
+            </div>
           </div>
         </div>
       )}
