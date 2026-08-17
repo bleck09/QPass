@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaCalendarAlt, FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
-  FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends,
+  FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends, FaUsers,
   FaArrowLeft, FaSearch, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
   FaExchangeAlt, FaClock, FaExclamationTriangle
 } from 'react-icons/fa';
@@ -19,6 +19,31 @@ const leerIncidencias = () => {
 const guardarIncidencias = (lista) => {
   localStorage.setItem(CLAVE_INCIDENCIAS, JSON.stringify(lista));
 };
+
+// --- SOLICITUDES DE COMPRA DE ENTRADAS Y REPORTES DE DATOS (de Usuario Normal, vía localStorage) ---
+const CLAVE_SOLICITUDES = 'qpass_solicitudes_entradas';
+const CLAVE_REPORTES_ENTRADAS = 'qpass_reportes_entradas';
+
+const leerSolicitudes = () => {
+  const guardado = localStorage.getItem(CLAVE_SOLICITUDES);
+  return guardado ? JSON.parse(guardado) : [];
+};
+
+const guardarSolicitudes = (lista) => {
+  localStorage.setItem(CLAVE_SOLICITUDES, JSON.stringify(lista));
+};
+
+const leerReportesEntradas = () => {
+  const guardado = localStorage.getItem(CLAVE_REPORTES_ENTRADAS);
+  return guardado ? JSON.parse(guardado) : [];
+};
+
+const guardarReportesEntradas = (lista) => {
+  localStorage.setItem(CLAVE_REPORTES_ENTRADAS, JSON.stringify(lista));
+};
+
+const ETIQUETA_CAMPO_ENTRADA = { nombre: 'Nombre completo', correo: 'Correo electrónico', celular: 'Celular' };
+const ETIQUETA_CATEGORIA = { general: 'General', vip: 'VIP' };
 
 // --- DATOS SIMULADOS POR EVENTO ---
 const eventosDisponibles = [
@@ -270,6 +295,61 @@ export default function Admin() {
     cancelarResolucion();
   };
 
+  // --- SOLICITUDES DE COMPRA DE ENTRADAS Y REPORTES DE DATOS ---
+  const [solicitudes, setSolicitudes] = useState(leerSolicitudes);
+  const [reportesEntradas, setReportesEntradas] = useState(leerReportesEntradas);
+  const [solicitudAbierta, setSolicitudAbierta] = useState(null);
+  const [reporteEnEdicion, setReporteEnEdicion] = useState(null);
+  const [valorCorreccion, setValorCorreccion] = useState('');
+
+  const totalEntradasCompradas = useMemo(
+    () => solicitudes.reduce((suma, c) => suma + c.entradas.length, 0),
+    [solicitudes]
+  );
+  const reportesEntradasPendientes = useMemo(
+    () => reportesEntradas.filter(r => r.estado === 'pendiente'),
+    [reportesEntradas]
+  );
+
+  const toggleSolicitud = (id) => setSolicitudAbierta(prev => prev === id ? null : id);
+
+  const abrirCorreccion = (reporte) => {
+    setReporteEnEdicion(reporte.id);
+    const valorActual = reporte.campo === 'nombre' ? reporte.participanteNombre
+      : reporte.campo === 'correo' ? reporte.correoActual
+      : reporte.celularActual;
+    setValorCorreccion(valorActual || '');
+  };
+
+  const cancelarCorreccion = () => {
+    setReporteEnEdicion(null);
+    setValorCorreccion('');
+  };
+
+  const guardarCorreccion = (reporte) => {
+    if (!valorCorreccion.trim()) return;
+
+    const solicitudesActualizadas = solicitudes.map(compra => {
+      if (compra.id !== reporte.compraId) return compra;
+      return {
+        ...compra,
+        entradas: compra.entradas.map(ent => ent.id === reporte.entradaId
+          ? { ...ent, [reporte.campo]: valorCorreccion.trim() }
+          : ent),
+      };
+    });
+    setSolicitudes(solicitudesActualizadas);
+    guardarSolicitudes(solicitudesActualizadas);
+
+    const reportesActualizados = reportesEntradas.map(r => r.id === reporte.id
+      ? { ...r, estado: 'resuelto', valorCorregido: valorCorreccion.trim(), resueltoPor: usuarioAdmin.nombre }
+      : r);
+    setReportesEntradas(reportesActualizados);
+    guardarReportesEntradas(reportesActualizados);
+
+    cancelarCorreccion();
+  };
+
   const datos = datosPorEvento[eventoId];
 
   const statsEntradas = useMemo(() => {
@@ -359,8 +439,17 @@ export default function Admin() {
     setBusqueda('');
     setItemSeleccionado(null);
     setVistaDetalle(vista);
-    // Refrescamos por si hay incidencias nuevas reportadas por un Recargador.
-    if (vista === 'incidencias') setIncidencias(leerIncidencias());
+    // La vista de "Reportes" agrupa incidencias de recarga y reportes de datos de entradas.
+    if (vista === 'incidencias') {
+      setIncidencias(leerIncidencias());
+      setReportesEntradas(leerReportesEntradas());
+      cancelarCorreccion();
+    }
+    // Refrescamos por si hay solicitudes nuevas de Usuario Normal.
+    if (vista === 'solicitudesEntradas') {
+      setSolicitudes(leerSolicitudes());
+      setSolicitudAbierta(null);
+    }
   };
 
   const volver = () => {
@@ -496,8 +585,13 @@ export default function Admin() {
               </button>
               <button className="pi-dash-rol-card pi-dash-rol-card-alerta" onClick={() => abrirDetalle('incidencias')}>
                 <FaExclamationTriangle className="pi-dash-rol-icon" />
-                <span className="numero">{incidenciasPendientes.length}</span>
-                <span className="label">Incidencias de Recarga</span>
+                <span className="numero">{incidenciasPendientes.length + reportesEntradasPendientes.length}</span>
+                <span className="label">Reportes</span>
+              </button>
+              <button className="pi-dash-rol-card pi-dash-rol-card-alerta" onClick={() => abrirDetalle('solicitudesEntradas')}>
+                <FaTicketAlt className="pi-dash-rol-icon" />
+                <span className="numero">{solicitudes.length}</span>
+                <span className="label">Solicitudes de Entradas</span>
               </button>
             </div>
           </section>
@@ -826,11 +920,13 @@ export default function Admin() {
         </section>
       )}
 
-      {/* ================= DETALLE: INCIDENCIAS DE RECARGA ================= */}
+      {/* ================= DETALLE: REPORTES (INCIDENCIAS DE RECARGA + DATOS DE ENTRADAS) ================= */}
       {vistaActual === 'incidencias' && (
         <section className="pi-dash-seccion">
           <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
-          <h3 className="pi-dash-seccion-titulo">Incidencias de Recarga</h3>
+          <h3 className="pi-dash-seccion-titulo">Reportes</h3>
+
+          <h4 className="pi-dash-subtitulo"><FaCoins color="var(--verde-recarga-texto)" /> Incidencias de Recarga</h4>
           <p className="pi-dash-incidencias-nota">
             Reportes de un Recargador contando qué pasó con una recarga. Lee cada caso y decide qué hacer
             (por ejemplo, cuántos puntos acreditar) para cerrarlo.
@@ -902,6 +998,169 @@ export default function Admin() {
               </tbody>
             </table>
           </div>
+
+          <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado">
+            <FaTicketAlt color="var(--ambar-aviso-texto)" /> Reportes de Datos de Entradas
+          </h4>
+          <p className="pi-dash-incidencias-nota">
+            Reportes de Usuario Normal sobre nombre, correo o celular mal puestos en una entrada ya aprobada.
+            Corrige el dato para cerrar el reporte.
+          </p>
+          <div className="pi-dash-tabla-wrapper">
+            <table className="pi-dash-tabla">
+              <thead>
+                <tr>
+                  <th>Comprador</th>
+                  <th>Persona</th>
+                  <th>Dato reportado</th>
+                  <th>Valor actual</th>
+                  <th>Descripción</th>
+                  <th>Estado</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportesEntradas.map(rep => (
+                  <tr key={rep.id}>
+                    <td>{rep.compradorNombre}</td>
+                    <td>{rep.participanteNombre}</td>
+                    <td>{ETIQUETA_CAMPO_ENTRADA[rep.campo]}</td>
+                    <td>{rep.campo === 'nombre' ? rep.participanteNombre : rep.campo === 'correo' ? rep.correoActual : (rep.celularActual || '—')}</td>
+                    <td>{rep.descripcion}</td>
+                    <td>
+                      {rep.estado === 'pendiente'
+                        ? <span className="pi-dash-badge pi-dash-badge-pend"><FaExclamationTriangle /> Pendiente</span>
+                        : <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Corregido a "{rep.valorCorregido}"</span>}
+                    </td>
+                    <td>
+                      {rep.estado === 'pendiente' && (
+                        reporteEnEdicion === rep.id ? (
+                          <div className="pi-dash-resolver-form ancho">
+                            <input
+                              type="text"
+                              value={valorCorreccion}
+                              onChange={(e) => setValorCorreccion(e.target.value)}
+                              autoFocus
+                            />
+                            <button className="pi-dash-btn-ver" onClick={() => guardarCorreccion(rep)}>
+                              <FaCheckCircle /> Guardar
+                            </button>
+                            <button className="pi-dash-btn-ver" onClick={cancelarCorreccion}>Cancelar</button>
+                          </div>
+                        ) : (
+                          <button className="pi-dash-btn-ver" onClick={() => abrirCorreccion(rep)}>Corregir</button>
+                        )
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {reportesEntradas.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="pi-dash-sin-resultados">No hay reportes de datos incorrectos.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      {/* ================= DETALLE: SOLICITUDES DE COMPRA DE ENTRADAS ================= */}
+      {vistaActual === 'solicitudesEntradas' && (
+        <section className="pi-dash-seccion">
+          <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+          <h3 className="pi-dash-seccion-titulo">Solicitudes de Compra de Entradas</h3>
+          <p className="pi-dash-incidencias-nota">
+            Detalle de cada lote de entradas compradas: para quién, con qué correo y celular, y si ya fue aprobado.
+          </p>
+
+          <div className="pi-dash-resumen-grid pi-dash-resumen-espaciado">
+            <div className="pi-dash-resumen-card">
+              <FaTicketAlt color="var(--indigo-profundo)" size={20} />
+              <span className="numero">{solicitudes.length}</span>
+              <span className="label">Solicitudes</span>
+            </div>
+            <div className="pi-dash-resumen-card">
+              <FaUsers color="var(--cian-digital-texto)" size={20} />
+              <span className="numero">{totalEntradasCompradas}</span>
+              <span className="label">Entradas compradas en total</span>
+            </div>
+            <div className="pi-dash-resumen-card">
+              <FaExclamationTriangle color="var(--ambar-aviso-texto)" size={20} />
+              <span className="numero">{reportesEntradasPendientes.length}</span>
+              <span className="label">Reportes de datos pendientes</span>
+            </div>
+          </div>
+
+          <div className="pi-dash-tabla-wrapper">
+            <table className="pi-dash-tabla">
+              <thead>
+                <tr>
+                  <th>Comprador</th>
+                  <th>Entradas</th>
+                  <th>Total</th>
+                  <th>Estado</th>
+                  <th>Fecha</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {solicitudes.map(compra => (
+                  <Fragment key={compra.id}>
+                    <tr>
+                      <td>
+                        <div className="fila-nombre">{compra.compradorNombre}</div>
+                        <div className="celda-secundaria">{compra.compradorEmail}</div>
+                      </td>
+                      <td>{compra.entradas.length}</td>
+                      <td className="pi-dash-monto-celda">Bs. {compra.montoTotal}</td>
+                      <td>
+                        {compra.estado === 'confirmado'
+                          ? <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Aprobado</span>
+                          : <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> En revisión</span>}
+                      </td>
+                      <td>{compra.fecha}</td>
+                      <td>
+                        <button className="pi-dash-btn-ver" onClick={() => toggleSolicitud(compra.id)}>
+                          {solicitudAbierta === compra.id ? 'Ocultar' : 'Ver detalle'}
+                        </button>
+                      </td>
+                    </tr>
+                    {solicitudAbierta === compra.id && (
+                      <tr>
+                        <td colSpan={6} className="pi-dash-solicitud-detalle-celda">
+                          <div className="pi-dash-solicitud-detalle">
+                            <table className="pi-dash-tabla">
+                              <thead>
+                                <tr><th>Persona</th><th>Nombre</th><th>Correo</th><th>Celular</th><th>Categoría</th></tr>
+                              </thead>
+                              <tbody>
+                                {compra.entradas.map((ent, i) => (
+                                  <tr key={ent.id}>
+                                    <td>{ent.isTitular ? 'Titular' : `Invitado ${i + 1}`}</td>
+                                    <td>{ent.nombre}</td>
+                                    <td>{ent.correo}</td>
+                                    <td>{ent.celular || '—'}</td>
+                                    <td>{ETIQUETA_CATEGORIA[ent.categoriaId] || ent.categoriaId}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+                {solicitudes.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="pi-dash-sin-resultados">No hay solicitudes de compra registradas.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
         </section>
       )}
     </div>

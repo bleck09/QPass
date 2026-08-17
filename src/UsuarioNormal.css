@@ -125,6 +125,42 @@
 .pi-usr-btn-demo { align-self: flex-start; background-color: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); border: 1px dashed var(--ambar-aviso); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .pi-usr-btn-demo:hover { background-color: rgba(255, 176, 32, 0.25); }
 
+.pi-usr-btn-revisar { align-self: flex-start; display: flex; align-items: center; gap: 8px; background: var(--blanco); color: var(--indigo-profundo); border: 1px solid var(--borde-medio); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.pi-usr-btn-revisar:hover { background-color: var(--indigo-profundo-suave); border-color: var(--indigo-profundo); }
+
+/* --- MODAL: REVISAR MI SOLICITUD --- */
+.pi-usr-modal-overlay { position: fixed; inset: 0; background-color: rgba(10, 14, 39, 0.6); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
+.pi-usr-modal { background: var(--blanco); width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25); }
+.pi-usr-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--borde-suave); position: sticky; top: 0; background: var(--blanco); }
+.pi-usr-modal-header h3 { display: flex; align-items: center; gap: 10px; font-size: 17px; color: var(--texto-principal); }
+.pi-usr-btn-cerrar-modal { background-color: var(--gris-niebla); color: var(--gris-medio); border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.pi-usr-modal-body { padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+
+.pi-usr-revision-entrada { background-color: var(--gris-niebla); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.pi-usr-revision-titulo { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--texto-principal); }
+.pi-usr-revision-cabecera { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+.pi-usr-revision-datos { display: flex; flex-wrap: wrap; gap: 16px; font-size: 13px; color: var(--texto-secundario); }
+.pi-usr-revision-datos span { display: flex; align-items: center; gap: 6px; }
+
+.pi-usr-btn-reportar-entrada { display: flex; align-items: center; gap: 6px; background: none; border: 1px dashed var(--ambar-aviso); color: var(--ambar-aviso-texto); padding: 6px 12px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; }
+.pi-usr-btn-reportar-entrada:hover { background-color: var(--ambar-aviso-suave); }
+
+.pi-usr-form-reporte { display: flex; flex-direction: column; gap: 8px; background: var(--blanco); border: 1px solid var(--borde-suave); border-radius: 10px; padding: 14px; margin-top: 6px; }
+.pi-usr-form-reporte label { font-size: 12px; font-weight: 600; color: var(--texto-principal); }
+.pi-usr-form-reporte select,
+.pi-usr-form-reporte textarea { padding: 10px 12px; border: 1px solid var(--borde-medio); border-radius: 8px; font-family: inherit; font-size: 13px; color: var(--texto-principal); outline: none; transition: border-color 0.2s; resize: vertical; }
+.pi-usr-form-reporte select:focus,
+.pi-usr-form-reporte textarea:focus { border-color: var(--ambar-aviso); }
+
+.pi-usr-checks-reporte { display: flex; flex-wrap: wrap; gap: 14px; }
+.pi-usr-check-campo { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; color: var(--texto-principal); cursor: pointer; }
+.pi-usr-check-campo input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--ambar-aviso); }
+
+.pi-usr-modal-acciones { display: flex; justify-content: flex-end; gap: 10px; }
+.pi-usr-modal-acciones .pi-usr-btn-enviar { width: auto; padding: 10px 20px; }
+.btn-cerrar-secundario { background: var(--gris-niebla); border: none; color: var(--texto-principal); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.btn-cerrar-secundario:hover { background-color: var(--borde-suave); }
+
 /* Credenciales */
 .pi-usr-credenciales { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; border-top: 1px solid var(--borde-suave); padding-top: 15px; }
 .pi-usr-credencial { display: flex; gap: 15px; background-color: var(--blanco); border: 1px solid var(--borde-suave); border-radius: 12px; padding: 15px; align-items: center; }
@@ -141,6 +177,8 @@
 .pi-usr-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
 .pi-usr-badge-ok { background-color: var(--verde-recarga-suave); color: var(--verde-recarga-texto); }
 .pi-usr-badge-pend { background-color: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); }
+.pi-usr-badge-vigente { background-color: var(--cian-digital-suave); color: var(--cian-digital-texto); }
+.pi-usr-badge-pasado { background-color: var(--gris-niebla); color: var(--texto-secundario); }
 
 /* =========================================================
    PESTAÑA 2: MI SALDO Y ESTADO DE CUENTA

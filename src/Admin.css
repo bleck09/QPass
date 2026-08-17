@@ -538,3 +538,34 @@
 .pi-dash-resolver-form input:focus {
   border-color: var(--cian-digital);
 }
+
+.pi-dash-resolver-form.ancho input {
+  width: 180px;
+}
+
+/* --- SOLICITUDES DE COMPRA DE ENTRADAS --- */
+.pi-dash-resumen-espaciado {
+  margin-bottom: 20px;
+}
+
+.pi-dash-solicitud-detalle-celda {
+  padding: 0 !important;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+.pi-dash-solicitud-detalle {
+  background-color: var(--gris-niebla);
+  padding: 14px 20px;
+}
+
+.pi-dash-solicitud-detalle .pi-dash-tabla {
+  background: var(--blanco);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.pi-dash-solicitud-detalle .pi-dash-tabla th,
+.pi-dash-solicitud-detalle .pi-dash-tabla td {
+  font-size: 13px;
+  padding: 10px 12px;
+}
