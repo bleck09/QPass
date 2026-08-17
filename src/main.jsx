@@ -3,14 +3,15 @@ import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './index.css'
 
-import App from './App.jsx'
+// 1. IMPORTAMOS LA NUEVA LANDING PAGE GLOBAL Y LA DEL EVENTO
+import PaginaPrincipal from './PaginaPrincipal.jsx'
+import App from './App.jsx' 
 import Login from './Login.jsx'
 import MenuLateral from './MenuLateral.jsx' 
 
 import Admin from './Admin.jsx'
 import AdminConfigurarPagina from './AdminConfigurarPagina.jsx'
 import UsuNegoDasboar from './UsuNegoDasboar.jsx'
-// 1. IMPORTAMOS TU NUEVA HOJA AQUÍ
 import AdCreaUsuarioNegocio from './AdCreaUsuarioNegocio.jsx'
 import AdminCrearTickets from './AdminCrearTickets.jsx'
 import UsuNegoCreaAyudante from './UsuNegoCreaAyudante.jsx'
@@ -26,14 +27,16 @@ import Ayudante from './Ayudante.jsx'
 import Perfil from './Perfil.jsx'
 
 const router = createBrowserRouter([
-  { path: "/", element: <App /> },
-  { path: "/login", element: <Login /> },
+  // 2. ACTUALIZAMOS LAS RUTAS PÚBLICAS PRINCIPALES
+  { path: "/", element: <PaginaPrincipal /> }, // La vista corporativa global de QPass
+  { path: "/evento", element: <App /> },       // La vista específica del evento (Landing del cliente)
+  { path: "/login", element: <Login /> },      // Pantalla de inicio de sesión
   
+  // RUTAS PRIVADAS (Con Menú Lateral)
   {
     path: "/admin",
     element: <MenuLateral><Admin /></MenuLateral>,
   },
-  // 2. AGREGAMOS LA NUEVA RUTA AQUÍ (Debe coincidir con la ruta de tu MenuLateral.jsx)
   {
     path: "/AdCreaUsuarioNegocio",
     element: <MenuLateral><AdCreaUsuarioNegocio /></MenuLateral>,
