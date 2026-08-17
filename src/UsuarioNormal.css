@@ -1,594 +1,205 @@
-/* Prefix único: pi-usr- */
+/* Prefix único: pi-usr- aplicando Guía de Diseño QPass */
+
 .pi-usr-container {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
+  display: flex; flex-direction: column; gap: 24px;
 }
 
 .pi-usr-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
 }
 
-.pi-usr-header h2 {
-  color: var(--texto-principal);
-  font-size: 22px;
-}
-
-.pi-usr-tabs {
-  display: flex;
-  gap: 6px;
-  background-color: var(--gris-niebla);
-  padding: 4px;
-  border-radius: 10px;
-}
-
-.pi-usr-tabs button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  background: none;
-  padding: 9px 16px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--texto-secundario);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pi-usr-tabs button.activo {
-  background-color: var(--blanco);
-  color: var(--indigo-profundo);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
-}
-
-/* --- TARJETA GENÉRICA --- */
-.pi-usr-comprar {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.pi-usr-card {
-  background: var(--blanco);
-  border-radius: 14px;
-  padding: 22px 24px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.pi-usr-card h3 {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: var(--texto-principal);
-  font-size: 17px;
-  margin-bottom: 18px;
-}
-
-/* --- CATEGORÍAS DE ENTRADA --- */
-.pi-usr-categorias {
-  margin-bottom: 18px;
-}
-
-.pi-usr-categorias-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.pi-usr-categoria-card {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  text-align: left;
-  background-color: var(--gris-niebla);
-  border: 2px solid transparent;
-  border-radius: 10px;
-  padding: 14px 16px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pi-usr-categoria-card:hover {
-  border-color: var(--cian-digital-suave);
-}
-
-.pi-usr-categoria-card.seleccionada {
-  background-color: var(--cian-digital-suave);
-  border-color: var(--cian-digital);
-}
-
-.pi-usr-categoria-nombre {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--texto-principal);
-}
-
-.pi-usr-categoria-descripcion {
-  font-size: 12px;
-  color: var(--texto-secundario);
-}
-
-.pi-usr-categoria-precio {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--indigo-profundo);
-  margin-top: 4px;
-}
-
-/* --- STEPPER DE CANTIDAD --- */
-.pi-usr-stepper-fila {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding-bottom: 18px;
-  border-bottom: 1px solid var(--borde-suave);
-  margin-bottom: 18px;
-}
-
-.pi-usr-stepper-label {
-  display: block;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--texto-principal);
-}
-
-.pi-usr-stepper-precio {
-  display: block;
-  font-size: 13px;
-  color: var(--gris-medio);
-  margin-top: 2px;
-}
-
-.pi-usr-stepper {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  background-color: var(--gris-niebla);
-  padding: 6px 10px;
-  border-radius: 10px;
-}
-
-.pi-usr-stepper button {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  border: none;
-  background-color: var(--blanco);
-  color: var(--indigo-profundo);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-}
-
-.pi-usr-stepper button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.pi-usr-stepper span {
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--texto-principal);
-  min-width: 20px;
-  text-align: center;
-}
-
-/* --- ENTRADAS ADICIONALES --- */
-.pi-usr-invitados {
-  margin-bottom: 18px;
-}
-
-.pi-usr-invitados-nota {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: 13px;
-  background-color: var(--cian-digital-suave);
-  color: var(--cian-digital-texto);
-  padding: 10px 12px;
-  border-radius: 8px;
-  margin-bottom: 14px;
-}
-
-.pi-usr-invitado-card {
-  background-color: var(--gris-niebla);
-  border-radius: 10px;
-  padding: 14px;
-  margin-bottom: 10px;
-}
-
-.pi-usr-invitado-titulo {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--gris-medio);
-  margin-bottom: 10px;
-}
-
-.pi-usr-invitado-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-}
-
-.pi-usr-invitado-grid input {
-  padding: 10px 12px;
-  border: 1px solid var(--borde-medio);
-  border-radius: 8px;
-  font-size: 14px;
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.pi-usr-invitado-grid input:focus {
-  border-color: var(--cian-digital);
-}
-
-/* --- COMPROBANTE --- */
-.pi-usr-comprobante {
-  margin-bottom: 16px;
-}
-
-.pi-usr-form-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--texto-principal);
-  margin-bottom: 8px;
-}
-
-.pi-usr-btn-upload {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--gris-niebla);
-  color: var(--texto-principal);
-  padding: 10px 16px;
-  border-radius: 8px;
-  border: 1px solid var(--borde-medio);
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  transition: background 0.2s;
-}
-
-.pi-usr-btn-upload:hover {
-  background-color: var(--borde-suave);
-}
-
-.pi-usr-comprobante-preview {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-top: 12px;
-}
-
-.pi-usr-comprobante-preview img {
-  width: 64px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid var(--borde-medio);
-}
-
-.pi-usr-comprobante-preview span {
-  font-size: 13px;
-  color: var(--texto-secundario);
-}
+.pi-usr-header h2 { color: var(--texto-principal); font-size: 22px; font-weight: 700; margin: 0; }
 
-/* --- ALERTA / TOTAL / ENVÍO --- */
-.pi-usr-alerta-error {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  padding: 10px 12px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  margin-bottom: 16px;
-}
-
-.pi-usr-total-fila {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
-  color: var(--texto-principal);
-  margin-bottom: 16px;
-}
-
-.pi-usr-total-fila strong {
-  font-size: 20px;
-  color: var(--indigo-profundo);
-}
-
-.pi-usr-btn-enviar {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background-color: var(--coral-compra);
-  color: var(--texto-sobre-vivo);
-  border: none;
-  padding: 14px;
-  border-radius: 10px;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.pi-usr-btn-enviar:hover {
-  background-color: var(--coral-compra-hover);
-}
-
-/* --- SOLICITUDES DE COMPRA --- */
-.pi-usr-solicitudes {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.pi-usr-solicitud {
-  display: flex;
-  gap: 14px;
-  background-color: var(--gris-niebla);
-  border-radius: 12px;
-  padding: 14px;
-}
-
-.pi-usr-solicitud-img {
-  width: 64px;
-  height: 64px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 1px solid var(--borde-medio);
-}
-
-.pi-usr-solicitud-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.pi-usr-solicitud-cabecera {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.pi-usr-solicitud-titulo {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--texto-principal);
-}
-
-.pi-usr-solicitud-fecha {
-  font-size: 12px;
-  color: var(--gris-medio);
-}
-
-.pi-usr-btn-demo {
-  align-self: flex-start;
-  margin-top: 8px;
-  background-color: var(--ambar-aviso-suave);
-  color: var(--ambar-aviso-texto);
-  border: 1px dashed var(--ambar-aviso);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.pi-usr-btn-demo:hover {
-  background-color: rgba(255, 176, 32, 0.25);
-}
-
-/* --- CREDENCIALES GENERADAS --- */
-.pi-usr-credenciales {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.pi-usr-credencial {
-  display: flex;
-  gap: 12px;
-  background-color: var(--blanco);
-  border: 1px solid var(--borde-suave);
-  border-radius: 10px;
-  padding: 12px;
-  align-items: center;
-}
-
-.pi-usr-credencial img {
-  width: 64px;
-  height: 64px;
-  border-radius: 8px;
-}
-
-.pi-usr-credencial > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.pi-usr-credencial-nombre {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--texto-principal);
-}
-
-.pi-usr-credencial-linea {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--texto-secundario);
-}
-
-.pi-usr-credencial-nota {
-  font-size: 11px;
-  color: var(--verde-recarga-texto);
-  margin-top: 4px;
-}
-
-/* --- BADGES --- */
-.pi-usr-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 20px;
-}
-
-.pi-usr-badge-ok {
-  background-color: var(--verde-recarga-suave);
-  color: var(--verde-recarga-texto);
-}
-
-.pi-usr-badge-pend {
-  background-color: var(--ambar-aviso-suave);
-  color: var(--ambar-aviso-texto);
-}
-
-/* --- MI SALDO --- */
-.pi-usr-saldo {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.pi-usr-saldo-top {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px;
-}
-
-.pi-usr-saldo-card {
-  background: var(--blanco);
-  border-radius: 14px;
-  padding: 26px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.pi-usr-saldo-numero {
-  font-size: 32px;
-  font-weight: 700;
-  color: var(--texto-principal);
-}
-
-.pi-usr-saldo-label {
-  font-size: 13px;
-  color: var(--texto-secundario);
-  max-width: 220px;
-}
-
-.pi-usr-qr-card {
-  background: var(--blanco);
-  border-radius: 14px;
-  padding: 26px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 6px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-}
-
-.pi-usr-qr-card img {
-  width: 140px;
-  height: 140px;
-  border-radius: 12px;
-  border: 6px solid var(--cian-digital-suave);
-  margin-bottom: 8px;
-}
-
-.pi-usr-qr-titulo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--texto-principal);
-}
+.pi-usr-tabs { display: flex; gap: 6px; background-color: var(--gris-niebla); padding: 4px; border-radius: 10px; }
+.pi-usr-tabs button { display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--texto-secundario); cursor: pointer; transition: all 0.2s; }
+.pi-usr-tabs button.activo { background-color: var(--blanco); color: var(--indigo-profundo); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); }
 
-.pi-usr-qr-nota {
-  font-size: 12px;
-  color: var(--gris-medio);
-  max-width: 220px;
+/* --- BOTÓN DEMO DE SIMULACIÓN LÓGICA --- */
+.pi-usr-demo-toggle {
+  display: flex; align-items: center; gap: 12px; background-color: var(--blanco);
+  padding: 12px 18px; border-radius: 12px; border: 1px dashed var(--borde-medio); box-shadow: 0 4px 6px rgba(0,0,0,0.02);
 }
-
-.pi-usr-qr-usuario {
-  font-size: 12px;
-  color: var(--texto-secundario);
-  margin-top: 6px;
-}
-
-/* --- TABLA DE HISTORIAL --- */
-.pi-usr-tabla-wrapper {
-  overflow-x: auto;
-}
-
-.pi-usr-tabla {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.pi-usr-tabla th {
-  text-align: left;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--gris-medio);
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--borde-suave);
+.pi-usr-demo-toggle label { font-size: 13px; font-weight: 700; color: var(--texto-secundario); }
+.btn-toggle-demo {
+  padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;
+  border: 1px solid var(--borde-medio); background: var(--gris-niebla); color: var(--texto-principal); transition: all 0.2s;
 }
+.btn-toggle-demo.activo { background: var(--verde-recarga-suave); border-color: var(--verde-recarga); color: var(--verde-recarga-texto); }
 
-.pi-usr-tabla td {
-  padding: 12px;
-  border-bottom: 1px solid var(--borde-suave);
-  font-size: 14px;
-  color: var(--texto-principal);
-}
+/* --- TARJETAS GENÉRICAS --- */
+.pi-usr-card { background: var(--blanco); border-radius: 14px; padding: 24px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); border: 1px solid var(--borde-suave); }
+.pi-usr-card h3 { display: flex; align-items: center; gap: 10px; color: var(--texto-principal); font-size: 17px; margin: 0 0 18px 0; }
+.mt-20 { margin-top: 20px; }
+.texto-ayuda { font-size: 13px; color: var(--texto-secundario); }
 
-.pi-usr-tipo-celda {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
+/* --- PESTAÑA: COMPRAR ENTRADAS --- */
+.pi-usr-comprar { display: flex; flex-direction: column; gap: 20px; }
+
+.pi-usr-nota-informativa {
+  display: flex; align-items: flex-start; gap: 15px; background-color: var(--cian-digital-suave); border: 1px solid rgba(0, 180, 216, 0.3); padding: 16px; border-radius: 12px;
 }
-
-.pi-usr-monto-positivo {
-  color: var(--verde-recarga-texto);
-  font-weight: 700;
+.pi-usr-nota-informativa.nota-verde { background-color: var(--verde-recarga-suave); border-color: rgba(0, 196, 140, 0.3); }
+.pi-usr-nota-informativa.nota-verde .nota-icon { color: var(--verde-recarga-texto); }
+.pi-usr-nota-informativa.nota-verde strong { color: var(--verde-recarga-texto); }
+
+.nota-icon { font-size: 24px; color: var(--cian-digital-texto); flex-shrink: 0; }
+.pi-usr-nota-informativa strong { display: block; font-size: 15px; color: var(--cian-digital-texto); margin-bottom: 4px; }
+.pi-usr-nota-informativa p { margin: 0; font-size: 13px; color: var(--texto-principal); line-height: 1.5; }
+
+/* Carrito de Entradas */
+.pi-usr-cart-list { display: flex; flex-direction: column; gap: 16px; }
+
+.pi-usr-ticket-card {
+  background: var(--blanco); border-radius: 12px; border: 1px solid var(--borde-suave); border-left: 6px solid var(--gris-medio);
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; transition: all 0.3s;
+}
+
+.pi-usr-ticket-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; background-color: var(--gris-niebla); border-bottom: 1px solid var(--borde-suave); }
+.pi-usr-ticket-header h4 { margin: 0; font-size: 14px; font-weight: 700; color: var(--texto-principal); display: flex; align-items: center; gap: 8px; }
+
+.btn-eliminar-ticket { background: transparent; border: none; color: var(--rojo-error-texto); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
+.btn-eliminar-ticket:hover { color: var(--rojo-error); }
+
+.pi-usr-ticket-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
+
+.pi-usr-ticket-categorias label { display: block; font-size: 13px; font-weight: 600; color: var(--texto-principal); margin-bottom: 8px; }
+.cat-options { display: flex; gap: 12px; flex-wrap: wrap; }
+.btn-cat {
+  flex: 1; background-color: var(--blanco); border: 2px solid var(--borde-medio); border-radius: 8px; padding: 12px;
+  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;
+}
+.btn-cat:hover { border-color: var(--cian-digital-suave); }
+.btn-cat.activa { border-color: var(--cian-digital); background-color: var(--cian-digital-suave); }
+.cat-nombre { font-size: 14px; font-weight: 700; color: var(--texto-principal); }
+.cat-precio { font-size: 13px; color: var(--indigo-profundo); font-weight: 600; }
+
+.pi-usr-ticket-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.input-group { display: flex; flex-direction: column; gap: 6px; }
+.input-group label { font-size: 13px; font-weight: 600; color: var(--texto-principal); }
+.input-group input { padding: 10px 14px; border: 1px solid var(--borde-medio); border-radius: 8px; font-family: inherit; font-size: 14px; color: var(--texto-principal); outline: none; transition: border-color 0.2s; }
+.input-group input:focus { border-color: var(--cian-digital); }
+.input-group input:disabled { background-color: var(--gris-niebla); color: var(--texto-secundario); cursor: not-allowed; }
+
+.pi-usr-btn-agregar-mas {
+  background-color: transparent; color: var(--indigo-profundo); border: 2px dashed var(--borde-medio); padding: 16px; border-radius: 12px;
+  font-size: 14px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
+}
+.pi-usr-btn-agregar-mas:hover { border-color: var(--indigo-profundo); background-color: var(--indigo-profundo-suave); }
+
+/* Resumen Pago */
+.pi-usr-pago-card { display: flex; flex-direction: column; gap: 20px; }
+.pi-usr-form-label { display: block; font-size: 15px; font-weight: 700; color: var(--texto-principal); margin-bottom: 6px; }
+
+.pi-usr-btn-upload-grande {
+  width: 100%; padding: 30px; border: 2px dashed var(--borde-medio); border-radius: 12px; background-color: var(--gris-niebla);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; cursor: pointer; transition: all 0.2s;
+}
+.pi-usr-btn-upload-grande:hover { background-color: var(--cian-digital-suave); border-color: var(--cian-digital); }
+.pi-usr-btn-upload-grande span { font-size: 14px; font-weight: 600; color: var(--texto-principal); }
+
+.pi-usr-comprobante-preview-grande { display: flex; gap: 16px; padding: 16px; border: 1px solid var(--borde-suave); border-radius: 12px; background-color: var(--gris-niebla); }
+.pi-usr-comprobante-preview-grande img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--borde-medio); }
+.preview-info { display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+.preview-info span { font-size: 14px; font-weight: 600; color: var(--texto-principal); }
+.btn-cambiar-archivo { font-size: 13px; font-weight: 700; color: var(--cian-digital-texto); cursor: pointer; }
+
+.pi-usr-alerta-error { display: flex; align-items: center; gap: 8px; background-color: var(--rojo-error-suave); color: var(--rojo-error-texto); padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; }
+
+.pi-usr-resumen-compra { background-color: var(--blanco); border: 1px solid var(--borde-suave); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+.resumen-linea { display: flex; justify-content: space-between; font-size: 14px; color: var(--texto-secundario); }
+.resumen-total { display: flex; justify-content: space-between; align-items: center; font-size: 16px; font-weight: 700; color: var(--texto-principal); padding-top: 12px; border-top: 1px solid var(--borde-suave); }
+.resumen-total strong { font-size: 24px; color: var(--indigo-profundo); }
+
+.pi-usr-btn-enviar { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background-color: var(--coral-compra); color: var(--blanco); border: none; padding: 16px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
+.pi-usr-btn-enviar:hover { background-color: var(--coral-compra-hover); }
+
+/* --- HISTORIAL DE SOLICITUDES --- */
+.pi-usr-solicitudes { display: flex; flex-direction: column; gap: 14px; }
+.pi-usr-solicitud { display: flex; gap: 16px; background-color: var(--gris-niebla); border-radius: 12px; padding: 16px; border: 1px solid var(--borde-suave); }
+.pi-usr-solicitud-img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--borde-medio); }
+.pi-usr-solicitud-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.pi-usr-solicitud-cabecera { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
+.pi-usr-solicitud-titulo { font-size: 15px; font-weight: 700; color: var(--texto-principal); }
+.pi-usr-solicitud-fecha { font-size: 13px; color: var(--gris-medio); }
+
+.pi-usr-btn-demo { align-self: flex-start; background-color: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); border: 1px dashed var(--ambar-aviso); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.pi-usr-btn-demo:hover { background-color: rgba(255, 176, 32, 0.25); }
+
+/* Credenciales */
+.pi-usr-credenciales { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; border-top: 1px solid var(--borde-suave); padding-top: 15px; }
+.pi-usr-credencial { display: flex; gap: 15px; background-color: var(--blanco); border: 1px solid var(--borde-suave); border-radius: 12px; padding: 15px; align-items: center; }
+.qr-miniatura { width: 80px; height: 80px; border-radius: 8px; border: 3px solid var(--gris-niebla); }
+.credencial-datos { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.cred-cat { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+.pi-usr-credencial-nombre { font-size: 15px; font-weight: 700; color: var(--texto-principal); }
+.pi-usr-credencial-linea { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--texto-secundario); }
+.credencial-nueva-cuenta { margin-top: 8px; background-color: var(--indigo-profundo-suave); padding: 8px 12px; border-radius: 8px; }
+.credencial-nueva-cuenta .pi-usr-credencial-linea { color: var(--indigo-profundo); }
+.pi-usr-credencial-nota { display: block; font-size: 11px; color: var(--texto-secundario); margin-top: 4px; }
+
+/* Badges */
+.pi-usr-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
+.pi-usr-badge-ok { background-color: var(--verde-recarga-suave); color: var(--verde-recarga-texto); }
+.pi-usr-badge-pend { background-color: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); }
+
+/* =========================================================
+   PESTAÑA 2: MI SALDO Y ESTADO DE CUENTA
+========================================================= */
+.pi-usr-saldo { display: flex; flex-direction: column; gap: 24px; }
+
+/* Pantalla de Espera (Pending Approval) */
+.pi-usr-espera-aprobacion {
+  background-color: var(--blanco); border-radius: 16px; padding: 50px 30px;
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--borde-suave);
+}
+.espera-icono {
+  width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, var(--ambar-aviso), #FF8A00);
+  display: flex; justify-content: center; align-items: center; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(255, 176, 32, 0.3);
+}
+.pi-usr-espera-aprobacion h3 { font-size: 24px; color: var(--texto-principal); margin: 0 0 15px 0; font-weight: 800; }
+.pi-usr-espera-aprobacion p { font-size: 15px; color: var(--texto-secundario); max-width: 500px; line-height: 1.6; margin: 0 0 20px 0; }
+.espera-info-extra { display: flex; align-items: center; gap: 8px; background-color: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; }
+
+.animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Pantalla Activa */
+.pi-usr-saldo-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+
+.pi-usr-pase-card {
+  border-radius: 14px; padding: 26px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: var(--blanco); position: relative; overflow: hidden;
+}
+.pi-usr-pase-card.is-vip { background: linear-gradient(135deg, #1A2B6B, #3B4D8C); }
+.pi-usr-pase-card.is-general { background: linear-gradient(135deg, var(--cian-digital), #0096B4); }
+.pase-label { font-size: 11px; opacity: 0.8; letter-spacing: 1px; margin-bottom: 5px;}
+.pase-tipo { font-size: 28px; font-weight: 800; letter-spacing: 0.5px; }
+
+.pi-usr-saldo-card { background: var(--blanco); border-radius: 14px; padding: 26px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); border: 1px solid var(--borde-suave); }
+.pi-usr-saldo-numero { font-size: 34px; font-weight: 800; color: var(--texto-principal); }
+.pi-usr-saldo-label { font-size: 13px; color: var(--texto-secundario); max-width: 200px; }
+
+.pi-usr-qr-card { background: var(--blanco); border-radius: 14px; padding: 20px; display: flex; align-items: center; gap: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); border: 1px solid var(--borde-suave); }
+.pi-usr-qr-card img { width: 100px; height: 100px; border-radius: 8px; border: 4px solid var(--cian-digital-suave); }
+.qr-info-text { display: flex; flex-direction: column; justify-content: center; text-align: left; }
+.pi-usr-qr-titulo { display: flex; align-items: center; gap: 8px; font-size: 16px; font-weight: 700; color: var(--texto-principal); margin-bottom: 6px;}
+.pi-usr-qr-nota { font-size: 13px; color: var(--texto-secundario); }
+
+/* Tabla */
+.pi-usr-tabla-wrapper { overflow-x: auto; }
+.pi-usr-tabla { width: 100%; border-collapse: collapse; }
+.pi-usr-tabla th { text-align: left; font-size: 12px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gris-medio); padding: 14px 12px; border-bottom: 1px solid var(--borde-suave); }
+.pi-usr-tabla td { padding: 14px 12px; border-bottom: 1px solid var(--borde-suave); font-size: 14px; color: var(--texto-principal); vertical-align: middle;}
+.pi-usr-tabla tbody tr:hover { background-color: var(--gris-niebla); }
+
+.pi-usr-tipo-celda { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.pi-usr-monto-positivo { color: var(--verde-recarga-texto); font-weight: 700; }
+.pi-usr-monto-negativo { color: var(--rojo-error); font-weight: 700; }
+
+@media (max-width: 768px) {
+  .pi-usr-solicitud { flex-direction: column; }
+  .pi-usr-ticket-inputs { grid-template-columns: 1fr; }
+  .pi-usr-qr-card { flex-direction: column; text-align: center; }
+  .qr-info-text { align-items: center; text-align: center; }
 }

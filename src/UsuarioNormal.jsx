@@ -1,18 +1,17 @@
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaTicketAlt, FaWallet, FaQrcode, FaUpload, FaPlus, FaMinus, FaUserPlus,
-  FaCheckCircle, FaHourglassHalf, FaEnvelope, FaPhoneAlt, FaHistory,
-  FaStore, FaCoins, FaExclamationTriangle, FaKey
+  FaTicketAlt, FaWallet, FaQrcode, FaUpload, FaPlus, FaTrash, FaUserPlus,
+  FaCheckCircle, FaHourglassHalf, FaEnvelope, FaHistory,
+  FaStore, FaCoins, FaExclamationTriangle, FaKey, FaUserTag, FaIdCard, FaLock, FaUserCheck
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
 
 const MAX_ENTRADAS = 6;
 
-// --- CATEGORÍAS DE ENTRADA DISPONIBLES PARA EL EVENTO ---
 const categoriasEntradas = [
-  { id: 'general', nombre: 'General', descripcion: 'Acceso general al recinto del evento.', precio: 150 },
-  { id: 'vip', nombre: 'VIP', descripcion: 'Acceso a zona VIP con área preferencial.', precio: 300 },
+  { id: 'general', nombre: 'General', descripcion: 'Acceso general al recinto del evento.', precio: 150, color: 'var(--cian-digital)' },
+  { id: 'vip', nombre: 'VIP', descripcion: 'Acceso a zona VIP con área preferencial.', precio: 300, color: 'var(--ambar-aviso)' },
 ];
 
 const generarPassword = () => Math.random().toString(36).slice(-8);
@@ -29,29 +28,37 @@ const fechaHoraActual = () => {
 };
 
 const historialInicial = [
-  { id: 1, tipo: 'recarga', detalle: 'Recarga en punto oficial', monto: 100, unidad: 'pts', fecha: '05/08/2026', hora: '09:15' },
-  { id: 2, tipo: 'compra_qr', detalle: 'Foodtruck La Paceña', monto: 20, unidad: 'pts', fecha: '05/08/2026', hora: '13:40' },
-  { id: 3, tipo: 'compra_qr', detalle: 'Cervecería Andina', monto: 15, unidad: 'pts', fecha: '05/08/2026', hora: '18:05' },
+  { id: 1, tipo: 'recarga', detalle: 'Recarga inicial en boletería', monto: 200, unidad: 'pts', fecha: '13/08/2026', hora: '10:00' }
 ];
 
 export default function UsuarioNormal() {
   const [usuario] = useState(() => {
     const guardado = localStorage.getItem('usuarioProyectoIngresos');
-    return guardado ? JSON.parse(guardado) : { nombre: 'Usuario', email: 'usuario@proyectodeingresos.com' };
+    return guardado ? JSON.parse(guardado) : { nombre: 'Vladimir Chambi', email: 'vladimir@univalle.edu' };
   });
 
   const location = useLocation();
   const navigate = useNavigate();
   const pestana = location.pathname.endsWith('/saldo') ? 'saldo' : 'comprar';
 
-  const [historial, setHistorial] = useState(historialInicial);
-  const [compras, setCompras] = useState([]);
+  // --- ESTADOS DE SIMULACIÓN Y LÓGICA DE NEGOCIO ---
+  const [yaTieneEntrada, setYaTieneEntrada] = useState(false);
+  const [miCuentaActiva, setMiCuentaActiva] = useState(false);
 
-  const [categoriaId, setCategoriaId] = useState(categoriasEntradas[0].id);
-  const [cantidad, setCantidad] = useState(1);
-  const [invitados, setInvitados] = useState([]);
-  const [comprobante, setComprobante] = useState(null); // { nombreArchivo, previewUrl }
+  // --- ESTADOS DE COMPRAS ---
+  const [compras, setCompras] = useState([]);
+  
+  // El carrito inicia asumiendo que NO tiene entrada (el primer ticket es Titular)
+  const [entradasCart, setEntradasCart] = useState([
+    { id: "12/02/26", isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaId: 'general', precio: 150 }
+  ]);
+  
+  const [comprobante, setComprobante] = useState(null); 
   const [errorForm, setErrorForm] = useState('');
+
+  // --- ESTADOS DE SALDO ---
+  const [miCategoriaAcceso] = useState('VIP'); 
+  const [historial, setHistorial] = useState([]); 
 
   const saldo = useMemo(
     () => historial.reduce((total, item) => {
@@ -62,267 +69,289 @@ export default function UsuarioNormal() {
     [historial]
   );
 
-  const categoriaSeleccionada = categoriasEntradas.find(c => c.id === categoriaId) ?? categoriasEntradas[0];
-  const montoTotalEntradas = cantidad * categoriaSeleccionada.precio;
+  const montoTotalEntradas = entradasCart.reduce((acc, entrada) => acc + entrada.precio, 0);
 
-  const cambiarCantidad = (delta) => {
-    const nueva = Math.min(MAX_ENTRADAS, Math.max(1, cantidad + delta));
-    setCantidad(nueva);
-    setInvitados(prev => {
-      const necesarios = nueva - 1;
-      const copia = [...prev];
-      while (copia.length < necesarios) copia.push({ nombre: '', correo: '', celular: '' });
-      copia.length = necesarios;
-      return copia;
-    });
+  // --- CONTROLADOR DEL MODO SIMULACIÓN ---
+  const toggleSimulacionEntradaPropia = () => {
+    const nuevoEstado = !yaTieneEntrada;
+    setYaTieneEntrada(nuevoEstado);
+    
+    // Si marcamos que YA tiene entrada, su cuenta se activa automáticamente en el panel de Saldo
+    setMiCuentaActiva(nuevoEstado);
+    if(nuevoEstado && historial.length === 0) setHistorial(historialInicial);
+
+    // Reiniciamos el carrito basándonos en la nueva realidad del usuario
+    if (nuevoEstado) {
+      // Ya tiene entrada: Solo puede comprar para invitados
+      setEntradasCart([{ id: Date.now(), isTitular: false, nombre: '', correo: '', celular: '', categoriaId: 'general', precio: 150 }]);
+    } else {
+      // No tiene entrada: La primera debe ser obligatoria para él
+      setEntradasCart([{ id: Date.now(), isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaId: 'general', precio: 150 }]);
+    }
   };
 
-  const actualizarInvitado = (index, campo, valor) => {
-    setInvitados(prev => prev.map((inv, i) => (i === index ? { ...inv, [campo]: valor } : inv)));
+  // --- LÓGICA DEL CARRITO ---
+  const agregarEntrada = () => {
+    if (entradasCart.length >= MAX_ENTRADAS) return;
+    setEntradasCart([
+      ...entradasCart,
+      { id: Date.now(), isTitular: false, nombre: '', correo: '', celular: '', categoriaId: 'general', precio: 150 }
+    ]);
+  };
+
+  const quitarEntrada = (id) => setEntradasCart(entradasCart.filter(e => e.id !== id));
+
+  const actualizarEntrada = (id, campo, valor) => {
+    setEntradasCart(entradasCart.map(ent => {
+      if (ent.id === id) {
+        const updated = { ...ent, [campo]: valor };
+        if (campo === 'categoriaId') {
+          const cat = categoriasEntradas.find(c => c.id === valor);
+          updated.precio = cat ? cat.precio : 0;
+        }
+        return updated;
+      }
+      return ent;
+    }));
   };
 
   const handleComprobanteUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setComprobante({ nombreArchivo: file.name, previewUrl: reader.result });
-    };
+    reader.onloadend = () => setComprobante({ nombreArchivo: file.name, previewUrl: reader.result });
     reader.readAsDataURL(file);
   };
 
   const handleEnviarComprobante = () => {
     setErrorForm('');
+    if (!comprobante) return setErrorForm('Debes subir el comprobante de pago para continuar.');
+    
+    const invitadosIncompletos = entradasCart.some(ent => !ent.nombre.trim() || !ent.correo.trim() || (!ent.isTitular && !ent.celular.trim()));
+    if (invitadosIncompletos) return setErrorForm('Completa el nombre, correo y celular de todas las personas asignadas.');
 
-    if (!comprobante) {
-      setErrorForm('Debes subir el comprobante de pago para continuar.');
-      return;
-    }
-    if (cantidad > 1 && invitados.some(inv => !inv.nombre.trim() || !inv.correo.trim() || !inv.celular.trim())) {
-      setErrorForm('Completa nombre, correo y celular de cada entrada adicional.');
-      return;
-    }
+    const correos = entradasCart.map(e => e.correo.toLowerCase());
+    if (correos.length !== new Set(correos).size) return setErrorForm('Cada entrada necesita un correo electrónico único.');
 
     const { fecha, hora } = fechaHoraActual();
     setCompras(prev => [
-      {
-        id: Date.now(),
-        categoria: categoriaSeleccionada.nombre,
-        cantidad,
-        monto: montoTotalEntradas,
-        comprobante,
-        invitados: [...invitados],
-        estado: 'pendiente',
-        fecha,
-        hora,
-      },
+      { id: Date.now(), entradas: [...entradasCart], montoTotal: montoTotalEntradas, comprobante, estado: 'pendiente', fecha, hora },
       ...prev,
     ]);
 
-    setCantidad(1);
-    setInvitados([]);
+    // Resetear el formulario basándonos en si ya tenía entrada o no
+    if (yaTieneEntrada) {
+      setEntradasCart([{ id: "12/02/26", isTitular: false, nombre: '', correo: '', celular: '', categoriaId: 'general', precio: 150 }]);
+    } else {
+      setEntradasCart([{ id: "12/02/26", isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaId: 'general', precio: 150 }]);
+    }
     setComprobante(null);
   };
 
-  // Simulación del paso de confirmación del comprobante (en la vida real lo haría el equipo de Admin/Supervisor).
-  const simularConfirmacion = (compraId) => {
-    const compra = compras.find(c => c.id === compraId);
-    if (!compra) return;
-
+  const simularConfirmacionAdmin = (compraId) => {
     setCompras(prev => prev.map(c => {
       if (c.id !== compraId) return c;
-      const invitadosConCredenciales = c.invitados.map(inv => ({
-        ...inv,
-        password: generarPassword(),
-        qrUrl: qrDe(`QPASS-${inv.correo}`),
+      const entradasConfirmadas = c.entradas.map(ent => ({
+        ...ent,
+        password: ent.isTitular ? null : generarPassword(),
+        qrUrl: qrDe(`QPASS-${ent.correo}`),
       }));
-      return { ...c, estado: 'confirmado', invitados: invitadosConCredenciales };
+      return { ...c, estado: 'confirmado', entradas: entradasConfirmadas };
     }));
-
-    const { fecha, hora } = fechaHoraActual();
-    setHistorial(prev => [
-      {
-        id: Date.now(),
-        tipo: 'entrada',
-        detalle: compra.cantidad === 1
-          ? `Compra de 1 entrada ${compra.categoria}`
-          : `Compra de ${compra.cantidad} entradas ${compra.categoria}`,
-        monto: compra.monto,
-        unidad: 'Bs',
-        estado: 'confirmado',
-        fecha,
-        hora,
-      },
-      ...prev,
-    ]);
   };
 
   return (
     <div className="pi-usr-container">
 
       <div className="pi-usr-header">
-        <h2>Mi Cuenta</h2>
+        <h2>Panel de Asistente</h2>
         <div className="pi-usr-tabs">
-          <button
-            className={pestana === 'comprar' ? 'activo' : ''}
-            onClick={() => navigate('/usuarionormal')}
-          >
+          <button className={pestana === 'comprar' ? 'activo' : ''} onClick={() => navigate('/usuarionormal')}>
             <FaTicketAlt /> Comprar Entradas
           </button>
-          <button
-            className={pestana === 'saldo' ? 'activo' : ''}
-            onClick={() => navigate('/usuarionormal/saldo')}
-          >
-            <FaWallet /> Mi Saldo
+          <button className={pestana === 'saldo' ? 'activo' : ''} onClick={() => navigate('/usuarionormal/saldo')}>
+            <FaWallet /> Mi Entrada y Saldo
           </button>
         </div>
       </div>
 
-      {/* --- PESTAÑA: COMPRAR ENTRADAS --- */}
+      {/* PANEL DE SIMULACIÓN PARA EL DESARROLLADOR */}
+      <div className="pi-usr-demo-toggle">
+        <label>Control de Simulador Lógico:</label>
+        <button onClick={toggleSimulacionEntradaPropia} className={`btn-toggle-demo ${yaTieneEntrada ? 'activo' : ''}`}>
+          {yaTieneEntrada ? <FaUserCheck /> : <FaExclamationTriangle />}
+          {yaTieneEntrada ? ' Estado: YA TENGO UNA ENTRADA MÍA' : ' Estado: NO TENGO ENTRADA (Cuenta nueva)'}
+        </button>
+      </div>
+
+      {/* =========================================================
+          PESTAÑA 1: COMPRAR ENTRADAS
+      ========================================================= */}
       {pestana === 'comprar' && (
         <div className="pi-usr-comprar">
-          <div className="pi-usr-card">
-            <h3><FaTicketAlt color="var(--indigo-profundo)" /> Comprar entradas al evento</h3>
-
-            <div className="pi-usr-categorias">
-              <span className="pi-usr-form-label">Categoría de entrada</span>
-              <div className="pi-usr-categorias-grid">
-                {categoriasEntradas.map(cat => (
-                  <button
-                    type="button"
-                    key={cat.id}
-                    className={`pi-usr-categoria-card ${categoriaId === cat.id ? 'seleccionada' : ''}`}
-                    onClick={() => setCategoriaId(cat.id)}
-                  >
-                    <span className="pi-usr-categoria-nombre">{cat.nombre}</span>
-                    <span className="pi-usr-categoria-descripcion">{cat.descripcion}</span>
-                    <span className="pi-usr-categoria-precio">Bs. {cat.precio}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="pi-usr-stepper-fila">
+          
+          {/* Nota dinámica dependiendo de la validación */}
+          {yaTieneEntrada ? (
+            <div className="pi-usr-nota-informativa nota-verde">
+              <FaUserPlus className="nota-icon" />
               <div>
-                <span className="pi-usr-stepper-label">Cantidad de entradas</span>
-                <span className="pi-usr-stepper-precio">Bs. {categoriaSeleccionada.precio} por entrada · {categoriaSeleccionada.nombre}</span>
-              </div>
-              <div className="pi-usr-stepper">
-                <button type="button" onClick={() => cambiarCantidad(-1)} disabled={cantidad <= 1}>
-                  <FaMinus />
-                </button>
-                <span>{cantidad}</span>
-                <button type="button" onClick={() => cambiarCantidad(1)} disabled={cantidad >= MAX_ENTRADAS}>
-                  <FaPlus />
-                </button>
+                <strong>Comprando para terceros (Invitados)</strong>
+                <p>El sistema detecta que <b>ya cuentas con una entrada</b> asignada a tu cuenta. Las entradas que adquieras aquí serán creadas para tus invitados y se les enviará el QR a sus correos.</p>
               </div>
             </div>
+          ) : (
+            <div className="pi-usr-nota-informativa">
+              <FaIdCard className="nota-icon" />
+              <div>
+                <strong>Entradas personales e intransferibles</strong>
+                <p>Tu primera entrada será asignada a esta cuenta (no puedes modificar los datos). Si compras para amigos, asígnales su correo y el sistema les creará sus propias cuentas.</p>
+              </div>
+            </div>
+          )}
 
-            {invitados.length > 0 && (
-              <div className="pi-usr-invitados">
-                <p className="pi-usr-invitados-nota">
-                  <FaUserPlus /> La primera entrada es para ti. Completa los datos de las {invitados.length} entrada(s) adicionales:
-                  a cada correo se le enviará su propio código QR y una contraseña para que cree su cuenta.
-                </p>
-                {invitados.map((inv, index) => (
-                  <div key={index} className="pi-usr-invitado-card">
-                    <span className="pi-usr-invitado-titulo">Entrada adicional #{index + 2}</span>
-                    <div className="pi-usr-invitado-grid">
-                      <input
-                        type="text"
-                        placeholder="Nombre completo"
-                        value={inv.nombre}
-                        onChange={(e) => actualizarInvitado(index, 'nombre', e.target.value)}
-                      />
-                      <input
-                        type="email"
-                        placeholder="Correo electrónico"
-                        value={inv.correo}
-                        onChange={(e) => actualizarInvitado(index, 'correo', e.target.value)}
-                      />
-                      <input
-                        type="tel"
-                        placeholder="Celular"
-                        value={inv.celular}
-                        onChange={(e) => actualizarInvitado(index, 'celular', e.target.value)}
-                      />
+          <div className="pi-usr-cart-list">
+            {entradasCart.map((entrada, index) => {
+              const catSeleccionada = categoriasEntradas.find(c => c.id === entrada.categoriaId);
+              return (
+                <div key={entrada.id} className="pi-usr-ticket-card" style={{ borderLeftColor: catSeleccionada.color }}>
+                  <div className="pi-usr-ticket-header">
+                    <h4>
+                      {entrada.isTitular ? <FaUserTag color="var(--indigo-profundo)"/> : <FaUserPlus color="var(--gris-medio)"/>}
+                      {entrada.isTitular ? 'Entrada 1 (Tuya)' : `Entrada ${index + 1} (Invitado)`}
+                    </h4>
+                    
+                    {/* Solo permite borrar si NO es titular y hay más de un elemento */}
+                    {(!entrada.isTitular && entradasCart.length > 1) && (
+                      <button className="btn-eliminar-ticket" onClick={() => quitarEntrada(entrada.id)}>
+                        <FaTrash /> Quitar
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="pi-usr-ticket-body">
+                    <div className="pi-usr-ticket-categorias">
+                      <label>Categoría de Entrada:</label>
+                      <div className="cat-options">
+                        {categoriasEntradas.map(cat => (
+                          <button
+                            key={cat.id}
+                            className={`btn-cat ${entrada.categoriaId === cat.id ? 'activa' : ''}`}
+                            onClick={() => actualizarEntrada(entrada.id, 'categoriaId', cat.id)}
+                          >
+                            <span className="cat-nombre">{cat.nombre}</span>
+                            <span className="cat-precio">Bs. {cat.precio}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pi-usr-ticket-inputs">
+                      <div className="input-group">
+                        <label>Nombre Completo</label>
+                        <input type="text" placeholder="Ej: Ana López" value={entrada.nombre} onChange={(e) => actualizarEntrada(entrada.id, 'nombre', e.target.value)} disabled={entrada.isTitular} />
+                      </div>
+                      <div className="input-group">
+                        <label>Correo Electrónico</label>
+                        <input type="email" placeholder="Para enviar credenciales" value={entrada.correo} onChange={(e) => actualizarEntrada(entrada.id, 'correo', e.target.value)} disabled={entrada.isTitular} />
+                      </div>
+                      <div className="input-group">
+                        <label>Celular (WhatsApp)</label>
+                        <input type="tel" placeholder="Ej: 71234567" value={entrada.celular} onChange={(e) => actualizarEntrada(entrada.id, 'celular', e.target.value)} />
+                      </div>
                     </div>
                   </div>
-                ))}
-              </div>
-            )}
+                </div>
+              )
+            })}
+          </div>
 
+          {entradasCart.length < MAX_ENTRADAS && (
+            <button className="pi-usr-btn-agregar-mas" onClick={agregarEntrada}>
+              <FaPlus /> Añadir otra entrada para un amigo (Máx. {MAX_ENTRADAS})
+            </button>
+          )}
+
+          <div className="pi-usr-card pi-usr-pago-card">
             <div className="pi-usr-comprobante">
-              <span className="pi-usr-form-label">Comprobante de pago</span>
-              <label htmlFor="pi-usr-file" className="pi-usr-btn-upload">
-                <FaUpload /> {comprobante ? 'Cambiar comprobante' : 'Subir comprobante'}
-              </label>
-              <input id="pi-usr-file" type="file" accept="image/*" onChange={handleComprobanteUpload} hidden />
-              {comprobante && (
-                <div className="pi-usr-comprobante-preview">
+              <span className="pi-usr-form-label">Comprobante de Transferencia</span>
+              <p className="texto-ayuda" style={{marginBottom: '10px'}}>Transfiere el monto total a la cuenta oficial y sube la captura aquí.</p>
+              {!comprobante ? (
+                <label htmlFor="pi-usr-file" className="pi-usr-btn-upload-grande">
+                  <FaUpload size={24} color="var(--cian-digital)"/> 
+                  <span>Haz clic para subir comprobante</span>
+                </label>
+              ) : (
+                <div className="pi-usr-comprobante-preview-grande">
                   <img src={comprobante.previewUrl} alt="Comprobante" />
-                  <span>{comprobante.nombreArchivo}</span>
+                  <div className="preview-info">
+                    <span>{comprobante.nombreArchivo}</span>
+                    <label htmlFor="pi-usr-file" className="btn-cambiar-archivo">Cambiar foto</label>
+                  </div>
                 </div>
               )}
+              <input id="pi-usr-file" type="file" accept="image/*" onChange={handleComprobanteUpload} hidden />
             </div>
 
-            {errorForm && (
-              <div className="pi-usr-alerta-error">
-                <FaExclamationTriangle /> {errorForm}
-              </div>
-            )}
+            {errorForm && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorForm}</div>}
 
-            <div className="pi-usr-total-fila">
-              <span>Total a pagar</span>
-              <strong>Bs. {montoTotalEntradas}</strong>
+            <div className="pi-usr-resumen-compra">
+              <div className="resumen-linea">
+                <span>Total de entradas</span>
+                <span>{entradasCart.length}</span>
+              </div>
+              <div className="resumen-total">
+                <span>Total a pagar</span>
+                <strong>Bs. {montoTotalEntradas.toFixed(2)}</strong>
+              </div>
             </div>
 
             <button className="pi-usr-btn-enviar" onClick={handleEnviarComprobante}>
-              <FaUpload /> Enviar comprobante y solicitar entradas
+              <FaCheckCircle /> Enviar Pago y Solicitar
             </button>
           </div>
 
+          {/* HISTORIAL DE SOLICITUDES */}
           {compras.length > 0 && (
-            <div className="pi-usr-card">
-              <h3><FaHourglassHalf color="var(--indigo-profundo)" /> Tus solicitudes de compra</h3>
+            <div className="pi-usr-card mt-20">
+              <h3><FaHourglassHalf color="var(--indigo-profundo)" /> Mis solicitudes de Tickets</h3>
               <div className="pi-usr-solicitudes">
                 {compras.map(compra => (
                   <div key={compra.id} className="pi-usr-solicitud">
                     <img src={compra.comprobante.previewUrl} alt="Comprobante" className="pi-usr-solicitud-img" />
                     <div className="pi-usr-solicitud-info">
                       <div className="pi-usr-solicitud-cabecera">
-                        <span className="pi-usr-solicitud-titulo">
-                          {compra.cantidad === 1 ? '1 entrada' : `${compra.cantidad} entradas`} {compra.categoria} · Bs. {compra.monto}
-                        </span>
+                        <span className="pi-usr-solicitud-titulo">Lote de {compra.entradas.length} entrada(s) · Total: Bs. {compra.montoTotal}</span>
                         {compra.estado === 'pendiente' ? (
-                          <span className="pi-usr-badge pi-usr-badge-pend">
-                            <FaHourglassHalf /> Esperando confirmación
-                          </span>
+                          <span className="pi-usr-badge pi-usr-badge-pend"><FaHourglassHalf /> En revisión</span>
                         ) : (
-                          <span className="pi-usr-badge pi-usr-badge-ok">
-                            <FaCheckCircle /> Confirmado
-                          </span>
+                          <span className="pi-usr-badge pi-usr-badge-ok"><FaCheckCircle /> Aprobado</span>
                         )}
                       </div>
                       <span className="pi-usr-solicitud-fecha">{compra.fecha} · {compra.hora}</span>
 
                       {compra.estado === 'pendiente' && (
-                        <button className="pi-usr-btn-demo" onClick={() => simularConfirmacion(compra.id)}>
-                          Simular confirmación del comprobante (demo)
+                        <button className="pi-usr-btn-demo" onClick={() => simularConfirmacionAdmin(compra.id)}>
+                          Simular Aprobación del Admin (Demo)
                         </button>
                       )}
 
-                      {compra.estado === 'confirmado' && compra.invitados.length > 0 && (
+                      {compra.estado === 'confirmado' && (
                         <div className="pi-usr-credenciales">
-                          {compra.invitados.map((inv, i) => (
+                          <p className="texto-ayuda" style={{marginTop: '10px'}}>Credenciales generadas exitosamente:</p>
+                          {compra.entradas.map((ent, i) => (
                             <div key={i} className="pi-usr-credencial">
-                              <img src={inv.qrUrl} alt={`QR de ${inv.nombre}`} />
-                              <div>
-                                <span className="pi-usr-credencial-nombre">{inv.nombre}</span>
-                                <span className="pi-usr-credencial-linea"><FaEnvelope /> {inv.correo}</span>
-                                <span className="pi-usr-credencial-linea"><FaPhoneAlt /> {inv.celular}</span>
-                                <span className="pi-usr-credencial-linea"><FaKey /> {inv.password}</span>
-                                <span className="pi-usr-credencial-nota">Se envió el QR y la contraseña a su correo.</span>
+                              <img src={ent.qrUrl} alt={`QR`} className="qr-miniatura"/>
+                              <div className="credencial-datos">
+                                <span className="cred-cat" style={{color: categoriasEntradas.find(c=>c.id === ent.categoriaId)?.color}}>
+                                  {categoriasEntradas.find(c=>c.id === ent.categoriaId)?.nombre}
+                                </span>
+                                <span className="pi-usr-credencial-nombre">{ent.nombre} {ent.isTitular && "(Tú)"}</span>
+                                <span className="pi-usr-credencial-linea"><FaEnvelope /> {ent.correo}</span>
+                                {!ent.isTitular && (
+                                  <div className="credencial-nueva-cuenta">
+                                    <span className="pi-usr-credencial-linea"><FaKey /> Pass Temporal: <strong>{ent.password}</strong></span>
+                                  </div>
+                                )}
                               </div>
                             </div>
                           ))}
@@ -337,69 +366,96 @@ export default function UsuarioNormal() {
         </div>
       )}
 
-      {/* --- PESTAÑA: MI SALDO --- */}
+      {/* =========================================================
+          PESTAÑA 2: MI SALDO Y ENTRADA (Maneja Espera vs Aprobado)
+      ========================================================= */}
       {pestana === 'saldo' && (
         <div className="pi-usr-saldo">
-          <div className="pi-usr-saldo-top">
-            <div className="pi-usr-saldo-card">
-              <FaWallet size={30} color="var(--indigo-profundo)" />
-              <span className="pi-usr-saldo-numero">{saldo} pts</span>
-              <span className="pi-usr-saldo-label">Saldo disponible para gastar en el evento</span>
+          
+          {/* ESTADO 1: EN ESPERA DE APROBACIÓN */}
+          {!miCuentaActiva ? (
+            <div className="pi-usr-espera-aprobacion">
+              <div className="espera-icono">
+                <FaLock size={48} color="var(--blanco)" />
+              </div>
+              <h3>Tu cuenta está en revisión</h3>
+              <p>
+                Aún no tienes una entrada validada. Estamos esperando que el Administrador apruebe el comprobante de pago vinculado a tu cuenta para activar tu código QR y habilitar tu saldo.
+              </p>
+              <div className="espera-info-extra">
+                <FaHourglassHalf color="var(--ambar-aviso)"/>
+                <span>Generalmente esto toma menos de 24 horas hábiles.</span>
+              </div>
+              
+              <button className="pi-usr-btn-demo mt-20" onClick={() => {setMiCuentaActiva(true); setHistorial(historialInicial)}}>
+                Simular Aprobación para ver el Dashboard (Demo)
+              </button>
             </div>
+          ) : (
+            
+            /* ESTADO 2: CUENTA ACTIVA Y APROBADA */
+            <div className="pi-usr-saldo-activo animate-fade-in">
+              <div className="pi-usr-saldo-top">
+                <div className={`pi-usr-pase-card ${miCategoriaAcceso === 'VIP' ? 'is-vip' : 'is-general'}`}>
+                  <FaUserTag size={36} color="var(--blanco)" style={{marginBottom: '10px'}} />
+                  <span className="pase-label">TIPO DE ACCESO</span>
+                  <span className="pase-tipo">PASE {miCategoriaAcceso}</span>
+                </div>
 
-            <div className="pi-usr-qr-card">
-              <img src={qrDe(`QPASS-${usuario.email}`)} alt="Tu código QR" />
-              <span className="pi-usr-qr-titulo"><FaQrcode /> Tu código QR</span>
-              <span className="pi-usr-qr-nota">Único y personal — es tu manilla digital para el evento.</span>
-              <span className="pi-usr-qr-usuario">{usuario.nombre} · {usuario.email}</span>
-            </div>
-          </div>
+                <div className="pi-usr-saldo-card">
+                  <FaWallet size={30} color="var(--indigo-profundo)" />
+                  <span className="pi-usr-saldo-numero">{saldo} pts</span>
+                  <span className="pi-usr-saldo-label">Saldo digital disponible para gastar en el evento</span>
+                </div>
 
-          <div className="pi-usr-card">
-            <h3><FaHistory color="var(--indigo-profundo)" /> Historial de compras y recargas</h3>
-            <div className="pi-usr-tabla-wrapper">
-              <table className="pi-usr-tabla">
-                <thead>
-                  <tr>
-                    <th>Tipo</th>
-                    <th>Detalle</th>
-                    <th>Monto</th>
-                    <th>Estado</th>
-                    <th>Fecha</th>
-                    <th>Hora</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historial.map(item => (
-                    <tr key={item.id}>
-                      <td>
-                        <span className="pi-usr-tipo-celda">
-                          {item.tipo === 'recarga' && <><FaCoins color="var(--verde-recarga-texto)" /> Recarga</>}
-                          {item.tipo === 'compra_qr' && <><FaStore color="var(--indigo-profundo)" /> Compra con QR</>}
-                          {item.tipo === 'entrada' && <><FaTicketAlt color="var(--coral-compra)" /> Entrada</>}
-                        </span>
-                      </td>
-                      <td>{item.detalle}</td>
-                      <td className={item.tipo === 'recarga' ? 'pi-usr-monto-positivo' : ''}>
-                        {item.tipo === 'recarga' ? '+' : item.tipo === 'compra_qr' ? '-' : ''}{item.monto} {item.unidad}
-                      </td>
-                      <td>
-                        {item.estado === 'confirmado' && (
-                          <span className="pi-usr-badge pi-usr-badge-ok"><FaCheckCircle /> Confirmado</span>
-                        )}
-                        {item.estado === 'pendiente' && (
-                          <span className="pi-usr-badge pi-usr-badge-pend"><FaHourglassHalf /> Pendiente</span>
-                        )}
-                        {!item.estado && '—'}
-                      </td>
-                      <td>{item.fecha}</td>
-                      <td>{item.hora}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                <div className="pi-usr-qr-card">
+                  <img src={qrDe(`QPASS-${usuario.email}`)} alt="Tu código QR" />
+                  <div className="qr-info-text">
+                    <span className="pi-usr-qr-titulo"><FaQrcode /> Tu Manilla Digital</span>
+                    <span className="pi-usr-qr-nota">Muestra este código en puerta y en los puestos de venta.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pi-usr-card mt-20">
+                <h3><FaHistory color="var(--indigo-profundo)" /> Mis Transacciones (Compras y Recargas)</h3>
+                <div className="pi-usr-tabla-wrapper">
+                  <table className="pi-usr-tabla">
+                    <thead>
+                      <tr>
+                        <th>Movimiento</th>
+                        <th>Lugar / Detalle</th>
+                        <th>Monto</th>
+                        <th>Fecha / Hora</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {historial.length === 0 ? (
+                        <tr><td colSpan="4" style={{textAlign:'center', padding:'30px', color:'var(--gris-medio)'}}>Aún no tienes movimientos registrados.</td></tr>
+                      ) : (
+                        historial.map(item => (
+                          <tr key={item.id}>
+                            <td>
+                              <span className="pi-usr-tipo-celda">
+                                {item.tipo === 'recarga' && <><FaCoins color="var(--verde-recarga-texto)" /> Recarga de Saldo</>}
+                                {item.tipo === 'compra_qr' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
+                                {item.tipo === 'entrada' && <><FaTicketAlt color="var(--coral-compra)" /> Pago de Entrada</>}
+                              </span>
+                            </td>
+                            <td>{item.detalle}</td>
+                            <td className={item.tipo === 'recarga' ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
+                              {item.tipo === 'recarga' ? '+' : item.tipo === 'compra_qr' ? '-' : ''}{item.monto} {item.unidad}
+                            </td>
+                            <td style={{color: 'var(--texto-secundario)', fontSize: '13px'}}>{item.fecha} {item.hora}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  FaCamera, FaSave, FaLock, FaCheckCircle, FaExclamationTriangle
+  FaCamera, FaSave, FaCheckCircle, FaExclamationTriangle, FaUserShield
 } from 'react-icons/fa';
 import { EVENTO_USUARIO_ACTUALIZADO } from './MenuLateral';
 import './Perfil.css';
@@ -15,17 +15,21 @@ const getIniciales = (nombre = 'Usuario') => nombre.substring(0, 2).toUpperCase(
 export default function Perfil() {
   const [usuario, setUsuarioState] = useState(leerUsuarioGuardado);
 
+  // Estados de datos
   const [nombre, setNombre] = useState(usuario?.nombre || '');
   const [foto, setFoto] = useState(usuario?.foto || '');
 
+  // Estados de contraseñas
   const [contraseñaActual, setContraseñaActual] = useState('');
   const [contraseñaNueva, setContraseñaNueva] = useState('');
   const [contraseñaConfirmar, setContraseñaConfirmar] = useState('');
 
-  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' }); // tipo: 'exito' | 'error'
+  // Estados de UI
+  const [activeTab, setActiveTab] = useState('cuenta'); // 'cuenta' | 'seguridad'
+  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
 
   if (!usuario) {
-    return null; // MenuLateral ya redirige a /login si no hay sesión
+    return null; 
   }
 
   const handleFotoUpload = (e) => {
@@ -71,90 +75,167 @@ export default function Perfil() {
     setContraseñaActual('');
     setContraseñaNueva('');
     setContraseñaConfirmar('');
-    setMensaje({ texto: 'Perfil actualizado con éxito.', tipo: 'exito' });
-    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
+    setMensaje({ texto: 'Perfil actualizado exitosamente.', tipo: 'exito' });
+    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
   };
 
   return (
-    <div className="pi-perfil-container">
-      <h2>Mi Perfil</h2>
-
-      <div className="pi-perfil-card">
-        <div className="pi-perfil-avatar-seccion">
-          <div className="pi-perfil-avatar">
-            {foto
-              ? <img src={foto} alt={nombre} />
-              : <span>{getIniciales(nombre || usuario.email)}</span>}
-          </div>
-          <label htmlFor="pi-perfil-foto" className="pi-perfil-btn-foto">
-            <FaCamera /> Cambiar foto
-          </label>
-          <input id="pi-perfil-foto" type="file" accept="image/*" onChange={handleFotoUpload} hidden />
-        </div>
-
-        <div className="pi-perfil-datos">
-          <div className="pi-perfil-form-group">
-            <label>Nombre completo</label>
-            <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} />
-          </div>
-
-          <div className="pi-perfil-form-group">
-            <label>Correo electrónico</label>
-            <input type="email" value={usuario.email} disabled />
-          </div>
-
-          <div className="pi-perfil-form-group">
-            <label>Rol</label>
-            <input type="text" value={usuario.rol} disabled />
-          </div>
-        </div>
+    <div className="pi-perfil-page">
+      
+      {/* 1. PORTADA (COVER) */}
+      <div className="pi-perfil-cover">
+        <div className="pi-perfil-cover-pattern"></div>
       </div>
 
-      <div className="pi-perfil-card">
-        <h3><FaLock color="var(--indigo-profundo)" /> Cambiar contraseña</h3>
-        <p className="pi-perfil-nota">Deja estos campos vacíos si no quieres cambiar tu contraseña.</p>
-
-        <div className="pi-perfil-form-group">
-          <label>Contraseña actual</label>
-          <input
-            type="password"
-            value={contraseñaActual}
-            onChange={(e) => setContraseñaActual(e.target.value)}
-            placeholder="••••••••"
-          />
-        </div>
-
-        <div className="pi-perfil-passwords-grid">
-          <div className="pi-perfil-form-group">
-            <label>Nueva contraseña</label>
-            <input
-              type="password"
-              value={contraseñaNueva}
-              onChange={(e) => setContraseñaNueva(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-            />
+      {/* 2. CONTENEDOR PRINCIPAL SUPERPUESTO */}
+      <div className="pi-perfil-layout">
+        
+        {/* COLUMNA IZQUIERDA: RESUMEN DEL USUARIO */}
+        <aside className="pi-perfil-sidebar">
+          <div className="pi-perfil-avatar-wrapper">
+            <div className="pi-perfil-avatar">
+              {foto 
+                ? <img src={foto} alt={nombre} /> 
+                : <span>{getIniciales(nombre || usuario.email)}</span>
+              }
+            </div>
+            {/* Botón Flotante para cambiar foto */}
+            <label htmlFor="pi-perfil-foto" className="pi-perfil-camera-btn" title="Cambiar foto de perfil">
+              <FaCamera />
+            </label>
+            <input id="pi-perfil-foto" type="file" accept="image/*" onChange={handleFotoUpload} hidden />
           </div>
-          <div className="pi-perfil-form-group">
-            <label>Confirmar nueva contraseña</label>
-            <input
-              type="password"
-              value={contraseñaConfirmar}
-              onChange={(e) => setContraseñaConfirmar(e.target.value)}
-              placeholder="Repite la nueva contraseña"
-            />
+
+          <h2 className="pi-perfil-sidebar-name">{usuario.nombre || 'Usuario'}</h2>
+          <p className="pi-perfil-sidebar-role">{usuario.rol} de QPass</p>
+
+          <div className="pi-perfil-sidebar-stats">
+            <div className="stat-row">
+              <span>Estado de cuenta</span>
+              <span className="stat-value text-green">Activo</span>
+            </div>
+            <div className="stat-row">
+              <span>Último acceso</span>
+              <span className="stat-value">Hoy</span>
+            </div>
           </div>
-        </div>
+        </aside>
+
+        {/* COLUMNA DERECHA: FORMULARIOS Y TABS */}
+        <main className="pi-perfil-main-card">
+          
+          {/* Navegación por Pestañas */}
+          <div className="pi-perfil-tabs">
+            <button 
+              className={activeTab === 'cuenta' ? 'active' : ''} 
+              onClick={() => setActiveTab('cuenta')}
+            >
+              Ajustes de Cuenta
+            </button>
+            <button 
+              className={activeTab === 'seguridad' ? 'active' : ''} 
+              onClick={() => setActiveTab('seguridad')}
+            >
+              Seguridad y Contraseña
+            </button>
+          </div>
+
+          <div className="pi-perfil-tab-content">
+            
+            {mensaje.texto && (
+              <div className={`pi-perfil-alerta ${mensaje.tipo === 'error' ? 'error' : 'exito'}`}>
+                {mensaje.tipo === 'error' ? <FaExclamationTriangle /> : <FaCheckCircle />} {mensaje.texto}
+              </div>
+            )}
+
+            {/* PESTAÑA: AJUSTES DE CUENTA */}
+            {activeTab === 'cuenta' && (
+              <div className="pi-perfil-form-grid animate-fade">
+                <div className="pi-perfil-form-group full-width">
+                  <label>Nombre Completo</label>
+                  <input 
+                    type="text" 
+                    value={nombre} 
+                    onChange={(e) => setNombre(e.target.value)} 
+                    placeholder="Tu nombre y apellido"
+                  />
+                </div>
+
+                <div className="pi-perfil-form-group">
+                  <label>Correo Electrónico</label>
+                  <input 
+                    type="email" 
+                    value={usuario.email} 
+                    disabled 
+                    className="input-disabled"
+                  />
+                </div>
+
+                <div className="pi-perfil-form-group">
+                  <label>Rol Asignado</label>
+                  <input 
+                    type="text" 
+                    value={usuario.rol} 
+                    disabled 
+                    className="input-disabled"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* PESTAÑA: SEGURIDAD Y CONTRASEÑA */}
+            {activeTab === 'seguridad' && (
+              <div className="pi-perfil-form-grid animate-fade">
+                
+                <div className="pi-perfil-info-box full-width">
+                  <FaUserShield className="info-icon"/>
+                  <div>
+                    <h4>Protección de Cuenta</h4>
+                    <p>Si deseas actualizar tu contraseña, ingresa tu contraseña actual para verificar tu identidad y luego define una nueva (mínimo 6 caracteres).</p>
+                  </div>
+                </div>
+
+                <div className="pi-perfil-form-group full-width">
+                  <label>Contraseña Actual</label>
+                  <input
+                    type="password"
+                    value={contraseñaActual}
+                    onChange={(e) => setContraseñaActual(e.target.value)}
+                    placeholder="••••••••"
+                  />
+                </div>
+
+                <div className="pi-perfil-form-group">
+                  <label>Nueva Contraseña</label>
+                  <input
+                    type="password"
+                    value={contraseñaNueva}
+                    onChange={(e) => setContraseñaNueva(e.target.value)}
+                    placeholder="Nueva contraseña"
+                  />
+                </div>
+
+                <div className="pi-perfil-form-group">
+                  <label>Confirmar Nueva Contraseña</label>
+                  <input
+                    type="password"
+                    value={contraseñaConfirmar}
+                    onChange={(e) => setContraseñaConfirmar(e.target.value)}
+                    placeholder="Repite la contraseña"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="pi-perfil-footer">
+            <button className="pi-perfil-btn-guardar" onClick={guardarCambios}>
+              <FaSave /> Guardar Cambios
+            </button>
+          </div>
+
+        </main>
       </div>
-
-      {mensaje.texto && (
-        <div className={`pi-perfil-alerta ${mensaje.tipo === 'error' ? 'error' : 'exito'}`}>
-          {mensaje.tipo === 'error' ? <FaExclamationTriangle /> : <FaCheckCircle />} {mensaje.texto}
-        </div>
-      )}
-
-      <button className="pi-perfil-btn-guardar" onClick={guardarCambios}>
-        <FaSave /> Guardar cambios
-      </button>
     </div>
   );
 }
