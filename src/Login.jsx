@@ -1,6 +1,14 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MdEmail, MdLock, MdKeyboardArrowDown, MdKeyboardArrowUp, MdArrowBack } from 'react-icons/md';
+import { 
+  MdEmail, 
+  MdLock, 
+  MdKeyboardArrowDown, 
+  MdKeyboardArrowUp, 
+  MdArrowBack,
+  MdVisibility,        // <- Ícono Ojo Abierto
+  MdVisibilityOff      // <- Ícono Ojo Cerrado
+} from 'react-icons/md';
 import { FaBuilding } from 'react-icons/fa';
 import './Login.css';
 
@@ -19,6 +27,7 @@ const testCredentials = [
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false); // <- Estado para ver contraseña
   const [error, setError] = useState('');
   const [showDevCredentials, setShowDevCredentials] = useState(false);
   const navigate = useNavigate();
@@ -77,6 +86,8 @@ export default function Login() {
           <p className="pi-login-subtitle">Ingrese sus credenciales para acceder al portal de QPass.</p>
 
           <form onSubmit={handleLogin} className="pi-login-form">
+            
+            {/* CORREO */}
             <div className="pi-login-input-group">
               <label>CORREO ELECTRÓNICO</label>
               <div className="pi-login-input-wrapper">
@@ -93,6 +104,7 @@ export default function Login() {
               </div>
             </div>
 
+            {/* CONTRASEÑA */}
             <div className="pi-login-input-group">
               <label>CONTRASEÑA</label>
               <div className="pi-login-input-wrapper">
@@ -100,12 +112,22 @@ export default function Login() {
                   <MdLock size={20} />
                 </span>
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"} // <- Alterna entre 'text' y 'password'
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
                 />
+                
+                {/* BOTÓN PARA VER/OCULTAR CONTRASEÑA */}
+                <button 
+                  type="button" 
+                  className="pi-login-eye-btn" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+                </button>
               </div>
             </div>
 

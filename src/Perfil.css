@@ -336,3 +336,680 @@
     text-align: center;
   }
 }
+/* Prefix único: pi-perfil- aplicando Guía de Diseño QPass */
+
+.pi-perfil-page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* =======================================================
+   1. PORTADA (COVER)
+======================================================= */
+.pi-perfil-cover {
+  width: 100%;
+  height: 220px;
+  background: linear-gradient(135deg, var(--indigo-profundo) 0%, var(--cian-digital) 100%);
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+/* Patrón geométrico sutil para el fondo (Efecto de la imagen) */
+.pi-perfil-cover-pattern {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  opacity: 0.1;
+  background-image: 
+    linear-gradient(30deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff),
+    linear-gradient(150deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff),
+    linear-gradient(30deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff),
+    linear-gradient(150deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff),
+    linear-gradient(60deg, #ffffff77 25%, transparent 25.5%, transparent 75%, #ffffff77 75%, #ffffff77),
+    linear-gradient(60deg, #ffffff77 25%, transparent 25.5%, transparent 75%, #ffffff77 75%, #ffffff77);
+  background-size: 80px 140px;
+  background-position: 0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px;
+}
+
+/* =======================================================
+   2. CONTENEDOR PRINCIPAL SUPERPUESTO
+======================================================= */
+.pi-perfil-layout {
+  display: flex;
+  gap: 24px;
+  max-width: 1100px;
+  margin: -80px auto 0 auto;
+  padding: 0 20px;
+  width: 100%;
+  position: relative;
+  z-index: 10;
+  align-items: flex-start;
+}
+
+/* --- COLUMNA IZQUIERDA (SIDEBAR DE PERFIL) --- */
+.pi-perfil-sidebar {
+  width: 300px;
+  background: var(--blanco);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  padding: 30px 20px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+/* Avatar y botón flotante */
+.pi-perfil-avatar-wrapper {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 20px auto;
+}
+
+.pi-perfil-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: var(--gris-niebla);
+  border: 5px solid var(--blanco);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 40px;
+  font-weight: 800;
+  color: var(--indigo-profundo);
+}
+
+.pi-perfil-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pi-perfil-camera-btn {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  width: 36px;
+  height: 36px;
+  background-color: var(--cian-digital);
+  color: var(--blanco);
+  border: 3px solid var(--blanco);
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 14px;
+  transition: transform 0.2s, background 0.2s;
+}
+
+.pi-perfil-camera-btn:hover {
+  transform: scale(1.1);
+  background-color: var(--indigo-profundo);
+}
+
+.pi-perfil-sidebar-name {
+  margin: 0 0 10px 0;
+  font-size: 20px;
+  color: var(--texto-principal);
+  font-weight: 800;
+}
+
+/* NUEVA INSIGNIA DE ROL */
+.pi-perfil-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--indigo-profundo-suave);
+  color: var(--indigo-profundo);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 24px;
+  border: 1px solid rgba(26, 43, 107, 0.1);
+}
+
+/* Estadísticas debajo del perfil */
+.pi-perfil-sidebar-stats {
+  border-top: 1px solid var(--borde-suave);
+  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.stat-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--texto-secundario);
+  font-weight: 600;
+}
+
+.stat-value {
+  color: var(--texto-principal);
+  font-weight: 700;
+}
+.text-green { color: var(--verde-recarga-texto); }
+
+/* --- COLUMNA DERECHA (FORMULARIOS) --- */
+.pi-perfil-main-card {
+  flex: 1;
+  background: var(--blanco);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Navegación (Tabs) */
+.pi-perfil-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--borde-suave);
+  background-color: var(--blanco);
+}
+
+.pi-perfil-tabs button {
+  padding: 20px 30px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto-secundario);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+}
+
+.pi-perfil-tabs button:hover {
+  color: var(--texto-principal);
+}
+
+.pi-perfil-tabs button.active {
+  color: var(--cian-digital-texto);
+  border-bottom-color: var(--cian-digital);
+}
+
+/* Contenido de la Pestaña */
+.pi-perfil-tab-content {
+  padding: 30px;
+}
+
+.pi-perfil-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.pi-perfil-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pi-perfil-form-group label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--texto-principal);
+  display: flex;
+  align-items: center;
+}
+
+.pi-perfil-form-group input,
+.pi-perfil-textarea {
+  padding: 12px 16px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--texto-principal);
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+  background-color: var(--blanco);
+}
+
+.pi-perfil-textarea {
+  resize: vertical;
+  min-height: 100px;
+  line-height: 1.5;
+}
+
+.pi-perfil-form-group input:focus,
+.pi-perfil-textarea:focus {
+  border-color: var(--cian-digital);
+  box-shadow: 0 0 0 3px var(--cian-digital-suave);
+}
+
+.input-disabled {
+  background-color: var(--gris-niebla) !important;
+  color: var(--gris-medio) !important;
+  cursor: not-allowed;
+  border-color: var(--borde-suave) !important;
+}
+
+/* Caja de información (Seguridad) */
+.pi-perfil-info-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+  background-color: var(--gris-niebla);
+  border-left: 4px solid var(--indigo-profundo);
+  padding: 16px 20px;
+  border-radius: 8px;
+}
+
+.info-icon {
+  font-size: 24px;
+  color: var(--indigo-profundo);
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.pi-perfil-info-box h4 { margin: 0 0 6px 0; font-size: 15px; color: var(--texto-principal); }
+.pi-perfil-info-box p { margin: 0; font-size: 13px; color: var(--texto-secundario); line-height: 1.5; }
+
+/* Alertas */
+.pi-perfil-alerta {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 20px; border-radius: 8px; font-size: 14px; font-weight: 600;
+  margin-bottom: 24px;
+}
+
+.pi-perfil-alerta.exito { background-color: var(--verde-recarga-suave); color: var(--verde-recarga-texto); border: 1px solid rgba(0, 196, 140, 0.2); }
+.pi-perfil-alerta.error { background-color: var(--rojo-error-suave); color: var(--rojo-error-texto); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+/* Footer de la tarjeta */
+.pi-perfil-footer {
+  padding: 20px 30px;
+  background-color: var(--gris-niebla);
+  border-top: 1px solid var(--borde-suave);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.pi-perfil-btn-guardar {
+  display: flex; align-items: center; gap: 8px;
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.2s;
+}
+
+.pi-perfil-btn-guardar:hover {
+  background-color: var(--indigo-profundo-hover);
+  transform: translateY(-2px);
+}
+
+/* Animación simple */
+.animate-fade {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* =======================================================
+   3. RESPONSIVE (MÓVILES)
+======================================================= */
+@media (max-width: 900px) {
+  .pi-perfil-layout {
+    flex-direction: column;
+    margin-top: -100px;
+    align-items: center;
+  }
+  
+  .pi-perfil-sidebar {
+    width: 100%;
+    max-width: 400px;
+  }
+  
+  .pi-perfil-main-card {
+    width: 100%;
+  }
+
+  .pi-perfil-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pi-perfil-tabs button {
+    padding: 16px;
+    flex: 1;
+    text-align: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+}
+
+/* Prefix único: pi-perfil- aplicando Guía de Diseño QPass */
+
+.pi-perfil-page { width: 100%; display: flex; flex-direction: column; }
+
+/* 1. PORTADA (COVER) */
+.pi-perfil-cover {
+  width: 100%; height: 220px;
+  background: linear-gradient(135deg, var(--indigo-profundo) 0%, var(--cian-digital) 100%);
+  position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 20px;
+}
+.pi-perfil-cover-pattern {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0; opacity: 0.1;
+  background-image: linear-gradient(30deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff), linear-gradient(150deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff), linear-gradient(30deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff), linear-gradient(150deg, #ffffff 12%, transparent 12.5%, transparent 87%, #ffffff 87.5%, #ffffff), linear-gradient(60deg, #ffffff77 25%, transparent 25.5%, transparent 75%, #ffffff77 75%, #ffffff77), linear-gradient(60deg, #ffffff77 25%, transparent 25.5%, transparent 75%, #ffffff77 75%, #ffffff77);
+  background-size: 80px 140px; background-position: 0 0, 0 0, 40px 70px, 40px 70px, 0 0, 40px 70px;
+}
+
+/* 2. CONTENEDOR PRINCIPAL SUPERPUESTO */
+.pi-perfil-layout {
+  display: flex; gap: 24px; max-width: 1100px; margin: -80px auto 0 auto;
+  padding: 0 20px; width: 100%; position: relative; z-index: 10; align-items: flex-start;
+}
+
+/* --- COLUMNA IZQUIERDA --- */
+.pi-perfil-sidebar {
+  width: 300px; background: var(--blanco); border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); padding: 30px 20px;
+  text-align: center; flex-shrink: 0;
+}
+.pi-perfil-avatar-wrapper { position: relative; width: 130px; height: 130px; margin: 0 auto 20px auto; }
+.pi-perfil-avatar { width: 100%; height: 100%; border-radius: 50%; background-color: var(--gris-niebla); border: 5px solid var(--blanco); box-shadow: 0 4px 10px rgba(0,0,0,0.1); overflow: hidden; display: flex; justify-content: center; align-items: center; font-size: 40px; font-weight: 800; color: var(--indigo-profundo); }
+.pi-perfil-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.pi-perfil-camera-btn { position: absolute; bottom: 5px; right: 5px; width: 36px; height: 36px; background-color: var(--cian-digital); color: var(--blanco); border: 3px solid var(--blanco); border-radius: 50%; display: flex; justify-content: center; align-items: center; cursor: pointer; font-size: 14px; transition: transform 0.2s, background 0.2s; }
+.pi-perfil-camera-btn:hover { transform: scale(1.1); background-color: var(--indigo-profundo); }
+.pi-perfil-sidebar-name { margin: 0 0 10px 0; font-size: 20px; color: var(--texto-principal); font-weight: 800; }
+.pi-perfil-role-badge { display: inline-flex; align-items: center; gap: 8px; background-color: var(--indigo-profundo-suave); color: var(--indigo-profundo); padding: 6px 14px; border-radius: 20px; font-size: 13px; font-weight: 800; margin-bottom: 24px; border: 1px solid rgba(26, 43, 107, 0.1); }
+
+/* --- WIDGET PROGRESO CIRCULAR --- */
+.pi-perfil-progress-widget {
+  margin-top: 15px; border-top: 1px solid var(--borde-suave); padding-top: 25px;
+}
+.pi-perfil-progress-widget h4 { margin: 0 0 15px 0; font-size: 15px; color: var(--texto-principal); font-weight: 800; }
+
+.progress-circular-container {
+  position: relative; width: 120px; height: 120px; margin: 0 auto 20px auto;
+}
+.progress-svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.progress-bg { fill: none; stroke: var(--gris-niebla); stroke-width: 10; }
+.progress-bar {
+  fill: none; stroke-width: 10; stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease-out, stroke 0.5s;
+}
+.progress-text {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  display: flex; justify-content: center; align-items: center;
+}
+.progress-num { font-size: 24px; font-weight: 900; color: var(--texto-principal); }
+
+.progress-steps { list-style: none; padding: 0; margin: 0; text-align: left; display: flex; flex-direction: column; gap: 10px; }
+.progress-steps li { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 600; }
+.step-icon { font-size: 14px; flex-shrink: 0; }
+.step-icon.done { color: var(--verde-recarga); }
+.step-icon.pending { color: var(--rojo-error); opacity: 0.6; }
+.step-label { flex: 1; color: var(--texto-secundario); }
+.step-done .step-label { color: var(--texto-principal); }
+.step-points { color: var(--verde-recarga); font-size: 11px; font-weight: 800; }
+
+
+/* --- COLUMNA DERECHA (FORMULARIOS) --- */
+.pi-perfil-main-card { flex: 1; background: var(--blanco); border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08); display: flex; flex-direction: column; overflow: hidden; }
+
+/* Header Acción Editar */
+.pi-perfil-header-action { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px dashed var(--borde-suave); }
+.pi-perfil-header-action h3 { margin: 0; font-size: 18px; color: var(--texto-principal); font-weight: 800; }
+
+.btn-editar-toggle { display: flex; align-items: center; gap: 8px; background: var(--cian-digital-suave); color: var(--cian-digital-texto); border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-editar-toggle:hover { background: var(--cian-digital); color: var(--blanco); }
+.btn-cancelar-toggle { display: flex; align-items: center; gap: 8px; background: var(--gris-niebla); color: var(--texto-secundario); border: none; padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+.btn-cancelar-toggle:hover { background: var(--borde-medio); color: var(--texto-principal); }
+
+/* Tabs */
+.pi-perfil-tabs { display: flex; border-bottom: 1px solid var(--borde-suave); background-color: var(--blanco); }
+.pi-perfil-tabs button { padding: 20px 30px; background: none; border: none; font-size: 14px; font-weight: 700; color: var(--texto-secundario); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; }
+.pi-perfil-tabs button:hover { color: var(--texto-principal); }
+.pi-perfil-tabs button.active { color: var(--cian-digital-texto); border-bottom-color: var(--cian-digital); }
+.pi-perfil-tab-content { padding: 30px; }
+
+/* Grid y Formularios */
+.pi-perfil-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.full-width { grid-column: 1 / -1; }
+.pi-perfil-form-group { display: flex; flex-direction: column; gap: 8px; }
+
+.pi-perfil-form-group label { font-size: 13px; font-weight: 700; color: var(--texto-principal); display: flex; align-items: center; }
+.label-locked { color: var(--rojo-error); font-size: 10px; margin-left: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.pi-perfil-form-group input, .pi-perfil-textarea { padding: 12px 16px; border: 1px solid var(--borde-medio); border-radius: 8px; font-size: 14px; font-family: inherit; color: var(--texto-principal); transition: border-color 0.2s, box-shadow 0.2s; outline: none; background-color: var(--blanco); }
+.pi-perfil-textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+.pi-perfil-form-group input:focus, .pi-perfil-textarea:focus { border-color: var(--cian-digital); box-shadow: 0 0 0 3px var(--cian-digital-suave); }
+
+/* Estados de los Inputs */
+.input-locked { background-color: var(--gris-niebla) !important; color: var(--gris-medio) !important; cursor: not-allowed; border-color: var(--borde-suave) !important; }
+.input-readonly { background-color: transparent !important; border: 1px solid transparent !important; padding-left: 0 !important; color: var(--texto-secundario) !important; font-weight: 600; pointer-events: none; }
+
+/* Caja Info y Alertas */
+.pi-perfil-info-box { display: flex; align-items: flex-start; gap: 15px; background-color: var(--gris-niebla); border-left: 4px solid var(--indigo-profundo); padding: 16px 20px; border-radius: 8px; }
+.info-icon { font-size: 24px; color: var(--indigo-profundo); flex-shrink: 0; margin-top: 4px; }
+.pi-perfil-info-box h4 { margin: 0 0 6px 0; font-size: 15px; color: var(--texto-principal); }
+.pi-perfil-info-box p { margin: 0; font-size: 13px; color: var(--texto-secundario); line-height: 1.5; }
+
+.pi-perfil-alerta { display: flex; align-items: center; gap: 10px; padding: 14px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; margin-bottom: 24px; }
+.pi-perfil-alerta.exito { background-color: var(--verde-recarga-suave); color: var(--verde-recarga-texto); border: 1px solid rgba(0, 196, 140, 0.2); }
+.pi-perfil-alerta.error { background-color: var(--rojo-error-suave); color: var(--rojo-error-texto); border: 1px solid rgba(239, 68, 68, 0.2); }
+
+/* Footer Botón Guardar */
+.pi-perfil-footer { margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--borde-suave); display: flex; justify-content: flex-end; }
+.pi-perfil-btn-guardar { display: flex; align-items: center; gap: 8px; background-color: var(--indigo-profundo); color: var(--blanco); border: none; padding: 12px 24px; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; transition: background-color 0.2s, transform 0.2s; }
+.pi-perfil-btn-guardar:hover { background-color: var(--indigo-profundo-hover); transform: translateY(-2px); }
+
+.animate-fade { animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 3. RESPONSIVE */
+@media (max-width: 900px) {
+  .pi-perfil-layout { flex-direction: column; margin-top: -100px; align-items: center; }
+  .pi-perfil-sidebar { width: 100%; max-width: 400px; }
+  .pi-perfil-main-card { width: 100%; }
+  .pi-perfil-form-grid { grid-template-columns: 1fr; }
+  .pi-perfil-tabs button { padding: 16px; flex: 1; text-align: center; justify-content: center; font-size: 13px; }
+}
+
+/* =======================================================
+   ESTILOS DE VISTA LIMPIA (INFORMACIÓN PERSONAL)
+======================================================= */
+
+.pi-perfil-info-section {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Cabecera y Botón Edit (Estilo de la imagen de referencia) */
+.pi-perfil-header-action { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 30px; /* Más espacio abajo como en la foto */
+}
+
+.pi-perfil-header-action h3 { 
+  margin: 0; 
+  font-size: 18px; 
+  color: var(--azul-noche); /* Color oscuro puro */
+  font-weight: 800; 
+}
+
+.btn-editar-outline { 
+  display: flex; 
+  align-items: center; 
+  gap: 8px; 
+  background: var(--blanco); 
+  color: var(--texto-principal); 
+  border: 1px solid var(--borde-medio); 
+  padding: 8px 16px; 
+  border-radius: 8px; 
+  font-weight: 700; 
+  font-size: 13px;
+  cursor: pointer; 
+  transition: all 0.2s; 
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.btn-editar-outline:hover { 
+  background: var(--gris-niebla); 
+  border-color: var(--texto-secundario); 
+}
+
+/* Botones al estar editando */
+.btn-cancelar-toggle { 
+  background: var(--blanco); color: var(--texto-secundario); border: 1px solid var(--borde-suave); padding: 8px 16px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: all 0.2s; 
+}
+.btn-cancelar-toggle:hover { background: var(--gris-niebla); color: var(--texto-principal); }
+
+.btn-guardar-toggle { 
+  background: var(--cian-digital); color: var(--blanco); border: none; padding: 8px 20px; border-radius: 8px; font-weight: 800; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 10px rgba(0, 180, 216, 0.3);
+}
+.btn-guardar-toggle:hover { transform: translateY(-2px); background: var(--cian-digital-hover); }
+
+/* --- BLOQUES DE DATOS (Label gris arriba, Texto oscuro abajo) --- */
+.pi-perfil-data-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px; /* Espacio entre Label y Valor */
+}
+
+.data-label {
+  font-size: 13px;
+  color: var(--gris-medio);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+}
+
+/* Icono pequeño para indicar que un campo es ineditable en modo edición */
+.icon-locked {
+  margin-left: 8px;
+  font-size: 11px;
+  color: var(--borde-medio);
+}
+
+.data-value {
+  font-size: 15px;
+  color: var(--azul-noche); /* Texto bien oscuro y legible */
+  font-weight: 700;
+}
+
+.data-value-p {
+  font-size: 14px;
+  color: var(--texto-principal);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Cuando el campo está vacío en modo lectura */
+.data-value.empty, .data-value-p.empty {
+  color: var(--gris-medio);
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* Inputs cuando se hace clic en Editar */
+.pi-perfil-data-block input, 
+.pi-perfil-data-block textarea { 
+  padding: 10px 14px; 
+  border: 1px solid var(--borde-medio); 
+  border-radius: 8px; 
+  font-size: 14px; 
+  font-family: inherit; 
+  color: var(--texto-principal); 
+  outline: none; 
+  background-color: var(--blanco); 
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.pi-perfil-data-block textarea { 
+  resize: vertical; 
+  font-family: inherit;
+}
+
+.pi-perfil-data-block input:focus, 
+.pi-perfil-data-block textarea:focus { 
+  border-color: var(--cian-digital); 
+  box-shadow: 0 0 0 3px var(--cian-digital-suave); 
+}
+
+/* =======================================================
+   ESTILOS PARA NUEVOS INPUTS (Celular e Íconos)
+======================================================= */
+
+.data-label svg {
+  margin-right: 6px;
+  color: var(--cian-digital-texto); /* Color distintivo para los íconos */
+  font-size: 14px;
+}
+
+/* Diseño de Input Compuesto para el Teléfono (+591) */
+.pi-perfil-phone-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  background-color: var(--blanco);
+  overflow: hidden;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.pi-perfil-phone-wrapper:focus-within {
+  border-color: var(--cian-digital); 
+  box-shadow: 0 0 0 3px var(--cian-digital-suave);
+}
+
+.phone-prefix {
+  background-color: var(--gris-niebla);
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--texto-principal);
+  border-right: 1px solid var(--borde-medio);
+  user-select: none;
+}
+
+/* Quitamos el borde normal al input para que se mezcle con el wrapper */
+.pi-perfil-phone-wrapper input {
+  border: none !important;
+  box-shadow: none !important;
+  flex: 1;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--texto-principal);
+  background-color: transparent !important;
+}
+
+/* Ajustes menores para el Hover de botones */
+.btn-editar-outline:hover {
+  background-color: var(--gris-niebla);
+  border-color: var(--texto-principal);
+  transform: translateY(-1px);
+}

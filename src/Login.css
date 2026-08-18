@@ -132,11 +132,13 @@
   color: #64748b;
   display: flex;
   align-items: center;
+  transition: color 0.3s;
 }
 
 .pi-login-input-wrapper input {
   width: 100%;
-  padding: 14px 14px 14px 45px;
+  /* Modificamos el padding: agregamos 45px a la derecha para dar espacio al ojo */
+  padding: 14px 45px 14px 45px; 
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
@@ -157,7 +159,33 @@
 }
 
 .pi-login-input-wrapper input:focus + .pi-login-icon {
-  color: var(--color-primario, #00B4D8); /* El icono se pinta al hacer focus */
+  color: var(--color-primario, #00B4D8);
+}
+
+/* --- BOTÓN PARA VER/OCULTAR CONTRASEÑA --- */
+.pi-login-eye-btn {
+  position: absolute;
+  right: 14px; /* Pegado a la derecha */
+  background: transparent;
+  border: none;
+  color: #64748b; /* Mismo color inactivo que el candado */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+  transition: color 0.3s;
+}
+
+/* Al pasar el mouse cambia al color principal (Cian) */
+.pi-login-eye-btn:hover {
+  color: var(--color-primario, #00B4D8);
+}
+
+/* Al hacer click (active) o si el input tiene focus, podemos mantenerlo brillando si lo deseas */
+.pi-login-eye-btn:active {
+  transform: scale(0.9); /* Pequeña animación al hacer clic */
 }
 
 /* --- OPCIONES DE LOGIN --- */
