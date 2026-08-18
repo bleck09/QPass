@@ -135,7 +135,7 @@ export default function Login() {
               <label className="pi-login-checkbox">
                 <input type="checkbox" /> Recordarme
               </label>
-              <a href="#" className="pi-login-forgot">¿Olvidó su contraseña?</a>
+              <a href="#" className="pi-login-forgot" onClick={(e) => { e.preventDefault(); navigate('/RecuperarContra'); }}>¿Olvidó su contraseña?</a>
             </div>
 
             {error && <p className="pi-login-error">{error}</p>}
@@ -144,7 +144,11 @@ export default function Login() {
             
             <div className="pi-login-divider"><span>o</span></div>
 
-            <button type="button" className="pi-login-btn-register">
+            <button 
+              type="button" 
+              className="pi-login-btn-register"
+              onClick={() => navigate('/registrar')} // <- AGREGA ESTO AQUÍ
+            >
               REGISTRARME <FaBuilding style={{ marginLeft: '8px' }} />
             </button>
           </form>

@@ -44,7 +44,7 @@ export default function PaginaPrincipal() {
 
       <header className="qpass-home-hero">
         <div className="hero-content">
-          <div className="badge-tech glass-morphism">✨ La nueva era de los eventos en Bolivia</div>
+          <div className="badge-tech glass-morphism">La nueva era de los eventos en Bolivia</div>
           <h1>Revolucionamos la forma en que vives los eventos</h1>
           <p>Olvídate de las filas eternas. Con QPass, tu celular y una manilla QR es todo lo que necesitas para acceder y comprar al instante.</p>
           <div className="hero-buttons">

@@ -25,12 +25,17 @@ import UsuarioNormal from './UsuarioNormal.jsx'
 import UsuarioNegocio from './UsuarioNegocio.jsx'
 import Ayudante from './Ayudante.jsx'
 import Perfil from './Perfil.jsx'
+import Registrar from './Registrar.jsx'
+import RecuperarContra from './RecuperarContra.jsx'
 
 const router = createBrowserRouter([
   // 2. ACTUALIZAMOS LAS RUTAS PÚBLICAS PRINCIPALES
   { path: "/", element: <PaginaPrincipal /> }, // La vista corporativa global de QPass
   { path: "/evento", element: <App /> },       // La vista específica del evento (Landing del cliente)
-  { path: "/login", element: <Login /> },      // Pantalla de inicio de sesión
+  { path: "/login", element: <Login /> },
+   { path: "/Registrar", element: <Registrar/> },   
+   { path: "/recuperar", element: <RecuperarContra/> }, 
+      // Pantalla de inicio de sesión
   
   // RUTAS PRIVADAS (Con Menú Lateral)
   {
