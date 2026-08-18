@@ -385,6 +385,88 @@
   border-color: var(--cian-digital);
 }
 
+/* --- FOTO DEL CARNET --- */
+.pi-dev-form-carnet {
+  margin-top: 18px;
+  text-align: left;
+}
+
+.pi-dev-form-carnet label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  margin-bottom: 8px;
+}
+
+.pi-dev-btn-tomar-foto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px;
+  border: 1px dashed var(--borde-medio);
+  border-radius: 10px;
+  background-color: var(--gris-niebla);
+  color: var(--indigo-profundo);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-dev-btn-tomar-foto:hover {
+  background-color: var(--cian-digital-suave);
+  border-color: var(--cian-digital);
+}
+
+.pi-dev-carnet-preview {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--gris-niebla);
+  border-radius: 10px;
+  padding: 8px;
+}
+
+.pi-dev-carnet-preview img {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.pi-dev-btn-retomar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--indigo-profundo);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background-color: var(--blanco);
+}
+
+.pi-dev-btn-retomar:hover {
+  background-color: var(--cian-digital-suave);
+}
+
+.pi-dev-mini-carnet {
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+.pi-dev-sin-carnet {
+  color: var(--gris-medio);
+}
+
 .pi-dev-alerta-error {
   display: flex;
   align-items: center;
