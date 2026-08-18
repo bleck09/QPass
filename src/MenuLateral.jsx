@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   FaChartPie, FaUsers, FaCog, FaSignOutAlt, FaUserCircle,
   FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet,
-  FaExclamationTriangle, FaBars, FaMapMarkedAlt, FaHistory
+  FaExclamationTriangle, FaBars, FaMapMarkedAlt, FaCalendarAlt
 } from 'react-icons/fa';
 import { MdAccountBalance, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'react-icons/md';
 import './MenuLateral.css';
@@ -34,9 +34,9 @@ const menuConfig = {
     { titulo: 'Gestión Devoluciones', ruta: '/devolucion', icono: <FaBoxOpen /> }
   ],
   'Usuario Normal': [
+    { titulo: 'Eventos', ruta: '/usuarionormal/eventos', icono: <FaCalendarAlt /> },
+    { titulo: 'Mis Entradas', ruta: '/usuarionormal', icono: <FaFileInvoiceDollar /> },
     { titulo: 'Mi Saldo', ruta: '/usuarionormal/saldo', icono: <FaWallet /> },
-    { titulo: 'Comprar Entradas', ruta: '/usuarionormal', icono: <FaFileInvoiceDollar /> },
-    { titulo: 'Historial de Entradas', ruta: '/usuarionormal/historial', icono: <FaHistory /> },
     { titulo: 'Mi Perfil', ruta: '/perfil', icono: <FaUserCircle /> }
   ],
   'Usuario Negocio': [
