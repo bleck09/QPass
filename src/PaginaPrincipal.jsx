@@ -1,67 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  FaQrcode, FaSignInAlt, FaCalendarAlt,
+import {
+  FaQrcode, FaSignInAlt,
   FaBolt, FaChartPie, FaMobileAlt, FaArrowRight,
-  FaChevronLeft, FaChevronRight, FaMapMarkerAlt, FaExpandArrowsAlt
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 import './PaginaPrincipal.css';
-
-// --- DATOS SIMULADOS DE EVENTOS ---
-const proximosEventos = [
-  { id: 'ev-01', nombre: 'Festival QPass 2026', fecha: '15 Oct, 2026', lugar: 'Campo Ferial, Cbba', imagen: 'https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', categoria: 'Concierto', precio: 'Bs. 150' },
-  { id: 'ev-02', nombre: 'Tech Summit Latam', fecha: '20 Nov, 2026', lugar: 'Hotel Cochabamba', imagen: 'https://images.unsplash.com/photo-1505373877841-8d25f7d46678?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', categoria: 'Tecnología', precio: 'Bs. 300' },
-  { id: 'ev-03', nombre: 'Feria Gastronómica', fecha: '02 Nov, 2026', lugar: 'Parque de la Familia', imagen: 'https://images.unsplash.com/photo-1555244162-803834f70033?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', categoria: 'Gastronomía', precio: 'Bs. 50' },
-  { id: 'ev-04', nombre: 'Fiesta de Año Nuevo', fecha: '31 Dic, 2026', lugar: 'Salón El Portal', imagen: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', categoria: 'Fiesta', precio: 'Bs. 250' },
-  { id: 'ev-05', nombre: 'Carnaval VIP', fecha: '15 Feb, 2027', lugar: 'Santa Cruz', imagen: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80', categoria: 'Festival', precio: 'Bs. 400' },
-];
-
-const eventosPasados = [
-  { id: 'ev-pas-01', nombre: 'Oktoberfest 2025', fecha: 'Octubre 2025', lugar: 'Santa Cruz', imagen: 'https://images.unsplash.com/photo-1575037614876-c38db4ce8445?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' },
-  { id: 'ev-pas-02', nombre: 'Expo Valles', fecha: 'Agosto 2025', lugar: 'Tarija', imagen: 'https://images.unsplash.com/photo-1511527661048-7fe73d85e9a4?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80' },
-];
+import CarruselEventos from './CarruselEventos.jsx';
+import { proximosEventos, eventosPasados } from './data/eventos.js';
 
 export default function PaginaPrincipal() {
   const navigate = useNavigate();
-  const [activeIdx, setActiveIdx] = useState(0); 
-
-  // --- VARIABLES PARA LÓGICA DE RATÓN / TÁCTIL ---
-  const [touchStartX, setTouchStartX] = useState(null);
-  const [isDragging, setIsDragging] = useState(false); // <--- NUEVO: Para saber si estamos arrastrando
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   const verEvento = () => navigate('/evento');
-
-  const nextSlide = () => setActiveIdx((prev) => (prev + 1) % proximosEventos.length);
-  const prevSlide = () => setActiveIdx((prev) => (prev - 1 + proximosEventos.length) % proximosEventos.length);
-
-  // ==========================================
-  // LÓGICA DE ARRASTRE (SWIPE)
-  // ==========================================
-  const handleDragStart = (e) => {
-    setIsDragging(true); // Bloqueamos el "hover" mientras arrastramos
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    setTouchStartX(clientX);
-  };
-
-  const handleDragEnd = (e) => {
-    setIsDragging(false); // Liberamos el "hover"
-    if (touchStartX === null) return; 
-
-    const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
-    const diferenciaX = touchStartX - clientX;
-
-    if (diferenciaX > 50) {
-      nextSlide();
-    } else if (diferenciaX < -50) {
-      prevSlide();
-    }
-    
-    setTouchStartX(null);
-  };
 
   return (
     <div className="qpass-home-container">
@@ -104,85 +59,7 @@ export default function PaginaPrincipal() {
           <p>Explora y asegura tu acceso a las mejores experiencias. (Pasa el mouse o desliza)</p>
         </div>
 
-        {/* --- CONTENEDOR 3D --- */}
-        <div 
-          className="carousel-3d-container"
-          onMouseDown={handleDragStart}
-          onMouseUp={handleDragEnd}
-          onMouseLeave={handleDragEnd}
-          onTouchStart={handleDragStart}
-          onTouchEnd={handleDragEnd}
-        >
-          {proximosEventos.map((evento, index) => {
-            const offset = index - activeIdx;
-            const absOffset = Math.abs(offset);
-            const direction = Math.sign(offset);
-            const isActive = offset === 0;
-
-            return (
-              <div 
-                key={evento.id} 
-                className={`carousel-3d-card ${isActive ? 'active' : ''}`}
-                style={{
-                  '--offset': offset,
-                  '--abs-offset': absOffset,
-                  '--dir': direction,
-                  zIndex: 10 - absOffset
-                }}
-                onClick={() => setActiveIdx(index)}
-                
-                /* LÓGICA DE HOVER SUAVE */
-                onMouseEnter={() => {
-                  // Solo cambiamos al pasar el mouse si NO estamos arrastrando
-                  if (!isDragging) {
-                    setActiveIdx(index);
-                  }
-                }}
-              >
-                <div className="card-image-bg">
-                  <img src={evento.imagen} alt={evento.nombre} />
-                  <div className="card-overlay-gradient"></div>
-                </div>
-
-                <button className="btn-expand-icon glass-morphism"><FaExpandArrowsAlt/></button>
-
-                <div className="card-3d-content">
-                  <h3>{evento.nombre}</h3>
-                  <p className="card-desc">Vive la mejor experiencia con tecnología Cashless. Evita filas y recarga desde tu celular.</p>
-                  
-                  <div className="card-3d-footer">
-                    <div className="footer-info">
-                      <span><FaMapMarkerAlt/> {evento.lugar}</span>
-                      <span><FaCalendarAlt/> {evento.fecha}</span>
-                    </div>
-                    <div className="footer-price">
-                      <span>Desde</span>
-                      <strong>{evento.precio}</strong>
-                    </div>
-                  </div>
-
-                  {isActive && (
-                    <button className="btn-solid btn-full mt-15" onClick={(e) => { e.stopPropagation(); verEvento(); }}>
-                      Adquirir Entradas
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="carousel-control-pill glass-morphism">
-          <button onClick={prevSlide}><FaChevronLeft/></button>
-          <div className="pill-info">
-            <img src={proximosEventos[activeIdx].imagen} alt="thumb" />
-            <div className="pill-text">
-              <strong>{proximosEventos[activeIdx].nombre}</strong>
-              <span>{proximosEventos[activeIdx].categoria}</span>
-            </div>
-          </div>
-          <button onClick={nextSlide}><FaChevronRight/></button>
-        </div>
+        <CarruselEventos eventos={proximosEventos} onAdquirir={verEvento} />
       </section>
 
       {/* --- Resto del código se mantiene igual... --- */}

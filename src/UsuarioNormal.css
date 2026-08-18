@@ -32,8 +32,38 @@
 .mt-20 { margin-top: 20px; }
 .texto-ayuda { font-size: 13px; color: var(--texto-secundario); }
 
-/* --- PESTAÑA: COMPRAR ENTRADAS --- */
+/* =========================================================
+   PESTAÑA: EVENTOS (carrusel + eventos pasados)
+========================================================= */
+.pi-usr-eventos { display: flex; flex-direction: column; gap: 20px; }
+
+.pi-usr-eventos-panel {
+  background: var(--azul-noche, #0b1120); color: var(--blanco); border-radius: 20px; padding: 40px 20px;
+  display: flex; flex-direction: column; gap: 24px; overflow: hidden; position: relative;
+}
+/* El carrusel necesita el ancho completo del panel: sus tarjetas son position:absolute
+   y no aportan ancho intrínseco, así que con align-items:center (stretch por defecto
+   desactivado) el contenedor se encogía a 0 y las tarjetas quedaban invisibles. */
+.pi-usr-eventos-panel .carousel-3d-container { width: 100%; }
+
+.pi-usr-eventos-pasados-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+.pi-usr-evento-pasado-card { border-radius: 12px; overflow: hidden; border: 1px solid var(--borde-suave); background: var(--gris-niebla); }
+.pi-usr-evento-pasado-card img { width: 100%; height: 120px; object-fit: cover; display: block; }
+.pi-usr-evento-pasado-info { padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.pi-usr-evento-pasado-info strong { font-size: 14px; color: var(--texto-principal); }
+.pi-usr-evento-pasado-info span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--texto-secundario); }
+
+/* --- PESTAÑA: COMPRAR --- */
 .pi-usr-comprar { display: flex; flex-direction: column; gap: 20px; }
+
+.pi-usr-evento-header {
+  display: flex; align-items: center; gap: 16px; background: var(--blanco); border: 1px solid var(--borde-suave);
+  border-radius: 14px; padding: 16px; box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+}
+.pi-usr-evento-header img { width: 72px; height: 72px; border-radius: 10px; object-fit: cover; flex-shrink: 0; }
+.pi-usr-evento-header-eyebrow { display: block; font-size: 12px; font-weight: 700; color: var(--gris-medio); text-transform: uppercase; letter-spacing: 0.5px; }
+.pi-usr-evento-header h3 { margin: 2px 0 6px 0; font-size: 18px; color: var(--texto-principal); }
+.pi-usr-evento-header .texto-ayuda { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 
 .pi-usr-nota-informativa {
   display: flex; align-items: flex-start; gap: 15px; background-color: var(--cian-digital-suave); border: 1px solid rgba(0, 180, 216, 0.3); padding: 16px; border-radius: 12px;
@@ -46,45 +76,43 @@
 .pi-usr-nota-informativa strong { display: block; font-size: 15px; color: var(--cian-digital-texto); margin-bottom: 4px; }
 .pi-usr-nota-informativa p { margin: 0; font-size: 13px; color: var(--texto-principal); line-height: 1.5; }
 
-/* Carrito de Entradas */
-.pi-usr-cart-list { display: flex; flex-direction: column; gap: 16px; }
+/* Layout de dos columnas: entradas compactas + resumen/pago */
+.pi-usr-comprar-grid { display: grid; grid-template-columns: 1fr 340px; gap: 20px; align-items: start; }
+.pi-usr-comprar-col-resumen { position: sticky; top: 20px; }
 
-.pi-usr-ticket-card {
-  background: var(--blanco); border-radius: 12px; border: 1px solid var(--borde-suave); border-left: 6px solid var(--gris-medio);
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); overflow: hidden; transition: all 0.3s;
+/* Carrito de Entradas (compacto: una fila por entrada) */
+.pi-usr-cart-list { display: flex; flex-direction: column; gap: 12px; }
+
+.pi-usr-ticket-row {
+  background: var(--blanco); border-radius: 12px; border: 1px solid var(--borde-suave); border-left: 5px solid var(--gris-medio);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px;
 }
 
-.pi-usr-ticket-header { display: flex; justify-content: space-between; align-items: center; padding: 14px 20px; background-color: var(--gris-niebla); border-bottom: 1px solid var(--borde-suave); }
-.pi-usr-ticket-header h4 { margin: 0; font-size: 14px; font-weight: 700; color: var(--texto-principal); display: flex; align-items: center; gap: 8px; }
+.pi-usr-ticket-row-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.pi-usr-ticket-row-titulo { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--texto-principal); white-space: nowrap; }
 
-.btn-eliminar-ticket { background: transparent; border: none; color: var(--rojo-error-texto); font-size: 13px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: color 0.2s; }
-.btn-eliminar-ticket:hover { color: var(--rojo-error); }
-
-.pi-usr-ticket-body { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
-
-.pi-usr-ticket-categorias label { display: block; font-size: 13px; font-weight: 600; color: var(--texto-principal); margin-bottom: 8px; }
-.cat-options { display: flex; gap: 12px; flex-wrap: wrap; }
-.btn-cat {
-  flex: 1; background-color: var(--blanco); border: 2px solid var(--borde-medio); border-radius: 8px; padding: 12px;
-  cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px; transition: all 0.2s;
+.pi-usr-cat-mini-group { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.btn-cat-mini {
+  border: 1px solid var(--borde-medio); background: var(--gris-niebla); color: var(--texto-secundario);
+  padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;
 }
-.btn-cat:hover { border-color: var(--cian-digital-suave); }
-.btn-cat.activa { border-color: var(--cian-digital); background-color: var(--cian-digital-suave); }
-.cat-nombre { font-size: 14px; font-weight: 700; color: var(--texto-principal); }
-.cat-precio { font-size: 13px; color: var(--indigo-profundo); font-weight: 600; }
+.btn-cat-mini.activa { border-color: var(--cian-digital); background-color: var(--cian-digital-suave); color: var(--cian-digital-texto); }
 
-.pi-usr-ticket-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; }
+.pi-usr-ticket-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .input-group { display: flex; flex-direction: column; gap: 6px; }
-.input-group label { font-size: 13px; font-weight: 600; color: var(--texto-principal); }
-.input-group input { padding: 10px 14px; border: 1px solid var(--borde-medio); border-radius: 8px; font-family: inherit; font-size: 14px; color: var(--texto-principal); outline: none; transition: border-color 0.2s; }
+.input-group label { font-size: 12px; font-weight: 600; color: var(--texto-principal); }
+.input-group input { padding: 9px 12px; border: 1px solid var(--borde-medio); border-radius: 8px; font-family: inherit; font-size: 13px; color: var(--texto-principal); outline: none; transition: border-color 0.2s; }
 .input-group input:focus { border-color: var(--cian-digital); }
 .input-group input:disabled { background-color: var(--gris-niebla); color: var(--texto-secundario); cursor: not-allowed; }
 
 .pi-usr-btn-agregar-mas {
-  background-color: transparent; color: var(--indigo-profundo); border: 2px dashed var(--borde-medio); padding: 16px; border-radius: 12px;
-  font-size: 14px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
+  background-color: transparent; color: var(--indigo-profundo); border: 2px dashed var(--borde-medio); padding: 14px; border-radius: 12px;
+  font-size: 13px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
 }
 .pi-usr-btn-agregar-mas:hover { border-color: var(--indigo-profundo); background-color: var(--indigo-profundo-suave); }
+
+.btn-eliminar-ticket { background: transparent; border: none; color: var(--rojo-error-texto); font-size: 14px; cursor: pointer; display: flex; align-items: center; transition: color 0.2s; }
+.btn-eliminar-ticket:hover { color: var(--rojo-error); }
 
 /* Resumen Pago */
 .pi-usr-pago-card { display: flex; flex-direction: column; gap: 20px; }
@@ -113,22 +141,45 @@
 .pi-usr-btn-enviar { width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; background-color: var(--coral-compra); color: var(--blanco); border: none; padding: 16px; border-radius: 12px; font-size: 15px; font-weight: 700; cursor: pointer; transition: background 0.2s; }
 .pi-usr-btn-enviar:hover { background-color: var(--coral-compra-hover); }
 
-/* --- HISTORIAL DE SOLICITUDES --- */
-.pi-usr-solicitudes { display: flex; flex-direction: column; gap: 14px; }
-.pi-usr-solicitud { display: flex; gap: 16px; background-color: var(--gris-niebla); border-radius: 12px; padding: 16px; border: 1px solid var(--borde-suave); }
-.pi-usr-solicitud-img { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--borde-medio); }
-.pi-usr-solicitud-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
-.pi-usr-solicitud-cabecera { display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; }
-.pi-usr-solicitud-titulo { font-size: 15px; font-weight: 700; color: var(--texto-principal); }
-.pi-usr-solicitud-fecha { font-size: 13px; color: var(--gris-medio); }
-
 .pi-usr-btn-demo { align-self: flex-start; background-color: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); border: 1px dashed var(--ambar-aviso); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .pi-usr-btn-demo:hover { background-color: rgba(255, 176, 32, 0.25); }
 
 .pi-usr-btn-revisar { align-self: flex-start; display: flex; align-items: center; gap: 8px; background: var(--blanco); color: var(--indigo-profundo); border: 1px solid var(--borde-medio); padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s; }
 .pi-usr-btn-revisar:hover { background-color: var(--indigo-profundo-suave); border-color: var(--indigo-profundo); }
 
-/* --- MODAL: REVISAR MI SOLICITUD --- */
+/* =========================================================
+   PESTAÑA: MIS ENTRADAS (propias / para invitados, en cards)
+========================================================= */
+.pi-usr-mis-entradas { display: flex; flex-direction: column; gap: 12px; }
+
+.pi-usr-subtabs { display: flex; gap: 6px; background-color: var(--gris-niebla); padding: 4px; border-radius: 10px; width: fit-content; }
+.pi-usr-subtabs button { display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--texto-secundario); cursor: pointer; transition: all 0.2s; }
+.pi-usr-subtabs button.activo { background-color: var(--blanco); color: var(--indigo-profundo); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); }
+
+.pi-usr-entradas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+
+.pi-usr-entrada-card {
+  background: var(--blanco); border: 1px solid var(--borde-suave); border-top: 4px solid var(--gris-medio);
+  border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.pi-usr-entrada-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.pi-usr-entrada-nombre { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--texto-principal); }
+
+.pi-usr-entrada-evento { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-secundario); }
+
+.pi-usr-entrada-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+.pi-usr-entrada-qr { display: flex; align-items: center; gap: 12px; background-color: var(--gris-niebla); border-radius: 10px; padding: 10px; }
+.pi-usr-entrada-qr .qr-miniatura { width: 56px; height: 56px; border-radius: 8px; border: 2px solid var(--blanco); }
+
+.pi-usr-entrada-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.pi-usr-entrada-acciones .pi-usr-btn-revisar,
+.pi-usr-entrada-acciones .pi-usr-btn-demo,
+.pi-usr-entrada-acciones .pi-usr-btn-reportar-entrada { align-self: auto; }
+
+/* --- MODAL: REVISAR MI SOLICITUD / REPORTAR --- */
 .pi-usr-modal-overlay { position: fixed; inset: 0; background-color: rgba(10, 14, 39, 0.6); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
 .pi-usr-modal { background: var(--blanco); width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25); }
 .pi-usr-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--borde-suave); position: sticky; top: 0; background: var(--blanco); }
@@ -161,17 +212,9 @@
 .btn-cerrar-secundario { background: var(--gris-niebla); border: none; color: var(--texto-principal); padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .btn-cerrar-secundario:hover { background-color: var(--borde-suave); }
 
-/* Credenciales */
-.pi-usr-credenciales { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; border-top: 1px solid var(--borde-suave); padding-top: 15px; }
-.pi-usr-credencial { display: flex; gap: 15px; background-color: var(--blanco); border: 1px solid var(--borde-suave); border-radius: 12px; padding: 15px; align-items: center; }
+/* Credenciales (usado dentro de las cards de Mis Entradas) */
 .qr-miniatura { width: 80px; height: 80px; border-radius: 8px; border: 3px solid var(--gris-niebla); }
-.credencial-datos { display: flex; flex-direction: column; gap: 4px; flex: 1; }
-.cred-cat { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
-.pi-usr-credencial-nombre { font-size: 15px; font-weight: 700; color: var(--texto-principal); }
 .pi-usr-credencial-linea { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--texto-secundario); }
-.credencial-nueva-cuenta { margin-top: 8px; background-color: var(--indigo-profundo-suave); padding: 8px 12px; border-radius: 8px; }
-.credencial-nueva-cuenta .pi-usr-credencial-linea { color: var(--indigo-profundo); }
-.pi-usr-credencial-nota { display: block; font-size: 11px; color: var(--texto-secundario); margin-top: 4px; }
 
 /* Badges */
 .pi-usr-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 20px; }
@@ -181,7 +224,7 @@
 .pi-usr-badge-pasado { background-color: var(--gris-niebla); color: var(--texto-secundario); }
 
 /* =========================================================
-   PESTAÑA 2: MI SALDO Y ESTADO DE CUENTA
+   PESTAÑA: MI SALDO Y ESTADO DE CUENTA
 ========================================================= */
 .pi-usr-saldo { display: flex; flex-direction: column; gap: 24px; }
 
@@ -235,9 +278,15 @@
 .pi-usr-monto-positivo { color: var(--verde-recarga-texto); font-weight: 700; }
 .pi-usr-monto-negativo { color: var(--rojo-error); font-weight: 700; }
 
+@media (max-width: 900px) {
+  .pi-usr-comprar-grid { grid-template-columns: 1fr; }
+  .pi-usr-comprar-col-resumen { position: static; }
+}
+
 @media (max-width: 768px) {
-  .pi-usr-solicitud { flex-direction: column; }
   .pi-usr-ticket-inputs { grid-template-columns: 1fr; }
+  .pi-usr-cat-mini-group { margin-left: 0; }
   .pi-usr-qr-card { flex-direction: column; text-align: center; }
   .qr-info-text { align-items: center; text-align: center; }
+  .pi-usr-evento-header { flex-direction: column; text-align: center; }
 }

@@ -87,11 +87,15 @@ const router = createBrowserRouter([
     element: <MenuLateral><UsuarioNormal /></MenuLateral>,
   },
   {
-    path: "/usuarionormal/saldo",
+    path: "/usuarionormal/eventos",
     element: <MenuLateral><UsuarioNormal /></MenuLateral>,
   },
   {
-    path: "/usuarionormal/historial",
+    path: "/usuarionormal/comprar",
+    element: <MenuLateral><UsuarioNormal /></MenuLateral>,
+  },
+  {
+    path: "/usuarionormal/saldo",
     element: <MenuLateral><UsuarioNormal /></MenuLateral>,
   },
   {
