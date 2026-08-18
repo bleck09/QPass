@@ -61,6 +61,12 @@ const EVENTO_ACTUAL = { nombre: 'Festival QPass 2026', fecha: '2026-09-15' };
 
 const esVigente = (fechaEventoISO) => new Date(fechaEventoISO) >= new Date();
 
+// --- DATOS DE PAGO DEL NEGOCIO (QR que se muestra al hacer clic en "Pagar") ---
+const DATOS_PAGO_NEGOCIO = {
+  nombre: 'QPass Eventos',
+  qrUrl: qrDe('QPASS-PAGO-NEGOCIO-4021557896'),
+};
+
 // Entrada de ejemplo de un evento YA PASADO, para mostrar cómo se ve el historial
 // (los datos de entradas de eventos pasados ya no se pueden reportar).
 const comprasSeedPasadas = (usuario) => [
@@ -132,8 +138,10 @@ export default function UsuarioNormal() {
     { id: "12/02/26", isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaId: 'general', precio: 150 }
   ]);
   
-  const [comprobante, setComprobante] = useState(null); 
+  const [comprobante, setComprobante] = useState(null);
   const [errorForm, setErrorForm] = useState('');
+  // Al hacer clic en "Pagar" se muestra primero el QR del negocio; solo después se habilita subir el comprobante.
+  const [pagoIniciado, setPagoIniciado] = useState(false);
 
   // --- ESTADOS DE SALDO ---
   const [miCategoriaAcceso] = useState('VIP'); 
@@ -185,6 +193,8 @@ export default function UsuarioNormal() {
       // No tiene entrada: La primera debe ser obligatoria para él
       setEntradasCart([{ id: Date.now(), isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaId: 'general', precio: 150 }]);
     }
+    setPagoIniciado(false);
+    setComprobante(null);
   };
 
   // --- LÓGICA DEL CARRITO ---
@@ -254,6 +264,7 @@ export default function UsuarioNormal() {
       setEntradasCart([{ id: "12/02/26", isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaId: 'general', precio: 150 }]);
     }
     setComprobante(null);
+    setPagoIniciado(false);
   };
 
   const simularConfirmacionAdmin = (compraId) => {
@@ -494,28 +505,6 @@ export default function UsuarioNormal() {
           )}
 
           <div className="pi-usr-card pi-usr-pago-card">
-            <div className="pi-usr-comprobante">
-              <span className="pi-usr-form-label">Comprobante de Transferencia</span>
-              <p className="texto-ayuda" style={{marginBottom: '10px'}}>Transfiere el monto total a la cuenta oficial y sube la captura aquí.</p>
-              {!comprobante ? (
-                <label htmlFor="pi-usr-file" className="pi-usr-btn-upload-grande">
-                  <FaUpload size={24} color="var(--cian-digital)"/> 
-                  <span>Haz clic para subir comprobante</span>
-                </label>
-              ) : (
-                <div className="pi-usr-comprobante-preview-grande">
-                  <img src={comprobante.previewUrl} alt="Comprobante" />
-                  <div className="preview-info">
-                    <span>{comprobante.nombreArchivo}</span>
-                    <label htmlFor="pi-usr-file" className="btn-cambiar-archivo">Cambiar foto</label>
-                  </div>
-                </div>
-              )}
-              <input id="pi-usr-file" type="file" accept="image/*" onChange={handleComprobanteUpload} hidden />
-            </div>
-
-            {errorForm && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorForm}</div>}
-
             <div className="pi-usr-resumen-compra">
               <div className="resumen-linea">
                 <span>Total de entradas</span>
@@ -527,9 +516,49 @@ export default function UsuarioNormal() {
               </div>
             </div>
 
-            <button className="pi-usr-btn-enviar" onClick={handleEnviarComprobante}>
-              <FaCheckCircle /> Enviar Pago y Solicitar
-            </button>
+            {!pagoIniciado ? (
+              <button className="pi-usr-btn-enviar" onClick={() => setPagoIniciado(true)}>
+                <FaQrcode /> Pagar
+              </button>
+            ) : (
+              <>
+                <div className="pi-usr-qr-card">
+                  <img src={DATOS_PAGO_NEGOCIO.qrUrl} alt="QR de pago del negocio" />
+                  <div className="qr-info-text">
+                    <span className="pi-usr-qr-titulo"><FaQrcode /> Escanea para pagar</span>
+                    <span className="pi-usr-qr-nota">
+                      Transfiere Bs. {montoTotalEntradas.toFixed(2)} a {DATOS_PAGO_NEGOCIO.nombre} y luego sube tu comprobante.
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pi-usr-comprobante">
+                  <span className="pi-usr-form-label">Comprobante de Transferencia</span>
+                  <p className="texto-ayuda" style={{marginBottom: '10px'}}>Sube la captura de tu transferencia aquí.</p>
+                  {!comprobante ? (
+                    <label htmlFor="pi-usr-file" className="pi-usr-btn-upload-grande">
+                      <FaUpload size={24} color="var(--cian-digital)"/>
+                      <span>Haz clic para subir comprobante</span>
+                    </label>
+                  ) : (
+                    <div className="pi-usr-comprobante-preview-grande">
+                      <img src={comprobante.previewUrl} alt="Comprobante" />
+                      <div className="preview-info">
+                        <span>{comprobante.nombreArchivo}</span>
+                        <label htmlFor="pi-usr-file" className="btn-cambiar-archivo">Cambiar foto</label>
+                      </div>
+                    </div>
+                  )}
+                  <input id="pi-usr-file" type="file" accept="image/*" onChange={handleComprobanteUpload} hidden />
+                </div>
+
+                {errorForm && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorForm}</div>}
+
+                <button className="pi-usr-btn-enviar" onClick={handleEnviarComprobante}>
+                  <FaCheckCircle /> Enviar Pago y Solicitar
+                </button>
+              </>
+            )}
           </div>
 
           {/* HISTORIAL DE SOLICITUDES */}
