@@ -31,7 +31,8 @@ const menuConfig = {
     { titulo: 'Auditoría', ruta: '/supervisor/auditoria', icono: <FaUsers /> }
   ],
   Devolución: [
-    { titulo: 'Gestión Devoluciones', ruta: '/devolucion', icono: <FaBoxOpen /> }
+    { titulo: 'Gestión Devoluciones', ruta: '/devolucion', icono: <FaBoxOpen /> },
+    { titulo: 'Historial', ruta: '/devolucion/historial', icono: <FaFileInvoiceDollar /> }
   ],
   'Usuario Normal': [
     { titulo: 'Eventos', ruta: '/usuarionormal/eventos', icono: <FaCalendarAlt /> },

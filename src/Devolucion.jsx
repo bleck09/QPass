@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaTimes, FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle,
-  FaMoneyBillWave, FaUser, FaBuilding, FaHistory
+  FaMoneyBillWave, FaUser, FaBuilding, FaHistory, FaCamera, FaRedo
 } from 'react-icons/fa';
 import './Devolucion.css';
 
@@ -28,11 +29,15 @@ const fechaHoraActual = () => {
 };
 
 export default function Devolucion() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const pestana = location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
+
   const [beneficiarios, setBeneficiarios] = useState(beneficiariosIniciales);
-  const [pestana, setPestana] = useState('escanear'); // escanear | historial
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
   const [monto, setMonto] = useState('');
+  const [fotoCarnet, setFotoCarnet] = useState(null);
   const [retiroExitoso, setRetiroExitoso] = useState(null);
   const [retiros, setRetiros] = useState([]);
 
@@ -46,6 +51,7 @@ export default function Devolucion() {
   const handleSimularEscaneo = () => {
     setEscaneando(true);
     setMonto('');
+    setFotoCarnet(null);
     setRetiroExitoso(null);
     setTimeout(() => {
       const elegido = beneficiarios[Math.floor(Math.random() * beneficiarios.length)];
@@ -57,12 +63,21 @@ export default function Devolucion() {
   const cerrarTarjeta = () => {
     setTarjetaQR(null);
     setMonto('');
+    setFotoCarnet(null);
     setRetiroExitoso(null);
+  };
+
+  const handleFotoCarnet = (e) => {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    const lector = new FileReader();
+    lector.onloadend = () => setFotoCarnet(lector.result);
+    lector.readAsDataURL(archivo);
   };
 
   const confirmarRetiro = () => {
     const valor = Number(monto);
-    if (!tarjetaQR || !valor || valor <= 0 || valor > tarjetaQR.saldo) return;
+    if (!tarjetaQR || !valor || valor <= 0 || valor > tarjetaQR.saldo || !fotoCarnet) return;
 
     const nuevoSaldo = tarjetaQR.saldo - valor;
     const { fecha, hora } = fechaHoraActual();
@@ -78,6 +93,7 @@ export default function Devolucion() {
         tipo: tarjetaQR.tipo,
         documento: tarjetaQR.documento,
         foto: tarjetaQR.foto,
+        fotoCarnet,
         monto: valor,
         saldoResultante: nuevoSaldo,
         fecha,
@@ -97,13 +113,13 @@ export default function Devolucion() {
         <div className="pi-dev-tabs">
           <button
             className={pestana === 'escanear' ? 'activo' : ''}
-            onClick={() => setPestana('escanear')}
+            onClick={() => navigate('/devolucion')}
           >
             <FaQrcode /> Escanear QR
           </button>
           <button
             className={pestana === 'historial' ? 'activo' : ''}
-            onClick={() => setPestana('historial')}
+            onClick={() => navigate('/devolucion/historial')}
           >
             <FaHistory /> Historial ({retiros.length})
           </button>
@@ -143,6 +159,7 @@ export default function Devolucion() {
                   <th>Beneficiario</th>
                   <th>Documento</th>
                   <th>Tipo</th>
+                  <th>Carnet</th>
                   <th>Monto</th>
                   <th>Saldo Resultante</th>
                   <th>Fecha</th>
@@ -164,6 +181,11 @@ export default function Devolucion() {
                         {item.tipo === 'Negocio' ? <FaBuilding /> : <FaUser />} {item.tipo}
                       </span>
                     </td>
+                    <td>
+                      {item.fotoCarnet
+                        ? <img src={item.fotoCarnet} alt={`Carnet de ${item.beneficiario}`} className="pi-dev-mini-carnet" />
+                        : <span className="pi-dev-sin-carnet">—</span>}
+                    </td>
                     <td className="pi-dev-monto-celda">-{item.monto} pts</td>
                     <td>{item.saldoResultante} pts</td>
                     <td>{item.fecha}</td>
@@ -172,7 +194,7 @@ export default function Devolucion() {
                 ))}
                 {retiros.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="pi-dev-sin-resultados">
+                    <td colSpan={8} className="pi-dev-sin-resultados">
                       Aún no has procesado ninguna devolución en esta sesión.
                     </td>
                   </tr>
@@ -254,12 +276,37 @@ export default function Devolucion() {
                   )}
                 </div>
 
+                <div className="pi-dev-form-carnet">
+                  <label><FaIdCard /> Foto del carnet de quien retira</label>
+
+                  {fotoCarnet ? (
+                    <div className="pi-dev-carnet-preview">
+                      <img src={fotoCarnet} alt="Carnet de quien retira" />
+                      <label htmlFor="pi-dev-foto-carnet" className="pi-dev-btn-retomar">
+                        <FaRedo /> Tomar otra
+                      </label>
+                    </div>
+                  ) : (
+                    <label htmlFor="pi-dev-foto-carnet" className="pi-dev-btn-tomar-foto">
+                      <FaCamera /> Tomar foto del carnet
+                    </label>
+                  )}
+                  <input
+                    id="pi-dev-foto-carnet"
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    onChange={handleFotoCarnet}
+                    hidden
+                  />
+                </div>
+
                 <div className="pi-dev-tarjeta-acciones">
                   <button className="pi-dev-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
                   <button
                     className="pi-dev-btn-confirmar"
                     onClick={confirmarRetiro}
-                    disabled={!monto || Number(monto) <= 0 || excedeSaldo}
+                    disabled={!monto || Number(monto) <= 0 || excedeSaldo || !fotoCarnet}
                   >
                     <FaCheckCircle /> Confirmar Retiro
                   </button>

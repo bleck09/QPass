@@ -88,6 +88,10 @@ const router = createBrowserRouter([
     element: <MenuLateral><Devolucion /></MenuLateral>,
   },
   {
+    path: "/devolucion/historial",
+    element: <MenuLateral><Devolucion /></MenuLateral>,
+  },
+  {
     path: "/usuarionormal",
     element: <MenuLateral><UsuarioNormal /></MenuLateral>,
   },
