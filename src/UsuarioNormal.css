@@ -14,18 +14,6 @@
 .pi-usr-tabs button { display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--texto-secundario); cursor: pointer; transition: all 0.2s; }
 .pi-usr-tabs button.activo { background-color: var(--blanco); color: var(--indigo-profundo); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); }
 
-/* --- BOTÓN DEMO DE SIMULACIÓN LÓGICA --- */
-.pi-usr-demo-toggle {
-  display: flex; align-items: center; gap: 12px; background-color: var(--blanco);
-  padding: 12px 18px; border-radius: 12px; border: 1px dashed var(--borde-medio); box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-}
-.pi-usr-demo-toggle label { font-size: 13px; font-weight: 700; color: var(--texto-secundario); }
-.btn-toggle-demo {
-  padding: 8px 16px; border-radius: 8px; font-size: 12px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;
-  border: 1px solid var(--borde-medio); background: var(--gris-niebla); color: var(--texto-principal); transition: all 0.2s;
-}
-.btn-toggle-demo.activo { background: var(--verde-recarga-suave); border-color: var(--verde-recarga); color: var(--verde-recarga-texto); }
-
 /* --- TARJETAS GENÉRICAS --- */
 .pi-usr-card { background: var(--blanco); border-radius: 14px; padding: 24px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); border: 1px solid var(--borde-suave); }
 .pi-usr-card h3 { display: flex; align-items: center; gap: 10px; color: var(--texto-principal); font-size: 17px; margin: 0 0 18px 0; }
@@ -91,12 +79,8 @@
 .pi-usr-ticket-row-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .pi-usr-ticket-row-titulo { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--texto-principal); white-space: nowrap; }
 
-.pi-usr-cat-mini-group { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
-.btn-cat-mini {
-  border: 1px solid var(--borde-medio); background: var(--gris-niebla); color: var(--texto-secundario);
-  padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; transition: all 0.2s;
-}
-.btn-cat-mini.activa { border-color: var(--cian-digital); background-color: var(--cian-digital-suave); color: var(--cian-digital-texto); }
+/* Badge fijo (no editable) que muestra la categoría de una entrada de invitado, ya elegida al agregarla. */
+.pi-usr-cat-badge-fija { margin-left: auto; color: var(--blanco); font-size: 12px; font-weight: 700; padding: 6px 12px; border-radius: 20px; }
 
 .pi-usr-ticket-inputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
 .input-group { display: flex; flex-direction: column; gap: 6px; }
@@ -105,14 +89,41 @@
 .input-group input:focus { border-color: var(--cian-digital); }
 .input-group input:disabled { background-color: var(--gris-niebla); color: var(--texto-secundario); cursor: not-allowed; }
 
-.pi-usr-btn-agregar-mas {
-  background-color: transparent; color: var(--indigo-profundo); border: 2px dashed var(--borde-medio); padding: 14px; border-radius: 12px;
-  font-size: 13px; font-weight: 700; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; transition: all 0.2s;
-}
-.pi-usr-btn-agregar-mas:hover { border-color: var(--indigo-profundo); background-color: var(--indigo-profundo-suave); }
-
 .btn-eliminar-ticket { background: transparent; border: none; color: var(--rojo-error-texto); font-size: 14px; cursor: pointer; display: flex; align-items: center; transition: color 0.2s; }
 .btn-eliminar-ticket:hover { color: var(--rojo-error); }
+
+/* Cards grandes para elegir la categoría y sumar una entrada de invitado. */
+.pi-usr-categorias-grandes { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+.pi-usr-categorias-grandes h4 { margin: 0; font-size: 15px; font-weight: 700; color: var(--texto-principal); }
+
+.pi-usr-categorias-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; }
+
+/* Card grande estilo "evento": color sólido de la categoría, texto blanco, sombra y overlay sutil. */
+.pi-usr-categoria-card {
+  position: relative; overflow: hidden; border: none; border-radius: 18px; color: var(--blanco);
+  padding: 28px 18px; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  cursor: pointer; transition: all 0.25s; box-shadow: 0 10px 22px rgba(0,0,0,0.18);
+}
+.pi-usr-categoria-card::before {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(160deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0) 35%, rgba(0,0,0,0.22) 100%);
+  pointer-events: none;
+}
+.pi-usr-categoria-card > * { position: relative; }
+.pi-usr-categoria-card:hover:not(:disabled) { transform: translateY(-4px) scale(1.015); box-shadow: 0 16px 30px rgba(0,0,0,0.28); }
+.pi-usr-categoria-card:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.cat-card-badge {
+  position: absolute; top: 12px; right: 12px; background: var(--blanco); font-size: 12px; font-weight: 800;
+  min-width: 26px; height: 26px; padding: 0 6px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+.cat-card-nombre { font-size: 22px; font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.2); }
+.cat-card-precio { font-size: 15px; color: rgba(255,255,255,0.9); font-weight: 700; }
+.cat-card-cta {
+  display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; color: var(--blanco);
+  margin-top: 10px; background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px;
+}
 
 /* Resumen Pago */
 .pi-usr-pago-card { display: flex; flex-direction: column; gap: 20px; }
@@ -148,40 +159,83 @@
 .pi-usr-btn-revisar:hover { background-color: var(--indigo-profundo-suave); border-color: var(--indigo-profundo); }
 
 /* =========================================================
-   PESTAÑA: MIS ENTRADAS (propias / para invitados, en cards)
+   PESTAÑA: MIS ENTRADAS (manilla destacada + otras solicitudes + pasadas)
 ========================================================= */
-.pi-usr-mis-entradas { display: flex; flex-direction: column; gap: 12px; }
+.pi-usr-mis-entradas { display: flex; flex-direction: column; gap: 16px; }
 
-.pi-usr-subtabs { display: flex; gap: 6px; background-color: var(--gris-niebla); padding: 4px; border-radius: 10px; width: fit-content; }
-.pi-usr-subtabs button { display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 8px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--texto-secundario); cursor: pointer; transition: all 0.2s; }
-.pi-usr-subtabs button.activo { background-color: var(--blanco); color: var(--indigo-profundo); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1); }
-
-.pi-usr-entradas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-
-.pi-usr-entrada-card {
-  background: var(--blanco); border: 1px solid var(--borde-suave); border-top: 4px solid var(--gris-medio);
-  border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+/* Tu entrada propia y confirmada de un evento próximo, destacada en grande, con la imagen del evento de fondo. */
+.pi-usr-manilla-destacada {
+  position: relative; border-radius: 18px; overflow: hidden; color: var(--blanco);
+  background-color: var(--indigo-profundo); background-size: cover; background-position: center;
+  box-shadow: 0 10px 25px rgba(26, 43, 107, 0.25);
 }
+.pi-usr-manilla-overlay {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 24px; padding: 28px;
+  background: linear-gradient(120deg, rgba(10,14,39,0.92) 0%, rgba(10,14,39,0.78) 45%, rgba(26,43,107,0.55) 100%);
+}
+.pi-usr-manilla-destacada .manilla-qr { width: 140px; height: 140px; border-radius: 12px; border: 5px solid rgba(255,255,255,0.2); flex-shrink: 0; }
+.pi-usr-manilla-destacada .pi-usr-qr-titulo { color: rgba(255,255,255,0.75); font-size: 13px; }
+.pi-usr-manilla-destacada .manilla-info { flex: 1; min-width: 200px; }
+.pi-usr-manilla-destacada .manilla-info h3 { margin: 4px 0 10px 0; font-size: 24px; font-weight: 800; }
+.pi-usr-manilla-destacada .manilla-datos { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 13px; color: rgba(255,255,255,0.85); }
+.pi-usr-manilla-destacada .manilla-datos span { display: flex; align-items: center; gap: 6px; }
 
-.pi-usr-entrada-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
-.pi-usr-entrada-nombre { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; color: var(--texto-principal); }
+/* Cuenta regresiva compacta en el espacio sobrante de la manilla destacada. */
+.pi-usr-manilla-countdown {
+  margin-left: auto; display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: rgba(0,0,0,0.28); border-radius: 14px; padding: 14px 20px; flex-shrink: 0;
+}
+.countdown-title-mini { font-size: 11px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: rgba(255,255,255,0.7); }
+.countdown-timer-mini { display: flex; align-items: center; gap: 6px; }
+.time-block-mini { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.1); border-radius: 8px; padding: 6px 8px; min-width: 38px; }
+.time-number-mini { font-size: 20px; font-weight: 800; line-height: 1; }
+.time-label-mini { font-size: 9px; font-weight: 700; letter-spacing: 0.5px; color: rgba(255,255,255,0.6); margin-top: 3px; }
+.time-separator-mini { font-weight: 800; color: rgba(255,255,255,0.5); }
+.countdown-llego { display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 800; font-size: 14px; white-space: nowrap; }
+.countdown-llego-emoji { font-size: 28px; }
 
-.pi-usr-entrada-evento { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--texto-secundario); }
+.pi-usr-mis-entradas-subtitulo { font-size: 15px; font-weight: 700; color: var(--texto-principal); margin: 4px 0 0 0; }
 
-.pi-usr-entrada-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.pi-usr-entradas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
 
-.pi-usr-entrada-qr { display: flex; align-items: center; gap: 12px; background-color: var(--gris-niebla); border-radius: 10px; padding: 10px; }
-.pi-usr-entrada-qr .qr-miniatura { width: 56px; height: 56px; border-radius: 8px; border: 2px solid var(--blanco); }
+/* Card compacta de una solicitud (lote de entradas), con la imagen del evento de fondo. */
+.pi-usr-compra-card {
+  position: relative; border-radius: 14px; overflow: hidden; min-height: 200px;
+  background-size: cover; background-position: center; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+.pi-usr-compra-card-overlay {
+  position: relative; height: 100%; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+  background: linear-gradient(to bottom, rgba(10,14,39,0.15) 0%, rgba(10,14,39,0.75) 60%, rgba(10,14,39,0.92) 100%);
+  color: var(--blanco);
+}
+.pi-usr-compra-card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+.pi-usr-compra-card-info { display: flex; flex-direction: column; gap: 4px; }
+.pi-usr-compra-card-info strong { font-size: 16px; font-weight: 800; }
+.pi-usr-compra-card-info span { display: flex; align-items: center; gap: 6px; font-size: 12px; color: rgba(255,255,255,0.85); }
+.pi-usr-compra-card-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pi-usr-compra-card-acciones .pi-usr-btn-revisar { align-self: auto; background: var(--blanco); }
+.pi-usr-compra-card-acciones .pi-usr-btn-demo { align-self: auto; }
 
-.pi-usr-entrada-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
-.pi-usr-entrada-acciones .pi-usr-btn-revisar,
-.pi-usr-entrada-acciones .pi-usr-btn-demo,
-.pi-usr-entrada-acciones .pi-usr-btn-reportar-entrada { align-self: auto; }
+.pi-usr-btn-toggle-pasadas {
+  align-self: flex-start; display: flex; align-items: center; gap: 8px; background: var(--gris-niebla); color: var(--texto-principal);
+  border: 1px solid var(--borde-medio); padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+}
+.pi-usr-btn-toggle-pasadas:hover { background-color: var(--borde-suave); }
+
+/* QR de una entrada dentro del modal "Revisar mi solicitud" (compra ya aprobada). */
+.pi-usr-entrada-qr { display: flex; align-items: center; gap: 12px; background-color: var(--blanco); border-radius: 10px; padding: 10px; }
+.pi-usr-entrada-qr .qr-miniatura { width: 56px; height: 56px; border-radius: 8px; border: 2px solid var(--gris-niebla); }
 
 /* --- MODAL: REVISAR MI SOLICITUD / REPORTAR --- */
 .pi-usr-modal-overlay { position: fixed; inset: 0; background-color: rgba(10, 14, 39, 0.6); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; }
 .pi-usr-modal { background: var(--blanco); width: 100%; max-width: 640px; max-height: 85vh; overflow-y: auto; border-radius: 16px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25); }
+
+/* Pantalla grande de pago: QR bien visible antes de subir el comprobante. */
+.pi-usr-modal-pago { max-width: 520px; }
+.pi-usr-qr-card-grande { flex-direction: column; text-align: center; padding: 28px; }
+.pi-usr-qr-card-grande img { width: 300px; height: 300px; max-width: 100%; border-width: 6px; }
+.pi-usr-qr-card-grande .qr-info-text { align-items: center; text-align: center; }
+.pi-usr-qr-card-grande .pi-usr-qr-titulo { font-size: 18px; }
 .pi-usr-modal-header { display: flex; justify-content: space-between; align-items: center; padding: 18px 24px; border-bottom: 1px solid var(--borde-suave); position: sticky; top: 0; background: var(--blanco); }
 .pi-usr-modal-header h3 { display: flex; align-items: center; gap: 10px; font-size: 17px; color: var(--texto-principal); }
 .pi-usr-btn-cerrar-modal { background-color: var(--gris-niebla); color: var(--gris-medio); border: none; width: 32px; height: 32px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; }
@@ -228,36 +282,11 @@
 ========================================================= */
 .pi-usr-saldo { display: flex; flex-direction: column; gap: 24px; }
 
-/* Pantalla de Espera (Pending Approval) */
-.pi-usr-espera-aprobacion {
-  background-color: var(--blanco); border-radius: 16px; padding: 50px 30px;
-  display: flex; flex-direction: column; align-items: center; text-align: center;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: 1px solid var(--borde-suave);
-}
-.espera-icono {
-  width: 90px; height: 90px; border-radius: 50%; background: linear-gradient(135deg, var(--ambar-aviso), #FF8A00);
-  display: flex; justify-content: center; align-items: center; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(255, 176, 32, 0.3);
-}
-.pi-usr-espera-aprobacion h3 { font-size: 24px; color: var(--texto-principal); margin: 0 0 15px 0; font-weight: 800; }
-.pi-usr-espera-aprobacion p { font-size: 15px; color: var(--texto-secundario); max-width: 500px; line-height: 1.6; margin: 0 0 20px 0; }
-.espera-info-extra { display: flex; align-items: center; gap: 8px; background-color: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); padding: 10px 20px; border-radius: 20px; font-size: 13px; font-weight: 600; }
-
-.animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Pantalla Activa */
-.pi-usr-saldo-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
-
-.pi-usr-pase-card {
-  border-radius: 14px; padding: 26px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1); color: var(--blanco); position: relative; overflow: hidden;
-}
-.pi-usr-pase-card.is-vip { background: linear-gradient(135deg, #1A2B6B, #3B4D8C); }
-.pi-usr-pase-card.is-general { background: linear-gradient(135deg, var(--cian-digital), #0096B4); }
-.pase-label { font-size: 11px; opacity: 0.8; letter-spacing: 1px; margin-bottom: 5px;}
-.pase-tipo { font-size: 28px; font-weight: 800; letter-spacing: 0.5px; }
+.pi-usr-saldo-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
 
 .pi-usr-saldo-card { background: var(--blanco); border-radius: 14px; padding: 26px; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; gap: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.04); border: 1px solid var(--borde-suave); }
+.pi-usr-saldo-card.saldo-card-recargado { border-color: rgba(0, 196, 140, 0.3); }
+.pi-usr-saldo-card.saldo-card-gastado { border-color: rgba(255, 90, 90, 0.3); }
 .pi-usr-saldo-numero { font-size: 34px; font-weight: 800; color: var(--texto-principal); }
 .pi-usr-saldo-label { font-size: 13px; color: var(--texto-secundario); max-width: 200px; }
 
@@ -289,4 +318,7 @@
   .pi-usr-qr-card { flex-direction: column; text-align: center; }
   .qr-info-text { align-items: center; text-align: center; }
   .pi-usr-evento-header { flex-direction: column; text-align: center; }
+  .pi-usr-manilla-overlay { flex-direction: column; text-align: center; }
+  .pi-usr-manilla-destacada .manilla-datos { justify-content: center; }
+  .pi-usr-manilla-countdown { margin-left: 0; }
 }
