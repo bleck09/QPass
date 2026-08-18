@@ -450,3 +450,398 @@ html {
     right: auto;
   }
 }
+
+/* =======================================================
+   NAVBAR: BOTÓN VOLVER
+======================================================= */
+.pi-landing-volver {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--color-boton);
+  cursor: pointer;
+  transition: all 0.3s;
+  margin-right: 15px;
+}
+.pi-landing-volver:hover {
+  background: var(--color-primario);
+  color: var(--color-fondo);
+  transform: translateX(-3px);
+}
+
+/* =======================================================
+   SECCIÓN: CONTADOR DE TIEMPO (Countdown)
+======================================================= */
+.countdown-section {
+  text-align: center;
+  padding: 60px 5%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 30px;
+}
+
+.countdown-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.countdown-badge {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-primario);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.countdown-header h2 {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--color-texto-titulo);
+  margin: 0;
+}
+
+.countdown-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.time-block {
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 30px 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  min-width: 150px;
+}
+
+.time-number {
+  font-size: 5rem;
+  font-weight: 900;
+  color: var(--color-texto-titulo);
+  line-height: 1;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.time-label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--color-texto-p);
+  margin-top: 10px;
+  letter-spacing: 2px;
+}
+
+.time-separator {
+  font-size: 4rem;
+  font-weight: 900;
+  color: var(--color-primario);
+  margin-top: -30px;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 1; }
+  to { opacity: 0.3; }
+}
+
+/* =======================================================
+   SECCIÓN: PRECIOS / TICKETS (Pricing Cards Neón)
+======================================================= */
+.pricing-section {
+  text-align: center;
+  padding: 80px 5%;
+}
+
+.pricing-title {
+  font-size: 5rem;
+  font-weight: 900;
+  color: var(--color-texto-titulo);
+  margin-bottom: 60px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 30px;
+  max-width: 1100px;
+  margin: 0 auto;
+  align-items: center; /* Permite que la del centro sea más alta */
+}
+
+.pricing-card {
+  background: rgba(15, 23, 42, 0.5);
+  backdrop-filter: blur(15px);
+  border-radius: 30px;
+  border: 1px solid rgba(0, 180, 216, 0.3);
+  padding: 40px 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  text-align: left;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+
+/* La tarjeta VIP o Destacada del Centro */
+.pricing-card.destacado {
+  background: rgba(10, 14, 39, 0.7);
+  border-color: var(--color-primario);
+  transform: scale(1.08); /* Se hace un poco más grande */
+  box-shadow: 0 0 40px rgba(0, 180, 216, 0.3), inset 0 0 20px rgba(0, 180, 216, 0.1);
+  padding: 50px 30px; /* Más alta */
+}
+
+.pricing-card-header h3 {
+  font-size: 2rem;
+  color: var(--color-texto-titulo);
+  margin: 0 0 10px 0;
+  font-weight: 800;
+}
+
+.pricing-card-header p {
+  color: var(--color-texto-p);
+  font-size: 14px;
+  margin: 0;
+}
+
+.pricing-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  flex: 1; /* Empuja el botón y precio hacia abajo */
+}
+
+.pricing-features li {
+  color: var(--color-texto-titulo);
+  font-size: 15px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.check-icon {
+  color: var(--color-primario);
+  font-size: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.pricing-price {
+  text-align: center;
+  margin-top: 10px;
+}
+
+.price-amount {
+  font-size: 3rem;
+  font-weight: 900;
+  color: var(--color-texto-titulo);
+}
+
+.btn-pricing {
+  width: 100%;
+  padding: 16px;
+  border-radius: 30px;
+  border: none;
+  background-color: var(--color-primario);
+  color: var(--color-fondo);
+  font-weight: 800;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.btn-pricing:hover {
+  background-color: var(--color-boton);
+  color: var(--color-primario);
+  box-shadow: 0 0 20px var(--color-primario);
+}
+
+/* =======================================================
+   RESPONSIVE (MÓVILES)
+======================================================= */
+@media (max-width: 900px) {
+  .time-block {
+    min-width: 100px;
+    padding: 20px;
+  }
+  .time-number { font-size: 3rem; }
+  .time-separator { display: none; } /* Ocultar los dos puntos en móvil para no romper la grilla */
+  
+  .pricing-title { font-size: 3.5rem; }
+  .pricing-card.destacado { transform: scale(1); padding: 40px 30px; }
+  
+  .pi-landing-volver { margin-right: 5px; width: 35px; height: 35px; }
+}
+/* =======================================================
+   SECCIÓN: FECHA GIGANTE Y CONTADOR COMPACTO
+======================================================= */
+.date-countdown-section {
+  text-align: center;
+  padding: 80px 5%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 60px;
+}
+
+/* --- Diseño de la Fecha Gigante --- */
+.massive-date-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
+.date-subtitle {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--color-primario);
+  text-transform: uppercase;
+  letter-spacing: 4px;
+}
+
+.date-huge {
+  display: flex;
+  align-items: baseline; /* Alinea el "23" y "Febrero" por su base */
+  justify-content: center;
+  gap: 20px;
+  line-height: 0.9;
+}
+
+.date-number {
+  font-size: 12rem; /* TAMAÑO GIGANTE COMO EN TU REFERENCIA */
+  font-weight: 900;
+  color: var(--color-texto-titulo);
+  text-shadow: 0 10px 40px rgba(0,0,0,0.5), 0 0 20px rgba(0, 180, 216, 0.3);
+  letter-spacing: -5px;
+}
+
+.date-month {
+  font-size: 5rem;
+  font-weight: 800;
+  color: var(--color-texto-titulo);
+  opacity: 0.9;
+}
+
+.date-description {
+  max-width: 650px;
+  color: var(--color-texto-p);
+  font-size: 1.2rem;
+  line-height: 1.6;
+  margin-top: 10px;
+}
+
+/* --- Diseño del Contador en Panel Glass --- */
+.countdown-wrapper {
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(0, 180, 216, 0.2);
+  padding: 30px 50px;
+  border-radius: 30px;
+  backdrop-filter: blur(15px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.4), inset 0 0 20px rgba(255,255,255,0.02);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.countdown-title {
+  font-size: 1rem;
+  color: var(--color-texto-p);
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-weight: 700;
+}
+
+.countdown-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+/* Modificamos los bloques para que sean transparentes dentro del wrapper */
+.small-timer .time-block {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 10px 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 90px;
+}
+
+.small-timer .time-number {
+  font-size: 4rem;
+  font-weight: 900;
+  color: var(--color-texto-titulo);
+  line-height: 1;
+}
+
+.small-timer .time-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-primario);
+  margin-top: 8px;
+  letter-spacing: 2px;
+}
+
+.small-timer .time-separator {
+  font-size: 3rem;
+  font-weight: 900;
+  color: rgba(255, 255, 255, 0.3);
+  margin-top: -25px;
+  animation: pulse 1s infinite alternate;
+}
+
+@keyframes pulse {
+  from { opacity: 1; }
+  to { opacity: 0.3; }
+}
+
+/* =======================================================
+   RESPONSIVE (Para pantallas pequeñas y móviles)
+======================================================= */
+@media (max-width: 900px) {
+  .date-huge {
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .date-number { font-size: 8rem; line-height: 1; }
+  .date-month { font-size: 3.5rem; margin-top: -10px; }
+  
+  .countdown-wrapper {
+    padding: 20px;
+    width: 95%;
+  }
+  
+  .small-timer .time-number { font-size: 2.5rem; }
+  .small-timer .time-block { min-width: 60px; padding: 5px; }
+  .small-timer .time-separator { display: none; }
+}

@@ -163,7 +163,7 @@ export default function PaginaPrincipal() {
 
                   {isActive && (
                     <button className="btn-solid btn-full mt-15" onClick={(e) => { e.stopPropagation(); verEvento(); }}>
-                      Adquirir Entradas
+                      Ver Evento <FaArrowRight/>
                     </button>
                   )}
                 </div>
