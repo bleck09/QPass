@@ -4,7 +4,7 @@ import {
   FaCalendarAlt, FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
   FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends, FaUsers,
   FaArrowLeft, FaSearch, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
-  FaExchangeAlt, FaClock, FaExclamationTriangle
+  FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt
 } from 'react-icons/fa';
 import './Admin.css';
 
@@ -56,8 +56,8 @@ const datosPorEvento = {
     entradas: [
       { id: 1, nombre: 'María Fernanda Rojas', documento: '7451236 LP', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=47', estado: 'ingresado', horaIngreso: '08:12' },
       { id: 2, nombre: 'Jorge Luis Quispe', documento: '6621345 SC', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=12', estado: 'ingresado', horaIngreso: '08:20' },
-      { id: 3, nombre: 'Ana Belén Castro', documento: '5589214 CB', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=32', estado: 'ingresado', horaIngreso: '08:35' },
-      { id: 4, nombre: 'Ricardo Alanoca Mamani', documento: '4471258 LP', tipoEntrada: 'Staff', foto: 'https://i.pravatar.cc/300?img=51', estado: 'ingresado', horaIngreso: '08:41' },
+      { id: 3, nombre: 'Ana Belén Castro', documento: '5589214 CB', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=32', estado: 'salio', horaIngreso: '08:35', horaSalida: '13:20' },
+      { id: 4, nombre: 'Ricardo Alanoca Mamani', documento: '4471258 LP', tipoEntrada: 'Staff', foto: 'https://i.pravatar.cc/300?img=51', estado: 'salio', horaIngreso: '08:41', horaSalida: '14:05' },
       { id: 5, nombre: 'Daniela Vargas Soto', documento: '7789456 SC', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=25', estado: 'ingresado', horaIngreso: '09:02' },
       { id: 6, nombre: 'Sergio Fabián Choque', documento: '3312589 OR', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=15', estado: 'pendiente', horaIngreso: null },
       { id: 7, nombre: 'Paola Andrea Terrazas', documento: '6654123 CB', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=45', estado: 'pendiente', horaIngreso: null },
@@ -166,7 +166,7 @@ const datosPorEvento = {
   ev2: {
     entradas: [
       { id: 1, nombre: 'Pedro Callisaya', documento: '2214563 LP', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=33', estado: 'ingresado', horaIngreso: '10:05' },
-      { id: 2, nombre: 'Rosa Elena Mamani', documento: '3321654 LP', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=29', estado: 'ingresado', horaIngreso: '10:22' },
+      { id: 2, nombre: 'Rosa Elena Mamani', documento: '3321654 LP', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=29', estado: 'salio', horaIngreso: '10:22', horaSalida: '12:40' },
       { id: 3, nombre: 'Freddy Choque Apaza', documento: '4478912 LP', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=17', estado: 'pendiente', horaIngreso: null },
       { id: 4, nombre: 'Ximena Torrez', documento: '5589431 LP', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=38', estado: 'pendiente', horaIngreso: null },
     ],
@@ -251,11 +251,15 @@ export default function Admin() {
   const enReportes = location.pathname.endsWith('/reportes');
 
   const [eventoId, setEventoId] = useState(eventosDisponibles[0].id);
+  // /admin/reportes entra directo al dashboard del evento actual, sin pasar por la selección.
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(enReportes);
   const [vistaDetalle, setVistaDetalle] = useState(null); // null | entradas | recargadores | devoluciones | negocios | supervisores | incidencias
   const [itemSeleccionado, setItemSeleccionado] = useState(null); // id de la persona/negocio abierto dentro de una vista
   const [busqueda, setBusqueda] = useState('');
+  const [filtroEntradas, setFiltroEntradas] = useState(null); // null (todas) | ingresado | pendiente | salio
 
   const vistaActual = enReportes ? 'incidencias' : vistaDetalle;
+  const mostrarSelectorEventos = !eventoSeleccionado && !enReportes;
 
   const [usuarioAdmin] = useState(() => {
     const guardado = localStorage.getItem('usuarioProyectoIngresos');
@@ -351,14 +355,17 @@ export default function Admin() {
   };
 
   const datos = datosPorEvento[eventoId];
+  const eventoActual = eventosDisponibles.find(ev => ev.id === eventoId);
 
   const statsEntradas = useMemo(() => {
     const total = datos.entradas.length;
-    const ingresaron = datos.entradas.filter(p => p.estado === 'ingresado').length;
+    const dentro = datos.entradas.filter(p => p.estado === 'ingresado').length;
+    const salieron = datos.entradas.filter(p => p.estado === 'salio').length;
+    const ingresaron = dentro + salieron;
     const faltan = total - ingresaron;
     const pctIngresaron = total ? Math.round((ingresaron / total) * 1000) / 10 : 0;
     const pctFaltan = total ? Math.round((faltan / total) * 1000) / 10 : 0;
-    return { total, ingresaron, faltan, pctIngresaron, pctFaltan };
+    return { total, ingresaron, faltan, dentro, salieron, pctIngresaron, pctFaltan };
   }, [datos]);
 
   const totalAyudantes = useMemo(
@@ -429,16 +436,32 @@ export default function Admin() {
   };
 
   const entradasFiltradas = useMemo(() => {
-    return datos.entradas.filter(p =>
-      p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      p.documento.toLowerCase().includes(busqueda.toLowerCase())
-    );
-  }, [datos, busqueda]);
+    return datos.entradas
+      .filter(p => {
+        if (filtroEntradas === 'ingresado') return p.estado === 'ingresado' || p.estado === 'salio';
+        if (filtroEntradas === 'dentro') return p.estado === 'ingresado';
+        if (filtroEntradas === 'pendiente') return p.estado === 'pendiente';
+        if (filtroEntradas === 'salio') return p.estado === 'salio';
+        return true;
+      })
+      .filter(p =>
+        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        p.documento.toLowerCase().includes(busqueda.toLowerCase())
+      );
+  }, [datos, busqueda, filtroEntradas]);
 
-  const abrirDetalle = (vista) => {
+  const tituloEntradasFiltro = {
+    ingresado: 'Ya Ingresaron',
+    dentro: 'Están Dentro',
+    pendiente: 'Faltan por Ingresar',
+    salio: 'Ya Salieron',
+  }[filtroEntradas] || 'Detalle de Participantes';
+
+  const abrirDetalle = (vista, filtro = null) => {
     setBusqueda('');
     setItemSeleccionado(null);
     setVistaDetalle(vista);
+    setFiltroEntradas(filtro);
     // La vista de "Reportes" agrupa incidencias de recarga y reportes de datos de entradas.
     if (vista === 'incidencias') {
       setIncidencias(leerIncidencias());
@@ -456,8 +479,20 @@ export default function Admin() {
     setBusqueda('');
     setItemSeleccionado(null);
     setVistaDetalle(null);
+    setFiltroEntradas(null);
     // Si se entró directo por /admin/reportes, "volver" regresa al dashboard real.
     if (enReportes) navigate('/admin');
+  };
+
+  const seleccionarEvento = (id) => {
+    setEventoId(id);
+    setEventoSeleccionado(true);
+    volver();
+  };
+
+  const volverASeleccionEvento = () => {
+    volver();
+    setEventoSeleccionado(false);
   };
 
   const volverALaLista = () => setItemSeleccionado(null);
@@ -475,16 +510,32 @@ export default function Admin() {
     <div className="pi-dash-container">
 
       <div className="pi-dash-header">
-        <h2>Dashboard General</h2>
-        <div className="pi-dash-selector-evento">
-          <FaCalendarAlt />
-          <select value={eventoId} onChange={(e) => { setEventoId(e.target.value); volver(); }}>
-            {eventosDisponibles.map(ev => (
-              <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-            ))}
-          </select>
-        </div>
+        {mostrarSelectorEventos ? (
+          <h2>Selecciona un Evento</h2>
+        ) : (
+          <div className="pi-dash-header-titulo">
+            <button className="pi-dash-btn-volver-evento" onClick={volverASeleccionEvento}>
+              <FaArrowLeft /> Cambiar de evento
+            </button>
+            <h2>{eventoActual?.nombre}</h2>
+          </div>
+        )}
       </div>
+
+      {mostrarSelectorEventos ? (
+        <section className="pi-dash-seccion">
+          <div className="pi-dash-eventos-grid">
+            {eventosDisponibles.map(ev => (
+              <button key={ev.id} className="pi-dash-evento-card" onClick={() => seleccionarEvento(ev.id)}>
+                <FaCalendarAlt className="pi-dash-evento-icon" />
+                <span className="pi-dash-evento-nombre">{ev.nombre}</span>
+                <span className="pi-dash-evento-detalle">{datosPorEvento[ev.id].entradas.length} entradas</span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <>
 
       {/* ================= VISTA GENERAL ================= */}
       {vistaActual === null && (
@@ -520,29 +571,43 @@ export default function Admin() {
           <section className="pi-dash-seccion">
             <h3 className="pi-dash-seccion-titulo">Entradas al Evento</h3>
             <div className="pi-dash-stats-grid">
-              <div className="pi-dash-stat-card">
+              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas')}>
                 <div className="pi-dash-stat-icon pi-dash-icon-total"><FaTicketAlt /></div>
                 <div className="pi-dash-stat-info">
                   <span className="numero">{statsEntradas.total}</span>
                   <span className="label">Total de Entradas</span>
                 </div>
-              </div>
-              <div className="pi-dash-stat-card">
+              </button>
+              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'ingresado')}>
                 <div className="pi-dash-stat-icon pi-dash-icon-ok"><FaCheckCircle /></div>
                 <div className="pi-dash-stat-info">
                   <span className="numero">{statsEntradas.ingresaron}</span>
                   <span className="label">Ya Ingresaron</span>
                 </div>
                 <span className="pi-dash-porcentaje pi-dash-badge-ok">{statsEntradas.pctIngresaron}%</span>
-              </div>
-              <div className="pi-dash-stat-card">
+              </button>
+              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'dentro')}>
+                <div className="pi-dash-stat-icon pi-dash-icon-dentro"><FaUsers /></div>
+                <div className="pi-dash-stat-info">
+                  <span className="numero">{statsEntradas.dentro}</span>
+                  <span className="label">Están Dentro</span>
+                </div>
+              </button>
+              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'pendiente')}>
                 <div className="pi-dash-stat-icon pi-dash-icon-pend"><FaHourglassHalf /></div>
                 <div className="pi-dash-stat-info">
                   <span className="numero">{statsEntradas.faltan}</span>
                   <span className="label">Faltan por Ingresar</span>
                 </div>
                 <span className="pi-dash-porcentaje pi-dash-badge-pend">{statsEntradas.pctFaltan}%</span>
-              </div>
+              </button>
+              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'salio')}>
+                <div className="pi-dash-stat-icon pi-dash-icon-salio"><FaSignOutAlt /></div>
+                <div className="pi-dash-stat-info">
+                  <span className="numero">{statsEntradas.salieron}</span>
+                  <span className="label">Ya Salieron</span>
+                </div>
+              </button>
             </div>
 
             <div className="pi-dash-progreso-barra">
@@ -617,7 +682,7 @@ export default function Admin() {
       {vistaActual === 'entradas' && (
         <section className="pi-dash-seccion">
           <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
-          <h3 className="pi-dash-seccion-titulo">Detalle de Participantes</h3>
+          <h3 className="pi-dash-seccion-titulo">{tituloEntradasFiltro}</h3>
 
           <div className="pi-dash-buscador">
             <FaSearch />
@@ -652,11 +717,13 @@ export default function Admin() {
                     <td>{p.documento}</td>
                     <td>{p.tipoEntrada}</td>
                     <td>
-                      {p.estado === 'ingresado'
+                      {p.estado === 'salio'
+                        ? <span className="pi-dash-badge pi-dash-badge-salio"><FaSignOutAlt /> Salió</span>
+                        : p.estado === 'ingresado'
                         ? <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Ingresó</span>
                         : <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> Pendiente</span>}
                     </td>
-                    <td>{p.horaIngreso || '—'}</td>
+                    <td>{p.estado === 'salio' ? p.horaSalida : (p.horaIngreso || '—')}</td>
                   </tr>
                 ))}
                 {entradasFiltradas.length === 0 && (
@@ -1162,6 +1229,8 @@ export default function Admin() {
           </div>
 
         </section>
+      )}
+        </>
       )}
     </div>
   );

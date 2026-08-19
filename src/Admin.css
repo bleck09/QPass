@@ -18,26 +18,73 @@
   font-size: 22px;
 }
 
-.pi-dash-selector-evento {
+.pi-dash-header-titulo {
   display: flex;
   align-items: center;
-  gap: 10px;
-  background: var(--blanco);
-  border: 1px solid var(--borde-medio);
-  border-radius: 8px;
-  padding: 8px 14px;
-  color: var(--indigo-profundo);
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
-.pi-dash-selector-evento select {
-  border: none;
-  outline: none;
+.pi-dash-btn-volver-evento {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background: none;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--texto-principal);
+  border: none;
+  color: var(--indigo-profundo);
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
+  padding: 0;
+  margin-right: 6px;
+}
+
+.pi-dash-btn-volver-evento:hover {
+  text-decoration: underline;
+}
+
+/* --- SELECCIÓN DE EVENTO (CARDS) --- */
+.pi-dash-eventos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+}
+
+.pi-dash-evento-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--gris-niebla);
+  border: 1px solid var(--borde-suave);
+  border-radius: 12px;
+  padding: 28px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+
+.pi-dash-evento-card:hover {
+  background-color: var(--indigo-profundo-suave);
+  border-color: var(--indigo-profundo);
+  transform: translateY(-2px);
+}
+
+.pi-dash-evento-icon {
+  font-size: 26px;
+  color: var(--indigo-profundo);
+  margin-bottom: 4px;
+}
+
+.pi-dash-evento-nombre {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.pi-dash-evento-detalle {
+  font-size: 12px;
+  color: var(--texto-secundario);
 }
 
 /* --- SECCIONES --- */
@@ -78,12 +125,26 @@
 
 .pi-dash-stat-card {
   background: var(--gris-niebla);
+  border: none;
   border-radius: 12px;
   padding: 18px;
   display: flex;
   align-items: center;
   gap: 14px;
   position: relative;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+}
+
+.pi-dash-stat-card-click {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-dash-stat-card-click:hover {
+  background-color: var(--indigo-profundo-suave);
+  transform: translateY(-2px);
 }
 
 .pi-dash-stat-icon {
@@ -101,6 +162,8 @@
 .pi-dash-icon-total { background-color: var(--indigo-profundo); }
 .pi-dash-icon-ok { background-color: var(--verde-recarga); color: var(--texto-sobre-vivo); }
 .pi-dash-icon-pend { background-color: var(--ambar-aviso); color: var(--texto-sobre-vivo); }
+.pi-dash-icon-dentro { background-color: var(--cian-digital); color: var(--texto-sobre-vivo); }
+.pi-dash-icon-salio { background-color: var(--gris-medio); color: var(--texto-sobre-vivo); }
 
 .pi-dash-stat-info {
   display: flex;
@@ -323,6 +386,11 @@
 .pi-dash-badge-pend {
   background-color: var(--ambar-aviso-suave);
   color: var(--ambar-aviso-texto);
+}
+
+.pi-dash-badge-salio {
+  background-color: var(--borde-suave);
+  color: var(--gris-medio);
 }
 
 /* --- PODIO (TOP 3) --- */
