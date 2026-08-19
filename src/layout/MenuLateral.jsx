@@ -31,8 +31,7 @@ const menuConfig = {
   ],
   Supervisor: [
     { titulo: 'Panel de Control', ruta: '/supervisor', icono: <FaChartPie /> },
-    { titulo: 'Gestión de Entrega', ruta: '/supervisor/entrega', icono: <FaLink /> },
-    { titulo: 'Auditoría', ruta: '/supervisor/auditoria', icono: <FaUsers /> }
+    { titulo: 'Gestión de Entrega', ruta: '/supervisor/entrega', icono: <FaLink /> }
   ],
   Devolución: [
     { titulo: 'Gestión Devoluciones', ruta: '/devolucion', icono: <FaBoxOpen /> },

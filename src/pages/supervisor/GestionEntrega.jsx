@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import {
-  FaMapMarkerAlt, FaSearch, FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes
+  FaMapMarkerAlt, FaSearch, FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
+  FaUsers, FaHourglassHalf
 } from 'react-icons/fa';
 import { leerEventos } from '../../data/eventosAdmin';
 import { leerEntradas, vincularCodigoQr } from '../../data/entradas';
@@ -35,6 +36,13 @@ export default function GestionEntrega() {
     const termino = busqueda.toLowerCase();
     return participantes.filter(p => p.nombre.toLowerCase().includes(termino));
   }, [participantes, busqueda]);
+
+  const stats = useMemo(() => {
+    const total = participantes.length;
+    const entregados = participantes.filter(p => p.codigoQrVinculado).length;
+    const faltan = total - entregados;
+    return { total, entregados, faltan };
+  }, [participantes]);
 
   const abrirVincular = (participante) => {
     setParticipanteVinculando(participante);
@@ -85,6 +93,30 @@ export default function GestionEntrega() {
           <div className="pi-entrega-header">
             <h2>{eventoDetalle.nombre}</h2>
             <p>Busca a un participante y vincula su código QR de entrega.</p>
+          </div>
+
+          <div className="pi-entrega-stats-grid">
+            <div className="pi-entrega-stat-card">
+              <div className="pi-entrega-stat-icon pi-entrega-icon-total"><FaUsers /></div>
+              <div className="pi-entrega-stat-info">
+                <span className="numero">{stats.total}</span>
+                <span className="label">Total Participantes</span>
+              </div>
+            </div>
+            <div className="pi-entrega-stat-card">
+              <div className="pi-entrega-stat-icon pi-entrega-icon-ok"><FaCheckCircle /></div>
+              <div className="pi-entrega-stat-info">
+                <span className="numero">{stats.entregados}</span>
+                <span className="label">Ya se Entregó</span>
+              </div>
+            </div>
+            <div className="pi-entrega-stat-card">
+              <div className="pi-entrega-stat-icon pi-entrega-icon-pend"><FaHourglassHalf /></div>
+              <div className="pi-entrega-stat-info">
+                <span className="numero">{stats.faltan}</span>
+                <span className="label">Falta Entregar</span>
+              </div>
+            </div>
           </div>
 
           <div className="pi-entrega-buscador">
