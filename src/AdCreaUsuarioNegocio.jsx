@@ -1,56 +1,13 @@
 import { useState } from 'react';
-import { 
-  FaStore, FaUserTie, FaEnvelope, FaLock, FaPlus, 
-  FaTrash, FaSearch, FaTimes, FaUserShield, FaUsersCog,
-  FaDollarSign
+import {
+  FaStore, FaUserTie, FaEnvelope, FaLock, FaPlus,
+  FaTrash, FaSearch, FaTimes, FaUserShield, FaUsersCog
 } from 'react-icons/fa';
+import { ROLES, leerUsuarios, guardarUsuarios } from './data/usuarios';
 import './AdCreaUsuarioNegocio.css';
 
-// Lista de roles permitidos
-const ROLES = ['Cliente', 'Recargador', 'Supervisor', 'Devolucion', 'UsuarioNormal', 'UsuarioNegocio'];
-
-// Datos con imágenes de pravatar según la guía
-const mockUsuarios = [
-  {
-    id: 1,
-    nombre: 'María Fernández',
-    email: 'maria@fiesta.com',
-    rol: 'UsuarioNegocio',
-    extraInfo: 'Pollos Doña María',
-    foto: 'https://i.pravatar.cc/300?img=45',
-    recaudado: 1250.50
-  },
-  {
-    id: 2,
-    nombre: 'Carlos Ruiz',
-    email: 'carlos.r@evento.com',
-    rol: 'Supervisor',
-    extraInfo: 'Turno Mañana',
-    foto: 'https://i.pravatar.cc/300?img=12',
-    recaudado: 0
-  },
-  {
-    id: 3,
-    nombre: 'Ana López',
-    email: 'ana.recarga@evento.com',
-    rol: 'Recargador',
-    extraInfo: 'Caja Principal 01',
-    foto: 'https://i.pravatar.cc/300?img=5',
-    recaudado: 0
-  },
-  {
-    id: 4,
-    nombre: 'Luis Gómez',
-    email: 'luis.cliente@correo.com',
-    rol: 'Cliente',
-    extraInfo: '',
-    foto: null,
-    recaudado: 0
-  }
-];
-
 export default function AdCreaUsuarioNegocio() {
-  const [usuarios, setUsuarios] = useState(mockUsuarios);
+  const [usuarios, setUsuarios] = useState(leerUsuarios);
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState(''); 
   const [filtroRol, setFiltroRol] = useState('Todos'); 
@@ -78,14 +35,18 @@ export default function AdCreaUsuarioNegocio() {
       recaudado: 0
     };
 
-    setUsuarios([nuevoUsuario, ...usuarios]);
+    const actualizados = [nuevoUsuario, ...usuarios];
+    setUsuarios(actualizados);
+    guardarUsuarios(actualizados);
     setFormData({ nombre: '', email: '', password: '', rol: 'UsuarioNegocio' });
-    setShowModal(false); 
+    setShowModal(false);
   };
 
   const eliminarUsuario = (id) => {
     if(window.confirm('¿Estás seguro de eliminar a este usuario del sistema?')) {
-      setUsuarios(usuarios.filter(u => u.id !== id));
+      const actualizados = usuarios.filter(u => u.id !== id);
+      setUsuarios(actualizados);
+      guardarUsuarios(actualizados);
     }
   };
 
@@ -98,9 +59,6 @@ export default function AdCreaUsuarioNegocio() {
     u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     u.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  // Total recaudado (KPI)
-  const totalGlobal = usuarios.reduce((total, u) => total + (u.recaudado || 0), 0);
 
   const getBadgeColor = (rol) => {
     switch(rol) {
@@ -125,13 +83,7 @@ export default function AdCreaUsuarioNegocio() {
         </div>
         
         {/* KPI Estilo QPass */}
-        <div className="pi-adnegocio-kpi">
-          <span className="micro-etiqueta">Recaudación Global Negocios</span>
-          <div className="kpi-valor">
-            <FaDollarSign className="kpi-icon" />
-            <span className="numero-grande">{totalGlobal.toFixed(2)}</span>
-          </div>
-        </div>
+
       </div>
 
       <div className="pi-adnegocio-action-bar">

@@ -866,6 +866,40 @@
   font-weight: 600;
 }
 
+/* Pestañas: Mi Propuesta / Dashboard General */
+.pi-cliente-tabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 24px;
+  overflow-x: auto;
+}
+
+.pi-cliente-tabs .tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gris-niebla);
+  border: none;
+  color: var(--texto-secundario);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.pi-cliente-tabs .tab-btn:hover {
+  background-color: var(--indigo-profundo-suave);
+  color: var(--indigo-profundo);
+}
+
+.pi-cliente-tabs .tab-btn.active {
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
+}
+
 @media (max-width: 768px) {
   .preview-container {
     flex-direction: column;
