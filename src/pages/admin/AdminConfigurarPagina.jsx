@@ -6,8 +6,8 @@ import {
   FaTicketAlt, FaChartLine, FaExchangeAlt, FaStore, FaQrcode,
   FaTimes, FaClock, FaCalendarAlt
 } from 'react-icons/fa';
-import { leerEventos } from './data/eventosAdmin';
-import { leerConfig, guardarConfig } from './data/landingConfig';
+import { leerEventos } from '../../data/eventosAdmin';
+import { leerConfig, guardarConfig } from '../../data/landingConfig';
 import './AdminConfigurarPagina.css';
 
 // Configuración por defecto (Estilo Dark / Glassmorphism)

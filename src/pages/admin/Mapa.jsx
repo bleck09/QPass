@@ -6,8 +6,8 @@ import {
   FaInfoCircle, FaImage, FaUpload, FaArrowsAltH, FaArrowsAltV,
   FaCalendarAlt
 } from 'react-icons/fa';
-import { leerEventos } from './data/eventosAdmin';
-import { leerPuestos, guardarPuestos } from './data/mapaPuestos';
+import { leerEventos } from '../../data/eventosAdmin';
+import { leerPuestos, guardarPuestos } from '../../data/mapaPuestos';
 import './Mapa.css';
 
 const puestosDeNegociosRegistrados = [

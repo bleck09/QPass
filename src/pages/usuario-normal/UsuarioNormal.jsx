@@ -7,8 +7,8 @@ import {
   FaSearch, FaTimes, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
-import CarruselEventos from './CarruselEventos.jsx';
-import { proximosEventos, eventosPasados } from './data/eventos.js';
+import CarruselEventos from '../../components/CarruselEventos.jsx';
+import { proximosEventos, eventosPasados } from '../../data/eventos.js';
 
 const MAX_ENTRADAS = 6;
 

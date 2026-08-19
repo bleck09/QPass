@@ -6,8 +6,8 @@ import {
   FaMapMarkerAlt,
 } from 'react-icons/fa';
 import './PaginaPrincipal.css';
-import CarruselEventos from './CarruselEventos.jsx';
-import { proximosEventos, eventosPasados } from './data/eventos.js';
+import CarruselEventos from '../../components/CarruselEventos.jsx';
+import { proximosEventos, eventosPasados } from '../../data/eventos.js';
 
 export default function PaginaPrincipal() {
   const navigate = useNavigate();

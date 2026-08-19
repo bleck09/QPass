@@ -5,9 +5,9 @@ import {
   FaListUl, FaClock, FaPlus, FaTrash, FaPaperPlane,
   FaUpload, FaTimes, FaEye, FaFileAlt, FaChartPie
 } from 'react-icons/fa';
-import Admin from './Admin.jsx';
-import { leerUsuarios } from './data/usuarios';
-import { leerAsignaciones } from './data/asignacionesEventos';
+import Admin from '../admin/Admin.jsx';
+import { leerUsuarios } from '../../data/usuarios';
+import { leerAsignaciones } from '../../data/asignacionesEventos';
 import './Cliente.css';
 
 export default function Cliente() {

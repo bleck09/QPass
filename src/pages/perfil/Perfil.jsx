@@ -4,7 +4,7 @@ import {
   FaCalendarAlt, FaIdBadge, FaPhone, FaMapMarkerAlt, FaUserEdit,
   FaIdCard, FaBirthdayCake, FaEdit, FaTimes, FaCheck, FaEnvelope, FaQuoteLeft, FaUser
 } from 'react-icons/fa';
-import { EVENTO_USUARIO_ACTUALIZADO } from './MenuLateral';
+import { EVENTO_USUARIO_ACTUALIZADO } from '../../layout/MenuLateral';
 import './Perfil.css';
 
 const leerUsuarioGuardado = () => {

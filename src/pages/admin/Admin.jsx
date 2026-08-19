@@ -6,7 +6,7 @@ import {
   FaArrowLeft, FaSearch, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
   FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt, FaMapMarkerAlt
 } from 'react-icons/fa';
-import { leerEventos } from './data/eventosAdmin';
+import { leerEventos } from '../../data/eventosAdmin';
 import './Admin.css';
 
 // --- INCIDENCIAS DE RECARGA INCOMPLETA (reportadas por Recargador vía localStorage) ---

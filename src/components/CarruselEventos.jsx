@@ -2,7 +2,7 @@ import { useState } from 'react';
 import {
   FaCalendarAlt, FaChevronLeft, FaChevronRight, FaMapMarkerAlt, FaExpandArrowsAlt
 } from 'react-icons/fa';
-import './PaginaPrincipal.css';
+import '../pages/publico/PaginaPrincipal.css';
 
 // Carrusel 3D de eventos reutilizado tanto en la home pública (PaginaPrincipal)
 // como en la pestaña "Eventos" del panel privado del Usuario Normal.

@@ -4,7 +4,7 @@ import {
   FaCalendarAlt, FaTicketAlt, FaPlus, FaTrash, FaTags, FaAlignLeft,
   FaBoxes, FaDollarSign, FaCoins
 } from 'react-icons/fa';
-import { leerEventos } from './data/eventosAdmin';
+import { leerEventos } from '../../data/eventosAdmin';
 import './AdminCrearTickets.css';
 
 // --- CATEGORÍAS DE TICKET YA CREADAS POR EVENTO (semilla) ---

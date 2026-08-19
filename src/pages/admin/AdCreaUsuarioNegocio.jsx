@@ -3,7 +3,7 @@ import {
   FaStore, FaUserTie, FaEnvelope, FaLock, FaPlus,
   FaTrash, FaSearch, FaTimes, FaUserShield, FaUsersCog
 } from 'react-icons/fa';
-import { ROLES, leerUsuarios, guardarUsuarios } from './data/usuarios';
+import { ROLES, leerUsuarios, guardarUsuarios } from '../../data/usuarios';
 import './AdCreaUsuarioNegocio.css';
 
 export default function AdCreaUsuarioNegocio() {

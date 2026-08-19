@@ -4,9 +4,9 @@ import {
   FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage
 } from 'react-icons/fa';
-import { leerEventos, crearEvento } from './data/eventosAdmin';
-import { leerUsuarios } from './data/usuarios';
-import { leerAsignaciones, asignarUsuario, quitarAsignacion, ROLES_ASIGNABLES } from './data/asignacionesEventos';
+import { leerEventos, crearEvento } from '../../data/eventosAdmin';
+import { leerUsuarios } from '../../data/usuarios';
+import { leerAsignaciones, asignarUsuario, quitarAsignacion, ROLES_ASIGNABLES } from '../../data/asignacionesEventos';
 import './AdminGestionEventos.css';
 
 const FORM_EVENTO_VACIO = { nombre: '', lugar: '', fecha: '', imagen: '' };
