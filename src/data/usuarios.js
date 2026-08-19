@@ -42,11 +42,22 @@ const USUARIOS_SEED = [
   }
 ];
 
-export const leerUsuarios = () => {
-  const guardado = localStorage.getItem(CLAVE_USUARIOS);
-  return guardado ? JSON.parse(guardado) : USUARIOS_SEED;
-};
-
 export const guardarUsuarios = (lista) => {
   localStorage.setItem(CLAVE_USUARIOS, JSON.stringify(lista));
+};
+
+// Se asegura de que el usuario Cliente de prueba (id 4) siga teniendo el email correcto
+// aunque el navegador ya tenga guardada una versión vieja de este catálogo.
+export const leerUsuarios = () => {
+  const guardado = localStorage.getItem(CLAVE_USUARIOS);
+  if (!guardado) return USUARIOS_SEED;
+
+  const lista = JSON.parse(guardado);
+  const clienteDemo = USUARIOS_SEED.find(u => u.id === 4);
+  const yaCorrecto = lista.some(u => u.id === clienteDemo.id && u.email === clienteDemo.email);
+  if (yaCorrecto) return lista;
+
+  const completa = [...lista.filter(u => u.id !== clienteDemo.id), clienteDemo];
+  guardarUsuarios(completa);
+  return completa;
 };
