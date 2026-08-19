@@ -7,7 +7,7 @@
 .pi-unegocio-header-wrapper {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   margin-bottom: 24px;
   flex-wrap: wrap;
   gap: 20px;
@@ -67,7 +67,27 @@
 
 /* Botones Superiores */
 .pi-unegocio-action-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+/* TABS */
+.pi-unegocio-tabs {
+  display: flex;
+  gap: 6px;
+  background-color: var(--gris-niebla);
+  padding: 4px;
+  border-radius: 10px;
+}
+.pi-unegocio-tabs button {
+  display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 9px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--texto-secundario); cursor: pointer; transition: all 0.2s;
+}
+.pi-unegocio-tabs button.activo {
+  background-color: var(--blanco); color: var(--indigo-profundo); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Botón Principal (14px, 700) */

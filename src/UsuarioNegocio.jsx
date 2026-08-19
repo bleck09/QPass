@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect} from 'react';
 import { 
   FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign, 
-  FaImage, FaListUl, FaUsers, FaBoxOpen, FaUpload, FaUserTie, FaHamburger
+  FaImage, FaListUl, FaUsers, FaBoxOpen, FaUpload, FaUserTie, FaHamburger,
+  FaUserFriends 
 } from 'react-icons/fa';
 import './UsuarioNegocio.css';
+import UsuNegoCreaAyudante from './UsuNegoCreaAyudante'; 
 
 // Datos de prueba con imágenes de productos incluidas
 const mockPuestos = [
@@ -26,25 +28,48 @@ const mockPuestos = [
         imagen: null // Producto sin foto
       }
     ],
-    ayudantes: [
-      { id: 201, nombre: 'Pedro Gómez', email: 'pedro@ayudante.com', turno: 'Noche' }
-    ]
+    ayudantes: [] // This will be dynamically populated based on allAyudantes
   }
 ];
 
+// Global list of all ayudantes
+const mockAllAyudantes = [
+  { id: 201, nombre: 'Pedro Gómez', email: 'pedro@ayudante.com', turno: 'Noche', foto: null, puestosAsignados: ['Pizzas El Paso'] },
+  { id: 202, nombre: 'Ana Martínez', email: 'ana@ayudante.com', turno: 'Día', foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80', puestosAsignados: [] },
+  { id: 203, nombre: 'Juan Pérez', email: 'juan@ayudante.com', turno: 'Tarde', foto: null, puestosAsignados: [] },
+  { id: 204, nombre: 'Sofía Rojas', email: 'sofia@ayudante.com', turno: 'Día', foto: null, puestosAsignados: ['Pizzas El Paso'] },
+];
+
+const initialStateFormPuesto = { nombre: '', descripcion: '', logo: '' };
+const initialStateFormProducto = { nombre: '', precio: '', imagen: '' };
+const initialStateFormAyudante = { id: null, nombre: '', email: '', turno: 'Día', foto: '', puestosAsignados: [] };
+
+// ¡CORRECCIÓN 1! Se cambió el ]; final por };
+const syncPuestoAyudantes = (currentPuestos, currentAllAyudantes) => {
+  return currentPuestos.map(puesto => ({
+    ...puesto,
+    ayudantes: currentAllAyudantes.filter(ayu => ayu.puestosAsignados.includes(puesto.nombre))
+  }));
+};
+
 export default function UsuarioNegocio() {
   const [puestos, setPuestos] = useState(mockPuestos);
+  const [activeTab, setActiveTab] = useState('puestos'); // 'puestos' o 'ayudantes'
   
+  const [allAyudantes, setAllAyudantes] = useState(mockAllAyudantes); // Master list of all ayudantes
   const [showModalPuesto, setShowModalPuesto] = useState(false);
   const [showModalCatalogo, setShowModalCatalogo] = useState(false);
-  const [showModalAyudantes, setShowModalAyudantes] = useState(false);
-  
+  const [showModalAyudantesPuesto, setShowModalAyudantesPuesto] = useState(false); // New modal for managing ayudantes per puesto
   const [puestoSeleccionado, setPuestoSeleccionado] = useState(null);
 
   // Estados de los formularios
-  const [formPuesto, setFormPuesto] = useState({ nombre: '', descripcion: '', logo: '' });
-  // NUEVO: Agregamos el campo "imagen" al formulario del producto
-  const [formProducto, setFormProducto] = useState({ nombre: '', precio: '', imagen: '' });
+  const [formPuesto, setFormPuesto] = useState(initialStateFormPuesto);
+  const [formProducto, setFormProducto] = useState(initialStateFormProducto);
+
+  // Sincronizar los ayudantes de cada puesto cuando allAyudantes o puestos cambian
+  useEffect(() => {
+    setPuestos(prevPuestos => syncPuestoAyudantes(prevPuestos, allAyudantes));
+  }, [allAyudantes]);
 
   // --- LÓGICA DE PUESTOS ---
   const handlePuestoChange = (e) => {
@@ -72,17 +97,11 @@ export default function UsuarioNegocio() {
       descripcion: formPuesto.descripcion,
       logo: formPuesto.logo || null,
       productos: [],
-      ayudantes: []
+      ayudantes: [] 
     };
     setPuestos([...puestos, nuevo]);
     setFormPuesto({ nombre: '', descripcion: '', logo: '' });
     setShowModalPuesto(false);
-  };
-
-  const eliminarPuesto = (id) => {
-    if(window.confirm('¿Eliminar este puesto, su catálogo y desvincular ayudantes?')) {
-      setPuestos(puestos.filter(p => p.id !== id));
-    }
   };
 
   // --- LÓGICA DE CATÁLOGO Y PRODUCTOS ---
@@ -91,11 +110,16 @@ export default function UsuarioNegocio() {
     setShowModalCatalogo(true);
   };
 
+  // ¡CORRECCIÓN 2! Agregamos la función para abrir el modal de ayudantes
+  const abrirModalAyudantesPuesto = (puesto) => {
+    setPuestoSeleccionado(puesto);
+    setShowModalAyudantesPuesto(true);
+  };
+
   const handleProductoChange = (e) => {
     setFormProducto({ ...formProducto, [e.target.name]: e.target.value });
   };
 
-  // Subir imagen específica para el producto
   const handleProductoImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -132,7 +156,6 @@ export default function UsuarioNegocio() {
       ...puestoSeleccionado, 
       productos: [...puestoSeleccionado.productos, nuevoProducto] 
     });
-    // Limpiamos el formulario incluyendo la imagen
     setFormProducto({ nombre: '', precio: '', imagen: '' });
   };
 
@@ -151,36 +174,18 @@ export default function UsuarioNegocio() {
     });
   };
 
-  // --- LÓGICA DE AYUDANTES ---
-  const abrirAyudantes = (puesto) => {
-    setPuestoSeleccionado(puesto);
-    setShowModalAyudantes(true);
-  };
-
-  const removerAyudante = (idAyudante) => {
-    if(window.confirm('¿Desvincular este ayudante de este puesto?')) {
-      const puestosActualizados = puestos.map(p => {
-        if (p.id === puestoSeleccionado.id) {
-          return { ...p, ayudantes: p.ayudantes.filter(ayu => ayu.id !== idAyudante) };
-        }
-        return p;
-      });
-      setPuestos(puestosActualizados);
-      setPuestoSeleccionado({ 
-        ...puestoSeleccionado, 
-        ayudantes: puestoSeleccionado.ayudantes.filter(ayu => ayu.id !== idAyudante) 
-      });
-    }
-  };
-
   return (
     <div className="pi-unegocio-container">
       
       {/* Cabecera y KPI */}
       <div className="pi-unegocio-header-wrapper">
         <div className="pi-unegocio-header">
-          <h2>Mis Puestos de Negocio</h2>
-          <p>Crea sucursales, administra sus menús y revisa su personal asignado.</p>
+          <h2>Panel de Negocio</h2>
+          <p>
+            {activeTab === 'puestos' 
+              ? 'Crea sucursales, administra sus menús y revisa su personal asignado.'
+              : 'Gestiona a todo el personal que trabaja en tus puestos.'}
+          </p>
         </div>
         
         <div className="pi-unegocio-kpi">
@@ -193,12 +198,24 @@ export default function UsuarioNegocio() {
       </div>
 
       <div className="pi-unegocio-action-bar">
-        <button className="btn-primario" onClick={() => setShowModalPuesto(true)}>
-          <FaPlus /> Crear Nuevo Puesto
-        </button>
+        {/* TABS para cambiar entre Puestos y Ayudantes */}
+        <div className="pi-unegocio-tabs">
+          <button className={activeTab === 'puestos' ? 'activo' : ''} onClick={() => setActiveTab('puestos')}>
+            <FaStore /> Mis Puestos
+          </button>
+          <button className={activeTab === 'ayudantes' ? 'activo' : ''} onClick={() => setActiveTab('ayudantes')}>
+            <FaUserFriends /> Mis Ayudantes
+          </button>
+        </div>
+
+        {activeTab === 'puestos' && (
+          <button className="btn-primario" onClick={() => setShowModalPuesto(true)}>
+            <FaPlus /> Crear Nuevo Puesto
+          </button>
+        )}
       </div>
 
-      {/* Tabla Principal de Puestos */}
+      {activeTab === 'puestos' && (
       <div className="pi-unegocio-card">
         <div className="pi-unegocio-table-wrapper">
           <table className="pi-unegocio-table">
@@ -207,7 +224,6 @@ export default function UsuarioNegocio() {
                 <th>Detalles del Puesto</th>
                 <th>Catálogo</th>
                 <th style={{ textAlign: 'center' }}>Ayudantes</th>
-                <th style={{ textAlign: 'center' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -237,15 +253,10 @@ export default function UsuarioNegocio() {
                   <td style={{ textAlign: 'center' }}>
                     <div className="info-catalogo" style={{ alignItems: 'center' }}>
                       <span className="badge-ayudantes">{puesto.ayudantes.length} Asignados</span>
-                      <button className="btn-secundario-sm" onClick={() => abrirAyudantes(puesto)}>
+                      <button className="btn-secundario-sm" onClick={() => abrirModalAyudantesPuesto(puesto)}>
                         <FaUsers /> Ver Equipo
                       </button>
                     </div>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button className="btn-eliminar" onClick={() => eliminarPuesto(puesto.id)}>
-                      <FaTrash />
-                    </button>
                   </td>
                 </tr>
               ))}
@@ -260,6 +271,11 @@ export default function UsuarioNegocio() {
           </table>
         </div>
       </div>
+      )}
+
+      {activeTab === 'ayudantes' && (
+        <UsuNegoCreaAyudante allAyudantes={allAyudantes} setAllAyudantes={setAllAyudantes} puestos={puestos} />
+      )}
 
       {/* =========================================
           MODAL 1: CREAR NUEVO PUESTO
@@ -325,7 +341,6 @@ export default function UsuarioNegocio() {
 
             <div className="modal-body bg-gris">
               
-              {/* Formulario estructurado para añadir producto + foto */}
               <div className="form-añadir-producto">
                 <h3 className="titulo-seccion-pequeño">Añadir Nuevo Producto</h3>
                 <form onSubmit={agregarProducto}>
@@ -379,7 +394,6 @@ export default function UsuarioNegocio() {
                 </form>
               </div>
 
-              {/* Tabla de Productos del Puesto */}
               <div className="pi-unegocio-card no-margin">
                 <div className="pi-unegocio-table-wrapper">
                   <table className="pi-unegocio-table">
@@ -429,55 +443,67 @@ export default function UsuarioNegocio() {
       )}
 
       {/* =========================================
-          MODAL 3: VER AYUDANTES ASIGNADOS
+          MODAL 3: VER EQUIPO (AYUDANTES ASIGNADOS) ¡NUEVO!
       ========================================= */}
-      {showModalAyudantes && puestoSeleccionado && (
+      {showModalAyudantesPuesto && puestoSeleccionado && (
         <div className="modal-overlay">
           <div className="modal">
             <div className="modal-header">
               <h2><FaUsers color="var(--indigo-profundo)" /> Equipo: {puestoSeleccionado.nombre}</h2>
-              <button className="btn-close-modal" onClick={() => setShowModalAyudantes(false)}><FaTimes /></button>
+              <button className="btn-close-modal" onClick={() => setShowModalAyudantesPuesto(false)}>
+                <FaTimes />
+              </button>
             </div>
+            
             <div className="modal-body bg-gris">
-              <p className="texto-ayuda" style={{marginBottom: '15px'}}>
-                Estos son los ayudantes que están operando en este puesto. Para crear nuevos ayudantes, ve a la sección "Ayudantes".
-              </p>
               <div className="pi-unegocio-card no-margin">
                 <div className="pi-unegocio-table-wrapper">
                   <table className="pi-unegocio-table">
                     <thead>
                       <tr>
-                        <th>Ayudante</th>
-                        <th style={{ textAlign: 'center' }}>Remover</th>
+                        <th>Nombre del Ayudante</th>
+                        <th>Turno</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {puestoSeleccionado.ayudantes.map(ayu => (
-                        <tr key={ayu.id}>
+                      {puestoSeleccionado.ayudantes.map(ayudante => (
+                        <tr key={ayudante.id}>
                           <td>
                             <div className="item-info">
-                              <div className="item-no-img" style={{width: '35px', height: '35px', fontSize: '14px'}}>
-                                <FaUserTie />
-                              </div>
+                              {ayudante.foto ? (
+                                <img src={ayudante.foto} alt="Ayudante" className="item-img" style={{borderRadius: '50%', width: '40px', height: '40px'}} />
+                              ) : (
+                                <div className="item-no-img" style={{borderRadius: '50%', width: '40px', height: '40px'}}><FaUserTie /></div>
+                              )}
                               <div>
-                                <div className="fila-nombre">{ayu.nombre}</div>
-                                <div className="celda-secundaria">{ayu.email}</div>
+                                <div className="fila-nombre">{ayudante.nombre}</div>
+                                <div className="celda-secundaria">{ayudante.email}</div>
                               </div>
                             </div>
                           </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <button className="btn-eliminar" onClick={() => removerAyudante(ayu.id)} title="Desvincular del puesto">
-                              <FaTimes />
-                            </button>
+                          <td>
+                            <span className="badge-info">{ayudante.turno}</span>
                           </td>
                         </tr>
                       ))}
                       {puestoSeleccionado.ayudantes.length === 0 && (
-                        <tr><td colSpan="2" className="tabla-vacia">No hay ayudantes asignados a este puesto.</td></tr>
+                        <tr>
+                          <td colSpan="2" className="tabla-vacia">
+                            Aún no hay ayudantes asignados a esta sucursal.
+                          </td>
+                        </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
+              </div>
+              <div className="modal-actions" style={{ marginTop: '1rem' }}>
+                <button type="button" className="btn-primario" onClick={() => {
+                  setShowModalAyudantesPuesto(false);
+                  setActiveTab('ayudantes');
+                }}>
+                  Ir a Mis Ayudantes
+                </button>
               </div>
             </div>
           </div>
