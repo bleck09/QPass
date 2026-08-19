@@ -7,6 +7,7 @@ import {
   FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt, FaMapMarkerAlt
 } from 'react-icons/fa';
 import { leerEventos } from '../../data/eventosAdmin';
+import { leerEntradas } from '../../data/entradas';
 import './Admin.css';
 
 // --- INCIDENCIAS DE RECARGA INCOMPLETA (reportadas por Recargador vía localStorage) ---
@@ -47,26 +48,13 @@ const ETIQUETA_CAMPO_ENTRADA = { nombre: 'Nombre completo', correo: 'Correo elec
 const ETIQUETA_CATEGORIA = { general: 'General', vip: 'VIP' };
 
 // --- DATOS SIMULADOS DE ACTIVIDAD POR EVENTO ---
-// (los eventos en sí ahora viven en data/eventosAdmin.js; esto sigue siendo mock local
-// porque ninguna otra pantalla necesita esta actividad, solo el Dashboard General)
-const EVENTO_ACTIVIDAD_VACIA = { entradas: [], negocios: [], recargadores: [], devoluciones: [], supervisores: [] };
+// (los eventos en sí viven en data/eventosAdmin.js, y los participantes/entradas en
+// data/entradas.js —también los usa Gestión de Entrega de Supervisor—; esto sigue
+// siendo mock local porque ninguna otra pantalla necesita negocios/recargadores/etc.)
+const EVENTO_ACTIVIDAD_VACIA = { negocios: [], recargadores: [], devoluciones: [], supervisores: [] };
 
 const datosPorEvento = {
   ev1: {
-    entradas: [
-      { id: 1, nombre: 'María Fernanda Rojas', documento: '7451236 LP', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=47', estado: 'ingresado', horaIngreso: '08:12' },
-      { id: 2, nombre: 'Jorge Luis Quispe', documento: '6621345 SC', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=12', estado: 'ingresado', horaIngreso: '08:20' },
-      { id: 3, nombre: 'Ana Belén Castro', documento: '5589214 CB', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=32', estado: 'salio', horaIngreso: '08:35', horaSalida: '13:20' },
-      { id: 4, nombre: 'Ricardo Alanoca Mamani', documento: '4471258 LP', tipoEntrada: 'Staff', foto: 'https://i.pravatar.cc/300?img=51', estado: 'salio', horaIngreso: '08:41', horaSalida: '14:05' },
-      { id: 5, nombre: 'Daniela Vargas Soto', documento: '7789456 SC', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=25', estado: 'ingresado', horaIngreso: '09:02' },
-      { id: 6, nombre: 'Sergio Fabián Choque', documento: '3312589 OR', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=15', estado: 'pendiente', horaIngreso: null },
-      { id: 7, nombre: 'Paola Andrea Terrazas', documento: '6654123 CB', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=45', estado: 'pendiente', horaIngreso: null },
-      { id: 8, nombre: 'Luis Fernando Mamani', documento: '5521478 LP', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=13', estado: 'pendiente', horaIngreso: null },
-      { id: 9, nombre: 'Carla Ximena Flores', documento: '4498712 SC', tipoEntrada: 'Staff', foto: 'https://i.pravatar.cc/300?img=44', estado: 'pendiente', horaIngreso: null },
-      { id: 10, nombre: 'Diego Armando Peñaranda', documento: '7712365 TJ', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=59', estado: 'pendiente', horaIngreso: null },
-      { id: 11, nombre: 'Valeria Nicole Guzmán', documento: '3387654 LP', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=48', estado: 'pendiente', horaIngreso: null },
-      { id: 12, nombre: 'Marco Antonio Villca', documento: '6698741 CB', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=14', estado: 'pendiente', horaIngreso: null },
-    ],
     negocios: [
       {
         id: 1, nombre: 'Restaurante El Fogón', ayudantes: 3,
@@ -164,12 +152,6 @@ const datosPorEvento = {
     ],
   },
   ev2: {
-    entradas: [
-      { id: 1, nombre: 'Pedro Callisaya', documento: '2214563 LP', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=33', estado: 'ingresado', horaIngreso: '10:05' },
-      { id: 2, nombre: 'Rosa Elena Mamani', documento: '3321654 LP', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=29', estado: 'salio', horaIngreso: '10:22', horaSalida: '12:40' },
-      { id: 3, nombre: 'Freddy Choque Apaza', documento: '4478912 LP', tipoEntrada: 'VIP', foto: 'https://i.pravatar.cc/300?img=17', estado: 'pendiente', horaIngreso: null },
-      { id: 4, nombre: 'Ximena Torrez', documento: '5589431 LP', tipoEntrada: 'General', foto: 'https://i.pravatar.cc/300?img=38', estado: 'pendiente', horaIngreso: null },
-    ],
     negocios: [
       {
         id: 1, nombre: 'Anticuchos Doña Julia', ayudantes: 1,
@@ -363,7 +345,10 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     cancelarCorreccion();
   };
 
-  const datos = datosPorEvento[eventoId] || EVENTO_ACTIVIDAD_VACIA;
+  const datos = useMemo(() => ({
+    ...(datosPorEvento[eventoId] || EVENTO_ACTIVIDAD_VACIA),
+    entradas: leerEntradas(eventoId),
+  }), [eventoId]);
   const eventoActual = eventosDisponibles.find(ev => ev.id === eventoId);
 
   const statsEntradas = useMemo(() => {
@@ -540,7 +525,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                 <div className="pi-dash-evento-info">
                   <strong>{ev.nombre}</strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {ev.fecha}</span>
-                  <span className="pi-dash-evento-detalle"><FaTicketAlt /> {datosPorEvento[ev.id]?.entradas.length ?? 0} entradas</span>
+                  <span className="pi-dash-evento-detalle"><FaTicketAlt /> {leerEntradas(ev.id).length} entradas</span>
                 </div>
               </button>
             ))}

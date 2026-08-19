@@ -15,11 +15,13 @@ import AdminConfigurarPagina from './pages/admin/AdminConfigurarPagina.jsx'
 import UsuNegoDasboar from './pages/usuario-negocio/UsuNegoDasboar.jsx'
 import AdCreaUsuarioNegocio from './pages/admin/AdCreaUsuarioNegocio.jsx'
 import AdminCrearTickets from './pages/admin/AdminCrearTickets.jsx'
+import AdminCrearQr from './pages/admin/AdminCrearQr.jsx'
 import Mapa from './pages/admin/Mapa.jsx'
 
 import Cliente from './pages/cliente/Cliente.jsx'
 import Recargador from './pages/recargador/Recargador.jsx'
 import Supervisor from './pages/supervisor/Supervisor.jsx'
+import GestionEntrega from './pages/supervisor/GestionEntrega.jsx'
 import Devolucion from './pages/devolucion/Devolucion.jsx'
 import UsuarioNormal from './pages/usuario-normal/UsuarioNormal.jsx'
 import UsuarioNegocio from './pages/usuario-negocio/UsuarioNegocio.jsx'
@@ -64,6 +66,10 @@ const router = createBrowserRouter([
     element: <MenuLateral><AdminCrearTickets /></MenuLateral>,
   },
   {
+    path: "/admin/qr",
+    element: <MenuLateral><AdminCrearQr /></MenuLateral>,
+  },
+  {
     path: "/recargador",
     element: <MenuLateral><Recargador /></MenuLateral>,
   },
@@ -90,6 +96,10 @@ const router = createBrowserRouter([
   {
     path: "/supervisor",
     element: <MenuLateral><Supervisor /></MenuLateral>,
+  },
+  {
+    path: "/supervisor/entrega",
+    element: <MenuLateral><GestionEntrega /></MenuLateral>,
   },
   {
     path: "/devolucion",

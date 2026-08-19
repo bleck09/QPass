@@ -1,0 +1,269 @@
+/* Prefix único: pi-adqr- */
+.pi-adqr-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pi-adqr-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.pi-adqr-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--texto-principal);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.pi-adqr-header p {
+  color: var(--texto-secundario);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.pi-adqr-selector-evento {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: var(--indigo-profundo);
+  font-weight: 600;
+}
+
+.pi-adqr-selector-evento select {
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  background: none;
+}
+
+/* --- KPI --- */
+.pi-adqr-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.pi-adqr-kpi-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-adqr-kpi-card .numero {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.pi-adqr-kpi-card .label {
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+/* --- TARJETAS --- */
+.pi-adqr-card {
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+.pi-adqr-subtitulo {
+  font-size: 16px;
+  color: var(--texto-principal);
+}
+
+.pi-adqr-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.pi-adqr-acciones-lista {
+  display: flex;
+  gap: 10px;
+}
+
+/* --- FORMULARIO --- */
+.pi-adqr-form {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pi-adqr-input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  margin-bottom: 6px;
+}
+
+.pi-adqr-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pi-adqr-input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--gris-medio);
+  font-size: 14px;
+}
+
+.pi-adqr-input-wrapper input {
+  width: 200px;
+  padding: 10px 10px 10px 38px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--texto-principal);
+  transition: border-color 0.2s;
+}
+
+.pi-adqr-input-wrapper input:focus {
+  border-color: var(--cian-digital);
+}
+
+.pi-adqr-btn-add {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--indigo-profundo);
+  color: var(--blanco);
+  border: none;
+  padding: 11px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pi-adqr-btn-add:hover {
+  background-color: var(--indigo-profundo-hover);
+}
+
+.pi-adqr-btn-imprimir {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--verde-recarga);
+  color: var(--texto-sobre-vivo);
+  border: none;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pi-adqr-btn-imprimir:hover {
+  background-color: var(--verde-recarga-hover);
+}
+
+.pi-adqr-btn-vaciar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+  border: none;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.pi-adqr-btn-vaciar:hover {
+  background-color: var(--rojo-error);
+  color: var(--blanco);
+}
+
+.pi-adqr-empty {
+  text-align: center;
+  padding: 30px !important;
+  color: var(--texto-secundario);
+}
+
+/* --- GRILLA DE QR --- */
+.pi-adqr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 16px;
+}
+
+.pi-adqr-tarjeta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--borde-suave);
+  border-radius: 10px;
+  background: var(--gris-niebla);
+}
+
+.pi-adqr-tarjeta img {
+  width: 100%;
+  max-width: 150px;
+  height: auto;
+  border-radius: 6px;
+  background: var(--blanco);
+}
+
+.pi-adqr-codigo {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--texto-principal);
+  text-align: center;
+  word-break: break-all;
+}
+
+/* --- IMPRESIÓN (Descargar PDF usa el diálogo de impresión del navegador) --- */
+@media print {
+  .no-imprimir {
+    display: none !important;
+  }
+
+  .pi-adqr-card {
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .pi-adqr-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .pi-adqr-tarjeta {
+    break-inside: avoid;
+    background: var(--blanco);
+  }
+}

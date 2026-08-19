@@ -278,3 +278,15 @@
   .pi-layout-content { padding: 15px; }
   .pi-layout-header { padding: 0 15px; height: 60px; }
 }
+
+/* =======================================================
+   IMPRESIÓN (ej. "Descargar PDF" de Generar Códigos QR)
+   Oculta el chrome del panel y deja fluir el contenido en hojas normales.
+======================================================= */
+@media print {
+  .pi-layout-contenedor { height: auto; width: auto; overflow: visible; background: none; }
+  .pi-layout-sidebar, .pi-layout-header { display: none; }
+  .pi-layout-main-wrapper { padding: 0; background: none; }
+  .pi-layout-main { border-radius: 0; box-shadow: none; overflow: visible; background: none; }
+  .pi-layout-content { padding: 0; overflow: visible; }
+}

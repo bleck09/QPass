@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   FaChartPie, FaUsers, FaCog, FaSignOutAlt, FaUserCircle,
   FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet,
-  FaExclamationTriangle, FaBars, FaMapMarkedAlt, FaCalendarAlt
+  FaExclamationTriangle, FaBars, FaMapMarkedAlt, FaCalendarAlt, FaQrcode, FaLink
 } from 'react-icons/fa';
 import { MdAccountBalance, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'react-icons/md';
 import './MenuLateral.css';
@@ -15,6 +15,7 @@ const menuConfig = {
     { titulo: 'Gestión de Eventos', ruta: '/admin/eventos', icono: <FaCalendarAlt /> },
     { titulo: 'Usuario de Negocio', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
     { titulo: 'Tickets del Evento', ruta: '/AdminCrearTickets', icono: <FaFileInvoiceDollar /> },
+    { titulo: 'Generar QR', ruta: '/admin/qr', icono: <FaQrcode /> },
     { titulo: 'Reportes', ruta: '/admin/reportes', icono: <FaExclamationTriangle /> },
     { titulo: 'Configurar Página', ruta: '/admin/config', icono: <FaCog /> },
     { titulo: 'Mapa', ruta: '/Mapa', icono: <FaMapMarkedAlt /> } 
@@ -30,6 +31,7 @@ const menuConfig = {
   ],
   Supervisor: [
     { titulo: 'Panel de Control', ruta: '/supervisor', icono: <FaChartPie /> },
+    { titulo: 'Gestión de Entrega', ruta: '/supervisor/entrega', icono: <FaLink /> },
     { titulo: 'Auditoría', ruta: '/supervisor/auditoria', icono: <FaUsers /> }
   ],
   Devolución: [

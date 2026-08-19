@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
-  FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage
+  FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode
 } from 'react-icons/fa';
 import { leerEventos, crearEvento } from '../../data/eventosAdmin';
 import { leerUsuarios } from '../../data/usuarios';
@@ -90,6 +90,9 @@ export default function AdminGestionEventos() {
           <div className="pi-ges-accesos-rapidos">
             <button onClick={() => navigate('/AdminCrearTickets', { state: { eventoId: eventoDetalle.id } })}>
               <FaTicketAlt /> Tickets del Evento
+            </button>
+            <button onClick={() => navigate('/admin/qr', { state: { eventoId: eventoDetalle.id } })}>
+              <FaQrcode /> Generar QR
             </button>
             <button onClick={() => navigate('/admin/config', { state: { eventoId: eventoDetalle.id } })}>
               <FaCog /> Configurar Página
