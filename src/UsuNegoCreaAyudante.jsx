@@ -1,7 +1,8 @@
 import { useState, useMemo } from 'react';
 import {
   FaPlus, FaTrash, FaTimes, FaImage, FaUsers, FaUpload, FaCheckSquare,
-  FaUserTie, FaEnvelope, FaClock, FaSearch, FaEdit, FaSave, FaSquare, FaStore
+  FaUserTie, FaEnvelope, FaClock, FaSearch, FaEdit, FaSave, FaSquare, FaStore,
+  FaMapMarkerAlt
 } from 'react-icons/fa';
 import './UsuNegoCreaAyudante.css';
 
@@ -11,8 +12,27 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
   const [showModal, setShowModal] = useState(false);
   const [formAyudante, setFormAyudante] = useState(initialStateForm);
   const [busqueda, setBusqueda] = useState('');
+  const [ayudanteAsignandoId, setAyudanteAsignandoId] = useState(null);
 
   const isEditing = formAyudante.id !== null;
+
+  const ayudanteAsignando = allAyudantes.find(a => a.id === ayudanteAsignandoId) || null;
+
+  const abrirAsignarPuestos = (ayudante) => setAyudanteAsignandoId(ayudante.id);
+  const cerrarAsignarPuestos = () => setAyudanteAsignandoId(null);
+
+  const toggleAsignacionRapida = (puestoNombre) => {
+    setAllAyudantes(allAyudantes.map(a => {
+      if (a.id !== ayudanteAsignandoId) return a;
+      const tiene = a.puestosAsignados.includes(puestoNombre);
+      return {
+        ...a,
+        puestosAsignados: tiene
+          ? a.puestosAsignados.filter(p => p !== puestoNombre)
+          : [...a.puestosAsignados, puestoNombre]
+      };
+    }));
+  };
 
   const handleFormChange = (e) => {
     setFormAyudante({ ...formAyudante, [e.target.name]: e.target.value });
@@ -158,6 +178,9 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
                   </td>
                   <td>
                     <div className="action-buttons">
+                      <button className="btn-asignar" onClick={() => abrirAsignarPuestos(ayudante)} title="Asignar Puestos">
+                        <FaMapMarkerAlt />
+                      </button>
                       <button className="btn-editar" onClick={() => abrirModalParaEditar(ayudante)} title="Editar Ayudante">
                         <FaEdit />
                       </button>
@@ -252,6 +275,47 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL RÁPIDO: ASIGNAR PUESTOS */}
+      {ayudanteAsignando && (
+        <div className="pi-usr-modal-overlay" onClick={cerrarAsignarPuestos}>
+          <div className="pi-usr-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="pi-usr-modal-header">
+              <h3>
+                <FaMapMarkerAlt color="var(--indigo-profundo)" />
+                Asignar Puestos: {ayudanteAsignando.nombre}
+              </h3>
+              <button className="pi-usr-btn-cerrar-modal" onClick={cerrarAsignarPuestos}>
+                <FaTimes />
+              </button>
+            </div>
+            <div className="pi-usr-modal-body">
+              <p className="pi-ayudante-nota">
+                Marca en qué puestos puede trabajar. Los cambios se guardan al instante.
+              </p>
+              <div className="checkbox-grid">
+                {puestos.map(puesto => (
+                  <label key={puesto.id} className="checkbox-item">
+                    <input
+                      type="checkbox"
+                      checked={ayudanteAsignando.puestosAsignados.includes(puesto.nombre)}
+                      onChange={() => toggleAsignacionRapida(puesto.nombre)}
+                    />
+                    {ayudanteAsignando.puestosAsignados.includes(puesto.nombre) ? <FaCheckSquare /> : <FaSquare />}
+                    {puesto.nombre}
+                  </label>
+                ))}
+                {puestos.length === 0 && (
+                  <p className="tabla-vacia">Aún no has creado puestos.</p>
+                )}
+              </div>
+              <div className="pi-usr-modal-acciones">
+                <button type="button" className="pi-usr-btn-enviar" onClick={cerrarAsignarPuestos}>Listo</button>
+              </div>
             </div>
           </div>
         </div>

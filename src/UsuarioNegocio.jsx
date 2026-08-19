@@ -1,11 +1,12 @@
 import { useState, useEffect} from 'react';
-import { 
-  FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign, 
+import { useLocation } from 'react-router-dom';
+import {
+  FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign,
   FaImage, FaListUl, FaUsers, FaBoxOpen, FaUpload, FaUserTie, FaHamburger,
-  FaUserFriends 
+  FaUserFriends
 } from 'react-icons/fa';
 import './UsuarioNegocio.css';
-import UsuNegoCreaAyudante from './UsuNegoCreaAyudante'; 
+import UsuNegoCreaAyudante from './UsuNegoCreaAyudante';
 
 // Datos de prueba con imágenes de productos incluidas
 const mockPuestos = [
@@ -53,9 +54,21 @@ const syncPuestoAyudantes = (currentPuestos, currentAllAyudantes) => {
 };
 
 export default function UsuarioNegocio() {
+  const location = useLocation();
+  // /usuarionegocio/ayudantes entra directo a la pestaña "Mis Ayudantes" (accesible también
+  // desde el menú lateral como "Crear ayudante").
   const [puestos, setPuestos] = useState(mockPuestos);
-  const [activeTab, setActiveTab] = useState('puestos'); // 'puestos' o 'ayudantes'
-  
+  const [activeTab, setActiveTab] = useState(location.pathname.endsWith('/ayudantes') ? 'ayudantes' : 'puestos'); // 'puestos' o 'ayudantes'
+
+  // Si se navega entre /usuarionegocio y /usuarionegocio/ayudantes sin que el componente
+  // se vuelva a montar, esto ajusta la pestaña para que siga reflejando la URL actual
+  // (ajuste durante el render, no en un efecto, para no disparar un render extra).
+  const [ultimaRutaSincronizada, setUltimaRutaSincronizada] = useState(location.pathname);
+  if (location.pathname !== ultimaRutaSincronizada) {
+    setUltimaRutaSincronizada(location.pathname);
+    setActiveTab(location.pathname.endsWith('/ayudantes') ? 'ayudantes' : 'puestos');
+  }
+
   const [allAyudantes, setAllAyudantes] = useState(mockAllAyudantes); // Master list of all ayudantes
   const [showModalPuesto, setShowModalPuesto] = useState(false);
   const [showModalCatalogo, setShowModalCatalogo] = useState(false);

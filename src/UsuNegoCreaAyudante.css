@@ -42,6 +42,8 @@
 .badge-sin-puesto { background-color: var(--gris-niebla); color: var(--gris-medio); padding: 4px 10px; border-radius: 6px; font-size: 11px; font-style: italic; }
 
 .action-buttons { display: flex; justify-content: center; gap: 8px; }
+.btn-asignar { background-color: var(--blanco); color: var(--indigo-profundo); border: 1px solid var(--borde-medio); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; transition: all 0.2s; }
+.btn-asignar:hover { background-color: var(--indigo-profundo); color: var(--blanco); border-color: var(--indigo-profundo); }
 .btn-editar { background-color: var(--blanco); color: var(--cian-digital); border: 1px solid var(--borde-medio); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; transition: all 0.2s; }
 .btn-editar:hover { background-color: var(--cian-digital); color: var(--blanco); border-color: var(--cian-digital); }
 .btn-eliminar { background-color: var(--blanco); color: var(--rojo-error); border: 1px solid var(--borde-medio); width: 32px; height: 32px; border-radius: 8px; cursor: pointer; display: inline-flex; justify-content: center; align-items: center; transition: all 0.2s; }
@@ -84,6 +86,7 @@
 .pi-usr-btn-cerrar-modal:hover { color: var(--rojo-error); background-color: var(--rojo-error-suave); }
 
 .pi-usr-modal-body { padding: 20px 24px 24px; display: flex; flex-direction: column; gap: 16px; }
+.pi-ayudante-nota { font-size: 13px; color: var(--texto-secundario); margin: 0; line-height: 1.5; }
 
 /* Formularios y Checkbox dentro del modal */
 .formulario { display: flex; flex-direction: column; gap: 16px; margin-top: 10px; }

@@ -15,7 +15,6 @@ import AdminConfigurarPagina from './AdminConfigurarPagina.jsx'
 import UsuNegoDasboar from './UsuNegoDasboar.jsx'
 import AdCreaUsuarioNegocio from './AdCreaUsuarioNegocio.jsx'
 import AdminCrearTickets from './AdminCrearTickets.jsx'
-import UsuNegoCreaAyudante from './UsuNegoCreaAyudante.jsx'
 import Mapa from './Mapa.jsx'
 
 import Cliente from './Cliente.jsx'
@@ -121,8 +120,8 @@ const router = createBrowserRouter([
     element: <MenuLateral><UsuarioNegocio /></MenuLateral>,
   },
   {
-    path: "/UsuNegoCreaAyudante",
-    element: <MenuLateral><UsuNegoCreaAyudante /></MenuLateral>,
+    path: "/usuarionegocio/ayudantes",
+    element: <MenuLateral><UsuarioNegocio /></MenuLateral>,
   },
   {
     path: "/UsuNegoDasboar",
