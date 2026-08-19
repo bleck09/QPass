@@ -12,6 +12,7 @@ import './MenuLateral.css';
 const menuConfig = {
   Admin: [
     { titulo: 'Dashboard General', ruta: '/admin', icono: <FaChartPie /> },
+    { titulo: 'Gestión de Eventos', ruta: '/admin/eventos', icono: <FaCalendarAlt /> },
     { titulo: 'Usuario de Negocio', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
     { titulo: 'Tickets del Evento', ruta: '/AdminCrearTickets', icono: <FaFileInvoiceDollar /> },
     { titulo: 'Reportes', ruta: '/admin/reportes', icono: <FaExclamationTriangle /> },
@@ -19,7 +20,8 @@ const menuConfig = {
     { titulo: 'Mapa', ruta: '/Mapa', icono: <FaMapMarkedAlt /> } 
   ],
   Cliente: [
-    { titulo: 'Propuesta', ruta: '/Cliente', icono: <FaCashRegister /> }
+    { titulo: 'Mi Propuesta', ruta: '/Cliente', icono: <FaCashRegister /> },
+    { titulo: 'Dashboard General', ruta: '/Cliente/dashboard', icono: <FaChartPie /> }
   ],
   Recargador: [
     { titulo: 'Mi Caja', ruta: '/recargador', icono: <FaCashRegister /> },

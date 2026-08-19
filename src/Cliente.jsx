@@ -1,14 +1,38 @@
-import { useState } from 'react';
-import { 
-  FaCalendarAlt, FaPalette, FaImage, FaMapMarkedAlt, 
-  FaListUl, FaClock, FaPlus, FaTrash, FaPaperPlane, 
-  FaUpload, FaTimes, FaEye
+import { useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import {
+  FaCalendarAlt, FaPalette, FaImage, FaMapMarkedAlt,
+  FaListUl, FaClock, FaPlus, FaTrash, FaPaperPlane,
+  FaUpload, FaTimes, FaEye, FaFileAlt, FaChartPie
 } from 'react-icons/fa';
+import Admin from './Admin.jsx';
+import { leerUsuarios } from './data/usuarios';
+import { leerAsignaciones } from './data/asignacionesEventos';
 import './Cliente.css';
 
 export default function Cliente() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  // /Cliente/dashboard entra directo a la pestaña Dashboard General (accesible también
+  // desde el menú lateral), sin pasar por la pestaña de Propuesta. Se deriva de la URL en
+  // cada render (no de useState) para que el enlace del menú lateral funcione aunque
+  // React Router no vuelva a montar el componente al navegar entre ambas rutas.
+  const pestana = location.pathname.endsWith('/dashboard') ? 'dashboard' : 'propuesta';
+
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [showPreview, setShowPreview] = useState(false); // Estado para la Vista Previa
+
+  // Eventos a los que este Cliente tiene acceso (asignados desde Gestión de Eventos, Admin).
+  const eventosPermitidos = useMemo(() => {
+    const sesion = JSON.parse(localStorage.getItem('usuarioProyectoIngresos') || 'null');
+    if (!sesion?.email) return [];
+    const usuario = leerUsuarios().find(u => u.email === sesion.email);
+    if (!usuario) return [];
+    const ids = leerAsignaciones()
+      .filter(a => a.usuarioId === usuario.id)
+      .map(a => a.eventoId);
+    return [...new Set(ids)];
+  }, []);
 
   // Estado principal extendido con los 4 colores
   const [propuesta, setPropuesta] = useState({
@@ -74,7 +98,29 @@ export default function Cliente() {
 
   return (
     <div className="pi-cliente-container">
-      
+
+      {/* Pestañas: Propuesta del evento / Dashboard General (solo lectura) */}
+      <div className="pi-cliente-tabs">
+        <button
+          className={`tab-btn ${pestana === 'propuesta' ? 'active' : ''}`}
+          onClick={() => navigate('/Cliente')}
+        >
+          <FaFileAlt /> Mi Propuesta
+        </button>
+        <button
+          className={`tab-btn ${pestana === 'dashboard' ? 'active' : ''}`}
+          onClick={() => navigate('/Cliente/dashboard')}
+        >
+          <FaChartPie /> Dashboard General
+        </button>
+      </div>
+
+      {pestana === 'dashboard' && (
+        <Admin soloLectura eventosPermitidos={eventosPermitidos} />
+      )}
+
+      {pestana === 'propuesta' && (
+      <>
       {/* Cabecera con Botones */}
       <div className="pi-cliente-header">
         <div>
@@ -98,7 +144,7 @@ export default function Cliente() {
       )}
 
       <form className="pi-cliente-grid">
-        
+
         {/* COLUMNA IZQUIERDA */}
         <div className="pi-cliente-columna">
           
@@ -297,6 +343,8 @@ export default function Cliente() {
             </div>
           </div>
         </div>
+      )}
+      </>
       )}
 
     </div>

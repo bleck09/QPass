@@ -1,9 +1,13 @@
-import { useState } from 'react';
-import { 
-  FaStore, FaMap, FaListUl, FaPlus, FaTimes, 
-  FaSave, FaEdit, FaEyeSlash, FaCheck, FaLock, FaUnlock, 
-  FaInfoCircle, FaImage, FaUpload, FaArrowsAltH, FaArrowsAltV 
+import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import {
+  FaStore, FaMap, FaListUl, FaPlus, FaTimes,
+  FaSave, FaEdit, FaEyeSlash, FaCheck, FaLock, FaUnlock,
+  FaInfoCircle, FaImage, FaUpload, FaArrowsAltH, FaArrowsAltV,
+  FaCalendarAlt
 } from 'react-icons/fa';
+import { leerEventos } from './data/eventosAdmin';
+import { leerPuestos, guardarPuestos } from './data/mapaPuestos';
 import './Mapa.css';
 
 const puestosDeNegociosRegistrados = [
@@ -17,19 +21,26 @@ const mockPuestos = [
 ];
 
 export default function Mapa() {
-  const [puestos, setPuestos] = useState(() => {
-    const dataGuardada = localStorage.getItem('pi_mapa_puestos');
-    return dataGuardada ? JSON.parse(dataGuardada) : mockPuestos;
-  });
-  
-  const [vistaActiva, setVistaActiva] = useState('plano'); 
-  const [modoDiseno, setModoDiseno] = useState(false); 
+  const location = useLocation();
+  const eventosDisponibles = useMemo(() => leerEventos(), []);
+
+  const [eventoId, setEventoId] = useState(location.state?.eventoId || eventosDisponibles[0]?.id);
+  const [puestos, setPuestos] = useState(() => leerPuestos(eventoId, mockPuestos));
+
+  const [vistaActiva, setVistaActiva] = useState('plano');
+  const [modoDiseno, setModoDiseno] = useState(false);
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
 
   const [mostrarModal, setMostrarModal] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
-  
+
   const [form, setForm] = useState({ id: '', numero: '', categoria: 'Comida', foto: '', ancho: 100, alto: 100 });
+
+  const cambiarEvento = (nuevoId) => {
+    setEventoId(nuevoId);
+    setPuestos(leerPuestos(nuevoId, mockPuestos));
+    setModoDiseno(false);
+  };
 
   // =========================================================
   // MOTOR NATIVO: ARRASTRE (DRAG) Y REDIMENSIONAMIENTO (RESIZE)
@@ -160,7 +171,7 @@ export default function Mapa() {
     }
 
     setPuestos(puestosActualizados);
-    localStorage.setItem('pi_mapa_puestos', JSON.stringify(puestosActualizados));
+    guardarPuestos(eventoId, puestosActualizados);
     cerrarModal();
   };
 
@@ -182,12 +193,12 @@ export default function Mapa() {
   const toggleEstadoPuesto = (id) => {
     const puestosActualizados = puestos.map(p => p.id === id ? { ...p, estadoActivo: !p.estadoActivo } : p);
     setPuestos(puestosActualizados);
-    localStorage.setItem('pi_mapa_puestos', JSON.stringify(puestosActualizados));
+    guardarPuestos(eventoId, puestosActualizados);
   };
 
   const guardarDiseñoPlano = () => {
-    localStorage.setItem('pi_mapa_puestos', JSON.stringify(puestos));
-    setModoDiseno(false); 
+    guardarPuestos(eventoId, puestos);
+    setModoDiseno(false);
     mostrarAlerta("Distribución guardada y bloqueada.");
   };
 
@@ -200,7 +211,16 @@ export default function Mapa() {
           <h2><FaMap color="var(--cian-digital)"/> Diseñador del Recinto</h2>
           <p>Añade y escala visualmente los negocios, escenarios y zonas del evento.</p>
         </div>
-        
+
+        <div className="pi-mapa-selector-evento">
+          <FaCalendarAlt />
+          <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
+            {eventosDisponibles.map(ev => (
+              <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="pi-mapa-tabs-container">
           <div className="pi-mapa-tabs">
             <button className={vistaActiva === 'plano' ? 'active' : ''} onClick={() => setVistaActiva('plano')}>

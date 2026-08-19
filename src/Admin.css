@@ -46,45 +46,62 @@
 /* --- SELECCIÓN DE EVENTO (CARDS) --- */
 .pi-dash-eventos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, 240px);
+  justify-content: start;
   gap: 18px;
 }
 
 .pi-dash-evento-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 8px;
+  width: 100%;
   background-color: var(--gris-niebla);
   border: 1px solid var(--borde-suave);
   border-radius: 12px;
-  padding: 28px 16px;
+  overflow: hidden;
+  padding: 0;
   cursor: pointer;
   transition: all 0.2s;
-  text-align: center;
+  text-align: left;
+  font: inherit;
 }
 
 .pi-dash-evento-card:hover {
-  background-color: var(--indigo-profundo-suave);
   border-color: var(--indigo-profundo);
   transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
-.pi-dash-evento-icon {
-  font-size: 26px;
-  color: var(--indigo-profundo);
-  margin-bottom: 4px;
+.pi-dash-evento-imagen {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  display: block;
 }
 
-.pi-dash-evento-nombre {
+.pi-dash-evento-info {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.pi-dash-evento-info strong {
   font-size: 15px;
-  font-weight: 700;
   color: var(--texto-principal);
 }
 
-.pi-dash-evento-detalle {
+.pi-dash-evento-info span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
   color: var(--texto-secundario);
+}
+
+.pi-dash-evento-detalle {
+  color: var(--indigo-profundo) !important;
+  font-weight: 600;
 }
 
 /* --- SECCIONES --- */

@@ -1,17 +1,14 @@
 import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import {
   FaCalendarAlt, FaTicketAlt, FaPlus, FaTrash, FaTags, FaAlignLeft,
   FaBoxes, FaDollarSign, FaCoins
 } from 'react-icons/fa';
+import { leerEventos } from './data/eventosAdmin';
 import './AdminCrearTickets.css';
 
-// --- EVENTOS DISPONIBLES (mismos del Dashboard General) ---
-const eventosDisponibles = [
-  { id: 'ev1', nombre: 'Festival QPass 2026' },
-  { id: 'ev2', nombre: 'Feria Gastronómica La Paz' },
-];
-
-// --- CATEGORÍAS DE TICKET YA CREADAS POR EVENTO ---
+// --- CATEGORÍAS DE TICKET YA CREADAS POR EVENTO (semilla) ---
+const CLAVE_TICKETS = 'pi_tickets_categorias';
 const categoriasIniciales = {
   ev1: [
     { id: 1, nombre: 'General', descripcion: 'Acceso general al recinto del evento.', cantidad: 500, precio: 150 },
@@ -23,9 +20,21 @@ const categoriasIniciales = {
   ],
 };
 
+const leerCategoriasPorEvento = () => {
+  const guardado = localStorage.getItem(CLAVE_TICKETS);
+  return guardado ? JSON.parse(guardado) : categoriasIniciales;
+};
+
+const guardarCategoriasPorEvento = (obj) => {
+  localStorage.setItem(CLAVE_TICKETS, JSON.stringify(obj));
+};
+
 export default function AdminCrearTickets() {
-  const [eventoId, setEventoId] = useState(eventosDisponibles[0].id);
-  const [categoriasPorEvento, setCategoriasPorEvento] = useState(categoriasIniciales);
+  const location = useLocation();
+  const eventosDisponibles = useMemo(() => leerEventos(), []);
+
+  const [eventoId, setEventoId] = useState(location.state?.eventoId || eventosDisponibles[0]?.id);
+  const [categoriasPorEvento, setCategoriasPorEvento] = useState(leerCategoriasPorEvento);
 
   const [formCategoria, setFormCategoria] = useState({ nombre: '', descripcion: '', cantidad: '', precio: '' });
 
@@ -57,20 +66,22 @@ export default function AdminCrearTickets() {
       precio: Number(formCategoria.precio),
     };
 
-    setCategoriasPorEvento(prev => ({
-      ...prev,
-      [eventoId]: [...(prev[eventoId] || []), nuevaCategoria],
-    }));
+    setCategoriasPorEvento(prev => {
+      const actualizado = { ...prev, [eventoId]: [...(prev[eventoId] || []), nuevaCategoria] };
+      guardarCategoriasPorEvento(actualizado);
+      return actualizado;
+    });
 
     setFormCategoria({ nombre: '', descripcion: '', cantidad: '', precio: '' });
   };
 
   const eliminarCategoria = (id) => {
     if (!window.confirm('¿Eliminar esta categoría de ticket?')) return;
-    setCategoriasPorEvento(prev => ({
-      ...prev,
-      [eventoId]: prev[eventoId].filter(c => c.id !== id),
-    }));
+    setCategoriasPorEvento(prev => {
+      const actualizado = { ...prev, [eventoId]: prev[eventoId].filter(c => c.id !== id) };
+      guardarCategoriasPorEvento(actualizado);
+      return actualizado;
+    });
   };
 
   return (

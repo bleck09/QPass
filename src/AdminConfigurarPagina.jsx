@@ -1,10 +1,13 @@
-import { useState } from 'react';
-import { 
-  FaPlus, FaTrash, FaSave, FaEye, FaImage, FaUpload, 
+import { useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
+import {
+  FaPlus, FaTrash, FaSave, FaEye, FaImage, FaUpload,
   FaPalette, FaTextHeight, FaListUl, FaRegCalendarAlt, FaUndo,
-  FaTicketAlt, FaChartLine, FaExchangeAlt, FaStore, FaQrcode, 
-  FaTimes, FaClock // <-- ¡Aquí está el FaTimes corregido y FaClock añadido!
+  FaTicketAlt, FaChartLine, FaExchangeAlt, FaStore, FaQrcode,
+  FaTimes, FaClock, FaCalendarAlt
 } from 'react-icons/fa';
+import { leerEventos } from './data/eventosAdmin';
+import { leerConfig, guardarConfig } from './data/landingConfig';
 import './AdminConfigurarPagina.css';
 
 // Configuración por defecto (Estilo Dark / Glassmorphism)
@@ -38,19 +41,25 @@ const opcionesIconos = [
   { valor: 'qrcode', etiqueta: 'Código QR' }
 ];
 
+const normalizarConfig = (config) => {
+  if (!config.colorBoton) config.colorBoton = defaultLandingConfig.colorBoton;
+  return config;
+};
+
 export default function AdminConfigurarPagina() {
-  const [config, setConfig] = useState(() => {
-    const dataGuardada = localStorage.getItem('pi_landing_config');
-    if (dataGuardada) {
-      const parsed = JSON.parse(dataGuardada);
-      if(!parsed.colorBoton) parsed.colorBoton = defaultLandingConfig.colorBoton;
-      return parsed;
-    }
-    return defaultLandingConfig;
-  });
-  
+  const location = useLocation();
+  const eventosDisponibles = useMemo(() => leerEventos(), []);
+
+  const [eventoId, setEventoId] = useState(location.state?.eventoId || eventosDisponibles[0]?.id);
+  const [config, setConfig] = useState(() => normalizarConfig(leerConfig(eventoId, defaultLandingConfig)));
+
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [showPreview, setShowPreview] = useState(false);
+
+  const cambiarEvento = (nuevoId) => {
+    setEventoId(nuevoId);
+    setConfig(normalizarConfig(leerConfig(nuevoId, defaultLandingConfig)));
+  };
 
   const handleChange = (e) => {
     setConfig({ ...config, [e.target.name]: e.target.value });
@@ -82,17 +91,17 @@ export default function AdminConfigurarPagina() {
   };
 
   const guardarConfiguracion = () => {
-    localStorage.setItem('pi_landing_config', JSON.stringify(config));
+    guardarConfig(eventoId, config);
     setMensaje({ texto: '¡Página de inicio actualizada con éxito!', tipo: 'exito' });
-    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000); 
+    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
   };
 
   const restablecerValores = () => {
     if (window.confirm("¿Estás seguro de que deseas volver a los valores originales del diseño moderno?")) {
       setConfig(defaultLandingConfig);
-      localStorage.setItem('pi_landing_config', JSON.stringify(defaultLandingConfig));
+      guardarConfig(eventoId, defaultLandingConfig);
       setMensaje({ texto: 'Se han restaurado los valores por defecto.', tipo: 'aviso' });
-      setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000); 
+      setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
     }
   };
 
@@ -111,6 +120,14 @@ export default function AdminConfigurarPagina() {
       
       <div className="pi-admin-header">
         <h2>Gestión de la Landing Page</h2>
+        <div className="pi-admin-selector-evento">
+          <FaCalendarAlt />
+          <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
+            {eventosDisponibles.map(ev => (
+              <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+            ))}
+          </select>
+        </div>
         <div className="pi-admin-header-actions">
           <button className="pi-admin-btn-reset" onClick={restablecerValores}>
             <FaUndo /> Restablecer

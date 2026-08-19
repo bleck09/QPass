@@ -34,6 +34,27 @@
   margin: 0;
 }
 
+.pi-mapa-selector-evento {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--blanco);
+  border: 1px solid var(--borde-suave);
+  border-radius: 10px;
+  padding: 10px 16px;
+  color: var(--indigo-profundo);
+  font-weight: 600;
+}
+
+.pi-mapa-selector-evento select {
+  border: none;
+  outline: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-principal);
+  background: none;
+}
+
 /* --- TABS (Diseño Visual / Tabla) --- */
 .pi-mapa-tabs-container {
   display: flex;

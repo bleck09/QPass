@@ -1,11 +1,12 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaCalendarAlt, FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
+  FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
   FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends, FaUsers,
   FaArrowLeft, FaSearch, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
-  FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt
+  FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt, FaMapMarkerAlt
 } from 'react-icons/fa';
+import { leerEventos } from './data/eventosAdmin';
 import './Admin.css';
 
 // --- INCIDENCIAS DE RECARGA INCOMPLETA (reportadas por Recargador vía localStorage) ---
@@ -45,11 +46,10 @@ const guardarReportesEntradas = (lista) => {
 const ETIQUETA_CAMPO_ENTRADA = { nombre: 'Nombre completo', correo: 'Correo electrónico', celular: 'Celular' };
 const ETIQUETA_CATEGORIA = { general: 'General', vip: 'VIP' };
 
-// --- DATOS SIMULADOS POR EVENTO ---
-const eventosDisponibles = [
-  { id: 'ev1', nombre: 'Festival QPass 2026' },
-  { id: 'ev2', nombre: 'Feria Gastronómica La Paz' },
-];
+// --- DATOS SIMULADOS DE ACTIVIDAD POR EVENTO ---
+// (los eventos en sí ahora viven en data/eventosAdmin.js; esto sigue siendo mock local
+// porque ninguna otra pantalla necesita esta actividad, solo el Dashboard General)
+const EVENTO_ACTIVIDAD_VACIA = { entradas: [], negocios: [], recargadores: [], devoluciones: [], supervisores: [] };
 
 const datosPorEvento = {
   ev1: {
@@ -243,16 +243,25 @@ function Podio({ lista, valorKey, unidad }) {
   );
 }
 
-export default function Admin() {
+export default function Admin({ soloLectura = false, eventosPermitidos = null } = {}) {
   const location = useLocation();
   const navigate = useNavigate();
   // /admin/reportes abre directamente el apartado de Incidencias (accesible también
   // desde el menú lateral), sin pasar por la tarjeta del dashboard.
   const enReportes = location.pathname.endsWith('/reportes');
 
-  const [eventoId, setEventoId] = useState(eventosDisponibles[0].id);
+  const eventosDisponibles = useMemo(() => {
+    const todos = leerEventos();
+    return eventosPermitidos ? todos.filter(ev => eventosPermitidos.includes(ev.id)) : todos;
+  }, [eventosPermitidos]);
+
+  const [eventoId, setEventoId] = useState(eventosDisponibles[0]?.id);
   // /admin/reportes entra directo al dashboard del evento actual, sin pasar por la selección.
-  const [eventoSeleccionado, setEventoSeleccionado] = useState(enReportes);
+  // En modo solo lectura (ej. Cliente) también se salta la selección si ya tiene un evento
+  // asignado, para que vea su proyecto directamente en vez de una pantalla vacía.
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(
+    enReportes || (soloLectura && eventosDisponibles.length > 0)
+  );
   const [vistaDetalle, setVistaDetalle] = useState(null); // null | entradas | recargadores | devoluciones | negocios | supervisores | incidencias
   const [itemSeleccionado, setItemSeleccionado] = useState(null); // id de la persona/negocio abierto dentro de una vista
   const [busqueda, setBusqueda] = useState('');
@@ -354,7 +363,7 @@ export default function Admin() {
     cancelarCorreccion();
   };
 
-  const datos = datosPorEvento[eventoId];
+  const datos = datosPorEvento[eventoId] || EVENTO_ACTIVIDAD_VACIA;
   const eventoActual = eventosDisponibles.find(ev => ev.id === eventoId);
 
   const statsEntradas = useMemo(() => {
@@ -527,11 +536,19 @@ export default function Admin() {
           <div className="pi-dash-eventos-grid">
             {eventosDisponibles.map(ev => (
               <button key={ev.id} className="pi-dash-evento-card" onClick={() => seleccionarEvento(ev.id)}>
-                <FaCalendarAlt className="pi-dash-evento-icon" />
-                <span className="pi-dash-evento-nombre">{ev.nombre}</span>
-                <span className="pi-dash-evento-detalle">{datosPorEvento[ev.id].entradas.length} entradas</span>
+                <img src={ev.imagen} alt={ev.nombre} className="pi-dash-evento-imagen" />
+                <div className="pi-dash-evento-info">
+                  <strong>{ev.nombre}</strong>
+                  <span><FaMapMarkerAlt /> {ev.lugar} · {ev.fecha}</span>
+                  <span className="pi-dash-evento-detalle"><FaTicketAlt /> {datosPorEvento[ev.id]?.entradas.length ?? 0} entradas</span>
+                </div>
               </button>
             ))}
+            {eventosDisponibles.length === 0 && (
+              <p className="pi-dash-sin-resultados">
+                {soloLectura ? 'Todavía no tienes eventos asignados.' : 'No hay eventos disponibles.'}
+              </p>
+            )}
           </div>
         </section>
       ) : (
@@ -1033,7 +1050,7 @@ export default function Admin() {
                         : <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Resuelta (+{inc.ajusteAplicado} pts por {inc.resueltoPor})</span>}
                     </td>
                     <td>
-                      {inc.estado === 'pendiente' && (
+                      {!soloLectura && inc.estado === 'pendiente' && (
                         incidenciaEnResolucion === inc.id ? (
                           <div className="pi-dash-resolver-form">
                             <input
@@ -1100,7 +1117,7 @@ export default function Admin() {
                         : <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Corregido a "{rep.valorCorregido}"</span>}
                     </td>
                     <td>
-                      {rep.estado === 'pendiente' && (
+                      {!soloLectura && rep.estado === 'pendiente' && (
                         reporteEnEdicion === rep.id ? (
                           <div className="pi-dash-resolver-form ancho">
                             <input
