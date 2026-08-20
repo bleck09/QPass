@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: qpass_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: qpass
+      POSTGRES_PASSWORD: qpass
+      POSTGRES_DB: qpass
+    ports:
+      - "5433:5432"
+    volumes:
+      - qpass_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  qpass_postgres_data:

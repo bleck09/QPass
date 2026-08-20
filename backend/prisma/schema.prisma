@@ -15,114 +15,383 @@ enum Rol {
   Devolucion
   UsuarioNormal
   UsuarioNegocio
+  Ayudante
 }
 
-enum EstadoEntrada {
+enum EstadoIngreso {
   pendiente
   ingresado
   salio
 }
 
-model Usuario {
-  id            Int          @id @default(autoincrement())
-  nombre        String
-  email         String       @unique
-  passwordHash  String
-  rol           Rol
-  extraInfo     String?
-  foto          String?
-  recaudado     Decimal      @default(0) @db.Decimal(10, 2)
-  createdAt     DateTime     @default(now())
+enum EstadoSolicitud {
+  pendiente
+  confirmado
+}
 
-  asignaciones  Asignacion[]
-  puestos       Puesto[]
+enum EstadoCaso {
+  pendiente
+  resuelto
+}
+
+enum TipoTransaccion {
+  recarga
+  consumo
+  devolucion
+  ajuste
+}
+
+enum CampoReportado {
+  nombre
+  correo
+  celular
+}
+
+model Usuario {
+  id               Int      @id @default(autoincrement())
+  nombre           String
+  apellidoPaterno  String?
+  apellidoMaterno  String?
+  email            String   @unique
+  passwordHash     String
+  rol              Rol
+  ci               String?  @unique
+  celular          String?
+  fechaNacimiento  DateTime?
+  ciudad           String?
+  biografia        String?
+  foto             String?
+  createdAt        DateTime @default(now())
+
+  asignaciones          Asignacion[]
+  compras               Compra[]              @relation("Comprador")
+  entradasPropias       Entrada[]              @relation("TitularCuenta")
+  puestos               Puesto[]               @relation("NegocioDueno")
+  puestosComoAyudante   PuestoAyudante[]
+  ventasRealizadas      Venta[]                @relation("Vendedor")
+  transaccionesOperadas Transaccion[]          @relation("Operador")
+  transaccionesNegocio  Transaccion[]          @relation("BilleteraNegocio")
+  incidenciasReportadas IncidenciaRecarga[]    @relation("RecargadorQueReporta")
+  incidenciasResueltas  IncidenciaRecarga[]    @relation("AdminQueResuelve")
+  reportesResueltos     ReporteEntrada[]       @relation("AdminQueCorrige")
 
   @@map("usuarios")
 }
 
 model Evento {
-  id          String       @id @default(cuid())
-  nombre      String
-  lugar       String
-  fecha       String
-  fechaISO    DateTime?
-  hora        String?
-  imagen      String?
-  categoria   String?
-  precio      String?
-  createdAt   DateTime     @default(now())
+  id        String   @id @default(cuid())
+  nombre    String
+  lugar     String
+  fecha     String
+  fechaISO  DateTime?
+  hora      String?
+  imagen    String?
+  createdAt DateTime @default(now())
 
-  asignaciones Asignacion[]
-  entradas     Entrada[]
-  codigosQr    CodigoQr[]
-  puestos      Puesto[]
+  asignaciones      Asignacion[]
+  categoriasTicket  CategoriaTicket[]
+  compras           Compra[]
+  entradas          Entrada[]
+  codigosQr         CodigoQr[]
+  puestos           Puesto[]
+  landingConfig     LandingConfig?
+  propuestaLanding  PropuestaLanding?
 
   @@map("eventos")
 }
 
+// Rol que cumple un usuario DENTRO de un evento específico (además de su rol global de cuenta).
 model Asignacion {
-  id         String   @id @default(cuid())
-  eventoId   String
-  usuarioId  Int
-  rol        Rol
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  eventoId  String
+  usuarioId Int
+  rol       Rol
+  createdAt DateTime @default(now())
 
-  evento     Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
   @@unique([eventoId, usuarioId])
   @@map("asignaciones_eventos")
 }
 
-model Entrada {
-  id                 Int           @id @default(autoincrement())
-  eventoId           String
-  nombre             String
-  documento          String
-  correo             String
-  tipoEntrada        String
-  foto               String?
-  estado             EstadoEntrada @default(pendiente)
-  horaIngreso        String?
-  horaSalida         String?
-  vinculadoEn        DateTime?
+model CategoriaTicket {
+  id          String   @id @default(cuid())
+  eventoId    String
+  nombre      String
+  descripcion String?
+  cantidad    Int
+  precio      Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
 
-  evento             Evento        @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  codigoQrVinculado   CodigoQr?     @relation("EntradaCodigoQr")
+  evento   Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  entradas Entrada[]
+
+  @@map("categorias_ticket")
+}
+
+// Una orden de compra de entradas (el titular + N invitados) hecha por un Usuario Normal.
+model Compra {
+  id                     String          @id @default(cuid())
+  eventoId               String
+  compradorId            Int
+  montoTotal             Decimal         @db.Decimal(10, 2)
+  estado                 EstadoSolicitud @default(pendiente)
+  comprobanteUrl         String?
+  comprobanteNombreArchivo String?
+  createdAt              DateTime        @default(now())
+
+  evento    Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  comprador Usuario   @relation("Comprador", fields: [compradorId], references: [id])
+  entradas  Entrada[]
+
+  @@map("compras")
+}
+
+// Cada boleto/persona: título de acceso + billetera cashless una vez vinculado a un QR físico.
+model Entrada {
+  id                String        @id @default(cuid())
+  eventoId          String
+  compraId          String?
+  categoriaTicketId String?
+  usuarioId         Int?          // set solo si el titular tiene cuenta registrada (Usuario Normal)
+
+  isTitular   Boolean @default(false)
+  nombre      String
+  correo      String
+  celular     String?
+  documento   String?
+  foto        String?
+  passwordTemporal String? // credencial para invitados sin cuenta
+
+  estadoIngreso EstadoIngreso @default(pendiente)
+  horaIngreso   String?
+  horaSalida    String?
+  fotoIngreso   String?       // foto de seguridad tomada en puerta
+
+  saldo Decimal @default(0) @db.Decimal(10, 2) // cache; la fuente de verdad son las Transaccion
+
+  createdAt DateTime @default(now())
+
+  evento          Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  compra          Compra?          @relation(fields: [compraId], references: [id], onDelete: SetNull)
+  categoriaTicket CategoriaTicket? @relation(fields: [categoriaTicketId], references: [id])
+  usuario         Usuario?         @relation("TitularCuenta", fields: [usuarioId], references: [id])
+
+  codigoQrVinculado CodigoQr?
+  transacciones     Transaccion[]
+  ventas            Venta[]
+  incidencias       IncidenciaRecarga[]
+  reportesDatos     ReporteEntrada[]
 
   @@map("entradas")
 }
 
+// Pulsera/tarjeta física con QR, del pool generado por Admin para el evento.
 model CodigoQr {
-  id          String   @id @default(cuid())
-  eventoId    String
-  numero      Int
-  codigo      String   @unique
-  generadoEn  DateTime @default(now())
+  id         String   @id @default(cuid())
+  eventoId   String
+  numero     Int
+  codigo     String   @unique
+  generadoEn DateTime @default(now())
 
-  entradaId   Int?     @unique
-  entrada     Entrada? @relation("EntradaCodigoQr", fields: [entradaId], references: [id])
-  evento      Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  entradaId String?  @unique
+
+  evento  Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  entrada Entrada? @relation(fields: [entradaId], references: [id])
 
   @@unique([eventoId, numero])
   @@map("codigos_qr")
 }
 
+// Ledger único de movimientos de dinero. El dueño es UNA de: entradaId (billetera de asistente)
+// o negocioUsuarioId (billetera de un Usuario Negocio, alimentada por sus Ventas y vaciada por Devolucion).
+model Transaccion {
+  id               String          @id @default(cuid())
+  tipo             TipoTransaccion
+  monto            Decimal         @db.Decimal(10, 2)
+  saldoResultante  Decimal         @db.Decimal(10, 2)
+
+  entradaId        String?
+  negocioUsuarioId Int?
+  operadorId       Int             // quién la ejecutó: Recargador, Ayudante o Devolucion
+
+  fotoCarnetUrl String? // exigida en retiros (Devolucion)
+  nota          String?
+
+  createdAt DateTime @default(now())
+
+  entrada        Entrada? @relation(fields: [entradaId], references: [id])
+  negocioUsuario Usuario? @relation("BilleteraNegocio", fields: [negocioUsuarioId], references: [id])
+  operador       Usuario  @relation("Operador", fields: [operadorId], references: [id])
+
+  @@map("transacciones")
+}
+
+// Reporte de un Recargador cuando la recarga entregada no coincidió con lo pedido.
+model IncidenciaRecarga {
+  id               String     @id @default(cuid())
+  entradaId        String
+  montoEntregado   Decimal    @db.Decimal(10, 2)
+  montoSolicitado  Decimal?   @db.Decimal(10, 2)
+  nota             String
+  recargadorId     Int
+  estado           EstadoCaso @default(pendiente)
+  ajusteAplicado   Decimal?   @db.Decimal(10, 2)
+  resueltoPorId    Int?
+  createdAt        DateTime   @default(now())
+  resueltoEn       DateTime?
+
+  entrada    Entrada  @relation(fields: [entradaId], references: [id], onDelete: Cascade)
+  recargador Usuario  @relation("RecargadorQueReporta", fields: [recargadorId], references: [id])
+  resueltoPor Usuario? @relation("AdminQueResuelve", fields: [resueltoPorId], references: [id])
+
+  @@map("incidencias_recarga")
+}
+
+// Reporte de un Usuario Normal: un dato (nombre/correo/celular) de una entrada ya aprobada está mal.
+model ReporteEntrada {
+  id             String         @id @default(cuid())
+  compraId       String
+  entradaId      String
+  campo          CampoReportado
+  descripcion    String
+  estado         EstadoCaso     @default(pendiente)
+  valorCorregido String?
+  resueltoPorId  Int?
+  createdAt      DateTime       @default(now())
+  resueltoEn     DateTime?
+
+  entrada     Entrada  @relation(fields: [entradaId], references: [id], onDelete: Cascade)
+  resueltoPor Usuario? @relation("AdminQueCorrige", fields: [resueltoPorId], references: [id])
+
+  @@map("reportes_entrada")
+}
+
+// Puesto/stand de un Usuario Negocio. Es a la vez el registro de negocio (catálogo, ayudantes)
+// y su ubicación en el mapa del recinto (x/y/ancho/alto).
 model Puesto {
+  id           String   @id @default(cuid())
+  eventoId     String
+  negocioId    Int
+  nombre       String
+  descripcion  String?
+  logo         String?
+  categoria    String?
+  x            Float    @default(0)
+  y            Float    @default(0)
+  ancho        Float    @default(100)
+  alto         Float    @default(100)
+  estadoActivo Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  evento    Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  negocio   Usuario          @relation("NegocioDueno", fields: [negocioId], references: [id])
+  productos Producto[]
+  ayudantes PuestoAyudante[]
+  ventas    Venta[]
+
+  @@map("puestos")
+}
+
+model Producto {
+  id        String   @id @default(cuid())
+  puestoId  String
+  nombre    String
+  precio    Decimal  @db.Decimal(10, 2)
+  imagen    String?
+  createdAt DateTime @default(now())
+
+  puesto     Puesto      @relation(fields: [puestoId], references: [id], onDelete: Cascade)
+  ventaItems VentaItem[]
+
+  @@map("productos")
+}
+
+// Un Ayudante puede trabajar en varios puestos a la vez (y un puesto tener varios ayudantes).
+model PuestoAyudante {
+  id         String   @id @default(cuid())
+  puestoId   String
+  ayudanteId Int
+  turno      String   @default("Día")
+  createdAt  DateTime @default(now())
+
+  puesto   Puesto  @relation(fields: [puestoId], references: [id], onDelete: Cascade)
+  ayudante Usuario @relation(fields: [ayudanteId], references: [id])
+
+  @@unique([puestoId, ayudanteId])
+  @@map("puesto_ayudantes")
+}
+
+// Una venta cobrada por un Ayudante contra el saldo de una Entrada. Genera además una
+// Transaccion(tipo=consumo, entradaId=comprador) que es la que mueve el saldo real.
+model Venta {
   id            String   @id @default(cuid())
-  eventoId      String
-  numero        Int?
-  categoria     String?
-  foto          String?
-  x             Float    @default(0)
-  y             Float    @default(0)
-  ancho         Float    @default(100)
-  alto          Float    @default(100)
-  estadoActivo  Boolean  @default(true)
+  puestoId      String
+  ayudanteId    Int
+  entradaId     String
+  montoTotal    Decimal  @db.Decimal(10, 2)
+  transaccionId String?  @unique
+  createdAt     DateTime @default(now())
 
-  negocioId     Int?
-  negocio       Usuario? @relation(fields: [negocioId], references: [id])
-  evento        Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  puesto   Puesto      @relation(fields: [puestoId], references: [id], onDelete: Cascade)
+  ayudante Usuario     @relation("Vendedor", fields: [ayudanteId], references: [id])
+  entrada  Entrada     @relation(fields: [entradaId], references: [id])
+  items    VentaItem[]
 
-  @@map("puestos_mapa")
+  @@map("ventas")
+}
+
+model VentaItem {
+  id             String  @id @default(cuid())
+  ventaId        String
+  productoId     String
+  nombreProducto String  // snapshot: el nombre puede cambiar después
+  precioUnitario Decimal @db.Decimal(10, 2)
+  cantidad       Int
+
+  venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  producto Producto @relation(fields: [productoId], references: [id])
+
+  @@map("venta_items")
+}
+
+// Configuración publicada de la landing pública de un evento (una por evento).
+model LandingConfig {
+  eventoId       String   @id
+  titulo         String
+  informacion    String
+  imagen         String?
+  colorPrimario  String
+  colorBoton     String
+  colorFondo     String
+  colorTextoTitulo String
+  colorTextoP    String
+  actividades    Json     // [{ icono, titulo, descripcion }]
+  cronograma     Json     // [{ hora, actividad }]
+  updatedAt      DateTime @updatedAt
+
+  evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@map("landing_config")
+}
+
+// Propuesta que el Cliente (organizador) envía para que Admin arme/apruebe la landing.
+model PropuestaLanding {
+  eventoId      String   @id
+  nombreEvento  String
+  descripcion   String
+  colorPrimario String
+  colorFondo    String
+  colorTextoTitulo String
+  colorTextoP   String
+  imagenPortada String?
+  mapaLugar     String?
+  actividades   Json     // [{ titulo, descripcion }]
+  cronograma    Json     // [{ hora, actividad }]
+  createdAt     DateTime @default(now())
+
+  evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@map("propuestas_landing")
 }

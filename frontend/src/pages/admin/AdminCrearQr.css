@@ -213,6 +213,101 @@
   color: var(--texto-secundario);
 }
 
+/* --- PAGINADOR --- */
+.pi-adqr-paginador {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
+
+.pi-adqr-paginador button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  background: var(--blanco);
+  color: var(--texto-principal);
+  cursor: pointer;
+}
+
+.pi-adqr-paginador button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* --- CHIP (código sin imagen, se pide el QR recién al hacer click) --- */
+.pi-adqr-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--borde-suave);
+  border-radius: 10px;
+  background: var(--gris-niebla);
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.pi-adqr-chip:hover {
+  border-color: var(--cian-digital);
+}
+
+.pi-adqr-chip svg {
+  color: var(--indigo-profundo);
+  font-size: 20px;
+}
+
+/* --- MODAL DE VISTA PREVIA DE UN QR --- */
+.pi-adqr-modal-fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.pi-adqr-modal {
+  position: relative;
+  background: var(--blanco);
+  border-radius: 14px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: auto;
+}
+
+.pi-adqr-modal img {
+  max-width: min(80vw, 500px);
+  max-height: 60vh;
+  width: auto;
+  height: auto;
+}
+
+.pi-adqr-modal-cerrar {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  border: none;
+  background: none;
+  font-size: 18px;
+  color: var(--texto-secundario);
+  cursor: pointer;
+}
+
 /* --- GRILLA DE QR --- */
 .pi-adqr-grid {
   display: grid;
@@ -232,11 +327,26 @@
 }
 
 .pi-adqr-tarjeta img {
-  width: 100%;
-  max-width: 150px;
-  height: auto;
   border-radius: 6px;
   background: var(--blanco);
+}
+
+/* Vista previa siempre chica en pantalla; el tamaño real elegido (cm/px) se respeta
+   recién al armar el PDF, que se descarga como archivo y no depende de esto. */
+.pi-adqr-tarjeta img {
+  width: auto !important;
+  height: auto !important;
+  max-width: 150px;
+  max-height: 150px;
+}
+
+.pi-adqr-qr-cargando {
+  width: 150px;
+  height: 150px;
+  max-width: 100%;
+  border-radius: 6px;
+  background: var(--gris-medio);
+  opacity: 0.3;
 }
 
 .pi-adqr-codigo {
@@ -247,23 +357,26 @@
   word-break: break-all;
 }
 
-/* --- IMPRESIÓN (Descargar PDF usa el diálogo de impresión del navegador) --- */
-@media print {
-  .no-imprimir {
-    display: none !important;
-  }
+/* --- PROGRESO DE GENERACIÓN DEL PDF --- */
+.pi-adqr-progreso {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: var(--texto-secundario);
+}
 
-  .pi-adqr-card {
-    box-shadow: none;
-    padding: 0;
-  }
+.pi-adqr-progreso-barra {
+  flex: 1;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--gris-niebla);
+  overflow: hidden;
+}
 
-  .pi-adqr-grid {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .pi-adqr-tarjeta {
-    break-inside: avoid;
-    background: var(--blanco);
-  }
+.pi-adqr-progreso-relleno {
+  height: 100%;
+  background: var(--indigo-profundo);
+  transition: width 0.15s ease-out;
 }

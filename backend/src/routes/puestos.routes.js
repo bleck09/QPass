@@ -5,23 +5,30 @@ import { requireAuth, requireRol } from '../middleware/auth.js';
 export const puestosRouter = Router();
 
 puestosRouter.get('/', async (req, res) => {
-  const { eventoId } = req.query;
+  const { eventoId, negocioId } = req.query;
   if (!eventoId) return res.status(400).json({ error: 'eventoId es requerido' });
-  const puestos = await prisma.puesto.findMany({ where: { eventoId } });
+  const puestos = await prisma.puesto.findMany({
+    where: { eventoId, negocioId: negocioId ? Number(negocioId) : undefined },
+    include: { productos: true, ayudantes: { include: { ayudante: true } } },
+  });
   res.json(puestos);
 });
 
-// Reemplaza el mapa completo del evento (equivalente a guardarPuestos del frontend).
-puestosRouter.put('/', requireAuth, requireRol('Admin'), async (req, res) => {
-  const { eventoId, puestos } = req.body;
+puestosRouter.post('/', requireAuth, requireRol('UsuarioNegocio', 'Admin'), async (req, res) => {
+  const { eventoId, nombre, descripcion, logo } = req.body;
+  const negocioId = req.usuario.rol === 'UsuarioNegocio' ? req.usuario.id : req.body.negocioId;
+  const puesto = await prisma.puesto.create({
+    data: { eventoId, negocioId, nombre, descripcion, logo },
+  });
+  res.status(201).json(puesto);
+});
 
-  await prisma.$transaction([
-    prisma.puesto.deleteMany({ where: { eventoId } }),
-    prisma.puesto.createMany({
-      data: puestos.map((p) => ({ ...p, eventoId, id: undefined })),
-    }),
-  ]);
-
-  const actualizado = await prisma.puesto.findMany({ where: { eventoId } });
-  res.json(actualizado);
+// Datos del puesto (nombre/logo) o su posición en el mapa (x/y/ancho/alto/estadoActivo).
+puestosRouter.patch('/:id', requireAuth, requireRol('UsuarioNegocio', 'Admin'), async (req, res) => {
+  const { nombre, descripcion, logo, categoria, x, y, ancho, alto, estadoActivo } = req.body;
+  const puesto = await prisma.puesto.update({
+    where: { id: req.params.id },
+    data: { nombre, descripcion, logo, categoria, x, y, ancho, alto, estadoActivo },
+  });
+  res.json(puesto);
 });

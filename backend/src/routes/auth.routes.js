@@ -6,13 +6,23 @@ import { prisma } from '../lib/prisma.js';
 export const authRouter = Router();
 
 authRouter.post('/registro', async (req, res) => {
-  const { nombre, email, password, rol } = req.body;
+  const { nombre, apellidoPaterno, apellidoMaterno, email, password, ci, celular, fechaNacimiento, rol } = req.body;
   const existente = await prisma.usuario.findUnique({ where: { email } });
   if (existente) return res.status(409).json({ error: 'El email ya está registrado' });
 
   const passwordHash = await bcrypt.hash(password, 10);
   const usuario = await prisma.usuario.create({
-    data: { nombre, email, passwordHash, rol: rol || 'UsuarioNormal' },
+    data: {
+      nombre,
+      apellidoPaterno,
+      apellidoMaterno,
+      email,
+      passwordHash,
+      ci,
+      celular,
+      fechaNacimiento: fechaNacimiento ? new Date(fechaNacimiento) : undefined,
+      rol: rol || 'UsuarioNormal',
+    },
   });
 
   res.status(201).json({ id: usuario.id, nombre: usuario.nombre, email: usuario.email, rol: usuario.rol });

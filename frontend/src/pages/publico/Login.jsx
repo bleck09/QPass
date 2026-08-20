@@ -135,7 +135,7 @@ export default function Login() {
               <label className="pi-login-checkbox">
                 <input type="checkbox" /> Recordarme
               </label>
-              <a href="#" className="pi-login-forgot" onClick={(e) => { e.preventDefault(); navigate('/RecuperarContra'); }}>¿Olvidó su contraseña?</a>
+              <a href="#" className="pi-login-forgot" onClick={(e) => { e.preventDefault(); navigate('/recuperar'); }}>¿Olvidó su contraseña?</a>
             </div>
 
             {error && <p className="pi-login-error">{error}</p>}
