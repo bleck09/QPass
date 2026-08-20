@@ -1,0 +1,128 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  Admin
+  Cliente
+  Recargador
+  Supervisor
+  Devolucion
+  UsuarioNormal
+  UsuarioNegocio
+}
+
+enum EstadoEntrada {
+  pendiente
+  ingresado
+  salio
+}
+
+model Usuario {
+  id            Int          @id @default(autoincrement())
+  nombre        String
+  email         String       @unique
+  passwordHash  String
+  rol           Rol
+  extraInfo     String?
+  foto          String?
+  recaudado     Decimal      @default(0) @db.Decimal(10, 2)
+  createdAt     DateTime     @default(now())
+
+  asignaciones  Asignacion[]
+  puestos       Puesto[]
+
+  @@map("usuarios")
+}
+
+model Evento {
+  id          String       @id @default(cuid())
+  nombre      String
+  lugar       String
+  fecha       String
+  fechaISO    DateTime?
+  hora        String?
+  imagen      String?
+  categoria   String?
+  precio      String?
+  createdAt   DateTime     @default(now())
+
+  asignaciones Asignacion[]
+  entradas     Entrada[]
+  codigosQr    CodigoQr[]
+  puestos      Puesto[]
+
+  @@map("eventos")
+}
+
+model Asignacion {
+  id         String   @id @default(cuid())
+  eventoId   String
+  usuarioId  Int
+  rol        Rol
+  createdAt  DateTime @default(now())
+
+  evento     Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@unique([eventoId, usuarioId])
+  @@map("asignaciones_eventos")
+}
+
+model Entrada {
+  id                 Int           @id @default(autoincrement())
+  eventoId           String
+  nombre             String
+  documento          String
+  correo             String
+  tipoEntrada        String
+  foto               String?
+  estado             EstadoEntrada @default(pendiente)
+  horaIngreso        String?
+  horaSalida         String?
+  vinculadoEn        DateTime?
+
+  evento             Evento        @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  codigoQrVinculado   CodigoQr?     @relation("EntradaCodigoQr")
+
+  @@map("entradas")
+}
+
+model CodigoQr {
+  id          String   @id @default(cuid())
+  eventoId    String
+  numero      Int
+  codigo      String   @unique
+  generadoEn  DateTime @default(now())
+
+  entradaId   Int?     @unique
+  entrada     Entrada? @relation("EntradaCodigoQr", fields: [entradaId], references: [id])
+  evento      Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@unique([eventoId, numero])
+  @@map("codigos_qr")
+}
+
+model Puesto {
+  id            String   @id @default(cuid())
+  eventoId      String
+  numero        Int?
+  categoria     String?
+  foto          String?
+  x             Float    @default(0)
+  y             Float    @default(0)
+  ancho         Float    @default(100)
+  alto          Float    @default(100)
+  estadoActivo  Boolean  @default(true)
+
+  negocioId     Int?
+  negocio       Usuario? @relation(fields: [negocioId], references: [id])
+  evento        Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@map("puestos_mapa")
+}
