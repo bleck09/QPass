@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   FaPlus, FaTrash, FaSave, FaEye, FaImage, FaUpload,
@@ -6,8 +6,7 @@ import {
   FaTicketAlt, FaChartLine, FaExchangeAlt, FaStore, FaQrcode,
   FaTimes, FaClock, FaCalendarAlt
 } from 'react-icons/fa';
-import { leerEventos } from '../../data/eventosAdmin';
-import { leerConfig, guardarConfig } from '../../data/landingConfig';
+import api from '../../api/index.js';
 import './AdminConfigurarPagina.css';
 
 // Configuración por defecto (Estilo Dark / Glassmorphism)
@@ -48,18 +47,28 @@ const normalizarConfig = (config) => {
 
 export default function AdminConfigurarPagina() {
   const location = useLocation();
-  const eventosDisponibles = useMemo(() => leerEventos(), []);
-
-  const [eventoId, setEventoId] = useState(location.state?.eventoId || eventosDisponibles[0]?.id);
-  const [config, setConfig] = useState(() => normalizarConfig(leerConfig(eventoId, defaultLandingConfig)));
+  const [eventosDisponibles, setEventosDisponibles] = useState([]);
+  const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
+  const [config, setConfig] = useState(defaultLandingConfig);
 
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [showPreview, setShowPreview] = useState(false);
 
-  const cambiarEvento = (nuevoId) => {
-    setEventoId(nuevoId);
-    setConfig(normalizarConfig(leerConfig(nuevoId, defaultLandingConfig)));
-  };
+  useEffect(() => {
+    api.eventos.listar().then(lista => {
+      setEventosDisponibles(lista);
+      setEventoId(prev => prev || lista[0]?.id);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!eventoId) return;
+    api.landingConfig.obtener(eventoId)
+      .then(cfg => setConfig(normalizarConfig(cfg)))
+      .catch(() => setConfig(defaultLandingConfig));
+  }, [eventoId]);
+
+  const cambiarEvento = (nuevoId) => setEventoId(nuevoId);
 
   const handleChange = (e) => {
     setConfig({ ...config, [e.target.name]: e.target.value });
@@ -90,16 +99,17 @@ export default function AdminConfigurarPagina() {
     setConfig({ ...config, [key]: config[key].filter((_, i) => i !== index) });
   };
 
-  const guardarConfiguracion = () => {
-    guardarConfig(eventoId, config);
+  const guardarConfiguracion = async () => {
+    const guardada = await api.landingConfig.guardar(eventoId, config);
+    setConfig(normalizarConfig(guardada));
     setMensaje({ texto: '¡Página de inicio actualizada con éxito!', tipo: 'exito' });
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
   };
 
-  const restablecerValores = () => {
+  const restablecerValores = async () => {
     if (window.confirm("¿Estás seguro de que deseas volver a los valores originales del diseño moderno?")) {
-      setConfig(defaultLandingConfig);
-      guardarConfig(eventoId, defaultLandingConfig);
+      const guardada = await api.landingConfig.guardar(eventoId, defaultLandingConfig);
+      setConfig(normalizarConfig(guardada));
       setMensaje({ texto: 'Se han restaurado los valores por defecto.', tipo: 'aviso' });
       setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
     }

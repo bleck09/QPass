@@ -1,19 +1,27 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  FaQrcode, FaSignInAlt, 
+  FaQrcode, FaSignInAlt,
   FaBolt, FaChartPie, FaMobileAlt, FaArrowRight,
   FaMapMarkerAlt,
 } from 'react-icons/fa';
 import './PaginaPrincipal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
-import { proximosEventos, eventosPasados } from '../../data/eventos.js';
+import api from '../../api/index.js';
+import { esVigente, conPrecioDesde, formatearFecha } from '../../utils/eventos.js';
 
 export default function PaginaPrincipal() {
   const navigate = useNavigate();
+  const [proximosEventos, setProximosEventos] = useState([]);
+  const [eventosPasados, setEventosPasados] = useState([]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    api.eventos.listar().then(async (todos) => {
+      const proximos = todos.filter(esVigente);
+      setProximosEventos(await conPrecioDesde(proximos));
+      setEventosPasados(todos.filter(ev => !esVigente(ev)));
+    });
   }, []);
 
   const verEvento = () => navigate('/evento');
@@ -115,7 +123,7 @@ export default function PaginaPrincipal() {
               <img src={evento.imagen} alt={evento.nombre} />
               <div className="past-card-info">
                 <h4>{evento.nombre}</h4>
-                <span><FaMapMarkerAlt/> {evento.lugar} · {evento.fecha}</span>
+                <span><FaMapMarkerAlt/> {evento.lugar} · {formatearFecha(evento.fecha)}</span>
               </div>
             </div>
           ))}

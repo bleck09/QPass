@@ -1,52 +1,58 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FaUsers, FaCheckCircle, FaQrcode, FaTimes,
   FaSearch, FaIdCard, FaTicketAlt,  FaUserCheck, FaExclamationTriangle,
-  FaSignOutAlt, FaCamera, FaHistory, FaSignInAlt, FaUserSecret, FaSyncAlt
+  FaSignOutAlt, FaCamera, FaHistory, FaSignInAlt, FaUserSecret, FaSyncAlt,
+  FaMapMarkerAlt, FaArrowLeft
 } from 'react-icons/fa';
+import api from '../../api/index.js';
+import { formatearFecha } from '../../utils/eventos.js';
 import './Supervisor.css';
-
-// --- DATOS SIMULADOS DEL EVENTO ---
-const participantesIniciales = [
-  // 1. Caso Normal: Adentro y con foto
-  { id: 1, nombre: 'María Fernanda Rojas', documento: '7451236 LP', tipoEntrada: 'VIP', fotoPerfil: 'https://i.pravatar.cc/300?img=47', fotoIngreso: 'https://i.pravatar.cc/300?img=47', estado: 'ingresado', historial: [{ tipo: 'Entrada', hora: '08:12' }] },
-  // 2. Caso Salida: Afuera temporalmente
-  { id: 2, nombre: 'Jorge Luis Quispe', documento: '6621345 SC', tipoEntrada: 'General', fotoPerfil: 'https://i.pravatar.cc/300?img=12', fotoIngreso: 'https://i.pravatar.cc/300?img=12', estado: 'salio', historial: [{ tipo: 'Entrada', hora: '08:20' }, { tipo: 'Salida', hora: '10:15' }] },
-  // 3. Caso Excepción: Adentro pero OMITIÓ la foto al entrar
-  { id: 3, nombre: 'Ana Belén Castro', documento: '5589214 CB', tipoEntrada: 'General', fotoPerfil: 'https://i.pravatar.cc/300?img=32', fotoIngreso: null, estado: 'ingresado', historial: [{ tipo: 'Entrada (Sin Foto)', hora: '08:35' }] },
-  // 4. Casos Pendientes: Nunca han entrado
-  { id: 4, nombre: 'Sergio Fabián Choque', documento: '3312589 OR', tipoEntrada: 'General', fotoPerfil: 'https://i.pravatar.cc/300?img=15', fotoIngreso: null, estado: 'pendiente', historial: [] },
-  { id: 5, nombre: 'Daniela Vargas Soto', documento: '7789456 SC', tipoEntrada: 'VIP', fotoPerfil: 'https://i.pravatar.cc/300?img=25', fotoIngreso: null, estado: 'pendiente', historial: [] },
-];
-
-const horaActual = () => new Date().toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+import './GestionEntrega.css';
 
 export default function Supervisor() {
-  const [participantes, setParticipantes] = useState(participantesIniciales);
-  
-  const [tarjetaQR, setTarjetaQR] = useState(null); 
+  const [eventos, setEventos] = useState([]);
+  const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
+  const [participantes, setParticipantes] = useState([]);
+
+  const [tarjetaQR, setTarjetaQR] = useState(null);
+  const [historialTarjeta, setHistorialTarjeta] = useState([]);
   const [fotoCapturadaTemporal, setFotoCapturadaTemporal] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
-  
-  const [filtro, setFiltro] = useState('todos'); 
+
+  const [filtro, setFiltro] = useState('todos');
   const [busqueda, setBusqueda] = useState('');
   const [alertaToggle, setAlertaToggle] = useState(''); // Mensaje de error interno del modal
 
+  useEffect(() => { api.eventos.listar().then(setEventos); }, []);
+
+  const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
+
+  const abrirEvento = (ev) => {
+    setEventoIdDetalle(ev.id);
+    api.entradas.listar({ eventoId: ev.id }).then(setParticipantes);
+  };
+
+  const volverALista = () => {
+    setEventoIdDetalle(null);
+    setParticipantes([]);
+  };
+
   const stats = useMemo(() => {
     const total = participantes.length;
-    const adentro = participantes.filter(p => p.estado === 'ingresado').length;
-    const afuera = participantes.filter(p => p.estado === 'salio').length;
-    const pendientes = participantes.filter(p => p.estado === 'pendiente').length;
+    const adentro = participantes.filter(p => p.estadoIngreso === 'ingresado').length;
+    const afuera = participantes.filter(p => p.estadoIngreso === 'salio').length;
+    const pendientes = participantes.filter(p => p.estadoIngreso === 'pendiente').length;
     const pctAdentro = total ? Math.round((adentro / total) * 1000) / 10 : 0;
     return { total, adentro, afuera, pendientes, pctAdentro };
   }, [participantes]);
 
   const listaFiltrada = useMemo(() => {
     return participantes.filter(p => {
-      const coincideFiltro = filtro === 'todos' || p.estado === filtro;
+      const coincideFiltro = filtro === 'todos' || p.estadoIngreso === filtro;
       const coincideBusqueda =
         p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        p.documento.toLowerCase().includes(busqueda.toLowerCase());
+        (p.documento || '').toLowerCase().includes(busqueda.toLowerCase());
       return coincideFiltro && coincideBusqueda;
     });
   }, [participantes, filtro, busqueda]);
@@ -55,6 +61,7 @@ export default function Supervisor() {
   // LÓGICA DE ESCANEO GENERAL
   // ========================================================
   const simularEscaneoGeneral = () => {
+    if (participantes.length === 0) return;
     setEscaneando(true);
     setTimeout(() => {
       // Tomamos alguien al azar para simular
@@ -63,15 +70,8 @@ export default function Supervisor() {
       setFotoCapturadaTemporal(null);
       setAlertaToggle('');
       setTarjetaQR(elegido);
+      api.entradas.registros(elegido.id).then(setHistorialTarjeta);
     }, 700);
-  };
-
-  // Botones específicos para tu demostración al Ingeniero
-  const abrirModalEspecifico = (idRequerido) => {
-    const elegido = participantes.find(p => p.id === idRequerido);
-    setFotoCapturadaTemporal(null);
-    setAlertaToggle('');
-    setTarjetaQR(elegido);
   };
 
   // ========================================================
@@ -86,85 +86,70 @@ export default function Supervisor() {
 
   const cerrarTarjeta = () => {
     setTarjetaQR(null);
+    setHistorialTarjeta([]);
     setFotoCapturadaTemporal(null);
     setAlertaToggle('');
   };
 
-  // ========================================================
-  // CAMBIO DE ESTADOS (TOGGLE Y PRIMER INGRESO)
-  // ========================================================
-  
-  // 1. Para cuando es "Pendiente" (Primer ingreso)
-  const registrarPrimerIngreso = (omitirFoto = false) => {
-    if (!omitirFoto && !fotoCapturadaTemporal) return; // Validación de seguridad
-
-    const nuevaHora = horaActual();
-    const tipoMov = omitirFoto ? 'Entrada (Sin foto)' : 'Entrada';
-    const nuevoHistorial = [{ tipo: tipoMov, hora: nuevaHora }];
-
-    const actualizado = {
-      ...tarjetaQR,
-      estado: 'ingresado',
-      historial: nuevoHistorial,
-      fotoIngreso: omitirFoto ? null : fotoCapturadaTemporal
-    };
-
-    setTarjetaQR(actualizado);
-    setParticipantes(prev => prev.map(p => p.id === actualizado.id ? actualizado : p));
+  const actualizarParticipante = (entradaActualizada) => {
+    setTarjetaQR(entradaActualizada);
+    setParticipantes(prev => prev.map(p => p.id === entradaActualizada.id ? entradaActualizada : p));
+    api.entradas.registros(entradaActualizada.id).then(setHistorialTarjeta);
   };
 
-  // 2. Para cuando ya entró alguna vez (Interruptor Adentro/Afuera)
-  const cambiarEstadoToggle = (nuevoEstado) => {
-    // Regla de Negocio: Si quiere salir ('salio') pero NUNCA se tomó foto, bloquearlo.
-    if (nuevoEstado === 'salio' && !tarjetaQR.fotoIngreso && !fotoCapturadaTemporal) {
-      setAlertaToggle('¡FOTO OBLIGATORIA! El participante no tiene foto de seguridad. Tómale una antes de registrar su salida.');
+  // ========================================================
+  // REGISTRAR INGRESO / SALIDA — cada escaneo exige una foto nueva (anti-préstamo de manilla),
+  // no se reutiliza ninguna foto guardada de una vez anterior.
+  // ========================================================
+  const registrarMovimiento = async (tipo) => {
+    if (!fotoCapturadaTemporal) {
+      setAlertaToggle('Toma una foto antes de registrar el movimiento.');
       return;
     }
-
     setAlertaToggle('');
-    const nuevaHora = horaActual();
-    const tipoMov = nuevoEstado === 'ingresado' ? 'Entrada' : 'Salida';
-    
-    // Si acaba de tomar la foto para salir, se la guardamos definitivamente
-    const fotoFinal = tarjetaQR.fotoIngreso || fotoCapturadaTemporal;
-
-    const nuevoHistorial = [...tarjetaQR.historial, { tipo: tipoMov, hora: nuevaHora }];
-
-    const actualizado = {
-      ...tarjetaQR,
-      estado: nuevoEstado,
-      historial: nuevoHistorial,
-      fotoIngreso: fotoFinal
-    };
-
-    // Actualiza la tarjeta en vivo y la base de datos global
-    setTarjetaQR(actualizado);
-    setParticipantes(prev => prev.map(p => p.id === actualizado.id ? actualizado : p));
+    const actualizado = tipo === 'salida'
+      ? await api.entradas.salida(tarjetaQR.id, fotoCapturadaTemporal)
+      : await api.entradas.ingreso(tarjetaQR.id, fotoCapturadaTemporal);
+    setFotoCapturadaTemporal(null);
+    actualizarParticipante(actualizado);
   };
 
-  // ========================================================
-  // RENDERIZADO CONDICIONAL DEL MODAL
-  // ========================================================
-  const esPendiente = tarjetaQR && tarjetaQR.estado === 'pendiente';
-  const faltaFotoObligatoria = tarjetaQR && !tarjetaQR.fotoIngreso;
+  if (!eventoDetalle) {
+    return (
+      <div className="pi-sup-container">
+        <div className="pi-sup-header">
+          <h2>Punto de Control de Accesos</h2>
+        </div>
+        <div className="pi-entrega-eventos-grid">
+          {eventos.map(ev => (
+            <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
+              <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+              <div className="pi-entrega-evento-info">
+                <strong>{ev.nombre}</strong>
+                <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pi-sup-container">
 
       <div className="pi-sup-header">
-        <h2>Punto de Control de Accesos</h2>
-        
+        <div>
+          <button className="pi-entrega-btn-volver" onClick={volverALista}>
+            <FaArrowLeft /> Cambiar de evento
+          </button>
+          <h2>{eventoDetalle.nombre}</h2>
+        </div>
+
         <div className="pi-sup-simuladores">
           <button className="pi-sup-btn-escanear-general" onClick={simularEscaneoGeneral} disabled={escaneando}>
             <FaQrcode /> {escaneando ? 'Escaneando...' : 'Escanear Código QR'}
           </button>
-          
-          <div className="sim-demos">
-            <span className="sim-label">Casos Demo:</span>
-            <button onClick={() => abrirModalEspecifico(4)}>1. Nuevo Ingreso</button>
-            <button onClick={() => abrirModalEspecifico(1)}>2. Cambiar Adentro/Afuera</button>
-            <button onClick={() => abrirModalEspecifico(3)}>3. Adentro (Pero omitió foto)</button>
-          </div>
         </div>
       </div>
 
@@ -225,21 +210,22 @@ export default function Supervisor() {
             </thead>
             <tbody>
               {listaFiltrada.map(p => {
-                const ultimoHistorial = p.historial.length > 0 ? p.historial[p.historial.length - 1] : null;
+                const historial = historialDe(p);
+                const ultimoHistorial = historial.length > 0 ? historial[historial.length - 1] : null;
                 return (
                   <tr key={p.id}>
                     <td>
                       <div className="pi-sup-fila-persona">
-                        <img src={p.fotoPerfil} alt={p.nombre} className="pi-sup-mini-avatar" />
+                        {p.foto && <img src={p.foto} alt={p.nombre} className="pi-sup-mini-avatar" />}
                         <span>{p.nombre}</span>
                       </div>
                     </td>
-                    <td>{p.documento}</td>
-                    <td>{p.tipoEntrada}</td>
+                    <td>{p.documento || '—'}</td>
+                    <td>{p.categoriaTicket?.nombre || '—'}</td>
                     <td>
-                      {p.estado === 'ingresado' && <span className="pi-sup-badge pi-sup-badge-ok">Adentro</span>}
-                      {p.estado === 'salio' && <span className="pi-sup-badge pi-sup-badge-out">Salió</span>}
-                      {p.estado === 'pendiente' && <span className="pi-sup-badge pi-sup-badge-pend">Pendiente</span>}
+                      {p.estadoIngreso === 'ingresado' && <span className="pi-sup-badge pi-sup-badge-ok">Adentro</span>}
+                      {p.estadoIngreso === 'salio' && <span className="pi-sup-badge pi-sup-badge-out">Salió</span>}
+                      {p.estadoIngreso === 'pendiente' && <span className="pi-sup-badge pi-sup-badge-pend">Pendiente</span>}
                     </td>
                     <td className="col-historial">
                       {ultimoHistorial ? `${ultimoHistorial.tipo} a las ${ultimoHistorial.hora}` : '—'}
@@ -269,21 +255,18 @@ export default function Supervisor() {
             </div>
 
             {/* FOTOS SUPERPUESTAS */}
-            <div className={`pi-sup-fotos-comparacion ${faltaFotoObligatoria && !fotoCapturadaTemporal ? 'single-photo' : 'dual-photo'}`}>
-              
+            <div className="pi-sup-fotos-comparacion dual-photo">
+
               <div className="foto-box">
-                <img src={tarjetaQR.fotoPerfil} alt="Perfil" className="foto-img" />
+                {tarjetaQR.foto
+                  ? <img src={tarjetaQR.foto} alt="Perfil" className="foto-img" />
+                  : <div className="foto-placeholder"><FaIdCard size={26} /></div>}
                 <span className="foto-label text-gray">FOTO DE PERFIL</span>
               </div>
 
-              {/* Lógica dinámica de la foto de puerta */}
+              {/* Cada escaneo pide una foto nueva — no se reutiliza ninguna guardada de antes. */}
               <div className="foto-box">
-                {tarjetaQR.fotoIngreso ? (
-                  <>
-                    <img src={tarjetaQR.fotoIngreso} alt="Ingreso" className="foto-img border-cyan" />
-                    <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
-                  </>
-                ) : fotoCapturadaTemporal ? (
+                {fotoCapturadaTemporal ? (
                   <div className="foto-capturada-container">
                     <img src={fotoCapturadaTemporal} alt="Captura" className="foto-img border-cyan" />
                     <button className="btn-retake" onClick={descartarFoto} title="Volver a tomar"><FaSyncAlt /></button>
@@ -306,14 +289,14 @@ export default function Supervisor() {
                 <FaIdCard className="info-icon" />
                 <div>
                   <span className="info-label">DOCUMENTO</span>
-                  <span className="info-valor">{tarjetaQR.documento}</span>
+                  <span className="info-valor">{tarjetaQR.documento || '—'}</span>
                 </div>
               </div>
               <div className="info-row">
                 <FaTicketAlt className="info-icon" />
                 <div>
                   <span className="info-label">TIPO DE ENTRADA</span>
-                  <span className="info-valor">{tarjetaQR.tipoEntrada}</span>
+                  <span className="info-valor">{tarjetaQR.categoriaTicket?.nombre || '—'}</span>
                 </div>
               </div>
             </div>
@@ -326,14 +309,17 @@ export default function Supervisor() {
 
             <div className="pi-sup-historial-section">
               <h4 className="historial-title"><FaHistory /> Historial de Accesos</h4>
-              {tarjetaQR.historial.length === 0 ? (
+              {historialTarjeta.length === 0 ? (
                 <p className="historial-vacio">Sin registros previos.</p>
               ) : (
                 <div className="historial-list">
-                  {tarjetaQR.historial.map((mov, idx) => (
-                    <div key={idx} className={`historial-item ${mov.tipo.includes('Entrada') ? 'item-in' : 'item-out'}`}>
-                      {mov.tipo.includes('Entrada') ? <FaSignInAlt/> : <FaSignOutAlt/>}
-                      <span>{mov.tipo} registrada a las {mov.hora}</span>
+                  {historialTarjeta.map((mov) => (
+                    <div key={mov.id} className={`historial-item ${mov.tipo === 'ingreso' ? 'item-in' : 'item-out'}`}>
+                      {mov.tipo === 'ingreso' ? <FaSignInAlt/> : <FaSignOutAlt/>}
+                      <span>
+                        {mov.tipo === 'ingreso' ? 'Entrada' : 'Salida'} registrada el {formatearFecha(mov.createdAt)}
+                        {' '}por {mov.registradoPor?.nombre}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -341,43 +327,26 @@ export default function Supervisor() {
             </div>
 
             {/* =========================================
-                FOOTER DINÁMICO
+                FOOTER: cada escaneo exige foto nueva, sin importar el estado actual
             ========================================= */}
             <div className="pi-sup-modal-footer">
-              
-              {esPendiente ? (
-                // --- FOOTER 1: PRIMER INGRESO ---
-                <>
-                  <button className="btn-omitir" onClick={() => registrarPrimerIngreso(true)}>
-                    Omitir por ahora
-                  </button>
-                  <button 
-                    className="btn-in-primero" 
-                    onClick={() => registrarPrimerIngreso(false)}
-                    disabled={!fotoCapturadaTemporal}
-                  >
-                    <FaSignInAlt /> {fotoCapturadaTemporal ? 'Confirmar Ingreso' : 'Requiere Fotografía'}
-                  </button>
-                </>
-              ) : (
-                // --- FOOTER 2: INTERRUPTOR (ADENTRO / AFUERA) ---
-                <div className="pi-sup-toggle-switch">
-                  <button 
-                    className={`toggle-option ${tarjetaQR.estado === 'salio' ? 'active-out' : ''}`}
-                    onClick={() => cambiarEstadoToggle('salio')}
-                  >
-                    <FaSignOutAlt /> AFUERA
-                  </button>
-                  
-                  <button 
-                    className={`toggle-option ${tarjetaQR.estado === 'ingresado' ? 'active-in' : ''}`}
-                    onClick={() => cambiarEstadoToggle('ingresado')}
-                  >
-                    <FaSignInAlt /> ADENTRO
-                  </button>
-                </div>
-              )}
+              <div className="pi-sup-toggle-switch">
+                <button
+                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'salio' ? 'active-out' : ''}`}
+                  onClick={() => registrarMovimiento('salida')}
+                  disabled={!fotoCapturadaTemporal}
+                >
+                  <FaSignOutAlt /> REGISTRAR SALIDA
+                </button>
 
+                <button
+                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''}`}
+                  onClick={() => registrarMovimiento('ingreso')}
+                  disabled={!fotoCapturadaTemporal}
+                >
+                  <FaSignInAlt /> REGISTRAR INGRESO
+                </button>
+              </div>
             </div>
 
           </div>

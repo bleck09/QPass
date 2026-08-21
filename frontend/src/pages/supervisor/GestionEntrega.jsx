@@ -1,29 +1,36 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FaMapMarkerAlt, FaSearch, FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
   FaUsers, FaHourglassHalf
 } from 'react-icons/fa';
-import { leerEventos } from '../../data/eventosAdmin';
-import { leerEntradas, vincularCodigoQr } from '../../data/entradas';
-import { leerQrDelEvento } from '../../data/codigosQr';
+import api from '../../api/index.js';
+import { formatearFecha } from '../../utils/eventos.js';
 import './GestionEntrega.css';
 
 export default function GestionEntrega() {
-  const eventos = useMemo(() => leerEventos(), []);
+  const [eventos, setEventos] = useState([]);
 
   const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
   const [participantes, setParticipantes] = useState([]);
+  const [codigosDisponibles, setCodigosDisponibles] = useState([]);
   const [busqueda, setBusqueda] = useState('');
 
   const [participanteVinculando, setParticipanteVinculando] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
   const [codigoEscaneado, setCodigoEscaneado] = useState(null);
 
+  useEffect(() => { api.eventos.listar().then(setEventos); }, []);
+
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
+
+  const refrescarEvento = (eventoId) => {
+    api.entradas.listar({ eventoId }).then(setParticipantes);
+    api.codigosQr.listar({ eventoId, disponibles: true }).then(setCodigosDisponibles);
+  };
 
   const abrirEvento = (ev) => {
     setEventoIdDetalle(ev.id);
-    setParticipantes(leerEntradas(ev.id));
+    refrescarEvento(ev.id);
     setBusqueda('');
   };
 
@@ -55,29 +62,20 @@ export default function GestionEntrega() {
     setEscaneando(false);
   };
 
-  // Códigos QR generados para este evento que todavía no están vinculados a nadie.
-  const codigosDisponibles = useMemo(() => {
-    if (!participanteVinculando) return [];
-    const yaVinculados = new Set(
-      participantes.filter(p => p.codigoQrVinculado).map(p => p.codigoQrVinculado)
-    );
-    return leerQrDelEvento(eventoIdDetalle).codigos.filter(qr => !yaVinculados.has(qr.codigo));
-  }, [participanteVinculando, participantes, eventoIdDetalle]);
-
   const simularEscaneo = () => {
     if (codigosDisponibles.length === 0) return;
     setEscaneando(true);
     setTimeout(() => {
       const elegido = codigosDisponibles[Math.floor(Math.random() * codigosDisponibles.length)];
-      setCodigoEscaneado(elegido.codigo);
+      setCodigoEscaneado(elegido);
       setEscaneando(false);
     }, 700);
   };
 
-  const confirmarVinculo = () => {
+  const confirmarVinculo = async () => {
     if (!codigoEscaneado || !participanteVinculando) return;
-    const actualizados = vincularCodigoQr(eventoIdDetalle, participanteVinculando.id, codigoEscaneado);
-    setParticipantes(actualizados);
+    await api.entradas.vincularQr(participanteVinculando.id, codigoEscaneado.id);
+    refrescarEvento(eventoIdDetalle);
     cerrarVincular();
   };
 
@@ -145,15 +143,15 @@ export default function GestionEntrega() {
                   <tr key={p.id}>
                     <td>
                       <div className="pi-entrega-fila-persona">
-                        <img src={p.foto} alt={p.nombre} className="pi-entrega-mini-avatar" />
+                        {p.foto && <img src={p.foto} alt={p.nombre} className="pi-entrega-mini-avatar" />}
                         <span>{p.nombre}</span>
                       </div>
                     </td>
-                    <td>{p.tipoEntrada}</td>
+                    <td>{p.categoriaTicket?.nombre || '—'}</td>
                     <td>{p.correo}</td>
                     <td>
                       {p.codigoQrVinculado
-                        ? <span className="pi-entrega-badge pi-entrega-badge-ok"><FaCheckCircle /> {p.codigoQrVinculado}</span>
+                        ? <span className="pi-entrega-badge pi-entrega-badge-ok"><FaCheckCircle /> {p.codigoQrVinculado.codigo}</span>
                         : <span className="pi-entrega-badge pi-entrega-badge-pend">Sin vincular</span>}
                     </td>
                     <td>
@@ -185,7 +183,7 @@ export default function GestionEntrega() {
                 <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
                   <strong>{ev.nombre}</strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {ev.fecha}</span>
+                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
                 </div>
               </button>
             ))}
@@ -215,7 +213,7 @@ export default function GestionEntrega() {
               {codigoEscaneado ? (
                 <div className="pi-entrega-codigo-detectado">
                   <FaCheckCircle color="var(--verde-recarga-texto)" />
-                  <span>{codigoEscaneado}</span>
+                  <span>{codigoEscaneado.codigo}</span>
                 </div>
               ) : (
                 <button

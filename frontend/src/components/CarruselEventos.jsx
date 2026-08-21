@@ -2,6 +2,7 @@ import { useState } from 'react';
 import {
   FaCalendarAlt, FaChevronLeft, FaChevronRight, FaMapMarkerAlt, FaExpandArrowsAlt
 } from 'react-icons/fa';
+import { formatearFecha } from '../utils/eventos.js';
 import '../pages/publico/PaginaPrincipal.css';
 
 // Carrusel 3D de eventos reutilizado tanto en la home pública (PaginaPrincipal)
@@ -86,11 +87,11 @@ export default function CarruselEventos({ eventos, onAdquirir }) {
                 <div className="card-3d-footer">
                   <div className="footer-info">
                     <span><FaMapMarkerAlt/> {evento.lugar}</span>
-                    <span><FaCalendarAlt/> {evento.fecha}</span>
+                    <span><FaCalendarAlt/> {formatearFecha(evento.fecha)}</span>
                   </div>
                   <div className="footer-price">
                     <span>Desde</span>
-                    <strong>{evento.precio}</strong>
+                    <strong>{evento.precioDesde != null ? `Bs. ${evento.precioDesde}` : 'Consultar'}</strong>
                   </div>
                 </div>
 
@@ -111,7 +112,7 @@ export default function CarruselEventos({ eventos, onAdquirir }) {
           <img src={eventos[activeIdx].imagen} alt="thumb" />
           <div className="pill-text">
             <strong>{eventos[activeIdx].nombre}</strong>
-            <span>{eventos[activeIdx].categoria}</span>
+            <span>{eventos[activeIdx].lugar}</span>
           </div>
         </div>
         <button onClick={nextSlide}><FaChevronRight/></button>

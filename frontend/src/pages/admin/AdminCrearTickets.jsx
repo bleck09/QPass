@@ -1,47 +1,31 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   FaCalendarAlt, FaTicketAlt, FaPlus, FaTrash, FaTags, FaAlignLeft,
   FaBoxes, FaDollarSign, FaCoins
 } from 'react-icons/fa';
-import { leerEventos } from '../../data/eventosAdmin';
+import api from '../../api/index.js';
 import './AdminCrearTickets.css';
-
-// --- CATEGORÍAS DE TICKET YA CREADAS POR EVENTO (semilla) ---
-const CLAVE_TICKETS = 'pi_tickets_categorias';
-const categoriasIniciales = {
-  ev1: [
-    { id: 1, nombre: 'General', descripcion: 'Acceso general al recinto del evento.', cantidad: 500, precio: 150 },
-    { id: 2, nombre: 'VIP', descripcion: 'Acceso a zona VIP con área preferencial.', cantidad: 100, precio: 300 },
-    { id: 3, nombre: 'Staff', descripcion: 'Acceso de personal autorizado del evento.', cantidad: 30, precio: 0 },
-  ],
-  ev2: [
-    { id: 1, nombre: 'General', descripcion: 'Entrada libre a la feria gastronómica.', cantidad: 200, precio: 50 },
-  ],
-};
-
-const leerCategoriasPorEvento = () => {
-  const guardado = localStorage.getItem(CLAVE_TICKETS);
-  return guardado ? JSON.parse(guardado) : categoriasIniciales;
-};
-
-const guardarCategoriasPorEvento = (obj) => {
-  localStorage.setItem(CLAVE_TICKETS, JSON.stringify(obj));
-};
 
 export default function AdminCrearTickets() {
   const location = useLocation();
-  const eventosDisponibles = useMemo(() => leerEventos(), []);
-
-  const [eventoId, setEventoId] = useState(location.state?.eventoId || eventosDisponibles[0]?.id);
-  const [categoriasPorEvento, setCategoriasPorEvento] = useState(leerCategoriasPorEvento);
+  const [eventosDisponibles, setEventosDisponibles] = useState([]);
+  const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
+  const [categorias, setCategorias] = useState([]);
 
   const [formCategoria, setFormCategoria] = useState({ nombre: '', descripcion: '', cantidad: '', precio: '' });
 
-  const categorias = useMemo(
-    () => categoriasPorEvento[eventoId] || [],
-    [categoriasPorEvento, eventoId]
-  );
+  useEffect(() => {
+    api.eventos.listar().then(lista => {
+      setEventosDisponibles(lista);
+      setEventoId(prev => prev || lista[0]?.id);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!eventoId) return;
+    api.categoriasTicket.listar(eventoId).then(setCategorias);
+  }, [eventoId]);
 
   const totales = useMemo(() => {
     const totalCategorias = categorias.length;
@@ -54,34 +38,26 @@ export default function AdminCrearTickets() {
     setFormCategoria({ ...formCategoria, [e.target.name]: e.target.value });
   };
 
-  const agregarCategoria = (e) => {
+  const agregarCategoria = async (e) => {
     e.preventDefault();
     if (!formCategoria.nombre || !formCategoria.cantidad || formCategoria.precio === '') return;
 
-    const nuevaCategoria = {
-      id: Date.now(),
+    const nuevaCategoria = await api.categoriasTicket.crear({
+      eventoId,
       nombre: formCategoria.nombre,
       descripcion: formCategoria.descripcion,
       cantidad: Number(formCategoria.cantidad),
       precio: Number(formCategoria.precio),
-    };
-
-    setCategoriasPorEvento(prev => {
-      const actualizado = { ...prev, [eventoId]: [...(prev[eventoId] || []), nuevaCategoria] };
-      guardarCategoriasPorEvento(actualizado);
-      return actualizado;
     });
 
+    setCategorias(prev => [...prev, nuevaCategoria]);
     setFormCategoria({ nombre: '', descripcion: '', cantidad: '', precio: '' });
   };
 
-  const eliminarCategoria = (id) => {
+  const eliminarCategoria = async (id) => {
     if (!window.confirm('¿Eliminar esta categoría de ticket?')) return;
-    setCategoriasPorEvento(prev => {
-      const actualizado = { ...prev, [eventoId]: prev[eventoId].filter(c => c.id !== id) };
-      guardarCategoriasPorEvento(actualizado);
-      return actualizado;
-    });
+    await api.categoriasTicket.eliminar(id);
+    setCategorias(prev => prev.filter(c => c.id !== id));
   };
 
   return (

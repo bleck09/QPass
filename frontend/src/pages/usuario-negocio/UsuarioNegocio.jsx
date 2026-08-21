@@ -1,63 +1,24 @@
-import { useState, useEffect} from 'react';
+import { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign,
   FaImage, FaListUl, FaUsers, FaBoxOpen, FaUpload, FaUserTie, FaHamburger,
-  FaUserFriends
+  FaUserFriends, FaCalendarAlt
 } from 'react-icons/fa';
 import './UsuarioNegocio.css';
 import UsuNegoCreaAyudante from './UsuNegoCreaAyudante';
-
-// Datos de prueba con imágenes de productos incluidas
-const mockPuestos = [
-  {
-    id: 1,
-    nombre: 'Pizzas El Paso',
-    descripcion: 'Pizzas artesanales, porciones y bebidas frías.',
-    logo: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&w=150&q=80',
-    productos: [
-      { 
-        id: 101, 
-        nombre: 'Porción de Pizza Pepperoni', 
-        precio: 15.00,
-        imagen: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80'
-      },
-      { 
-        id: 102, 
-        nombre: 'Gaseosa 500ml', 
-        precio: 10.00,
-        imagen: null // Producto sin foto
-      }
-    ],
-    ayudantes: [] // This will be dynamically populated based on allAyudantes
-  }
-];
-
-// Global list of all ayudantes
-const mockAllAyudantes = [
-  { id: 201, nombre: 'Pedro Gómez', email: 'pedro@ayudante.com', turno: 'Noche', foto: null, puestosAsignados: ['Pizzas El Paso'] },
-  { id: 202, nombre: 'Ana Martínez', email: 'ana@ayudante.com', turno: 'Día', foto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=100&q=80', puestosAsignados: [] },
-  { id: 203, nombre: 'Juan Pérez', email: 'juan@ayudante.com', turno: 'Tarde', foto: null, puestosAsignados: [] },
-  { id: 204, nombre: 'Sofía Rojas', email: 'sofia@ayudante.com', turno: 'Día', foto: null, puestosAsignados: ['Pizzas El Paso'] },
-];
+import api from '../../api/index.js';
+import { leerSesion } from '../../api/client.js';
 
 const initialStateFormPuesto = { nombre: '', descripcion: '', logo: '' };
 const initialStateFormProducto = { nombre: '', precio: '', imagen: '' };
-const initialStateFormAyudante = { id: null, nombre: '', email: '', turno: 'Día', foto: '', puestosAsignados: [] };
-
-// ¡CORRECCIÓN 1! Se cambió el ]; final por };
-const syncPuestoAyudantes = (currentPuestos, currentAllAyudantes) => {
-  return currentPuestos.map(puesto => ({
-    ...puesto,
-    ayudantes: currentAllAyudantes.filter(ayu => ayu.puestosAsignados.includes(puesto.nombre))
-  }));
-};
 
 export default function UsuarioNegocio() {
   const location = useLocation();
+  const sesion = leerSesion();
+
   // /usuarionegocio/ayudantes entra directo a la pestaña "Mis Ayudantes" (accesible también
   // desde el menú lateral como "Crear ayudante").
-  const [puestos, setPuestos] = useState(mockPuestos);
   const [activeTab, setActiveTab] = useState(location.pathname.endsWith('/ayudantes') ? 'ayudantes' : 'puestos'); // 'puestos' o 'ayudantes'
 
   // Si se navega entre /usuarionegocio y /usuarionegocio/ayudantes sin que el componente
@@ -69,7 +30,10 @@ export default function UsuarioNegocio() {
     setActiveTab(location.pathname.endsWith('/ayudantes') ? 'ayudantes' : 'puestos');
   }
 
-  const [allAyudantes, setAllAyudantes] = useState(mockAllAyudantes); // Master list of all ayudantes
+  const [eventos, setEventos] = useState([]);
+  const [eventoId, setEventoId] = useState('');
+  const [puestos, setPuestos] = useState([]);
+
   const [showModalPuesto, setShowModalPuesto] = useState(false);
   const [showModalCatalogo, setShowModalCatalogo] = useState(false);
   const [showModalAyudantesPuesto, setShowModalAyudantesPuesto] = useState(false); // New modal for managing ayudantes per puesto
@@ -79,10 +43,19 @@ export default function UsuarioNegocio() {
   const [formPuesto, setFormPuesto] = useState(initialStateFormPuesto);
   const [formProducto, setFormProducto] = useState(initialStateFormProducto);
 
-  // Sincronizar los ayudantes de cada puesto cuando allAyudantes o puestos cambian
   useEffect(() => {
-    setPuestos(prevPuestos => syncPuestoAyudantes(prevPuestos, allAyudantes));
-  }, [allAyudantes]);
+    api.eventos.listar().then(lista => {
+      setEventos(lista);
+      setEventoId(prev => prev || lista[0]?.id || '');
+    });
+  }, []);
+
+  const recargarPuestos = () => {
+    if (!eventoId) return;
+    api.puestos.listar({ eventoId, negocioId: sesion.id }).then(setPuestos);
+  };
+
+  useEffect(() => { recargarPuestos(); }, [eventoId]);
 
   // --- LÓGICA DE PUESTOS ---
   const handlePuestoChange = (e) => {
@@ -102,17 +75,12 @@ export default function UsuarioNegocio() {
 
   const quitarImagen = () => setFormPuesto({ ...formPuesto, logo: '' });
 
-  const crearPuesto = (e) => {
+  const crearPuesto = async (e) => {
     e.preventDefault();
-    const nuevo = {
-      id: Date.now(),
-      nombre: formPuesto.nombre,
-      descripcion: formPuesto.descripcion,
-      logo: formPuesto.logo || null,
-      productos: [],
-      ayudantes: [] 
-    };
-    setPuestos([...puestos, nuevo]);
+    await api.puestos.crear({
+      eventoId, nombre: formPuesto.nombre, descripcion: formPuesto.descripcion, logo: formPuesto.logo || null,
+    });
+    recargarPuestos();
     setFormPuesto({ nombre: '', descripcion: '', logo: '' });
     setShowModalPuesto(false);
   };
@@ -146,45 +114,28 @@ export default function UsuarioNegocio() {
 
   const quitarImagenProducto = () => setFormProducto({ ...formProducto, imagen: '' });
 
-  const agregarProducto = (e) => {
+  const agregarProducto = async (e) => {
     e.preventDefault();
     if (!formProducto.nombre || !formProducto.precio) return;
 
-    const nuevoProducto = {
-      id: Date.now(),
+    const nuevoProducto = await api.productos.crear({
+      puestoId: puestoSeleccionado.id,
       nombre: formProducto.nombre,
       precio: parseFloat(formProducto.precio),
-      imagen: formProducto.imagen || null
-    };
-
-    const puestosActualizados = puestos.map(p => {
-      if (p.id === puestoSeleccionado.id) {
-        return { ...p, productos: [...p.productos, nuevoProducto] };
-      }
-      return p;
+      imagen: formProducto.imagen || null,
     });
 
-    setPuestos(puestosActualizados);
-    setPuestoSeleccionado({ 
-      ...puestoSeleccionado, 
-      productos: [...puestoSeleccionado.productos, nuevoProducto] 
-    });
+    const productosActualizados = [...puestoSeleccionado.productos, nuevoProducto];
+    setPuestos(prev => prev.map(p => p.id === puestoSeleccionado.id ? { ...p, productos: productosActualizados } : p));
+    setPuestoSeleccionado({ ...puestoSeleccionado, productos: productosActualizados });
     setFormProducto({ nombre: '', precio: '', imagen: '' });
   };
 
-  const eliminarProducto = (idProducto) => {
-    const puestosActualizados = puestos.map(p => {
-      if (p.id === puestoSeleccionado.id) {
-        return { ...p, productos: p.productos.filter(prod => prod.id !== idProducto) };
-      }
-      return p;
-    });
-
-    setPuestos(puestosActualizados);
-    setPuestoSeleccionado({ 
-      ...puestoSeleccionado, 
-      productos: puestoSeleccionado.productos.filter(prod => prod.id !== idProducto) 
-    });
+  const eliminarProducto = async (idProducto) => {
+    await api.productos.eliminar(idProducto);
+    const productosActualizados = puestoSeleccionado.productos.filter(prod => prod.id !== idProducto);
+    setPuestos(prev => prev.map(p => p.id === puestoSeleccionado.id ? { ...p, productos: productosActualizados } : p));
+    setPuestoSeleccionado({ ...puestoSeleccionado, productos: productosActualizados });
   };
 
   return (
@@ -201,6 +152,13 @@ export default function UsuarioNegocio() {
           </p>
         </div>
         
+        <div className="pi-unegocio-selector-evento">
+          <FaCalendarAlt />
+          <select value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
+            {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
+          </select>
+        </div>
+
         <div className="pi-unegocio-kpi">
           <span className="micro-etiqueta">Total de Puestos Activos</span>
           <div className="kpi-valor">
@@ -287,7 +245,7 @@ export default function UsuarioNegocio() {
       )}
 
       {activeTab === 'ayudantes' && (
-        <UsuNegoCreaAyudante allAyudantes={allAyudantes} setAllAyudantes={setAllAyudantes} puestos={puestos} />
+        <UsuNegoCreaAyudante puestos={puestos} onCambio={recargarPuestos} />
       )}
 
       {/* =========================================
@@ -431,7 +389,7 @@ export default function UsuarioNegocio() {
                             </div>
                           </td>
                           <td>
-                            <span className="badge-precio">Bs. {producto.precio.toFixed(2)}</span>
+                            <span className="badge-precio">Bs. {Number(producto.precio).toFixed(2)}</span>
                           </td>
                           <td style={{ textAlign: 'center' }}>
                             <button className="btn-eliminar" onClick={() => eliminarProducto(producto.id)} title="Eliminar producto">
@@ -479,23 +437,23 @@ export default function UsuarioNegocio() {
                       </tr>
                     </thead>
                     <tbody>
-                      {puestoSeleccionado.ayudantes.map(ayudante => (
-                        <tr key={ayudante.id}>
+                      {puestoSeleccionado.ayudantes.map(asignacion => (
+                        <tr key={asignacion.id}>
                           <td>
                             <div className="item-info">
-                              {ayudante.foto ? (
-                                <img src={ayudante.foto} alt="Ayudante" className="item-img" style={{borderRadius: '50%', width: '40px', height: '40px'}} />
+                              {asignacion.ayudante.foto ? (
+                                <img src={asignacion.ayudante.foto} alt="Ayudante" className="item-img" style={{borderRadius: '50%', width: '40px', height: '40px'}} />
                               ) : (
                                 <div className="item-no-img" style={{borderRadius: '50%', width: '40px', height: '40px'}}><FaUserTie /></div>
                               )}
                               <div>
-                                <div className="fila-nombre">{ayudante.nombre}</div>
-                                <div className="celda-secundaria">{ayudante.email}</div>
+                                <div className="fila-nombre">{asignacion.ayudante.nombre}</div>
+                                <div className="celda-secundaria">{asignacion.ayudante.email}</div>
                               </div>
                             </div>
                           </td>
                           <td>
-                            <span className="badge-info">{ayudante.turno}</span>
+                            <span className="badge-info">{asignacion.turno}</span>
                           </td>
                         </tr>
                       ))}

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
   FaStore, FaMap, FaListUl, FaPlus, FaTimes,
@@ -6,26 +6,16 @@ import {
   FaInfoCircle, FaImage, FaUpload, FaArrowsAltH, FaArrowsAltV,
   FaCalendarAlt
 } from 'react-icons/fa';
-import { leerEventos } from '../../data/eventosAdmin';
-import { leerPuestos, guardarPuestos } from '../../data/mapaPuestos';
+import api from '../../api/index.js';
+import { ROLES } from '../../constants/roles.js';
 import './Mapa.css';
-
-const puestosDeNegociosRegistrados = [
-  { id: 'n1', nombre: 'Pizzas El Paso', logo: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&w=150&q=80', categoria: 'Comida' },
-  { id: 'n2', nombre: 'Pollos Doña María', logo: 'https://images.unsplash.com/photo-1626082896492-766af4eb65ed?ixlib=rb-4.0.3&w=150&q=80', categoria: 'Comida' }
-];
-
-const mockPuestos = [
-  { id: '1', numero: 'Pizzas El Paso', foto: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&w=150&q=80', categoria: 'Comida', estadoActivo: true, x: 50, y: 50, ancho: 120, alto: 100 },
-  { id: '2', numero: 'Escenario Principal', foto: null, categoria: 'Entretenimiento', estadoActivo: true, x: 300, y: 50, ancho: 250, alto: 120 }
-];
 
 export default function Mapa() {
   const location = useLocation();
-  const eventosDisponibles = useMemo(() => leerEventos(), []);
-
-  const [eventoId, setEventoId] = useState(location.state?.eventoId || eventosDisponibles[0]?.id);
-  const [puestos, setPuestos] = useState(() => leerPuestos(eventoId, mockPuestos));
+  const [eventosDisponibles, setEventosDisponibles] = useState([]);
+  const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
+  const [puestos, setPuestos] = useState([]);
+  const [negociosDisponibles, setNegociosDisponibles] = useState([]);
 
   const [vistaActiva, setVistaActiva] = useState('plano');
   const [modoDiseno, setModoDiseno] = useState(false);
@@ -34,11 +24,23 @@ export default function Mapa() {
   const [mostrarModal, setMostrarModal] = useState(false);
   const [modoEdicion, setModoEdicion] = useState(false);
 
-  const [form, setForm] = useState({ id: '', numero: '', categoria: 'Comida', foto: '', ancho: 100, alto: 100 });
+  const [form, setForm] = useState({ id: '', negocioId: '', nombre: '', categoria: 'Comida', logo: '', ancho: 100, alto: 100 });
+
+  useEffect(() => {
+    api.eventos.listar().then(lista => {
+      setEventosDisponibles(lista);
+      setEventoId(prev => prev || lista[0]?.id);
+    });
+    api.usuarios.listar({ rol: ROLES.USUARIO_NEGOCIO }).then(setNegociosDisponibles);
+  }, []);
+
+  useEffect(() => {
+    if (!eventoId) return;
+    api.puestos.listar({ eventoId }).then(setPuestos);
+  }, [eventoId]);
 
   const cambiarEvento = (nuevoId) => {
     setEventoId(nuevoId);
-    setPuestos(leerPuestos(nuevoId, mockPuestos));
     setModoDiseno(false);
   };
 
@@ -129,75 +131,68 @@ export default function Mapa() {
 
   const handleSelectNegocio = (e) => {
     const negocioId = e.target.value;
-    if (negocioId === 'personalizado') {
-      setForm({ ...form, numero: '', foto: '', categoria: 'General' });
-      return;
-    }
-    const neg = puestosDeNegociosRegistrados.find(n => n.id === negocioId);
-    if (neg) setForm({ ...form, numero: neg.nombre, foto: neg.logo, categoria: neg.categoria });
+    const neg = negociosDisponibles.find(n => String(n.id) === negocioId);
+    setForm({ ...form, negocioId, nombre: neg?.nombre || '' });
   };
 
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setForm({ ...form, foto: reader.result });
+      reader.onloadend = () => setForm({ ...form, logo: reader.result });
       reader.readAsDataURL(file);
     }
   };
 
-  const guardarElemento = (e) => {
+  const guardarElemento = async (e) => {
     e.preventDefault();
-    if (!form.numero.trim()) return;
-
-    let puestosActualizados;
+    if (!form.nombre.trim()) return;
 
     if (modoEdicion) {
-      puestosActualizados = puestos.map(p => 
-        p.id === form.id ? { 
-          ...p, numero: form.numero, categoria: form.categoria, foto: form.foto,
-          ancho: Number(form.ancho), alto: Number(form.alto)
-        } : p
-      );
+      const actualizado = await api.puestos.actualizar(form.id, {
+        nombre: form.nombre, categoria: form.categoria, logo: form.logo,
+        ancho: Number(form.ancho), alto: Number(form.alto),
+      });
+      setPuestos(prev => prev.map(p => p.id === actualizado.id ? { ...p, ...actualizado } : p));
       mostrarAlerta("Elemento actualizado correctamente.");
     } else {
-      const nuevoId = "hola";
-      const nuevoPuesto = {
-        id: nuevoId, numero: form.numero, categoria: form.categoria, foto: form.foto || null,
-        estadoActivo: true, x: 20, y: 20, ancho: Number(form.ancho), alto: Number(form.alto)
-      };
-      puestosActualizados = [...puestos, nuevoPuesto];
+      if (!form.negocioId) return;
+      const creado = await api.puestos.crear({
+        eventoId, negocioId: Number(form.negocioId), nombre: form.nombre, logo: form.logo,
+      });
+      const posicionado = await api.puestos.actualizar(creado.id, {
+        categoria: form.categoria, x: 20, y: 20, ancho: Number(form.ancho), alto: Number(form.alto),
+      });
+      setPuestos(prev => [...prev, { ...creado, ...posicionado }]);
       mostrarAlerta("Nuevo elemento añadido al plano.");
     }
 
-    setPuestos(puestosActualizados);
-    guardarPuestos(eventoId, puestosActualizados);
     cerrarModal();
   };
 
   const editarPuesto = (puesto) => {
     setForm({
-      id: puesto.id, numero: puesto.numero, categoria: puesto.categoria, 
-      foto: puesto.foto || '', ancho: puesto.ancho || 100, alto: puesto.alto || 100
+      id: puesto.id, negocioId: String(puesto.negocioId), nombre: puesto.nombre, categoria: puesto.categoria || 'Comida',
+      logo: puesto.logo || '', ancho: puesto.ancho || 100, alto: puesto.alto || 100
     });
     setModoEdicion(true);
     setMostrarModal(true);
   };
 
   const cerrarModal = () => {
-    setForm({ id: '', numero: '', categoria: 'Comida', foto: '', ancho: 100, alto: 100 });
+    setForm({ id: '', negocioId: '', nombre: '', categoria: 'Comida', logo: '', ancho: 100, alto: 100 });
     setModoEdicion(false);
     setMostrarModal(false);
   };
 
-  const toggleEstadoPuesto = (id) => {
-    const puestosActualizados = puestos.map(p => p.id === id ? { ...p, estadoActivo: !p.estadoActivo } : p);
-    setPuestos(puestosActualizados);
-    guardarPuestos(eventoId, puestosActualizados);
+  const toggleEstadoPuesto = async (id) => {
+    const puesto = puestos.find(p => p.id === id);
+    const actualizado = await api.puestos.actualizar(id, { estadoActivo: !puesto.estadoActivo });
+    setPuestos(prev => prev.map(p => p.id === id ? { ...p, ...actualizado } : p));
   };
 
-  const guardarDiseñoPlano = () => {
-    guardarPuestos(eventoId, puestos);
+  const guardarDiseñoPlano = async () => {
+    await Promise.all(puestos.map(p => api.puestos.actualizar(p.id, { x: p.x, y: p.y, ancho: p.ancho, alto: p.alto })));
     setModoDiseno(false);
     mostrarAlerta("Distribución guardada y bloqueada.");
   };
@@ -266,12 +261,12 @@ export default function Mapa() {
                       <tr key={puesto.id} style={{ opacity: puesto.estadoActivo ? 1 : 0.5 }}>
                         <td>
                           <div className="item-info-mapa">
-                            {puesto.foto ? (
-                              <img src={puesto.foto} alt="img" className="img-miniatura" />
+                            {puesto.logo ? (
+                              <img src={puesto.logo} alt="img" className="img-miniatura" />
                             ) : (
                               <div className="no-img-miniatura"><FaStore /></div>
                             )}
-                            <span className="fila-nombre">{puesto.numero}</span>
+                            <span className="fila-nombre">{puesto.nombre}</span>
                           </div>
                         </td>
                         <td>{puesto.categoria}</td>
@@ -338,16 +333,16 @@ export default function Mapa() {
                 }}
               >
                 {/* Contenido (Imagen o Icono) */}
-                {puesto.foto ? (
-                  <div className="box-fondo-img" style={{ backgroundImage: `url(${puesto.foto})` }}>
+                {puesto.logo ? (
+                  <div className="box-fondo-img" style={{ backgroundImage: `url(${puesto.logo})` }}>
                     <div className="box-overlay-texto">
-                      <strong>{puesto.numero}</strong>
+                      <strong>{puesto.nombre}</strong>
                     </div>
                   </div>
                 ) : (
                   <div className="box-fondo-color">
                     <FaStore className="puesto-icon-dinamico" />
-                    <strong>{puesto.numero}</strong>
+                    <strong>{puesto.nombre}</strong>
                     <span>{puesto.categoria}</span>
                   </div>
                 )}
@@ -382,11 +377,11 @@ export default function Mapa() {
                 
                 {!modoEdicion && (
                   <div className="input-group" style={{ backgroundColor: 'var(--gris-niebla)', padding: '15px', borderRadius: '8px' }}>
-                    <label>¿Es un negocio ya registrado en el sistema?</label>
-                    <select onChange={handleSelectNegocio} className="pi-select-rol">
-                      <option value="personalizado">No, crear un elemento libre (Ej: Baños, Escenario)</option>
-                      {puestosDeNegociosRegistrados.map(neg => (
-                        <option key={neg.id} value={neg.id}>Vendedor: {neg.nombre}</option>
+                    <label>Usuario Negocio dueño del puesto</label>
+                    <select value={form.negocioId} onChange={handleSelectNegocio} className="pi-select-rol" required>
+                      <option value="">Selecciona un negocio...</option>
+                      {negociosDisponibles.map(neg => (
+                        <option key={neg.id} value={neg.id}>{neg.nombre} ({neg.email})</option>
                       ))}
                     </select>
                   </div>
@@ -394,7 +389,7 @@ export default function Mapa() {
 
                 <div className="input-group">
                   <label>Nombre del Elemento</label>
-                  <input type="text" name="numero" value={form.numero} onChange={handleChange} placeholder="Ej: Escenario Norte" required />
+                  <input type="text" name="nombre" value={form.nombre} onChange={handleChange} placeholder="Ej: Pizzas El Paso" required />
                 </div>
 
                 <div className="input-group">
@@ -421,7 +416,7 @@ export default function Mapa() {
 
                 <div className="input-group">
                   <label><FaImage /> Imagen o Logo (Opcional)</label>
-                  {!form.foto ? (
+                  {!form.logo ? (
                     <div className="upload-zone-pequeña">
                       <FaUpload className="upload-icon" />
                       <span className="upload-text">Subir foto para el plano</span>
@@ -429,8 +424,8 @@ export default function Mapa() {
                     </div>
                   ) : (
                     <div className="preview-zone">
-                      <img src={form.foto} alt="Preview" className="img-preview-rect" style={{maxHeight:'100px'}}/>
-                      <button type="button" className="btn-quitar-imagen" onClick={() => setForm({...form, foto: ''})}>
+                      <img src={form.logo} alt="Preview" className="img-preview-rect" style={{maxHeight:'100px'}}/>
+                      <button type="button" className="btn-quitar-imagen" onClick={() => setForm({...form, logo: ''})}>
                         <FaTimes /> Quitar
                       </button>
                     </div>

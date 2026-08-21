@@ -20,6 +20,11 @@ categoriasTicketRouter.post('/', requireAuth, requireRol('Admin'), async (req, r
 });
 
 categoriasTicketRouter.delete('/:id', requireAuth, requireRol('Admin'), async (req, res) => {
+  const categoria = await prisma.categoriaTicket.findUnique({ where: { id: req.params.id } });
+  if (!categoria) return res.status(404).json({ error: 'Categoría no encontrada' });
+  if (categoria.cantidadVendida > 0) {
+    return res.status(409).json({ error: 'No se puede eliminar: ya tiene entradas vendidas' });
+  }
   await prisma.categoriaTicket.delete({ where: { id: req.params.id } });
   res.status(204).end();
 });

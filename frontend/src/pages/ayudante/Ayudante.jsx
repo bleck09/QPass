@@ -1,45 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   FaStore, FaShoppingCart, FaPlus, FaMinus, FaTrash, FaQrcode, FaTimes,
   FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle, FaHistory,
-  FaReceipt, FaHamburger
+  FaReceipt, FaHamburger, FaArrowLeft
 } from 'react-icons/fa';
+import api from '../../api/index.js';
+import { leerSesion } from '../../api/client.js';
 import './Ayudante.css';
 
-// --- PUESTO ASIGNADO AL AYUDANTE (con su catálogo de productos) ---
-const puestoAsignado = {
-  nombre: 'Pizzas El Paso',
-  descripcion: 'Pizzas artesanales, porciones y bebidas frías.',
-  logo: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&w=150&q=80',
-  productos: [
-    { id: 101, nombre: 'Porción de Pizza Pepperoni', precio: 15, imagen: 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?ixlib=rb-4.0.3&auto=format&fit=crop&w=150&q=80' },
-    { id: 102, nombre: 'Porción de Pizza Hawaiana', precio: 15, imagen: null },
-    { id: 103, nombre: 'Gaseosa 500ml', precio: 10, imagen: null },
-    { id: 104, nombre: 'Agua Mineral', precio: 5, imagen: null },
-  ],
-};
-
-// --- DATOS SIMULADOS DE CLIENTES (usuarios normales con saldo) ---
-const clientesIniciales = [
-  { id: 1, nombre: 'María Fernanda Rojas', documento: '7451236 LP', foto: 'https://i.pravatar.cc/300?img=47', saldo: 120 },
-  { id: 2, nombre: 'Jorge Luis Quispe', documento: '6621345 SC', foto: 'https://i.pravatar.cc/300?img=12', saldo: 45 },
-  { id: 3, nombre: 'Ana Belén Castro', documento: '5589214 CB', foto: 'https://i.pravatar.cc/300?img=32', saldo: 8 },
-  { id: 4, nombre: 'Ricardo Alanoca Mamani', documento: '4471258 LP', foto: 'https://i.pravatar.cc/300?img=51', saldo: 300 },
-  { id: 5, nombre: 'Daniela Vargas Soto', documento: '7789456 SC', foto: 'https://i.pravatar.cc/300?img=25', saldo: 80 },
-  { id: 6, nombre: 'Paola Andrea Terrazas', documento: '6654123 CB', foto: 'https://i.pravatar.cc/300?img=45', saldo: 200 },
-];
-
-const fechaHoraActual = () => {
-  const ahora = new Date();
-  return {
-    fecha: ahora.toLocaleDateString('es-BO'),
-    hora: ahora.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
-  };
-};
-
 export default function Ayudante() {
-  const [puesto] = useState(puestoAsignado);
-  const [clientes, setClientes] = useState(clientesIniciales);
+  const sesion = leerSesion();
+  const [puestosAsignados, setPuestosAsignados] = useState(null); // null = cargando
+  const [puesto, setPuesto] = useState(null);
+  const [productos, setProductos] = useState([]);
+  const [entradasEvento, setEntradasEvento] = useState([]);
 
   const [pestana, setPestana] = useState('vender'); // vender | historial
   const [carrito, setCarrito] = useState([]);
@@ -49,8 +23,23 @@ export default function Ayudante() {
   const [ventaExitosa, setVentaExitosa] = useState(null);
   const [ventas, setVentas] = useState([]);
 
+  useEffect(() => {
+    api.puestoAyudantes.listar({ ayudanteId: sesion.id }).then(lista => {
+      setPuestosAsignados(lista.map(a => a.puesto));
+    });
+  }, []);
+
+  const seleccionarPuesto = (p) => {
+    setPuesto(p);
+    api.productos.listar(p.id).then(setProductos);
+    api.entradas.listar({ eventoId: p.eventoId }).then(lista =>
+      setEntradasEvento(lista.filter(e => e.usuarioId).map(e => ({ ...e, saldo: Number(e.usuario?.saldo ?? 0) })))
+    );
+    api.ventas.listar({ puestoId: p.id }).then(setVentas);
+  };
+
   const totalCarrito = useMemo(
-    () => carrito.reduce((suma, item) => suma + item.precio * item.cantidad, 0),
+    () => carrito.reduce((suma, item) => suma + Number(item.precio) * item.cantidad, 0),
     [carrito]
   );
   const cantidadItemsCarrito = useMemo(
@@ -58,11 +47,11 @@ export default function Ayudante() {
     [carrito]
   );
   const totalVentasHoy = useMemo(
-    () => ventas.reduce((suma, v) => suma + v.total, 0),
+    () => ventas.reduce((suma, v) => suma + Number(v.montoTotal), 0),
     [ventas]
   );
 
-  const saldoInsuficiente = tarjetaQR && totalCarrito > tarjetaQR.saldo;
+  const saldoInsuficiente = tarjetaQR && totalCarrito > Number(tarjetaQR.saldo);
 
   // --- LÓGICA DEL CARRITO ---
   const agregarProducto = (producto) => {
@@ -88,11 +77,13 @@ export default function Ayudante() {
   const vaciarCarrito = () => setCarrito([]);
 
   // --- LÓGICA DE COBRO ---
+  // No hay cámara real: se simula el escaneo eligiendo una entrada al azar del evento
+  // (mismo patrón que Supervisor/Recargador/Devolución).
   const iniciarCobro = () => {
-    if (carrito.length === 0) return;
+    if (carrito.length === 0 || entradasEvento.length === 0) return;
     setEscaneando(true);
     setTimeout(() => {
-      const elegido = clientes[Math.floor(Math.random() * clientes.length)];
+      const elegido = entradasEvento[Math.floor(Math.random() * entradasEvento.length)];
       setEscaneando(false);
       setTarjetaQR(elegido);
     }, 700);
@@ -103,33 +94,53 @@ export default function Ayudante() {
     setVentaExitosa(null);
   };
 
-  const confirmarCobro = () => {
-    if (!tarjetaQR || carrito.length === 0 || totalCarrito > tarjetaQR.saldo) return;
+  const confirmarCobro = async () => {
+    if (!tarjetaQR || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
 
-    const nuevoSaldo = tarjetaQR.saldo - totalCarrito;
-    const { fecha, hora } = fechaHoraActual();
+    const nuevoSaldo = Number(tarjetaQR.saldo) - totalCarrito;
+    await api.ventas.crear({
+      puestoId: puesto.id,
+      entradaId: tarjetaQR.id,
+      items: carrito.map(i => ({ productoId: i.id, cantidad: i.cantidad })),
+    });
 
-    setClientes(prev => prev.map(c => c.id === tarjetaQR.id ? { ...c, saldo: nuevoSaldo } : c));
-
-    setVentas(prev => [
-      {
-        id: Date.now(),
-        cliente: tarjetaQR.nombre,
-        documento: tarjetaQR.documento,
-        foto: tarjetaQR.foto,
-        items: carrito.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, precio: i.precio })),
-        cantidadItems: cantidadItemsCarrito,
-        total: totalCarrito,
-        saldoResultante: nuevoSaldo,
-        fecha,
-        hora,
-      },
-      ...prev,
-    ]);
-
+    api.ventas.listar({ puestoId: puesto.id }).then(setVentas);
     setVentaExitosa({ monto: totalCarrito, saldo: nuevoSaldo });
     setCarrito([]);
   };
+
+  if (puestosAsignados === null) return null;
+
+  if (puestosAsignados.length === 0) {
+    return (
+      <div className="pi-ayu-container">
+        <div className="pi-ayu-header-wrapper">
+          <h2>Vender / Cobrar</h2>
+        </div>
+        <p className="pi-ayu-carrito-vacio">Todavía no tienes ningún puesto asignado. Pídele a tu Usuario Negocio que te asigne uno.</p>
+      </div>
+    );
+  }
+
+  if (!puesto) {
+    return (
+      <div className="pi-ayu-container">
+        <div className="pi-ayu-header-wrapper">
+          <h2>Selecciona tu puesto</h2>
+        </div>
+        <div className="pi-ayu-productos-grid">
+          {puestosAsignados.map(p => (
+            <button key={p.id} type="button" className="pi-ayu-producto-card" onClick={() => seleccionarPuesto(p)}>
+              {p.logo
+                ? <img src={p.logo} alt={p.nombre} className="pi-ayu-producto-img" />
+                : <div className="pi-ayu-producto-img-placeholder"><FaStore /></div>}
+              <span className="pi-ayu-producto-nombre">{p.nombre}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pi-ayu-container">
@@ -137,6 +148,9 @@ export default function Ayudante() {
       {/* --- CABECERA CON EL NOMBRE DEL NEGOCIO --- */}
       <div className="pi-ayu-header-wrapper">
         <div className="pi-ayu-header-negocio">
+          {puestosAsignados.length > 1 && (
+            <button className="pi-ayu-btn-quitar" onClick={() => setPuesto(null)} title="Cambiar de puesto"><FaArrowLeft /></button>
+          )}
           {puesto.logo
             ? <img src={puesto.logo} alt={puesto.nombre} className="pi-ayu-logo-negocio" />
             : <div className="pi-ayu-logo-placeholder"><FaStore /></div>}
@@ -172,7 +186,7 @@ export default function Ayudante() {
           <div className="pi-ayu-productos">
             <h3>Catálogo de productos</h3>
             <div className="pi-ayu-productos-grid">
-              {puesto.productos.map(producto => {
+              {productos.map(producto => {
                 const enCarrito = carrito.find(i => i.id === producto.id);
                 return (
                   <div className="pi-ayu-producto-card" key={producto.id}>
@@ -180,7 +194,7 @@ export default function Ayudante() {
                       ? <img src={producto.imagen} alt={producto.nombre} className="pi-ayu-producto-img" />
                       : <div className="pi-ayu-producto-img-placeholder"><FaHamburger /></div>}
                     <span className="pi-ayu-producto-nombre">{producto.nombre}</span>
-                    <span className="pi-ayu-producto-precio">{producto.precio} pts</span>
+                    <span className="pi-ayu-producto-precio">{Number(producto.precio)} pts</span>
 
                     {enCarrito ? (
                       <div className="pi-ayu-producto-stepper">
@@ -260,36 +274,37 @@ export default function Ayudante() {
                   <th>Documento</th>
                   <th>Productos</th>
                   <th>Total</th>
-                  <th>Saldo Resultante</th>
                   <th>Fecha</th>
                   <th>Hora</th>
                 </tr>
               </thead>
               <tbody>
-                {ventas.map(venta => (
-                  <tr key={venta.id}>
-                    <td>
-                      <div className="pi-ayu-fila-persona">
-                        <img src={venta.foto} alt={venta.cliente} className="pi-ayu-mini-avatar" />
-                        <span>{venta.cliente}</span>
-                      </div>
-                    </td>
-                    <td>{venta.documento}</td>
-                    <td>
-                      <span className="pi-ayu-badge-items">
-                        {venta.cantidadItems} {venta.cantidadItems === 1 ? 'producto' : 'productos'}
-                      </span>
-                    </td>
-                    <td className="pi-ayu-monto-celda">-{venta.total} pts</td>
-                    <td>{venta.saldoResultante} pts</td>
-                    <td>{venta.fecha}</td>
-                    <td>{venta.hora}</td>
-                  </tr>
-                ))}
+                {ventas.map(venta => {
+                  const cantidadItems = venta.items.reduce((s, i) => s + i.cantidad, 0);
+                  return (
+                    <tr key={venta.id}>
+                      <td>
+                        <div className="pi-ayu-fila-persona">
+                          {venta.entrada?.foto && <img src={venta.entrada.foto} alt={venta.entrada.nombre} className="pi-ayu-mini-avatar" />}
+                          <span>{venta.entrada?.nombre || '—'}</span>
+                        </div>
+                      </td>
+                      <td>{venta.entrada?.documento || '—'}</td>
+                      <td>
+                        <span className="pi-ayu-badge-items">
+                          {cantidadItems} {cantidadItems === 1 ? 'producto' : 'productos'}
+                        </span>
+                      </td>
+                      <td className="pi-ayu-monto-celda">-{Number(venta.montoTotal)} pts</td>
+                      <td>{new Date(venta.createdAt).toLocaleDateString('es-BO')}</td>
+                      <td>{new Date(venta.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
+                    </tr>
+                  );
+                })}
                 {ventas.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="pi-ayu-sin-resultados">
-                      Aún no has realizado ninguna venta en esta sesión.
+                    <td colSpan={6} className="pi-ayu-sin-resultados">
+                      Aún no has realizado ninguna venta.
                     </td>
                   </tr>
                 )}
@@ -323,7 +338,7 @@ export default function Ayudante() {
                     : <><FaCheckCircle /> Código QR Válido</>}
                 </div>
 
-                <img src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-ayu-tarjeta-foto" />
+                {tarjetaQR.foto && <img src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-ayu-tarjeta-foto" />}
                 <h2 className="pi-ayu-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
                 <div className="pi-ayu-tarjeta-datos">

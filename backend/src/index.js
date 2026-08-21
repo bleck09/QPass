@@ -1,5 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
+// Parchea Express para que un `throw`/rechazo dentro de un handler async llegue al
+// middleware de errores en vez de crashear el proceso entero (Express 4 no lo hace solo).
+import 'express-async-errors';
 import cors from 'cors';
 import { authRouter } from './routes/auth.routes.js';
 import { usuariosRouter } from './routes/usuarios.routes.js';
@@ -17,12 +20,14 @@ import { productosRouter } from './routes/productos.routes.js';
 import { puestoAyudantesRouter } from './routes/puestoAyudantes.routes.js';
 import { ventasRouter } from './routes/ventas.routes.js';
 import { landingConfigRouter } from './routes/landingConfig.routes.js';
-import { propuestaLandingRouter } from './routes/propuestaLanding.routes.js';
+import { solicitudesEventoRouter } from './routes/solicitudesEvento.routes.js';
 
 const app = express();
 
 app.use(cors());
-app.use(express.json());
+// Límite generoso porque varias rutas guardan imágenes en base64 en el body
+// (fotos de perfil, comprobantes, carnets, logos) que superan fácil el default de 100kb.
+app.use(express.json({ limit: '10mb' }));
 
 app.get('/health', (req, res) => res.json({ ok: true }));
 
@@ -42,11 +47,11 @@ app.use('/productos', productosRouter);
 app.use('/puesto-ayudantes', puestoAyudantesRouter);
 app.use('/ventas', ventasRouter);
 app.use('/landing-config', landingConfigRouter);
-app.use('/propuesta-landing', propuestaLandingRouter);
+app.use('/solicitudes-evento', solicitudesEventoRouter);
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).json({ error: 'Error interno del servidor' });
+  res.status(500).json({ error: err.message || 'Error interno del servidor' });
 });
 
 const PORT = process.env.PORT || 4000;

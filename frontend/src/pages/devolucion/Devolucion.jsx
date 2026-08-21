@@ -1,39 +1,26 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaTimes, FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle,
-  FaMoneyBillWave, FaUser, FaBuilding, FaHistory, FaCamera, FaRedo
+  FaMoneyBillWave, FaUser, FaBuilding, FaHistory, FaCamera, FaRedo, FaMapMarkerAlt, FaArrowLeft
 } from 'react-icons/fa';
+import api from '../../api/index.js';
+import { leerSesion } from '../../api/client.js';
+import { formatearFecha } from '../../utils/eventos.js';
 import './Devolucion.css';
-
-// --- DATOS SIMULADOS: USUARIOS NORMALES Y DE NEGOCIO ---
-// (fuente interna para resolver el QR escaneado; el encargado de devolución
-// nunca ve este listado completo, solo a la persona que escanea)
-const beneficiariosIniciales = [
-  { id: 1, nombre: 'María Fernanda Rojas', documento: '7451236 LP', tipo: 'Normal', foto: 'https://i.pravatar.cc/300?img=47', saldo: 120 },
-  { id: 2, nombre: 'Restaurante El Fogón', documento: '6621345 SC', tipo: 'Negocio', foto: 'https://i.pravatar.cc/300?img=12', saldo: 860 },
-  { id: 3, nombre: 'Ana Belén Castro', documento: '5589214 CB', tipo: 'Normal', foto: 'https://i.pravatar.cc/300?img=32', saldo: 35 },
-  { id: 4, nombre: 'Foodtruck La Paceña', documento: '4471258 LP', tipo: 'Negocio', foto: 'https://i.pravatar.cc/300?img=51', saldo: 410 },
-  { id: 5, nombre: 'Daniela Vargas Soto', documento: '7789456 SC', tipo: 'Normal', foto: 'https://i.pravatar.cc/300?img=25', saldo: 0 },
-  { id: 6, nombre: 'Cervecería Andina', documento: '3312589 OR', tipo: 'Negocio', foto: 'https://i.pravatar.cc/300?img=15', saldo: 275 },
-  { id: 7, nombre: 'Paola Andrea Terrazas', documento: '6654123 CB', tipo: 'Normal', foto: 'https://i.pravatar.cc/300?img=45', saldo: 90 },
-  { id: 8, nombre: 'Luis Fernando Mamani', documento: '5521478 LP', tipo: 'Normal', foto: 'https://i.pravatar.cc/300?img=13', saldo: 50 },
-];
-
-const fechaHoraActual = () => {
-  const ahora = new Date();
-  return {
-    fecha: ahora.toLocaleDateString('es-BO'),
-    hora: ahora.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
-  };
-};
+import '../supervisor/GestionEntrega.css';
+import { ROLES } from '../../constants/roles.js';
 
 export default function Devolucion() {
+  const sesion = leerSesion();
   const location = useLocation();
   const navigate = useNavigate();
   const pestana = location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
 
-  const [beneficiarios, setBeneficiarios] = useState(beneficiariosIniciales);
+  const [eventos, setEventos] = useState([]);
+  const [eventoDetalle, setEventoDetalle] = useState(null);
+  const [entradasEvento, setEntradasEvento] = useState([]);
+  const [negocios, setNegocios] = useState([]);
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
   const [monto, setMonto] = useState('');
@@ -41,22 +28,48 @@ export default function Devolucion() {
   const [retiroExitoso, setRetiroExitoso] = useState(null);
   const [retiros, setRetiros] = useState([]);
 
+  useEffect(() => {
+    api.eventos.listar().then(setEventos);
+    api.usuarios.listar({ rol: ROLES.USUARIO_NEGOCIO }).then(lista =>
+      setNegocios(lista.map(n => ({ ...n, tipo: 'Negocio', usuarioId: n.id, saldoDisponible: Number(n.saldo) })))
+    );
+  }, []);
+
+  const abrirEvento = (ev) => {
+    setEventoDetalle(ev);
+    api.entradas.listar({ eventoId: ev.id }).then(lista =>
+      setEntradasEvento(
+        lista.filter(e => e.usuarioId).map(e => ({ ...e, tipo: 'Normal', saldoDisponible: Number(e.usuario?.saldo ?? 0) }))
+      )
+    );
+    // Solo cubre retiros hechos contra la billetera de una Entrada de este evento
+    // (los retiros de saldo de Usuario Negocio no están ligados a un evento en el backend).
+    api.transacciones.listar({ eventoId: ev.id, tipo: 'devolucion' }).then(lista =>
+      setRetiros(lista.filter(t => t.operador.id === sesion.id))
+    );
+  };
+
+  const volverALista = () => setEventoDetalle(null);
+
   const totalRetiradoHoy = useMemo(
-    () => retiros.reduce((suma, item) => suma + item.monto, 0),
+    () => retiros.reduce((suma, item) => suma + Number(item.monto), 0),
     [retiros]
   );
 
-  const excedeSaldo = tarjetaQR && Number(monto) > tarjetaQR.saldo;
+  const excedeSaldo = tarjetaQR && Number(monto) > tarjetaQR.saldoDisponible;
 
   const handleSimularEscaneo = () => {
+    const pool = [...entradasEvento, ...negocios];
+    if (pool.length === 0) return;
     setEscaneando(true);
     setMonto('');
     setFotoCarnet(null);
     setRetiroExitoso(null);
+
     setTimeout(() => {
-      const elegido = beneficiarios[Math.floor(Math.random() * beneficiarios.length)];
-      setEscaneando(false);
+      const elegido = pool[Math.floor(Math.random() * pool.length)];
       setTarjetaQR(elegido);
+      setEscaneando(false);
     }, 700);
   };
 
@@ -75,41 +88,58 @@ export default function Devolucion() {
     lector.readAsDataURL(archivo);
   };
 
-  const confirmarRetiro = () => {
+  const confirmarRetiro = async () => {
     const valor = Number(monto);
-    if (!tarjetaQR || !valor || valor <= 0 || valor > tarjetaQR.saldo || !fotoCarnet) return;
+    if (!tarjetaQR || !valor || valor <= 0 || valor > tarjetaQR.saldoDisponible || !fotoCarnet) return;
 
-    const nuevoSaldo = tarjetaQR.saldo - valor;
-    const { fecha, hora } = fechaHoraActual();
+    await api.transacciones.devolucion({
+      usuarioId: tarjetaQR.usuarioId,
+      entradaId: tarjetaQR.tipo === 'Normal' ? tarjetaQR.id : undefined,
+      monto: valor,
+      fotoCarnetUrl: fotoCarnet,
+      eventoId: eventoDetalle.id,
+    });
 
-    setBeneficiarios(prev => prev.map(p =>
-      p.id === tarjetaQR.id ? { ...p, saldo: nuevoSaldo } : p
-    ));
+    if (tarjetaQR.tipo === 'Normal') {
+      api.transacciones.listar({ eventoId: eventoDetalle.id, tipo: 'devolucion' }).then(lista =>
+        setRetiros(lista.filter(t => t.operador.id === sesion.id))
+      );
+    }
 
-    setRetiros(prev => [
-      {
-        id: Date.now(),
-        beneficiario: tarjetaQR.nombre,
-        tipo: tarjetaQR.tipo,
-        documento: tarjetaQR.documento,
-        foto: tarjetaQR.foto,
-        fotoCarnet,
-        monto: valor,
-        saldoResultante: nuevoSaldo,
-        fecha,
-        hora,
-      },
-      ...prev,
-    ]);
-
-    setRetiroExitoso({ monto: valor, saldo: nuevoSaldo });
+    setRetiroExitoso({ monto: valor, saldo: tarjetaQR.saldoDisponible - valor });
   };
+
+  if (!eventoDetalle) {
+    return (
+      <div className="pi-dev-container">
+        <div className="pi-dev-header">
+          <h2>Gestión de Devoluciones</h2>
+        </div>
+        <div className="pi-entrega-eventos-grid">
+          {eventos.map(ev => (
+            <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
+              <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+              <div className="pi-entrega-evento-info">
+                <strong>{ev.nombre}</strong>
+                <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pi-dev-container">
 
       <div className="pi-dev-header">
-        <h2>Gestión de Devoluciones</h2>
+        <div>
+          <button className="pi-entrega-btn-volver" onClick={volverALista}>
+            <FaArrowLeft /> Cambiar de evento
+          </button>
+          <h2>{eventoDetalle.nombre}</h2>
+        </div>
         <div className="pi-dev-tabs">
           <button
             className={pestana === 'escanear' ? 'activo' : ''}
@@ -171,31 +201,31 @@ export default function Devolucion() {
                   <tr key={item.id}>
                     <td>
                       <div className="pi-dev-fila-persona">
-                        <img src={item.foto} alt={item.beneficiario} className="pi-dev-mini-avatar" />
-                        <span>{item.beneficiario}</span>
+                        {item.entrada?.foto && <img src={item.entrada.foto} alt={item.entrada.nombre} className="pi-dev-mini-avatar" />}
+                        <span>{item.entrada?.nombre || '—'}</span>
                       </div>
                     </td>
-                    <td>{item.documento}</td>
+                    <td>{item.entrada?.documento || '—'}</td>
                     <td>
-                      <span className={`pi-dev-badge-tipo ${item.tipo === 'Negocio' ? 'negocio' : 'normal'}`}>
-                        {item.tipo === 'Negocio' ? <FaBuilding /> : <FaUser />} {item.tipo}
+                      <span className="pi-dev-badge-tipo normal">
+                        <FaUser /> Normal
                       </span>
                     </td>
                     <td>
-                      {item.fotoCarnet
-                        ? <img src={item.fotoCarnet} alt={`Carnet de ${item.beneficiario}`} className="pi-dev-mini-carnet" />
+                      {item.fotoCarnetUrl
+                        ? <img src={item.fotoCarnetUrl} alt={`Carnet de ${item.entrada?.nombre}`} className="pi-dev-mini-carnet" />
                         : <span className="pi-dev-sin-carnet">—</span>}
                     </td>
-                    <td className="pi-dev-monto-celda">-{item.monto} pts</td>
-                    <td>{item.saldoResultante} pts</td>
-                    <td>{item.fecha}</td>
-                    <td>{item.hora}</td>
+                    <td className="pi-dev-monto-celda">-{Number(item.monto)} pts</td>
+                    <td>{Number(item.saldoResultante)} pts</td>
+                    <td>{new Date(item.createdAt).toLocaleDateString('es-BO')}</td>
+                    <td>{new Date(item.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
                   </tr>
                 ))}
                 {retiros.length === 0 && (
                   <tr>
                     <td colSpan={8} className="pi-dev-sin-resultados">
-                      Aún no has procesado ninguna devolución en esta sesión.
+                      Aún no has procesado ninguna devolución para este evento.
                     </td>
                   </tr>
                 )}
@@ -227,7 +257,7 @@ export default function Devolucion() {
                   <FaCheckCircle /> Código QR Válido
                 </div>
 
-                <img src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-dev-tarjeta-foto" />
+                {tarjetaQR.foto && <img src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-dev-tarjeta-foto" />}
                 <h2 className="pi-dev-tarjeta-nombre">{tarjetaQR.nombre}</h2>
                 <span className={`pi-dev-badge-tipo ${tarjetaQR.tipo === 'Negocio' ? 'negocio' : 'normal'}`}>
                   {tarjetaQR.tipo === 'Negocio' ? <FaBuilding /> : <FaUser />} Usuario {tarjetaQR.tipo}
@@ -238,14 +268,14 @@ export default function Devolucion() {
                     <FaIdCard />
                     <div>
                       <span className="label">Documento</span>
-                      <span className="valor">{tarjetaQR.documento}</span>
+                      <span className="valor">{tarjetaQR.documento || tarjetaQR.ci || '—'}</span>
                     </div>
                   </div>
                   <div className="pi-dev-tarjeta-dato">
                     <FaWallet />
                     <div>
                       <span className="label">Saldo Disponible</span>
-                      <span className="valor">{tarjetaQR.saldo} pts</span>
+                      <span className="valor">{tarjetaQR.saldoDisponible} pts</span>
                     </div>
                   </div>
                 </div>
@@ -261,17 +291,17 @@ export default function Devolucion() {
                     autoFocus
                   />
                   <div className="pi-dev-montos-rapidos">
-                    <button type="button" onClick={() => setMonto(String(Math.round(tarjetaQR.saldo / 2)))}>
+                    <button type="button" onClick={() => setMonto(String(Math.round(tarjetaQR.saldoDisponible / 2)))}>
                       Mitad
                     </button>
-                    <button type="button" onClick={() => setMonto(String(tarjetaQR.saldo))}>
+                    <button type="button" onClick={() => setMonto(String(tarjetaQR.saldoDisponible))}>
                       Retirar todo
                     </button>
                   </div>
 
                   {excedeSaldo && (
                     <div className="pi-dev-alerta-error">
-                      <FaExclamationTriangle /> Saldo insuficiente: el máximo disponible es {tarjetaQR.saldo} pts.
+                      <FaExclamationTriangle /> Saldo insuficiente: el máximo disponible es {tarjetaQR.saldoDisponible} pts.
                     </div>
                   )}
                 </div>

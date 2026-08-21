@@ -1,200 +1,64 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
   FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends, FaUsers,
   FaArrowLeft, FaSearch, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
-  FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt, FaMapMarkerAlt
+  FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt, FaMapMarkerAlt,
+  FaKey, FaTimes
 } from 'react-icons/fa';
-import { leerEventos } from '../../data/eventosAdmin';
-import { leerEntradas } from '../../data/entradas';
+import { leerSesion } from '../../api/client.js';
+import api from '../../api/index.js';
+import { formatearFecha } from '../../utils/eventos.js';
 import './Admin.css';
 
-// --- INCIDENCIAS DE RECARGA INCOMPLETA (reportadas por Recargador vía localStorage) ---
-const CLAVE_INCIDENCIAS = 'qpass_incidencias_recarga';
-
-const leerIncidencias = () => {
-  const guardado = localStorage.getItem(CLAVE_INCIDENCIAS);
-  return guardado ? JSON.parse(guardado) : [];
-};
-
-const guardarIncidencias = (lista) => {
-  localStorage.setItem(CLAVE_INCIDENCIAS, JSON.stringify(lista));
-};
-
-// --- SOLICITUDES DE COMPRA DE ENTRADAS Y REPORTES DE DATOS (de Usuario Normal, vía localStorage) ---
-const CLAVE_SOLICITUDES = 'qpass_solicitudes_entradas';
-const CLAVE_REPORTES_ENTRADAS = 'qpass_reportes_entradas';
-
-const leerSolicitudes = () => {
-  const guardado = localStorage.getItem(CLAVE_SOLICITUDES);
-  return guardado ? JSON.parse(guardado) : [];
-};
-
-const guardarSolicitudes = (lista) => {
-  localStorage.setItem(CLAVE_SOLICITUDES, JSON.stringify(lista));
-};
-
-const leerReportesEntradas = () => {
-  const guardado = localStorage.getItem(CLAVE_REPORTES_ENTRADAS);
-  return guardado ? JSON.parse(guardado) : [];
-};
-
-const guardarReportesEntradas = (lista) => {
-  localStorage.setItem(CLAVE_REPORTES_ENTRADAS, JSON.stringify(lista));
-};
-
 const ETIQUETA_CAMPO_ENTRADA = { nombre: 'Nombre completo', correo: 'Correo electrónico', celular: 'Celular' };
-const ETIQUETA_CATEGORIA = { general: 'General', vip: 'VIP' };
 
-// --- DATOS SIMULADOS DE ACTIVIDAD POR EVENTO ---
-// (los eventos en sí viven en data/eventosAdmin.js, y los participantes/entradas en
-// data/entradas.js —también los usa Gestión de Entrega de Supervisor—; esto sigue
-// siendo mock local porque ninguna otra pantalla necesita negocios/recargadores/etc.)
-const EVENTO_ACTIVIDAD_VACIA = { negocios: [], recargadores: [], devoluciones: [], supervisores: [] };
+const EVENTO_ACTIVIDAD_VACIA = { negocios: [], recargadores: [], devoluciones: [], supervisores: [], entradas: [] };
 
-const datosPorEvento = {
-  ev1: {
-    negocios: [
-      {
-        id: 1, nombre: 'Restaurante El Fogón', ayudantes: 3,
-        ventas: [
-          { hora: '12:30', cliente: 'María Fernanda Rojas', monto: 60 },
-          { hora: '13:15', cliente: 'Jorge Luis Quispe', monto: 45 },
-          { hora: '14:40', cliente: 'Ana Belén Castro', monto: 75 },
-          { hora: '16:05', cliente: 'Ricardo Alanoca Mamani', monto: 90 },
-        ],
-      },
-      {
-        id: 2, nombre: 'Foodtruck La Paceña', ayudantes: 2,
-        ventas: [
-          { hora: '12:50', cliente: 'Ana Belén Castro', monto: 40 },
-          { hora: '15:10', cliente: 'Daniela Vargas Soto', monto: 55 },
-          { hora: '17:20', cliente: 'Sergio Fabián Choque', monto: 35 },
-        ],
-      },
-      {
-        id: 3, nombre: 'Cervecería Andina', ayudantes: 4,
-        ventas: [
-          { hora: '13:00', cliente: 'María Fernanda Rojas', monto: 120 },
-          { hora: '15:45', cliente: 'Ricardo Alanoca Mamani', monto: 60 },
-          { hora: '18:30', cliente: 'Jorge Luis Quispe', monto: 105 },
-          { hora: '19:15', cliente: 'Paola Andrea Terrazas', monto: 80 },
-        ],
-      },
-      {
-        id: 4, nombre: 'Dulces Doña Rosa', ayudantes: 1,
-        ventas: [
-          { hora: '14:00', cliente: 'Daniela Vargas Soto', monto: 25 },
-          { hora: '16:40', cliente: 'Carla Ximena Flores', monto: 30 },
-        ],
-      },
-    ],
-    recargadores: [
-      {
-        id: 1, nombre: 'Juan Recargador',
-        recargas: [
-          { hora: '08:15', participante: 'María Fernanda Rojas', monto: 100 },
-          { hora: '09:02', participante: 'Jorge Luis Quispe', monto: 150 },
-          { hora: '10:30', participante: 'Ana Belén Castro', monto: 80 },
-          { hora: '11:45', participante: 'Sergio Fabián Choque', monto: 200 },
-        ],
-      },
-      {
-        id: 2, nombre: 'Lucía Paredes',
-        recargas: [
-          { hora: '08:40', participante: 'Paola Andrea Terrazas', monto: 120 },
-          { hora: '09:55', participante: 'Luis Fernando Mamani', monto: 90 },
-          { hora: '12:10', participante: 'Carla Ximena Flores', monto: 150 },
-        ],
-      },
-      {
-        id: 3, nombre: 'Marcos Vidal',
-        recargas: [
-          { hora: '09:20', participante: 'Diego Armando Peñaranda', monto: 100 },
-          { hora: '10:05', participante: 'Valeria Nicole Guzmán', monto: 130 },
-        ],
-      },
-    ],
-    devoluciones: [
-      {
-        id: 1, nombre: 'Luis Devoluciones',
-        retiros: [
-          { hora: '17:30', participante: 'María Fernanda Rojas', monto: 40 },
-          { hora: '18:05', participante: 'Ricardo Alanoca Mamani', monto: 60 },
-          { hora: '18:40', participante: 'Daniela Vargas Soto', monto: 70 },
-        ],
-      },
-      {
-        id: 2, nombre: 'Patricia Rojas',
-        retiros: [
-          { hora: '17:50', participante: 'Jorge Luis Quispe', monto: 80 },
-          { hora: '19:00', participante: 'Carla Ximena Flores', monto: 50 },
-        ],
-      },
-    ],
-    supervisores: [
-      {
-        id: 1, nombre: 'Ana Supervisor', email: 'supervisor@proyectodeingresos.com',
-        ingresos: [
-          { participante: 'María Fernanda Rojas', hora: '08:12' },
-          { participante: 'Jorge Luis Quispe', hora: '08:20' },
-          { participante: 'Ana Belén Castro', hora: '08:35' },
-        ],
-      },
-      {
-        id: 2, nombre: 'Carlos Mendoza', email: 'carlos.mendoza@qpass.com',
-        ingresos: [
-          { participante: 'Ricardo Alanoca Mamani', hora: '08:41' },
-          { participante: 'Daniela Vargas Soto', hora: '09:02' },
-        ],
-      },
-    ],
-  },
-  ev2: {
-    negocios: [
-      {
-        id: 1, nombre: 'Anticuchos Doña Julia', ayudantes: 1,
-        ventas: [
-          { hora: '11:15', cliente: 'Pedro Callisaya', monto: 35 },
-          { hora: '12:40', cliente: 'Rosa Elena Mamani', monto: 25 },
-        ],
-      },
-      {
-        id: 2, nombre: "Jugos Naturales K'oa", ayudantes: 1,
-        ventas: [
-          { hora: '11:50', cliente: 'Rosa Elena Mamani', monto: 20 },
-          { hora: '13:20', cliente: 'Pedro Callisaya', monto: 25 },
-        ],
-      },
-    ],
-    recargadores: [
-      {
-        id: 1, nombre: 'Juan Recargador',
-        recargas: [
-          { hora: '10:00', participante: 'Pedro Callisaya', monto: 60 },
-          { hora: '10:15', participante: 'Rosa Elena Mamani', monto: 50 },
-        ],
-      },
-    ],
-    devoluciones: [
-      {
-        id: 1, nombre: 'Luis Devoluciones',
-        retiros: [
-          { hora: '19:30', participante: 'Pedro Callisaya', monto: 20 },
-        ],
-      },
-    ],
-    supervisores: [
-      {
-        id: 1, nombre: 'Ana Supervisor', email: 'supervisor@proyectodeingresos.com',
-        ingresos: [
-          { participante: 'Pedro Callisaya', hora: '10:05' },
-          { participante: 'Rosa Elena Mamani', hora: '10:22' },
-        ],
-      },
-    ],
-  },
+const hora = (iso) => new Date(iso).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
+
+// Agrupa transacciones de un tipo (recarga/devolución) por operador, con el detalle de cada una.
+const agruparPorOperador = (transacciones, staffAsignado, campo) => {
+  const porOperador = new Map();
+  staffAsignado.forEach(u => porOperador.set(u.id, { id: u.id, nombre: u.nombre, [campo]: [] }));
+  transacciones.forEach(t => {
+    const id = t.operador.id;
+    if (!porOperador.has(id)) porOperador.set(id, { id, nombre: t.operador.nombre, [campo]: [] });
+    porOperador.get(id)[campo].push({
+      hora: hora(t.createdAt),
+      participante: t.entrada?.nombre || 'Retiro de Usuario Negocio',
+      monto: Number(t.monto),
+    });
+  });
+  return [...porOperador.values()];
+};
+
+// Ventas agrupadas por Usuario Negocio dueño del puesto (varios puestos pueden ser del mismo negocio).
+const agruparVentasPorNegocio = (ventas, puestos, usuariosPorId) => {
+  const ayudantesPorNegocio = new Map();
+  puestos.forEach(p => {
+    ayudantesPorNegocio.set(p.negocioId, (ayudantesPorNegocio.get(p.negocioId) || 0) + p.ayudantes.length);
+  });
+
+  const porNegocio = new Map();
+  ventas.forEach(v => {
+    const negocioId = v.puesto.negocioId;
+    if (!porNegocio.has(negocioId)) {
+      porNegocio.set(negocioId, {
+        id: negocioId,
+        nombre: usuariosPorId.get(negocioId)?.nombre || `Negocio #${negocioId}`,
+        ayudantes: ayudantesPorNegocio.get(negocioId) || 0,
+        ventas: [],
+      });
+    }
+    porNegocio.get(negocioId).ventas.push({
+      hora: hora(v.createdAt),
+      cliente: v.entrada?.nombre || '—',
+      monto: Number(v.montoTotal),
+    });
+  });
+  return [...porNegocio.values()];
 };
 
 const sumar = (lista, clave) => lista.reduce((total, item) => total + item[clave], 0);
@@ -232,18 +96,12 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   // desde el menú lateral), sin pasar por la tarjeta del dashboard.
   const enReportes = location.pathname.endsWith('/reportes');
 
-  const eventosDisponibles = useMemo(() => {
-    const todos = leerEventos();
-    return eventosPermitidos ? todos.filter(ev => eventosPermitidos.includes(ev.id)) : todos;
-  }, [eventosPermitidos]);
-
-  const [eventoId, setEventoId] = useState(eventosDisponibles[0]?.id);
+  const [eventosDisponibles, setEventosDisponibles] = useState([]);
+  const [eventoId, setEventoId] = useState('');
   // /admin/reportes entra directo al dashboard del evento actual, sin pasar por la selección.
   // En modo solo lectura (ej. Cliente) también se salta la selección si ya tiene un evento
   // asignado, para que vea su proyecto directamente en vez de una pantalla vacía.
-  const [eventoSeleccionado, setEventoSeleccionado] = useState(
-    enReportes || (soloLectura && eventosDisponibles.length > 0)
-  );
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(enReportes);
   const [vistaDetalle, setVistaDetalle] = useState(null); // null | entradas | recargadores | devoluciones | negocios | supervisores | incidencias
   const [itemSeleccionado, setItemSeleccionado] = useState(null); // id de la persona/negocio abierto dentro de una vista
   const [busqueda, setBusqueda] = useState('');
@@ -252,13 +110,52 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   const vistaActual = enReportes ? 'incidencias' : vistaDetalle;
   const mostrarSelectorEventos = !eventoSeleccionado && !enReportes;
 
-  const [usuarioAdmin] = useState(() => {
-    const guardado = localStorage.getItem('usuarioProyectoIngresos');
-    return guardado ? JSON.parse(guardado) : { nombre: 'Admin' };
-  });
-  const [incidencias, setIncidencias] = useState(leerIncidencias);
+  useEffect(() => {
+    api.eventos.listar().then(todos => {
+      const disponibles = eventosPermitidos ? todos.filter(ev => eventosPermitidos.includes(ev.id)) : todos;
+      setEventosDisponibles(disponibles);
+      setEventoId(prev => prev || disponibles[0]?.id || '');
+      if (soloLectura && disponibles.length > 0) setEventoSeleccionado(true);
+    });
+  }, [eventosPermitidos, soloLectura]);
+
+  const [datos, setDatos] = useState(EVENTO_ACTIVIDAD_VACIA);
+  const [incidencias, setIncidencias] = useState([]);
   const [incidenciaEnResolucion, setIncidenciaEnResolucion] = useState(null);
   const [montoAjuste, setMontoAjuste] = useState('');
+  const [solicitudes, setSolicitudes] = useState([]);
+  const [reportesEntradas, setReportesEntradas] = useState([]);
+
+  const cargarDatosEvento = async () => {
+    if (!eventoId) return;
+    const [entradas, incidenciasR, reportesR, comprasR, recargasR, devolucionesR, ventasR, puestosR, asignacionesR, usuariosR] = await Promise.all([
+      api.entradas.listar({ eventoId }),
+      api.incidencias.listar({ eventoId }),
+      api.reportesEntrada.listar({ eventoId }),
+      api.compras.listar({ eventoId }),
+      api.transacciones.listar({ eventoId, tipo: 'recarga' }),
+      api.transacciones.listar({ eventoId, tipo: 'devolucion' }),
+      api.ventas.listar({ eventoId }),
+      api.puestos.listar({ eventoId }),
+      api.asignaciones.listar({ eventoId }),
+      api.usuarios.listar(),
+    ]);
+    const usuariosPorId = new Map(usuariosR.map(u => [u.id, u]));
+    const staffDe = (rol) => asignacionesR.filter(a => a.rol === rol).map(a => a.usuario);
+
+    setIncidencias(incidenciasR);
+    setReportesEntradas(reportesR);
+    setSolicitudes(comprasR);
+    setDatos({
+      entradas,
+      recargadores: agruparPorOperador(recargasR, staffDe('Recargador'), 'recargas'),
+      devoluciones: agruparPorOperador(devolucionesR, staffDe('Devolucion'), 'retiros'),
+      negocios: agruparVentasPorNegocio(ventasR, puestosR, usuariosPorId),
+      supervisores: staffDe('Supervisor'),
+    });
+  };
+
+  useEffect(() => { cargarDatosEvento(); }, [eventoId]);
 
   const incidenciasPendientes = useMemo(
     () => incidencias.filter(i => i.estado === 'pendiente'),
@@ -277,22 +174,16 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     setMontoAjuste('');
   };
 
-  const confirmarAjuste = (incidencia) => {
+  const confirmarAjuste = async (incidencia) => {
     const valor = Number(montoAjuste);
     if (montoAjuste === '' || Number.isNaN(valor) || valor < 0) return;
 
-    const listaActualizada = incidencias.map(i => i.id === incidencia.id
-      ? { ...i, estado: 'resuelto', ajusteAplicado: valor, resueltoPor: usuarioAdmin.nombre }
-      : i);
-
-    setIncidencias(listaActualizada);
-    guardarIncidencias(listaActualizada);
+    await api.incidencias.resolver(incidencia.id, valor);
+    setIncidencias(await api.incidencias.listar({ eventoId }));
     cancelarResolucion();
   };
 
   // --- SOLICITUDES DE COMPRA DE ENTRADAS Y REPORTES DE DATOS ---
-  const [solicitudes, setSolicitudes] = useState(leerSolicitudes);
-  const [reportesEntradas, setReportesEntradas] = useState(leerReportesEntradas);
   const [solicitudAbierta, setSolicitudAbierta] = useState(null);
   const [reporteEnEdicion, setReporteEnEdicion] = useState(null);
   const [valorCorreccion, setValorCorreccion] = useState('');
@@ -308,11 +199,26 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
 
   const toggleSolicitud = (id) => setSolicitudAbierta(prev => prev === id ? null : id);
 
+  // No hay envío de correo real: las contraseñas de las cuentas nuevas (invitados sin cuenta
+  // previa) solo se ven una vez, en la respuesta de esta llamada — hay que compartirlas a mano.
+  const [passwordsAMostrar, setPasswordsAMostrar] = useState(null);
+
+  const aprobarSolicitud = async (compra) => {
+    const { passwordsGeneradas, ...actualizada } = await api.compras.aprobar(compra.id);
+    setSolicitudes(prev => prev.map(c => c.id === actualizada.id ? actualizada : c));
+    if (Object.keys(passwordsGeneradas || {}).length > 0) {
+      const entradasPorId = new Map(actualizada.entradas.map(e => [e.id, e]));
+      setPasswordsAMostrar(Object.entries(passwordsGeneradas).map(([entradaId, password]) => ({
+        nombre: entradasPorId.get(entradaId)?.nombre, correo: entradasPorId.get(entradaId)?.correo, password,
+      })));
+    }
+  };
+
   const abrirCorreccion = (reporte) => {
     setReporteEnEdicion(reporte.id);
-    const valorActual = reporte.campo === 'nombre' ? reporte.participanteNombre
-      : reporte.campo === 'correo' ? reporte.correoActual
-      : reporte.celularActual;
+    const valorActual = reporte.campo === 'nombre' ? reporte.entrada.nombre
+      : reporte.campo === 'correo' ? reporte.entrada.correo
+      : reporte.entrada.celular;
     setValorCorreccion(valorActual || '');
   };
 
@@ -321,40 +227,20 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     setValorCorreccion('');
   };
 
-  const guardarCorreccion = (reporte) => {
+  const guardarCorreccion = async (reporte) => {
     if (!valorCorreccion.trim()) return;
-
-    const solicitudesActualizadas = solicitudes.map(compra => {
-      if (compra.id !== reporte.compraId) return compra;
-      return {
-        ...compra,
-        entradas: compra.entradas.map(ent => ent.id === reporte.entradaId
-          ? { ...ent, [reporte.campo]: valorCorreccion.trim() }
-          : ent),
-      };
-    });
-    setSolicitudes(solicitudesActualizadas);
-    guardarSolicitudes(solicitudesActualizadas);
-
-    const reportesActualizados = reportesEntradas.map(r => r.id === reporte.id
-      ? { ...r, estado: 'resuelto', valorCorregido: valorCorreccion.trim(), resueltoPor: usuarioAdmin.nombre }
-      : r);
-    setReportesEntradas(reportesActualizados);
-    guardarReportesEntradas(reportesActualizados);
-
+    await api.reportesEntrada.corregir(reporte.id, valorCorreccion.trim());
+    setReportesEntradas(await api.reportesEntrada.listar({ eventoId }));
+    await cargarDatosEvento();
     cancelarCorreccion();
   };
 
-  const datos = useMemo(() => ({
-    ...(datosPorEvento[eventoId] || EVENTO_ACTIVIDAD_VACIA),
-    entradas: leerEntradas(eventoId),
-  }), [eventoId]);
   const eventoActual = eventosDisponibles.find(ev => ev.id === eventoId);
 
   const statsEntradas = useMemo(() => {
     const total = datos.entradas.length;
-    const dentro = datos.entradas.filter(p => p.estado === 'ingresado').length;
-    const salieron = datos.entradas.filter(p => p.estado === 'salio').length;
+    const dentro = datos.entradas.filter(p => p.estadoIngreso === 'ingresado').length;
+    const salieron = datos.entradas.filter(p => p.estadoIngreso === 'salio').length;
     const ingresaron = dentro + salieron;
     const faltan = total - ingresaron;
     const pctIngresaron = total ? Math.round((ingresaron / total) * 1000) / 10 : 0;
@@ -416,9 +302,6 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     datos.negocios.forEach(n => n.ventas.forEach(t => eventos.push({
       hora: t.hora, tipo: 'venta', detalle: `${n.nombre} le vendió a ${t.cliente}`, monto: t.monto,
     })));
-    datos.supervisores.forEach(s => s.ingresos.forEach(t => eventos.push({
-      hora: t.hora, tipo: 'ingreso', detalle: `${s.nombre} dejó ingresar a ${t.participante}`, monto: null,
-    })));
     return eventos.sort((a, b) => b.hora.localeCompare(a.hora)).slice(0, 8);
   }, [datos]);
 
@@ -432,15 +315,15 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   const entradasFiltradas = useMemo(() => {
     return datos.entradas
       .filter(p => {
-        if (filtroEntradas === 'ingresado') return p.estado === 'ingresado' || p.estado === 'salio';
-        if (filtroEntradas === 'dentro') return p.estado === 'ingresado';
-        if (filtroEntradas === 'pendiente') return p.estado === 'pendiente';
-        if (filtroEntradas === 'salio') return p.estado === 'salio';
+        if (filtroEntradas === 'ingresado') return p.estadoIngreso === 'ingresado' || p.estadoIngreso === 'salio';
+        if (filtroEntradas === 'dentro') return p.estadoIngreso === 'ingresado';
+        if (filtroEntradas === 'pendiente') return p.estadoIngreso === 'pendiente';
+        if (filtroEntradas === 'salio') return p.estadoIngreso === 'salio';
         return true;
       })
       .filter(p =>
         p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        p.documento.toLowerCase().includes(busqueda.toLowerCase())
+        (p.documento || '').toLowerCase().includes(busqueda.toLowerCase())
       );
   }, [datos, busqueda, filtroEntradas]);
 
@@ -458,13 +341,13 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     setFiltroEntradas(filtro);
     // La vista de "Reportes" agrupa incidencias de recarga y reportes de datos de entradas.
     if (vista === 'incidencias') {
-      setIncidencias(leerIncidencias());
-      setReportesEntradas(leerReportesEntradas());
+      api.incidencias.listar({ eventoId }).then(setIncidencias);
+      api.reportesEntrada.listar({ eventoId }).then(setReportesEntradas);
       cancelarCorreccion();
     }
     // Refrescamos por si hay solicitudes nuevas de Usuario Normal.
     if (vista === 'solicitudesEntradas') {
-      setSolicitudes(leerSolicitudes());
+      api.compras.listar({ eventoId }).then(setSolicitudes);
       setSolicitudAbierta(null);
     }
   };
@@ -497,8 +380,6 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     ? devolucionesOrdenadas.find(d => d.id === itemSeleccionado) : null;
   const negocioAbierto = vistaActual === 'negocios' && itemSeleccionado
     ? negociosOrdenados.find(n => n.id === itemSeleccionado) : null;
-  const supervisorAbierto = vistaActual === 'supervisores' && itemSeleccionado
-    ? datos.supervisores.find(s => s.id === itemSeleccionado) : null;
 
   return (
     <div className="pi-dash-container">
@@ -524,8 +405,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                 <img src={ev.imagen} alt={ev.nombre} className="pi-dash-evento-imagen" />
                 <div className="pi-dash-evento-info">
                   <strong>{ev.nombre}</strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {ev.fecha}</span>
-                  <span className="pi-dash-evento-detalle"><FaTicketAlt /> {leerEntradas(ev.id).length} entradas</span>
+                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
                 </div>
               </button>
             ))}
@@ -704,7 +584,6 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                   <th>Documento</th>
                   <th>Entrada</th>
                   <th>Estado</th>
-                  <th>Hora</th>
                 </tr>
               </thead>
               <tbody>
@@ -712,24 +591,23 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                   <tr key={p.id}>
                     <td>
                       <div className="pi-dash-fila-persona">
-                        <img src={p.foto} alt={p.nombre} className="pi-dash-mini-avatar" />
+                        {p.foto && <img src={p.foto} alt={p.nombre} className="pi-dash-mini-avatar" />}
                         <span>{p.nombre}</span>
                       </div>
                     </td>
-                    <td>{p.documento}</td>
-                    <td>{p.tipoEntrada}</td>
+                    <td>{p.documento || '—'}</td>
+                    <td>{p.categoriaTicket?.nombre || '—'}</td>
                     <td>
-                      {p.estado === 'salio'
+                      {p.estadoIngreso === 'salio'
                         ? <span className="pi-dash-badge pi-dash-badge-salio"><FaSignOutAlt /> Salió</span>
-                        : p.estado === 'ingresado'
+                        : p.estadoIngreso === 'ingresado'
                         ? <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Ingresó</span>
                         : <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> Pendiente</span>}
                     </td>
-                    <td>{p.estado === 'salio' ? p.horaSalida : (p.horaIngreso || '—')}</td>
                   </tr>
                 ))}
                 {entradasFiltradas.length === 0 && (
-                  <tr><td colSpan={5} className="pi-dash-sin-resultados">No se encontraron participantes.</td></tr>
+                  <tr><td colSpan={4} className="pi-dash-sin-resultados">No se encontraron participantes.</td></tr>
                 )}
               </tbody>
             </table>
@@ -937,55 +815,31 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
       {/* ================= DETALLE: SUPERVISORES ================= */}
       {vistaActual === 'supervisores' && (
         <section className="pi-dash-seccion">
-          {supervisorAbierto ? (
-            <>
-              <button className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft /> Volver a Supervisores</button>
-              <div className="pi-dash-detalle-header">
-                <h3 className="pi-dash-seccion-titulo">{supervisorAbierto.nombre}</h3>
-                <span className="pi-dash-detalle-total">Dejó ingresar a <strong>{supervisorAbierto.ingresos.length}</strong> persona(s)</span>
-              </div>
-              <div className="pi-dash-tabla-wrapper">
-                <table className="pi-dash-tabla">
-                  <thead><tr><th>Participante</th><th>Hora de Ingreso</th></tr></thead>
-                  <tbody>
-                    {supervisorAbierto.ingresos.map((t, i) => (
-                      <tr key={i}>
-                        <td>{t.participante}</td>
-                        <td><FaCheckCircle color="var(--verde-recarga-texto)" /> {t.hora}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          ) : (
-            <>
-              <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
-              <h3 className="pi-dash-seccion-titulo">Supervisores</h3>
+          <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+          <h3 className="pi-dash-seccion-titulo">Supervisores</h3>
+          <p className="pi-dash-incidencias-nota">
+            El sistema no registra qué supervisor gestionó cada ingreso individual; en total,
+            <strong> {statsEntradas.ingresaron}</strong> persona(s) ya ingresaron a este evento.
+          </p>
 
-              <div className="pi-dash-tabla-wrapper">
-                <table className="pi-dash-tabla">
-                  <thead>
-                    <tr><th>Nombre</th><th>Correo</th><th>Personas que dejó ingresar</th><th></th></tr>
-                  </thead>
-                  <tbody>
-                    {datos.supervisores.map(s => (
-                      <tr key={s.id}>
-                        <td>{s.nombre}</td>
-                        <td>{s.email}</td>
-                        <td>{s.ingresos.length}</td>
-                        <td>
-                          <button className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(s.id)}>
-                            <FaExchangeAlt /> Ver detalle
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+          <div className="pi-dash-tabla-wrapper">
+            <table className="pi-dash-tabla">
+              <thead>
+                <tr><th>Nombre</th><th>Correo</th></tr>
+              </thead>
+              <tbody>
+                {datos.supervisores.map(s => (
+                  <tr key={s.id}>
+                    <td>{s.nombre}</td>
+                    <td>{s.email}</td>
+                  </tr>
+                ))}
+                {datos.supervisores.length === 0 && (
+                  <tr><td colSpan={2} className="pi-dash-sin-resultados">No hay supervisores asignados a este evento.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </section>
       )}
 
@@ -1020,19 +874,19 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                   <tr key={inc.id}>
                     <td>
                       <div className="pi-dash-fila-persona">
-                        <img src={inc.foto} alt={inc.participante} className="pi-dash-mini-avatar" />
-                        <span>{inc.participante}</span>
+                        {inc.entrada.foto && <img src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-dash-mini-avatar" />}
+                        <span>{inc.entrada.nombre}</span>
                       </div>
                     </td>
-                    <td>{inc.documento}</td>
+                    <td>{inc.entrada.documento || '—'}</td>
                     <td>{inc.montoEntregado} pts</td>
                     <td>{inc.montoSolicitado != null ? `${inc.montoSolicitado} pts` : '—'}</td>
                     <td>{inc.nota || '—'}</td>
-                    <td>{inc.recargador}</td>
+                    <td>{inc.recargador.nombre}</td>
                     <td>
                       {inc.estado === 'pendiente'
                         ? <span className="pi-dash-badge pi-dash-badge-pend"><FaExclamationTriangle /> Pendiente</span>
-                        : <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Resuelta (+{inc.ajusteAplicado} pts por {inc.resueltoPor})</span>}
+                        : <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Resuelta (+{inc.ajusteAplicado} pts por {inc.resueltoPor?.nombre})</span>}
                     </td>
                     <td>
                       {!soloLectura && inc.estado === 'pendiente' && (
@@ -1091,10 +945,10 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
               <tbody>
                 {reportesEntradas.map(rep => (
                   <tr key={rep.id}>
-                    <td>{rep.compradorNombre}</td>
-                    <td>{rep.participanteNombre}</td>
+                    <td>{rep.entrada.compra?.comprador.nombre || '—'}</td>
+                    <td>{rep.entrada.nombre}</td>
                     <td>{ETIQUETA_CAMPO_ENTRADA[rep.campo]}</td>
-                    <td>{rep.campo === 'nombre' ? rep.participanteNombre : rep.campo === 'correo' ? rep.correoActual : (rep.celularActual || '—')}</td>
+                    <td>{rep.campo === 'nombre' ? rep.entrada.nombre : rep.campo === 'correo' ? rep.entrada.correo : (rep.entrada.celular || '—')}</td>
                     <td>{rep.descripcion}</td>
                     <td>
                       {rep.estado === 'pendiente'
@@ -1178,8 +1032,8 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                   <Fragment key={compra.id}>
                     <tr>
                       <td>
-                        <div className="fila-nombre">{compra.compradorNombre}</div>
-                        <div className="celda-secundaria">{compra.compradorEmail}</div>
+                        <div className="fila-nombre">{compra.comprador.nombre}</div>
+                        <div className="celda-secundaria">{compra.comprador.email}</div>
                       </td>
                       <td>{compra.entradas.length}</td>
                       <td className="pi-dash-monto-celda">Bs. {compra.montoTotal}</td>
@@ -1188,11 +1042,18 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                           ? <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Aprobado</span>
                           : <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> En revisión</span>}
                       </td>
-                      <td>{compra.fecha}</td>
+                      <td>{new Date(compra.createdAt).toLocaleDateString('es-BO')}</td>
                       <td>
-                        <button className="pi-dash-btn-ver" onClick={() => toggleSolicitud(compra.id)}>
-                          {solicitudAbierta === compra.id ? 'Ocultar' : 'Ver detalle'}
-                        </button>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                          {!soloLectura && compra.estado === 'pendiente' && (
+                            <button className="pi-dash-btn-ver" onClick={() => aprobarSolicitud(compra)}>
+                              <FaCheckCircle /> Aprobar
+                            </button>
+                          )}
+                          <button className="pi-dash-btn-ver" onClick={() => toggleSolicitud(compra.id)}>
+                            {solicitudAbierta === compra.id ? 'Ocultar' : 'Ver detalle'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                     {solicitudAbierta === compra.id && (
@@ -1210,7 +1071,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                                     <td>{ent.nombre}</td>
                                     <td>{ent.correo}</td>
                                     <td>{ent.celular || '—'}</td>
-                                    <td>{ETIQUETA_CATEGORIA[ent.categoriaId] || ent.categoriaId}</td>
+                                    <td>{ent.categoriaTicket?.nombre || '—'}</td>
                                   </tr>
                                 ))}
                               </tbody>
@@ -1233,6 +1094,40 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
         </section>
       )}
         </>
+      )}
+
+      {/* --- CONTRASEÑAS GENERADAS AL APROBAR (no hay envío de correo real) --- */}
+      {passwordsAMostrar && (
+        <div
+          onClick={() => setPasswordsAMostrar(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: 'var(--blanco, #fff)', borderRadius: '12px', padding: '24px', maxWidth: '520px', width: '90%', position: 'relative' }}
+          >
+            <button
+              onClick={() => setPasswordsAMostrar(null)}
+              style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
+            >
+              <FaTimes />
+            </button>
+            <h3><FaKey /> Cuentas nuevas creadas</h3>
+            <p className="pi-dash-incidencias-nota">
+              No hay envío de correo automático — comparte esta contraseña temporal a mano con cada invitado. Solo se muestra esta vez.
+            </p>
+            <div className="pi-dash-tabla-wrapper">
+              <table className="pi-dash-tabla">
+                <thead><tr><th>Nombre</th><th>Correo</th><th>Contraseña</th></tr></thead>
+                <tbody>
+                  {passwordsAMostrar.map((p, i) => (
+                    <tr key={i}><td>{p.nombre}</td><td>{p.correo}</td><td><strong>{p.password}</strong></td></tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

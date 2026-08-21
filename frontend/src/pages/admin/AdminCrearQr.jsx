@@ -4,8 +4,7 @@ import {
   FaCalendarAlt, FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
   FaEye, FaTimes, FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
-import { leerEventos } from '../../data/eventosAdmin';
-import { leerQrDelEvento, generarQr, vaciarQrDelEvento } from '../../data/codigosQr';
+import api from '../../api/index.js';
 import { generarDataUrlQr, construirPdfQr } from '../../utils/qrPdf';
 import './AdminCrearQr.css';
 
@@ -19,33 +18,30 @@ const cmAPx = (cm) => Math.round(Number(cm) * PX_POR_CM);
 const TAMANO_PAGINA = 100;
 
 // Dibuja el QR de un código bajo demanda (con la librería `qrcode`, sin red de por medio).
-function QrImg({ qr }) {
+// El tamaño (ancho/alto) es solo un dato de impresión, no viene del backend: se aplica el
+// tamaño elegido en el formulario actual a todos los códigos que se muestran/imprimen.
+function QrImg({ qr, ancho = 180, alto = 180 }) {
   const [dataUrl, setDataUrl] = useState(null);
 
   useEffect(() => {
     let cancelado = false;
-    generarDataUrlQr(qr).then((url) => { if (!cancelado) setDataUrl(url); });
+    generarDataUrlQr({ codigo: qr.codigo, ancho, alto }).then((url) => { if (!cancelado) setDataUrl(url); });
     return () => { cancelado = true; };
-  }, [qr]);
+  }, [qr, ancho, alto]);
 
   if (!dataUrl) {
-    return <div className="pi-adqr-qr-cargando" style={{ width: qr.ancho || 180, height: qr.alto || 180 }} />;
+    return <div className="pi-adqr-qr-cargando" style={{ width: ancho, height: alto }} />;
   }
   return (
-    <img
-      src={dataUrl}
-      alt={qr.codigo}
-      style={{ width: `${qr.ancho || 180}px`, height: `${qr.alto || 180}px` }}
-    />
+    <img src={dataUrl} alt={qr.codigo} style={{ width: `${ancho}px`, height: `${alto}px` }} />
   );
 }
 
 export default function AdminCrearQr() {
   const location = useLocation();
-  const eventosDisponibles = useMemo(() => leerEventos(), []);
-
-  const [eventoId, setEventoId] = useState(location.state?.eventoId || eventosDisponibles[0]?.id);
-  const [qrDelEvento, setQrDelEvento] = useState(() => leerQrDelEvento(eventoId));
+  const [eventosDisponibles, setEventosDisponibles] = useState([]);
+  const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
+  const [codigos, setCodigos] = useState([]);
   const [cantidad, setCantidad] = useState('50');
   const [prefijo, setPrefijo] = useState('QP');
   const [anchoCm, setAnchoCm] = useState('5');
@@ -55,34 +51,46 @@ export default function AdminCrearQr() {
   const [codigoAVer, setCodigoAVer] = useState(null);
   const [generandoPdf, setGenerandoPdf] = useState(null); // { actual, total } | null
 
+  useEffect(() => {
+    api.eventos.listar().then(lista => {
+      setEventosDisponibles(lista);
+      setEventoId(prev => prev || lista[0]?.id);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!eventoId) return;
+    api.codigosQr.listar({ eventoId }).then(setCodigos);
+  }, [eventoId]);
+
+  const anchoPx = cmAPx(anchoCm) || 180;
+  const altoPx = cmAPx(altoCm) || 180;
+
   const eventoActual = eventosDisponibles.find(ev => ev.id === eventoId);
-  const totalPaginas = Math.max(1, Math.ceil(qrDelEvento.codigos.length / TAMANO_PAGINA));
-  const codigosPagina = qrDelEvento.codigos.slice(pagina * TAMANO_PAGINA, pagina * TAMANO_PAGINA + TAMANO_PAGINA);
+  const totalPaginas = Math.max(1, Math.ceil(codigos.length / TAMANO_PAGINA));
+  const codigosPagina = codigos.slice(pagina * TAMANO_PAGINA, pagina * TAMANO_PAGINA + TAMANO_PAGINA);
 
   const cambiarEvento = (nuevoId) => {
     setEventoId(nuevoId);
-    setQrDelEvento(leerQrDelEvento(nuevoId));
     setPagina(0);
     setMostrarImagenes(false);
   };
 
-  const handleGenerar = (e) => {
+  const handleGenerar = async (e) => {
     e.preventDefault();
     const n = Number(cantidad);
     if (!n || n < 1) return;
     if (!prefijo.trim()) return;
-    setQrDelEvento(generarQr(eventoId, n, {
-      prefijo,
-      ancho: cmAPx(anchoCm) || 180,
-      alto: cmAPx(altoCm) || 180,
-    }));
+    await api.codigosQr.generar({ eventoId, cantidad: n, prefijo });
+    setCodigos(await api.codigosQr.listar({ eventoId }));
     setPagina(0);
     setMostrarImagenes(false);
   };
 
-  const handleVaciar = () => {
-    if (!window.confirm('¿Borrar todos los códigos QR generados para este evento?')) return;
-    setQrDelEvento(vaciarQrDelEvento(eventoId));
+  const handleVaciar = async () => {
+    if (!window.confirm('¿Borrar todos los códigos QR sin vincular de este evento?')) return;
+    await api.codigosQr.eliminarNoVinculados(eventoId);
+    setCodigos(await api.codigosQr.listar({ eventoId }));
     setPagina(0);
     setMostrarImagenes(false);
   };
@@ -94,11 +102,12 @@ export default function AdminCrearQr() {
   // Arma el PDF entero en el navegador (QR dibujado localmente, sin pedirle nada a
   // ninguna API externa) y lo descarga como archivo. `codigos` puede ser la página
   // actual o el evento completo; en lotes grandes se ve el progreso en vivo.
-  const descargarPdf = async (codigos) => {
-    if (codigos.length === 0 || generandoPdf) return;
-    setGenerandoPdf({ actual: 0, total: codigos.length });
+  const descargarPdf = async (lista) => {
+    if (lista.length === 0 || generandoPdf) return;
+    setGenerandoPdf({ actual: 0, total: lista.length });
     try {
-      await construirPdfQr(codigos, (actual, total) => setGenerandoPdf({ actual, total }));
+      const conTamano = lista.map(qr => ({ ...qr, ancho: anchoPx, alto: altoPx }));
+      await construirPdfQr(conTamano, (actual, total) => setGenerandoPdf({ actual, total }));
     } finally {
       setGenerandoPdf(null);
     }
@@ -110,7 +119,7 @@ export default function AdminCrearQr() {
       <div className="pi-adqr-header">
         <div>
           <h2><FaQrcode color="var(--indigo-profundo)" /> Generar Códigos QR</h2>
-          <p>Genera una cantidad de códigos QR únicos para el evento y descárgalos en PDF (simulado, sin backend real).</p>
+          <p>Genera una cantidad de códigos QR únicos para el evento y descárgalos en PDF.</p>
         </div>
         <div className="pi-adqr-selector-evento">
           <FaCalendarAlt />
@@ -125,7 +134,7 @@ export default function AdminCrearQr() {
       <div className="pi-adqr-kpi-grid">
         <div className="pi-adqr-kpi-card">
           <FaQrcode color="var(--indigo-profundo)" size={20} />
-          <span className="numero">{qrDelEvento.codigos.length}</span>
+          <span className="numero">{codigos.length}</span>
           <span className="label">Códigos generados</span>
         </div>
       </div>
@@ -205,7 +214,7 @@ export default function AdminCrearQr() {
           <h3 className="pi-adqr-subtitulo">
             Códigos de {eventoActual?.nombre || 'este evento'}
           </h3>
-          {qrDelEvento.codigos.length > 0 && (
+          {codigos.length > 0 && (
             <div className="pi-adqr-acciones-lista">
               <button
                 className="pi-adqr-btn-vaciar"
@@ -223,7 +232,7 @@ export default function AdminCrearQr() {
               </button>
               <button
                 className="pi-adqr-btn-imprimir"
-                onClick={() => descargarPdf(qrDelEvento.codigos)}
+                onClick={() => descargarPdf(codigos)}
                 disabled={!!generandoPdf}
               >
                 <FaFileDownload /> Descargar PDF (todo el evento)
@@ -247,7 +256,7 @@ export default function AdminCrearQr() {
           </div>
         )}
 
-        {qrDelEvento.codigos.length === 0 ? (
+        {codigos.length === 0 ? (
           <p className="pi-adqr-empty">Aún no se generaron códigos QR para este evento.</p>
         ) : (
           <>
@@ -256,7 +265,7 @@ export default function AdminCrearQr() {
                 <button type="button" onClick={() => irAPagina(pagina - 1)} disabled={pagina === 0}>
                   <FaChevronLeft />
                 </button>
-                <span>Página {pagina + 1} de {totalPaginas} ({qrDelEvento.codigos.length} códigos en total)</span>
+                <span>Página {pagina + 1} de {totalPaginas} ({codigos.length} códigos en total)</span>
                 <button type="button" onClick={() => irAPagina(pagina + 1)} disabled={pagina === totalPaginas - 1}>
                   <FaChevronRight />
                 </button>
@@ -267,7 +276,7 @@ export default function AdminCrearQr() {
               {codigosPagina.map(qr => (
                 mostrarImagenes ? (
                   <div key={qr.id} className="pi-adqr-tarjeta">
-                    <QrImg key={qr.id} qr={qr} />
+                    <QrImg key={qr.id} qr={qr} ancho={anchoPx} alto={altoPx} />
                     <span className="pi-adqr-codigo">{qr.codigo}</span>
                   </div>
                 ) : (
@@ -293,7 +302,7 @@ export default function AdminCrearQr() {
             <button type="button" className="pi-adqr-modal-cerrar" onClick={() => setCodigoAVer(null)}>
               <FaTimes />
             </button>
-            <QrImg key={codigoAVer.id} qr={codigoAVer} />
+            <QrImg key={codigoAVer.id} qr={codigoAVer} ancho={anchoPx} alto={altoPx} />
             <span className="pi-adqr-codigo">{codigoAVer.codigo}</span>
           </div>
         </div>

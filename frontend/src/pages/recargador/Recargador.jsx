@@ -1,50 +1,19 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaHistory, FaTimes, FaIdCard, FaCoins, FaCheckCircle, FaWallet,
-  FaExclamationTriangle, FaClipboardList
+  FaExclamationTriangle, FaClipboardList, FaMapMarkerAlt, FaArrowLeft
 } from 'react-icons/fa';
+import api from '../../api/index.js';
+import { leerSesion } from '../../api/client.js';
+import { formatearFecha } from '../../utils/eventos.js';
 import './Recargador.css';
-
-// --- INCIDENCIAS DE RECARGA INCOMPLETA (compartidas con Admin vía localStorage) ---
-const CLAVE_INCIDENCIAS = 'qpass_incidencias_recarga';
-
-const leerIncidencias = () => {
-  const guardado = localStorage.getItem(CLAVE_INCIDENCIAS);
-  return guardado ? JSON.parse(guardado) : [];
-};
-
-const guardarIncidencias = (lista) => {
-  localStorage.setItem(CLAVE_INCIDENCIAS, JSON.stringify(lista));
-};
-
-// --- DATOS SIMULADOS DE PARTICIPANTES ---
-const participantesIniciales = [
-  { id: 1, nombre: 'María Fernanda Rojas', documento: '7451236 LP', foto: 'https://i.pravatar.cc/300?img=47', saldo: 120 },
-  { id: 2, nombre: 'Jorge Luis Quispe', documento: '6621345 SC', foto: 'https://i.pravatar.cc/300?img=12', saldo: 45 },
-  { id: 3, nombre: 'Ana Belén Castro', documento: '5589214 CB', foto: 'https://i.pravatar.cc/300?img=32', saldo: 0 },
-  { id: 4, nombre: 'Ricardo Alanoca Mamani', documento: '4471258 LP', foto: 'https://i.pravatar.cc/300?img=51', saldo: 300 },
-  { id: 5, nombre: 'Daniela Vargas Soto', documento: '7789456 SC', foto: 'https://i.pravatar.cc/300?img=25', saldo: 80 },
-  { id: 6, nombre: 'Sergio Fabián Choque', documento: '3312589 OR', foto: 'https://i.pravatar.cc/300?img=15', saldo: 15 },
-  { id: 7, nombre: 'Paola Andrea Terrazas', documento: '6654123 CB', foto: 'https://i.pravatar.cc/300?img=45', saldo: 200 },
-  { id: 8, nombre: 'Luis Fernando Mamani', documento: '5521478 LP', foto: 'https://i.pravatar.cc/300?img=13', saldo: 0 },
-];
+import '../supervisor/GestionEntrega.css';
 
 const montosRapidos = [20, 50, 100, 200];
 
-const fechaHoraActual = () => {
-  const ahora = new Date();
-  return {
-    fecha: ahora.toLocaleDateString('es-BO'),
-    hora: ahora.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
-  };
-};
-
 export default function Recargador() {
-  const [usuario] = useState(() => {
-    const guardado = localStorage.getItem('usuarioProyectoIngresos');
-    return guardado ? JSON.parse(guardado) : { nombre: 'Recargador' };
-  });
+  const sesion = leerSesion();
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -52,13 +21,15 @@ export default function Recargador() {
     ? 'incidencias'
     : location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
 
-  const [participantes, setParticipantes] = useState(participantesIniciales);
+  const [eventos, setEventos] = useState([]);
+  const [eventoDetalle, setEventoDetalle] = useState(null);
+  const [entradasEvento, setEntradasEvento] = useState([]);
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
   const [monto, setMonto] = useState('');
   const [recargaExitosa, setRecargaExitosa] = useState(null);
   const [historial, setHistorial] = useState([]);
-  const [incidencias, setIncidencias] = useState(leerIncidencias);
+  const [incidencias, setIncidencias] = useState([]);
 
   // Reporte de incidencia: solo se ofrece DESPUÉS de confirmar la recarga,
   // cuando el recargador ya entregó lo que pudo y quiere avisar que faltó.
@@ -74,23 +45,39 @@ export default function Recargador() {
   const [notaIncidenciaHist, setNotaIncidenciaHist] = useState('');
   const [historialReportados, setHistorialReportados] = useState([]);
 
+  useEffect(() => { api.eventos.listar().then(setEventos); }, []);
+
+  const abrirEvento = (ev) => {
+    setEventoDetalle(ev);
+    api.entradas.listar({ eventoId: ev.id }).then(lista =>
+      setEntradasEvento(lista.filter(e => e.usuarioId).map(e => ({ ...e, saldo: Number(e.usuario?.saldo ?? 0) })))
+    );
+    api.transacciones.listar({ eventoId: ev.id, tipo: 'recarga' }).then(lista =>
+      setHistorial(lista.filter(t => t.operador.id === sesion.id))
+    );
+    api.incidencias.listar({ eventoId: ev.id }).then(setIncidencias);
+  };
+
+  const volverALista = () => setEventoDetalle(null);
+
   const irAIncidencias = () => {
     // Refrescamos por si Admin resolvió alguna desde su panel.
-    setIncidencias(leerIncidencias());
+    if (eventoDetalle) api.incidencias.listar({ eventoId: eventoDetalle.id }).then(setIncidencias);
     navigate('/recargador/incidencias');
   };
 
   const totalHistorialHoy = useMemo(
-    () => historial.reduce((suma, item) => suma + item.monto, 0),
+    () => historial.reduce((suma, item) => suma + Number(item.monto), 0),
     [historial]
   );
 
   const handleSimularEscaneo = () => {
+    if (entradasEvento.length === 0) return;
     setEscaneando(true);
     setMonto('');
     setRecargaExitosa(null);
     setTimeout(() => {
-      const elegido = participantes[Math.floor(Math.random() * participantes.length)];
+      const elegido = entradasEvento[Math.floor(Math.random() * entradasEvento.length)];
       setEscaneando(false);
       setTarjetaQR(elegido);
     }, 700);
@@ -106,57 +93,30 @@ export default function Recargador() {
     setIncidenciaReportada(false);
   };
 
-  const confirmarRecarga = () => {
+  const confirmarRecarga = async () => {
     const valor = Number(monto);
     if (!tarjetaQR || !valor || valor <= 0) return;
 
-    const nuevoSaldo = tarjetaQR.saldo + valor;
-    const { fecha, hora } = fechaHoraActual();
+    const { transaccion } = await api.transacciones.recarga({ entradaId: tarjetaQR.id, monto: valor });
+    api.transacciones.listar({ eventoId: eventoDetalle.id, tipo: 'recarga' }).then(lista =>
+      setHistorial(lista.filter(t => t.operador.id === sesion.id))
+    );
 
-    setParticipantes(prev => prev.map(p =>
-      p.id === tarjetaQR.id ? { ...p, saldo: nuevoSaldo } : p
-    ));
-
-    setHistorial(prev => [
-      {
-        id: Date.now(),
-        participante: tarjetaQR.nombre,
-        documento: tarjetaQR.documento,
-        foto: tarjetaQR.foto,
-        monto: valor,
-        saldoResultante: nuevoSaldo,
-        fecha,
-        hora,
-      },
-      ...prev,
-    ]);
-
-    setRecargaExitosa({ monto: valor, saldo: nuevoSaldo });
+    setRecargaExitosa({ monto: valor, saldo: Number(transaccion.saldoResultante) });
   };
 
   // Se dispara aparte, una vez que la recarga ya quedó confirmada: el recargador
   // cuenta qué pasó, sin condiciones de montos — Admin decide qué hacer con eso.
-  const reportarIncidencia = () => {
+  const reportarIncidencia = async () => {
     if (!tarjetaQR || !recargaExitosa || !notaIncidencia.trim()) return;
 
-    const { fecha, hora } = fechaHoraActual();
-    const incidencia = {
-      id: Date.now(),
-      participante: tarjetaQR.nombre,
-      documento: tarjetaQR.documento,
-      foto: tarjetaQR.foto,
+    await api.incidencias.crear({
+      entradaId: tarjetaQR.id,
       montoEntregado: recargaExitosa.monto,
       montoSolicitado: montoSolicitado ? Number(montoSolicitado) : null,
       nota: notaIncidencia.trim(),
-      recargador: usuario.nombre,
-      estado: 'pendiente',
-      fecha,
-      hora,
-    };
-
-    const listaActualizada = [incidencia, ...incidencias];
-    setIncidencias(listaActualizada);
-    guardarIncidencias(listaActualizada);
+    });
+    api.incidencias.listar({ eventoId: eventoDetalle.id }).then(setIncidencias);
     setIncidenciaReportada(true);
     setMostrarFormIncidencia(false);
   };
@@ -173,36 +133,51 @@ export default function Recargador() {
     setNotaIncidenciaHist('');
   };
 
-  const reportarIncidenciaHistorial = () => {
+  const reportarIncidenciaHistorial = async () => {
     if (!historialAReportar || !notaIncidenciaHist.trim()) return;
 
-    const { fecha, hora } = fechaHoraActual();
-    const incidencia = {
-      id: Date.now(),
-      participante: historialAReportar.participante,
-      documento: historialAReportar.documento,
-      foto: historialAReportar.foto,
-      montoEntregado: historialAReportar.monto,
+    await api.incidencias.crear({
+      entradaId: historialAReportar.entradaId,
+      montoEntregado: Number(historialAReportar.monto),
       montoSolicitado: montoSolicitadoHist ? Number(montoSolicitadoHist) : null,
       nota: notaIncidenciaHist.trim(),
-      recargador: usuario.nombre,
-      estado: 'pendiente',
-      fecha,
-      hora,
-    };
-
-    const listaActualizada = [incidencia, ...incidencias];
-    setIncidencias(listaActualizada);
-    guardarIncidencias(listaActualizada);
+    });
+    api.incidencias.listar({ eventoId: eventoDetalle.id }).then(setIncidencias);
     setHistorialReportados(prev => [...prev, historialAReportar.id]);
     cerrarReporteHistorial();
   };
+
+  if (!eventoDetalle) {
+    return (
+      <div className="pi-rec-container">
+        <div className="pi-rec-header">
+          <h2>Recarga de Puntos</h2>
+        </div>
+        <div className="pi-entrega-eventos-grid">
+          {eventos.map(ev => (
+            <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
+              <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+              <div className="pi-entrega-evento-info">
+                <strong>{ev.nombre}</strong>
+                <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="pi-rec-container">
 
       <div className="pi-rec-header">
-        <h2>Recarga de Puntos</h2>
+        <div>
+          <button className="pi-entrega-btn-volver" onClick={volverALista}>
+            <FaArrowLeft /> Cambiar de evento
+          </button>
+          <h2>{eventoDetalle.nombre}</h2>
+        </div>
         <div className="pi-rec-tabs">
           <button
             className={pestana === 'escanear' ? 'activo' : ''}
@@ -250,7 +225,7 @@ export default function Recargador() {
               <span className="label">Total recargado</span>
             </div>
             <div className="pi-rec-historial-stat">
-              <span className="numero">{usuario.nombre}</span>
+              <span className="numero">{sesion.nombre}</span>
               <span className="label">Recargador</span>
             </div>
           </div>
@@ -273,15 +248,15 @@ export default function Recargador() {
                   <tr key={item.id}>
                     <td>
                       <div className="pi-rec-fila-persona">
-                        <img src={item.foto} alt={item.participante} className="pi-rec-mini-avatar" />
-                        <span>{item.participante}</span>
+                        {item.entrada?.foto && <img src={item.entrada.foto} alt={item.entrada.nombre} className="pi-rec-mini-avatar" />}
+                        <span>{item.entrada?.nombre || '—'}</span>
                       </div>
                     </td>
-                    <td>{item.documento}</td>
-                    <td className="pi-rec-monto-celda">+{item.monto} pts</td>
-                    <td>{item.saldoResultante} pts</td>
-                    <td>{item.fecha}</td>
-                    <td>{item.hora}</td>
+                    <td>{item.entrada?.documento || '—'}</td>
+                    <td className="pi-rec-monto-celda">+{Number(item.monto)} pts</td>
+                    <td>{Number(item.saldoResultante)} pts</td>
+                    <td>{new Date(item.createdAt).toLocaleDateString('es-BO')}</td>
+                    <td>{new Date(item.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
                     <td>
                       {historialReportados.includes(item.id) ? (
                         <span className="pi-rec-badge pi-rec-badge-pend">
@@ -333,20 +308,20 @@ export default function Recargador() {
                   <tr key={inc.id}>
                     <td>
                       <div className="pi-rec-fila-persona">
-                        <img src={inc.foto} alt={inc.participante} className="pi-rec-mini-avatar" />
-                        <span>{inc.participante}</span>
+                        {inc.entrada.foto && <img src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-rec-mini-avatar" />}
+                        <span>{inc.entrada.nombre}</span>
                       </div>
                     </td>
-                    <td>{inc.documento}</td>
-                    <td>{inc.montoEntregado} pts</td>
-                    <td>{inc.montoSolicitado != null ? `${inc.montoSolicitado} pts` : '—'}</td>
+                    <td>{inc.entrada.documento || '—'}</td>
+                    <td>{Number(inc.montoEntregado)} pts</td>
+                    <td>{inc.montoSolicitado != null ? `${Number(inc.montoSolicitado)} pts` : '—'}</td>
                     <td>{inc.nota || '—'}</td>
                     <td>
                       {inc.estado === 'pendiente'
                         ? <span className="pi-rec-badge pi-rec-badge-pend"><FaExclamationTriangle /> Pendiente</span>
                         : <span className="pi-rec-badge pi-rec-badge-ok"><FaCheckCircle /> Resuelta</span>}
                     </td>
-                    <td>{inc.fecha}</td>
+                    <td>{new Date(inc.createdAt).toLocaleDateString('es-BO')}</td>
                   </tr>
                 ))}
                 {incidencias.length === 0 && (
@@ -432,7 +407,7 @@ export default function Recargador() {
                   <FaCheckCircle /> Código QR Válido
                 </div>
 
-                <img src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-rec-tarjeta-foto" />
+                {tarjetaQR.foto && <img src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-rec-tarjeta-foto" />}
                 <h2 className="pi-rec-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
                 <div className="pi-rec-tarjeta-datos">
@@ -497,29 +472,29 @@ export default function Recargador() {
               <FaExclamationTriangle /> Reportar incidencia
             </div>
 
-            <img src={historialAReportar.foto} alt={historialAReportar.participante} className="pi-rec-tarjeta-foto" />
-            <h2 className="pi-rec-tarjeta-nombre">{historialAReportar.participante}</h2>
+            {historialAReportar.entrada?.foto && <img src={historialAReportar.entrada.foto} alt={historialAReportar.entrada.nombre} className="pi-rec-tarjeta-foto" />}
+            <h2 className="pi-rec-tarjeta-nombre">{historialAReportar.entrada?.nombre}</h2>
 
             <div className="pi-rec-tarjeta-datos">
               <div className="pi-rec-tarjeta-dato">
                 <FaIdCard />
                 <div>
                   <span className="label">Documento</span>
-                  <span className="valor">{historialAReportar.documento}</span>
+                  <span className="valor">{historialAReportar.entrada?.documento || '—'}</span>
                 </div>
               </div>
               <div className="pi-rec-tarjeta-dato">
                 <FaWallet />
                 <div>
                   <span className="label">Se le dio</span>
-                  <span className="valor">{historialAReportar.monto} pts</span>
+                  <span className="valor">{Number(historialAReportar.monto)} pts</span>
                 </div>
               </div>
             </div>
 
             <div className="pi-rec-form-incidencia pi-rec-form-incidencia-post">
               <label>
-                <FaExclamationTriangle /> ¿Qué pasó con {historialAReportar.participante}?
+                <FaExclamationTriangle /> ¿Qué pasó con {historialAReportar.entrada?.nombre}?
               </label>
               <textarea
                 className="pi-rec-nota-incidencia"

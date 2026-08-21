@@ -1,52 +1,45 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   FaStore, FaUserTie, FaEnvelope, FaLock, FaPlus,
   FaTrash, FaSearch, FaTimes, FaUserShield, FaUsersCog
 } from 'react-icons/fa';
-import { ROLES, leerUsuarios, guardarUsuarios } from '../../data/usuarios';
+import api from '../../api/index.js';
 import './AdCreaUsuarioNegocio.css';
 
+const ROLES = ['Cliente', 'Recargador', 'Supervisor', 'Devolucion', 'UsuarioNormal', 'UsuarioNegocio'];
+
 export default function AdCreaUsuarioNegocio() {
-  const [usuarios, setUsuarios] = useState(leerUsuarios);
+  const [usuarios, setUsuarios] = useState([]);
   const [showModal, setShowModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState(''); 
-  const [filtroRol, setFiltroRol] = useState('Todos'); 
-  
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filtroRol, setFiltroRol] = useState('Todos');
+
   const [formData, setFormData] = useState({
     nombre: '',
     email: '',
     password: '',
-    rol: 'UsuarioNegocio' 
+    rol: 'UsuarioNegocio'
   });
+
+  const recargarUsuarios = () => api.usuarios.listar().then(setUsuarios);
+  useEffect(() => { recargarUsuarios(); }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const nuevoUsuario = {
-      id: Date.now(),
-      nombre: formData.nombre,
-      email: formData.email,
-      rol: formData.rol,
-      extraInfo: formData.rol === 'UsuarioNegocio' ? 'Pendiente de configurar...' : 'Sin asignar', 
-      foto: null, 
-      recaudado: 0
-    };
-
-    const actualizados = [nuevoUsuario, ...usuarios];
-    setUsuarios(actualizados);
-    guardarUsuarios(actualizados);
+    await api.auth.registro(formData);
+    await recargarUsuarios();
     setFormData({ nombre: '', email: '', password: '', rol: 'UsuarioNegocio' });
     setShowModal(false);
   };
 
-  const eliminarUsuario = (id) => {
-    if(window.confirm('¿Estás seguro de eliminar a este usuario del sistema?')) {
-      const actualizados = usuarios.filter(u => u.id !== id);
-      setUsuarios(actualizados);
-      guardarUsuarios(actualizados);
+  const eliminarUsuario = async (id) => {
+    if (window.confirm('¿Estás seguro de eliminar a este usuario del sistema?')) {
+      await api.usuarios.eliminar(id);
+      setUsuarios(prev => prev.filter(u => u.id !== id));
     }
   };
 
@@ -131,7 +124,7 @@ export default function AdCreaUsuarioNegocio() {
                 <th>Usuario</th>
                 <th>Contacto</th>
                 <th>Rol / Tipo</th>
-                <th>Detalles Extras</th>
+                <th>CI / Celular</th>
                 <th style={{ textAlign: 'center' }}>Acción</th>
               </tr>
             </thead>
@@ -162,7 +155,7 @@ export default function AdCreaUsuarioNegocio() {
                   </td>
                   <td>
                     <span className="celda-secundaria">
-                      {user.extraInfo || '-'}
+                      {user.ci || user.celular || '-'}
                     </span>
                   </td>
                   <td style={{ textAlign: 'center' }}>

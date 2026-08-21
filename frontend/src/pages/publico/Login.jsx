@@ -10,25 +10,29 @@ import {
   MdVisibilityOff      // <- Ícono Ojo Cerrado
 } from 'react-icons/md';
 import { FaBuilding } from 'react-icons/fa';
+import { ROLE_LABELS, ROLE_HOME_PATH } from '../../constants/roles.js';
+import { guardarSesion } from '../../api/client.js';
+import api from '../../api/index.js';
 import './Login.css';
 
-// 1. Credenciales de prueba
-const testCredentials = [
-  { rol: 'Admin', nombre: 'Carlos Admin', email: 'admin@QPass.com', pass: '123456', path: '/admin' },
-  { rol: 'Cliente', nombre: 'Erick Cliente', email: 'cliente@QPass.com', pass: '123456', path: '/Cliente' },
-  { rol: 'Recargador', nombre: 'Juan Recargador', email: 'recargador@QPass.com', pass: '123456', path: '/recargador' },
-  { rol: 'Supervisor', nombre: 'Ana Supervisor', email: 'supervisor@QPass.com', pass: '123456', path: '/supervisor' },
-  { rol: 'Devolución', nombre: 'Luis Devoluciones', email: 'devolucion@QPass.com', pass: '123456', path: '/devolucion' },
-  { rol: 'Usuario Normal', nombre: 'Pedro Normal', email: 'normal@QPass.com', pass: '123456', path: '/usuarionormal' },
-  { rol: 'Usuario Negocio', nombre: 'María Negocio', email: 'negocio@QPass.com', pass: '123456', path: '/usuarionegocio' },
-  { rol: 'Ayudante', nombre: 'José Ayudante', email: 'ayudante@QPass.com', pass: '123456', path: '/ayudante' }
-];
+// Cuentas de prueba sembradas por backend/prisma/seed.js (password "123456" para todas).
+const credencialesDemo = [
+  { rol: 'Admin', email: 'admin@qpass.com' },
+  { rol: 'Cliente', email: 'cliente@qpass.com' },
+  { rol: 'Recargador', email: 'recargador@qpass.com' },
+  { rol: 'Supervisor', email: 'supervisor@qpass.com' },
+  { rol: 'Devolucion', email: 'devolucion@qpass.com' },
+  { rol: 'UsuarioNormal', email: 'normal@qpass.com' },
+  { rol: 'UsuarioNegocio', email: 'negocio@qpass.com' },
+  { rol: 'Ayudante', email: 'ayudante@qpass.com' },
+].map(c => ({ ...c, label: ROLE_LABELS[c.rol], pass: '123456' }));
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); // <- Estado para ver contraseña
   const [error, setError] = useState('');
+  const [cargando, setCargando] = useState(false);
   const [showDevCredentials, setShowDevCredentials] = useState(false);
   const navigate = useNavigate();
 
@@ -42,19 +46,19 @@ export default function Login() {
     };
   });
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
+    setCargando(true);
 
-    const user = testCredentials.find(
-      (u) => u.email === email && u.pass === password
-    );
-
-    if (user) {
-      localStorage.setItem('usuarioProyectoIngresos', JSON.stringify(user));
-      navigate(user.path);
-    } else {
-      setError('Credenciales incorrectas. Verifica tu correo o contraseña.');
+    try {
+      const { token, usuario } = await api.auth.login(email, password);
+      guardarSesion({ ...usuario, token });
+      navigate(ROLE_HOME_PATH[usuario.rol] || '/');
+    } catch (err) {
+      setError(err.message === 'Credenciales inválidas' ? 'Credenciales incorrectas. Verifica tu correo o contraseña.' : err.message);
+    } finally {
+      setCargando(false);
     }
   };
 
@@ -140,7 +144,9 @@ export default function Login() {
 
             {error && <p className="pi-login-error">{error}</p>}
 
-            <button type="submit" className="pi-login-btn-enter">ENTRAR →</button>
+            <button type="submit" className="pi-login-btn-enter" disabled={cargando}>
+              {cargando ? 'Entrando…' : 'ENTRAR →'}
+            </button>
             
             <div className="pi-login-divider"><span>o</span></div>
 
@@ -178,9 +184,9 @@ export default function Login() {
                   </tr>
                 </thead>
                 <tbody>
-                  {testCredentials.map((cred, index) => (
+                  {credencialesDemo.map((cred, index) => (
                     <tr key={index}>
-                      <td>{cred.rol}</td>
+                      <td>{cred.label}</td>
                       <td>{cred.email}</td>
                       <td>{cred.pass}</td>
                     </tr>

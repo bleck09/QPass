@@ -1,51 +1,65 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   FaPlus, FaTrash, FaTimes, FaImage, FaUsers, FaUpload, FaCheckSquare,
-  FaUserTie, FaEnvelope, FaClock, FaSearch, FaEdit, FaSave, FaSquare, FaStore,
+  FaUserTie, FaEnvelope, FaLock, FaSearch, FaSave, FaSquare, FaStore,
   FaMapMarkerAlt
 } from 'react-icons/fa';
+import api from '../../api/index.js';
+import { ROLES } from '../../constants/roles.js';
 import './UsuNegoCreaAyudante.css';
 
-const initialStateForm = { id: null, nombre: '', email: '', turno: 'Día', foto: '', puestosAsignados: [] };
+const initialStateForm = { nombre: '', email: '', password: '', foto: '', puestosAsignados: [] };
 
-export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, puestos }) {
+export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
   const [showModal, setShowModal] = useState(false);
   const [formAyudante, setFormAyudante] = useState(initialStateForm);
   const [busqueda, setBusqueda] = useState('');
   const [ayudanteAsignandoId, setAyudanteAsignandoId] = useState(null);
+  const [asignacionesPorAyudante, setAsignacionesPorAyudante] = useState(new Map());
 
-  const isEditing = formAyudante.id !== null;
+  // No hay un endpoint "mis ayudantes"; se arma juntando las asignaciones de cada uno de mis puestos.
+  const recargarAyudantes = async () => {
+    const listas = await Promise.all(puestos.map(p => api.puestoAyudantes.listar({ puestoId: p.id })));
+    const porAyudante = new Map();
+    listas.flat().forEach(asig => {
+      const actual = porAyudante.get(asig.ayudante.id) || { ...asig.ayudante, asignaciones: [] };
+      actual.asignaciones.push({ id: asig.id, puestoId: asig.puestoId, turno: asig.turno, puestoNombre: puestos.find(p => p.id === asig.puestoId)?.nombre });
+      porAyudante.set(asig.ayudante.id, actual);
+    });
+    setAsignacionesPorAyudante(porAyudante);
+  };
 
-  const ayudanteAsignando = allAyudantes.find(a => a.id === ayudanteAsignandoId) || null;
+  useEffect(() => { if (puestos.length > 0) recargarAyudantes(); }, [puestos]);
+
+  const ayudantes = useMemo(() => [...asignacionesPorAyudante.values()], [asignacionesPorAyudante]);
+
+  const ayudanteAsignando = ayudantes.find(a => a.id === ayudanteAsignandoId) || null;
 
   const abrirAsignarPuestos = (ayudante) => setAyudanteAsignandoId(ayudante.id);
   const cerrarAsignarPuestos = () => setAyudanteAsignandoId(null);
 
-  const toggleAsignacionRapida = (puestoNombre) => {
-    setAllAyudantes(allAyudantes.map(a => {
-      if (a.id !== ayudanteAsignandoId) return a;
-      const tiene = a.puestosAsignados.includes(puestoNombre);
-      return {
-        ...a,
-        puestosAsignados: tiene
-          ? a.puestosAsignados.filter(p => p !== puestoNombre)
-          : [...a.puestosAsignados, puestoNombre]
-      };
-    }));
+  const toggleAsignacionRapida = async (puesto) => {
+    const existente = ayudanteAsignando.asignaciones.find(a => a.puestoId === puesto.id);
+    if (existente) {
+      await api.puestoAyudantes.quitar(existente.id);
+    } else {
+      await api.puestoAyudantes.asignar({ puestoId: puesto.id, ayudanteId: ayudanteAsignando.id });
+    }
+    await recargarAyudantes();
+    onCambio?.();
   };
 
   const handleFormChange = (e) => {
     setFormAyudante({ ...formAyudante, [e.target.name]: e.target.value });
   };
 
-  const handlePuestoToggle = (puestoNombre) => {
+  const handlePuestoToggle = (puestoId) => {
     setFormAyudante(prevForm => {
-      const currentPuestos = prevForm.puestosAsignados;
-      if (currentPuestos.includes(puestoNombre)) {
-        return { ...prevForm, puestosAsignados: currentPuestos.filter(p => p !== puestoNombre) };
-      } else {
-        return { ...prevForm, puestosAsignados: [...currentPuestos, puestoNombre] };
-      }
+      const actual = prevForm.puestosAsignados;
+      return {
+        ...prevForm,
+        puestosAsignados: actual.includes(puestoId) ? actual.filter(p => p !== puestoId) : [...actual, puestoId],
+      };
     });
   };
 
@@ -67,44 +81,38 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
     setShowModal(true);
   };
 
-  const abrirModalParaEditar = (ayudante) => {
-    setFormAyudante(ayudante);
-    setShowModal(true);
-  };
-
   const cerrarModal = () => {
     setShowModal(false);
     setFormAyudante(initialStateForm);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isEditing) {
-      // Lógica para actualizar
-      setAllAyudantes(allAyudantes.map(a => a.id === formAyudante.id ? formAyudante : a));
-    } else {
-      // Lógica para crear
-      const nuevoAyudante = {
-        ...formAyudante,
-        id: Date.now(),
-      };
-      setAllAyudantes([...allAyudantes, nuevoAyudante]);
-    }
+    const nuevo = await api.auth.registro({
+      rol: ROLES.AYUDANTE, nombre: formAyudante.nombre, email: formAyudante.email,
+      password: formAyudante.password, foto: formAyudante.foto || undefined,
+    });
+    await Promise.all(formAyudante.puestosAsignados.map(puestoId =>
+      api.puestoAyudantes.asignar({ puestoId, ayudanteId: nuevo.id })
+    ));
+    await recargarAyudantes();
+    onCambio?.();
     cerrarModal();
   };
 
-  const eliminarAyudante = (id) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar a este ayudante? Esta acción no se puede deshacer.')) {
-      setAllAyudantes(allAyudantes.filter(a => a.id !== id));
-    }
+  const eliminarAyudante = async (ayudante) => {
+    if (!window.confirm('¿Quitar a este ayudante de todos tus puestos? Su cuenta no se elimina.')) return;
+    await Promise.all(ayudante.asignaciones.map(a => api.puestoAyudantes.quitar(a.id)));
+    await recargarAyudantes();
+    onCambio?.();
   };
 
   const ayudantesFiltrados = useMemo(() => {
-    return allAyudantes.filter(a =>
+    return ayudantes.filter(a =>
       a.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       a.email.toLowerCase().includes(busqueda.toLowerCase())
     );
-  }, [allAyudantes, busqueda]);
+  }, [ayudantes, busqueda]);
 
   return (
     <div className="pi-ayudante-container">
@@ -116,8 +124,8 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
         <div className="pi-ayudante-kpi">
           <span className="micro-etiqueta">Total de Ayudantes</span>
           <div className="kpi-valor">
-            <FaUsers className="kpi-icon" /> {/* Using allAyudantes.length for total count */}
-            <span className="numero-grande">{allAyudantes.length}</span>
+            <FaUsers className="kpi-icon" />
+            <span className="numero-grande">{ayudantes.length}</span>
           </div>
         </div>
       </div>
@@ -132,10 +140,13 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
-        <button className="btn-primario" onClick={abrirModalParaCrear}>
+        <button className="btn-primario" onClick={abrirModalParaCrear} disabled={puestos.length === 0}>
           <FaPlus /> Crear Nuevo Ayudante
         </button>
       </div>
+      {puestos.length === 0 && (
+        <p className="pi-ayudante-nota">Crea al menos un puesto para este evento antes de agregar ayudantes.</p>
+      )}
 
       <div className="pi-ayudante-card">
         <div className="pi-ayudante-table-wrapper">
@@ -143,7 +154,6 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
             <thead>
               <tr>
                 <th>Ayudante</th>
-                <th>Turno</th>
                 <th>Puestos Asignados</th>
                 <th style={{ textAlign: 'center' }}>Acciones</th>
               </tr>
@@ -164,12 +174,11 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
                       </div>
                     </div>
                   </td>
-                  <td><div className="celda-normal">{ayudante.turno}</div></td>
                   <td>
                     <div className="badge-sucursal-container">
-                      {ayudante.puestosAsignados.length > 0 ? (
-                        ayudante.puestosAsignados.map(puesto => (
-                          <span key={puesto} className="badge-puesto">{puesto}</span>
+                      {ayudante.asignaciones.length > 0 ? (
+                        ayudante.asignaciones.map(a => (
+                          <span key={a.id} className="badge-puesto">{a.puestoNombre}</span>
                         ))
                       ) : (
                         <span className="badge-sin-puesto">Sin asignar</span>
@@ -181,10 +190,7 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
                       <button className="btn-asignar" onClick={() => abrirAsignarPuestos(ayudante)} title="Asignar Puestos">
                         <FaMapMarkerAlt />
                       </button>
-                      <button className="btn-editar" onClick={() => abrirModalParaEditar(ayudante)} title="Editar Ayudante">
-                        <FaEdit />
-                      </button>
-                      <button className="btn-eliminar" onClick={() => eliminarAyudante(ayudante.id)} title="Eliminar Ayudante">
+                      <button className="btn-eliminar" onClick={() => eliminarAyudante(ayudante)} title="Quitar de mis puestos">
                         <FaTrash />
                       </button>
                     </div>
@@ -193,7 +199,7 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
               ))}
               {ayudantesFiltrados.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="tabla-vacia">
+                  <td colSpan="3" className="tabla-vacia">
                     {busqueda ? 'No se encontraron ayudantes.' : 'Aún no has creado ayudantes.'}
                   </td>
                 </tr>
@@ -203,14 +209,14 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
         </div>
       </div>
 
-      {/* MODAL PARA CREAR/EDITAR AYUDANTE */}
+      {/* MODAL PARA CREAR AYUDANTE */}
       {showModal && (
         <div className="pi-usr-modal-overlay" onClick={cerrarModal}>
           <div className="pi-usr-modal" onClick={(e) => e.stopPropagation()}>
             <div className="pi-usr-modal-header">
               <h3>
                 <FaUserTie color="var(--indigo-profundo)" />
-                {isEditing ? 'Editar Ayudante' : 'Registrar Nuevo Ayudante'}
+                Registrar Nuevo Ayudante
               </h3>
               <button className="pi-usr-btn-cerrar-modal" onClick={cerrarModal}>
                 <FaTimes />
@@ -227,13 +233,8 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
                   <input type="email" name="email" value={formAyudante.email} onChange={handleFormChange} placeholder="Ej: juan.perez@email.com" required />
                 </div>
                 <div className="input-group">
-                  <label><FaClock /> Turno de Trabajo</label>
-                  <select name="turno" value={formAyudante.turno} onChange={handleFormChange} className="input-wrapper">
-                    <option value="Día">Día</option>
-                    <option value="Tarde">Tarde</option>
-                    <option value="Noche">Noche</option>
-                    <option value="Completo">Tiempo Completo</option>
-                  </select>
+                  <label><FaLock /> Contraseña Temporal</label>
+                  <input type="text" name="password" value={formAyudante.password} onChange={handleFormChange} placeholder="Ej: 123456" required />
                 </div>
 
                 <div className="input-group">
@@ -243,10 +244,10 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
                       <label key={puesto.id} className="checkbox-item">
                         <input
                           type="checkbox"
-                          checked={formAyudante.puestosAsignados.includes(puesto.nombre)}
-                          onChange={() => handlePuestoToggle(puesto.nombre)}
+                          checked={formAyudante.puestosAsignados.includes(puesto.id)}
+                          onChange={() => handlePuestoToggle(puesto.id)}
                         />
-                        {formAyudante.puestosAsignados.includes(puesto.nombre) ? <FaCheckSquare /> : <FaSquare />}
+                        {formAyudante.puestosAsignados.includes(puesto.id) ? <FaCheckSquare /> : <FaSquare />}
                         {puesto.nombre}
                       </label>
                     ))}
@@ -271,7 +272,7 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
                 <div className="pi-usr-modal-acciones">
                   <button type="button" className="btn-cerrar-secundario" onClick={cerrarModal}>Cancelar</button>
                   <button type="submit" className="pi-usr-btn-enviar">
-                    <FaSave /> {isEditing ? 'Guardar Cambios' : 'Crear Ayudante'}
+                    <FaSave /> Crear Ayudante
                   </button>
                 </div>
               </form>
@@ -298,17 +299,16 @@ export default function UsuNegoCreaAyudante({ allAyudantes, setAllAyudantes, pue
                 Marca en qué puestos puede trabajar. Los cambios se guardan al instante.
               </p>
               <div className="checkbox-grid">
-                {puestos.map(puesto => (
-                  <label key={puesto.id} className="checkbox-item">
-                    <input
-                      type="checkbox"
-                      checked={ayudanteAsignando.puestosAsignados.includes(puesto.nombre)}
-                      onChange={() => toggleAsignacionRapida(puesto.nombre)}
-                    />
-                    {ayudanteAsignando.puestosAsignados.includes(puesto.nombre) ? <FaCheckSquare /> : <FaSquare />}
-                    {puesto.nombre}
-                  </label>
-                ))}
+                {puestos.map(puesto => {
+                  const asignado = ayudanteAsignando.asignaciones.some(a => a.puestoId === puesto.id);
+                  return (
+                    <label key={puesto.id} className="checkbox-item">
+                      <input type="checkbox" checked={asignado} onChange={() => toggleAsignacionRapida(puesto)} />
+                      {asignado ? <FaCheckSquare /> : <FaSquare />}
+                      {puesto.nombre}
+                    </label>
+                  );
+                })}
                 {puestos.length === 0 && (
                   <p className="tabla-vacia">Aún no has creado puestos.</p>
                 )}

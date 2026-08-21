@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt, 
+import {
+  FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt,
   FaQrcode, FaMapMarkedAlt, FaStore, FaTimes,
   FaArrowLeft, FaCheck
 } from 'react-icons/fa';
-import './App.css'; 
+import api from '../../api/index.js';
+import { esVigente } from '../../utils/eventos.js';
+import './App.css';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
 const defaultLandingData = {
@@ -45,12 +47,6 @@ const defaultLandingData = {
   ]
 };
 
-const mockMapa = [
-  { id: '1', numero: 'Pizzas El Paso', foto: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?ixlib=rb-4.0.3&w=150&q=80', categoria: 'Comida', estadoActivo: true, x: 50, y: 50, ancho: 120, alto: 100 },
-  { id: '2', numero: 'Pollos Doña María', foto: 'https://images.unsplash.com/photo-1626082896492-766af4eb65ed?ixlib=rb-4.0.3&w=150&q=80', categoria: 'Comida', estadoActivo: true, x: 200, y: 150, ancho: 120, alto: 100 },
-  { id: '3', numero: 'Escenario Principal', foto: null, categoria: 'Entretenimiento', estadoActivo: true, x: 400, y: 50, ancho: 250, alto: 120 }
-];
-
 export default function App() {
   const navigate = useNavigate();
 
@@ -59,25 +55,46 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
-  const [data] = useState(() => {
-    const dataGuardada = localStorage.getItem('pi_landing_config');
-    return dataGuardada ? JSON.parse(dataGuardada) : defaultLandingData;
-  });
-
-  const [mapaPuestos] = useState(() => {
-    const mapaGuardado = localStorage.getItem('pi_mapa_puestos');
-    return mapaGuardado ? JSON.parse(mapaGuardado) : mockMapa;
-  });
-
+  const [evento, setEvento] = useState(null);
+  const [data, setData] = useState(defaultLandingData);
+  const [precios, setPrecios] = useState(defaultLandingData.precios);
+  const [mapaPuestos, setMapaPuestos] = useState([]);
   const [puestoModal, setPuestoModal] = useState(null);
-  
+
   // ESTADOS DEL CONTADOR
-  const [timeLeft, setTimeLeft] = useState({ dias: 15, horas: 4, minutos: 60, seg: 5 });
+  const [timeLeft, setTimeLeft] = useState({ dias: 0, horas: 0, minutos: 0, seg: 0 });
+
+  useEffect(() => {
+    api.eventos.listar().then(async (todos) => {
+      const activo = todos.find(esVigente) || todos[0];
+      if (!activo) return;
+      setEvento(activo);
+
+      api.landingConfig.obtener(activo.id)
+        .then(cfg => setData({ ...defaultLandingData, ...cfg }))
+        .catch(() => {});
+
+      api.categoriasTicket.listar(activo.id).then(categorias => {
+        if (categorias.length === 0) return;
+        setPrecios(categorias.map(c => ({
+          id: c.id,
+          tipo: c.nombre,
+          precio: `${c.precio} Bs`,
+          destacado: false,
+          beneficios: [c.descripcion || 'Acceso al evento'],
+        })));
+      });
+
+      api.puestos.listar({ eventoId: activo.id }).then(setMapaPuestos);
+    });
+  }, []);
 
   // LÓGICA DEL CONTADOR
   useEffect(() => {
+    if (!evento?.fecha) return;
+
     const calcularTiempo = () => {
-      const diferencia = +new Date(data.fechaEvento) - +new Date();
+      const diferencia = +new Date(evento.fecha) - +new Date();
       if (diferencia > 0) {
         setTimeLeft({
           dias: Math.floor(diferencia / (1000 * 60 * 60 * 24)),
@@ -90,7 +107,7 @@ export default function App() {
     calcularTiempo();
     const timer = setInterval(calcularTiempo, 1000);
     return () => clearInterval(timer);
-  }, [data.fechaEvento]);
+  }, [evento?.fecha]);
 
   const handleLoginClick = () => navigate('/login');
   const handleVolverInicio = () => navigate('/'); 
@@ -158,7 +175,7 @@ export default function App() {
       <section id="entradas" className="pi-landing-section pricing-section">
         <h2 className="pricing-title">OUR PRICES</h2>
         <div className="pricing-grid">
-          {(data.precios || defaultLandingData.precios).map((plan) => (
+          {precios.map((plan) => (
             <div key={plan.id} className={`pricing-card ${plan.destacado ? 'destacado' : ''}`}>
               <div className="pricing-card-header">
                 <h3>{plan.tipo}</h3>
@@ -260,18 +277,16 @@ export default function App() {
                   left: `${puesto.x}px`, top: `${puesto.y}px`,
                   width: `${puesto.ancho}px`, height: `${puesto.alto}px`
                 }}
-                onClick={() => {
-                  setPuestoModal({ ...puesto, productos: puesto.productos || [] });
-                }}
+                onClick={() => setPuestoModal(puesto)}
               >
-                {puesto.foto ? (
-                  <div className="box-fondo-img" style={{ backgroundImage: `url(${puesto.foto})` }}>
-                    <div className="box-overlay-texto"><strong>{puesto.numero}</strong></div>
+                {puesto.logo ? (
+                  <div className="box-fondo-img" style={{ backgroundImage: `url(${puesto.logo})` }}>
+                    <div className="box-overlay-texto"><strong>{puesto.nombre}</strong></div>
                   </div>
                 ) : (
                   <div className="box-fondo-color">
                     <FaStore className="puesto-icon-dinamico" />
-                    <strong>{puesto.numero}</strong>
+                    <strong>{puesto.nombre}</strong>
                   </div>
                 )}
               </div>
@@ -316,10 +331,22 @@ export default function App() {
         <div className="pi-landing-modal-overlay" onClick={() => setPuestoModal(null)}>
           <div className="pi-landing-modal glass-modal" onClick={e => e.stopPropagation()}>
             <div className="pi-landing-modal-header">
-              <h2>{puestoModal.numero}</h2>
+              <h2>{puestoModal.nombre}</h2>
               <button className="btn-close-modal" onClick={() => setPuestoModal(null)}>
                 <FaTimes />
               </button>
+            </div>
+            <div className="pi-landing-modal-body">
+              {puestoModal.descripcion && <p>{puestoModal.descripcion}</p>}
+              {(puestoModal.productos || []).length === 0 ? (
+                <p>Este puesto todavía no tiene productos publicados.</p>
+              ) : (
+                <ul className="pricing-features">
+                  {puestoModal.productos.map(p => (
+                    <li key={p.id}><FaCheck className="check-icon" /> {p.nombre} — {p.precio} Bs</li>
+                  ))}
+                </ul>
+              )}
             </div>
           </div>
         </div>

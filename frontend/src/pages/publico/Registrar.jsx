@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { 
   MdEmail, MdLock, MdArrowBack, MdVisibility, MdVisibilityOff 
 } from 'react-icons/md';
-import { 
-  FaUser, FaIdCard, FaBirthdayCake, FaChevronDown, FaEnvelopeOpenText 
+import {
+  FaUser, FaIdCard, FaBirthdayCake, FaChevronDown, FaEnvelopeOpenText
 } from 'react-icons/fa';
+import { ROLES } from '../../constants/roles.js';
+import api from '../../api/index.js';
 import './Registrar.css';
 
 export default function Registrar() {
@@ -98,12 +100,12 @@ export default function Registrar() {
     }
   };
 
-  const handleVerifyAndRegister = (e) => {
+  const handleVerifyAndRegister = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     const codigoIngresado = otp.join('');
-    
+
     if (codigoIngresado.length < 6) {
       setError('Debes ingresar los 6 dígitos del código.');
       return;
@@ -115,25 +117,26 @@ export default function Registrar() {
       return;
     }
 
-    // CREACIÓN DEL USUARIO FINAL
-    const nuevoUsuario = {
-      rol: 'Usuario Normal',
-      nombre: `${nombre} ${paterno} ${materno}`,
-      email: email,
-      ci: ci,
-      pass: password,
-      fechaNacimiento: fechaNacimiento,
-      celular: celular,
-      foto: '',
-      fechaCreacion: new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-    };
+    try {
+      await api.auth.registro({
+        rol: ROLES.USUARIO_NORMAL,
+        nombre,
+        apellidoPaterno: paterno,
+        apellidoMaterno: materno,
+        email,
+        ci,
+        password,
+        fechaNacimiento: fechaNacimiento || undefined,
+        celular: celular || undefined,
+      });
 
-    console.log("Usuario verificado y registrado:", nuevoUsuario);
-    setSuccess('¡Correo verificado! Cuenta creada exitosamente.');
-    
-    setTimeout(() => {
-      navigate('/login');
-    }, 2500);
+      setSuccess('¡Correo verificado! Cuenta creada exitosamente.');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2500);
+    } catch (err) {
+      setError(err.message === 'El email ya está registrado' ? 'Ese correo ya tiene una cuenta registrada.' : err.message);
+    }
   };
 
   const estiloDinamico = {

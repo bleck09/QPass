@@ -1,112 +1,98 @@
 import { useState, useEffect } from 'react';
-import { 
-  FaStore, FaDollarSign, FaUsers, FaShoppingCart, 
-  FaChartBar, FaTrophy, FaMedal, FaArrowLeft, FaBoxOpen, FaEye, 
-  FaUserTie, FaSearch, FaRegClock, FaTag
+import {
+  FaStore, FaDollarSign, FaUsers, FaShoppingCart,
+  FaChartBar, FaTrophy, FaMedal, FaArrowLeft, FaBoxOpen, FaEye,
+  FaUserTie, FaSearch, FaRegClock, FaTag, FaCalendarAlt
 } from 'react-icons/fa';
+import api from '../../api/index.js';
+import { leerSesion } from '../../api/client.js';
 import './UsuNegoDasboar.css';
 
-// ==============================================================
-// DATOS DE PRUEBA
-// ==============================================================
-const mockDashboardData = {
-  totalIngresos: 3630,
-  totalVentas: 310,
-  puestosActivos: 3,
-  totalAyudantes: 7,
-  topProductos: [
-    { id: 101, nombre: 'Combo Pizza Familiar', ventas: 45, ingresos: 900 },
-    { id: 102, nombre: 'Pollo Entero a la Leña', ventas: 38, ingresos: 760 },
-    { id: 103, nombre: 'Cerveza Artesanal', ventas: 60, ingresos: 300 }
-  ],
-  // AHORA LOS AYUDANTES TIENEN UN ARRAY DE SUCURSALES (Pueden estar en varias)
-  listaAyudantes: [
-    { id: 1, nombre: 'Carlos Ruiz', sucursales: ['Pizzas El Paso', 'Pollos Doña María'], rol: 'Ayudante', avatar: 'CR' },
-    { id: 2, nombre: 'Ana Gómez', sucursales: ['Pizzas El Paso'], rol: 'Ayudante', avatar: 'AG' },
-    { id: 3, nombre: 'Luis Arce', sucursales: ['Pollos Doña María'], rol: 'Ayudante', avatar: 'LA' },
-    { id: 4, nombre: 'María Paz', sucursales: ['Pollos Doña María', 'Licoreria'], rol: 'Ayudante', avatar: 'MP' },
-    { id: 5, nombre: 'Jorge Luna', sucursales: ['Bebidas Oasis', 'Pizzas El Paso'], rol: 'Ayudante', avatar: 'JL' },
-    { id: 6, nombre: 'Erick Maldonado', sucursales: ['Licoreria'], rol: 'Ayudante', avatar: 'MP' }
-  ],
-  ventasPorPuesto: [
-    { 
-      id: 1, nombre: 'Pizzas El Paso', ingresos: 1650, ventas: 120, ayudantes: 2,
-      productos: [
-        { 
-          id: 101, nombre: 'Combo Pizza Familiar', precio: 20, ventas: 45, ingresos: 900,
-          historial: [
-            { idVenta: 'V-1001', hora: '19:30', vendedor: 'Carlos Ruiz', precio: 20 },
-            { idVenta: 'V-1005', hora: '20:15', vendedor: 'Ana Gómez', precio: 20 },
-            { idVenta: 'V-1012', hora: '21:00', vendedor: 'Carlos Ruiz', precio: 20 }
-          ]
-        },
-        { 
-          id: 104, nombre: 'Pizza Personal', precio: 15, ventas: 50, ingresos: 750,
-          historial: [
-            { idVenta: 'V-1002', hora: '19:35', vendedor: 'Ana Gómez', precio: 15 }
-          ]
-        }
-      ]
-    },
-    { 
-      id: 2, nombre: 'Pollos Doña María', ingresos: 720, ventas: 95, ayudantes: 2,
-      productos: [
-        { 
-          id: 102, nombre: 'Pollo Entero a la Leña', precio: 20, ventas: 38, ingresos: 100,
-          historial: [
-            { vendedor: 'Juan Miguel', hora: '18:45', Comprador: 'Luis Arce', precio: 20 },
-            { vendedor: 'Juan Perez', hora: '19:20', Comprador: 'María Paz', precio: 20 }
-          ]
-        },
-        { 
-          id: 102, nombre: 'Pollo Entero a la Leña', precio: 20, ventas: 38, ingresos: 420,
-          historial: [
-            { vendedor: 'Juan Miguel', hora: '18:45', Comprador: 'Luis Arce', precio: 20 },
-            { vendedor: 'Juan Perez', hora: '19:20', Comprador: 'María Paz', precio: 20 }
-          ]
-        },
-        { 
-          id: 102, nombre: 'Pollo Entero a la Leña', precio: 20, ventas: 38, ingresos: 200,
-          historial: [
-            { vendedor: 'Juan Miguel', hora: '18:45', Comprador: 'Luis Arce', precio: 20 },
-            { vendedor: 'Juan Perez', hora: '19:20', Comprador: 'María Paz', precio: 20 }
-          ]
-        }
-      ]
-    },
-    { 
-      id: 3, nombre: 'Licoreria', ingresos: 1260, ventas: 95, ayudantes: 3,
-      productos: [
-        { 
-          id: 102, nombre: 'Coca cola', precio: 20, ventas: 38, ingresos: 760,
-          historial: [
-            { vendedor: 'Juan Miguel', hora: '18:45', Comprador: 'Luis Arce', precio: 20 },
-            { vendedor: 'Juan Perez', hora: '19:20', Comprador: 'María Paz', precio: 20 }
-          ]
-        },
-        { 
-          id: 103, nombre: 'wisky', precio: 20, ventas: 38, ingresos: 500,
-          historial: [
-            { vendedor: 'Juan Miguel', hora: '18:45', Comprador: 'Luis Arce', precio: 20 },
-            { vendedor: 'Juan Perez', hora: '19:20', Comprador: 'María Paz', precio: 20 }
-          ]
-        }
-      ]
-    }
-  ]
+const iniciales = (nombre = '') => nombre.substring(0, 2).toUpperCase();
+
+const DATA_VACIA = { totalIngresos: 0, totalVentas: 0, puestosActivos: 0, totalAyudantes: 0, topProductos: [], listaAyudantes: [], ventasPorPuesto: [] };
+
+// Construye el mismo shape que antes venía de mock, pero desde /puestos + /ventas + /puesto-ayudantes reales.
+const construirDashboard = async (eventoId, negocioId) => {
+  const puestos = await api.puestos.listar({ eventoId, negocioId });
+  if (puestos.length === 0) return DATA_VACIA;
+
+  const ventasPorPuestoRaw = await Promise.all(puestos.map(p => api.ventas.listar({ puestoId: p.id })));
+
+  const ayudantesPorId = new Map();
+  const ventasPorPuesto = puestos.map((puesto, idx) => {
+    const ventas = ventasPorPuestoRaw[idx];
+    const productosPorId = new Map(puesto.productos.map(p => [p.id, { id: p.id, nombre: p.nombre, precio: Number(p.precio), ventas: 0, ingresos: 0, historial: [] }]));
+
+    ventas.forEach(venta => {
+      puesto.ayudantes.forEach(a => ayudantesPorId.set(a.ayudante.id, { ...a.ayudante, sucursales: new Set([...(ayudantesPorId.get(a.ayudante.id)?.sucursales || []), puesto.nombre]) }));
+
+      venta.items.forEach(item => {
+        const prod = productosPorId.get(item.productoId) || { id: item.productoId, nombre: item.nombreProducto, precio: Number(item.precioUnitario), ventas: 0, ingresos: 0, historial: [] };
+        prod.ventas += item.cantidad;
+        prod.ingresos += Number(item.precioUnitario) * item.cantidad;
+        prod.historial.push({
+          idVenta: venta.id, hora: new Date(venta.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
+          vendedor: venta.ayudante?.nombre || '—', precio: Number(item.precioUnitario),
+        });
+        productosPorId.set(prod.id, prod);
+      });
+    });
+
+    return {
+      id: puesto.id, nombre: puesto.nombre,
+      ingresos: ventas.reduce((s, v) => s + Number(v.montoTotal), 0),
+      ventas: ventas.length,
+      ayudantes: puesto.ayudantes.length,
+      productos: [...productosPorId.values()],
+    };
+  });
+
+  const productosGlobales = new Map();
+  ventasPorPuesto.forEach(p => p.productos.forEach(prod => {
+    const actual = productosGlobales.get(prod.nombre) || { id: prod.id, nombre: prod.nombre, ventas: 0, ingresos: 0 };
+    actual.ventas += prod.ventas;
+    actual.ingresos += prod.ingresos;
+    productosGlobales.set(prod.nombre, actual);
+  }));
+
+  return {
+    totalIngresos: ventasPorPuesto.reduce((s, p) => s + p.ingresos, 0),
+    totalVentas: ventasPorPuesto.reduce((s, p) => s + p.ventas, 0),
+    puestosActivos: puestos.length,
+    totalAyudantes: ayudantesPorId.size,
+    topProductos: [...productosGlobales.values()].sort((a, b) => b.ingresos - a.ingresos).slice(0, 5),
+    listaAyudantes: [...ayudantesPorId.values()].map(a => ({ ...a, sucursales: [...a.sucursales], avatar: iniciales(a.nombre) })),
+    ventasPorPuesto,
+  };
 };
 
 export default function UsuNegoDasboar() {
-  const [data] = useState(mockDashboardData);
+  const sesion = leerSesion();
+  const [eventos, setEventos] = useState([]);
+  const [eventoId, setEventoId] = useState('');
+  const [data, setData] = useState(DATA_VACIA);
   const [cargarGrafico, setCargarGrafico] = useState(false);
-  
+
   // SISTEMA DE VISTAS (PANTALLA COMPLETA)
   // 'GENERAL' | 'SUCURSAL' | 'AYUDANTES' | 'PRODUCTO'
   const [vistaActual, setVistaActual] = useState('GENERAL');
-  
+
   // Datos temporales de la vista seleccionada
   const [sucursalSeleccionada, setSucursalSeleccionada] = useState(null);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+
+  useEffect(() => {
+    api.eventos.listar().then(lista => {
+      setEventos(lista);
+      setEventoId(prev => prev || lista[0]?.id || '');
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!eventoId) return;
+    construirDashboard(eventoId, sesion.id).then(setData);
+  }, [eventoId]);
 
   // Efecto para animar barras sin error de React
   useEffect(() => {
@@ -126,8 +112,16 @@ export default function UsuNegoDasboar() {
     return (
       <div className="pi-dashboard-container animate-fade">
         <div className="pi-dashboard-header">
-          <h2>Dashboard General</h2>
-          <p>Resumen global de todos tus puestos y personal asignado.</p>
+          <div>
+            <h2>Dashboard General</h2>
+            <p>Resumen global de todos tus puestos y personal asignado.</p>
+          </div>
+          <div className="pi-unegocio-selector-evento">
+            <FaCalendarAlt />
+            <select value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
+              {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
+            </select>
+          </div>
         </div>
 
         <div className="pi-dashboard-kpi-grid">
@@ -292,7 +286,7 @@ export default function UsuNegoDasboar() {
                         <strong>{ayudante.nombre}</strong>
                       </div>
                     </td>
-                    <td style={{ color: 'var(--texto-secundario)' }}>{ayudante.rol}</td>
+                    <td style={{ color: 'var(--texto-secundario)' }}>Ayudante</td>
                     <td>
                       <div className="badge-sucursal-container">
                         {ayudante.sucursales.map((suc, i) => (

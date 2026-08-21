@@ -1,29 +1,54 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
-  FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode
+  FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode,
+  FaCheckCircle, FaBan, FaFileAlt
 } from 'react-icons/fa';
-import { leerEventos, crearEvento } from '../../data/eventosAdmin';
-import { leerUsuarios } from '../../data/usuarios';
-import { leerAsignaciones, asignarUsuario, quitarAsignacion, ROLES_ASIGNABLES } from '../../data/asignacionesEventos';
+import { ROLE_LABELS } from '../../constants/roles.js';
+import api from '../../api/index.js';
+import { formatearFecha } from '../../utils/eventos.js';
 import './AdminGestionEventos.css';
 
-const FORM_EVENTO_VACIO = { nombre: '', lugar: '', fecha: '', imagen: '' };
+const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
+const FORM_EVENTO_VACIO = { nombre: '', lugar: '', fecha: '', fechaFin: '', imagen: '' };
 const FORM_ASIGNAR_VACIO = { usuarioId: '', rol: ROLES_ASIGNABLES[0] };
 
 export default function AdminGestionEventos() {
   const navigate = useNavigate();
 
-  const [eventos, setEventos] = useState(leerEventos);
-  const [usuarios] = useState(leerUsuarios);
-  const [asignaciones, setAsignaciones] = useState(leerAsignaciones);
+  const [eventos, setEventos] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
+  const [asignaciones, setAsignaciones] = useState([]);
+  const [solicitudes, setSolicitudes] = useState([]);
 
   const [busqueda, setBusqueda] = useState('');
   const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
   const [mostrarFormCrear, setMostrarFormCrear] = useState(false);
   const [formEvento, setFormEvento] = useState(FORM_EVENTO_VACIO);
   const [formAsignar, setFormAsignar] = useState(FORM_ASIGNAR_VACIO);
+
+  useEffect(() => {
+    api.eventos.listar().then(setEventos);
+    api.usuarios.listar().then(setUsuarios);
+    api.asignaciones.listar().then(setAsignaciones);
+    api.solicitudesEvento.listar({ estado: 'pendiente' }).then(setSolicitudes);
+  }, []);
+
+  const aprobarSolicitud = async (s) => {
+    if (!window.confirm(`¿Aprobar "${s.nombreEvento}" y crear el evento real?`)) return;
+    const nuevo = await api.solicitudesEvento.aprobar(s.id);
+    setEventos(prev => [nuevo, ...prev]);
+    setSolicitudes(prev => prev.filter(x => x.id !== s.id));
+    setEventoIdDetalle(nuevo.id);
+  };
+
+  const rechazarSolicitud = async (s) => {
+    const motivo = window.prompt('¿Por qué se rechaza esta solicitud? (el cliente lo verá)');
+    if (motivo === null) return;
+    await api.solicitudesEvento.rechazar(s.id, motivo);
+    setSolicitudes(prev => prev.filter(x => x.id !== s.id));
+  };
 
   const eventosFiltrados = useMemo(() => {
     const termino = busqueda.toLowerCase();
@@ -46,29 +71,30 @@ export default function AdminGestionEventos() {
     setFormEvento({ ...formEvento, [e.target.name]: e.target.value });
   };
 
-  const handleCrearEvento = (e) => {
+  const handleCrearEvento = async (e) => {
     e.preventDefault();
-    if (!formEvento.nombre.trim() || !formEvento.lugar.trim() || !formEvento.fecha.trim()) return;
+    if (!formEvento.nombre.trim() || !formEvento.lugar.trim() || !formEvento.fecha || !formEvento.fechaFin) return;
 
-    const { lista, nuevo } = crearEvento(formEvento);
-    setEventos(lista);
+    const nuevo = await api.eventos.crear(formEvento);
+    setEventos(prev => [nuevo, ...prev]);
     setFormEvento(FORM_EVENTO_VACIO);
     setMostrarFormCrear(false);
     setEventoIdDetalle(nuevo.id);
   };
 
-  const handleAsignar = (e) => {
+  const handleAsignar = async (e) => {
     e.preventDefault();
     if (!formAsignar.usuarioId || !eventoIdDetalle) return;
 
-    const actualizadas = asignarUsuario(eventoIdDetalle, Number(formAsignar.usuarioId), formAsignar.rol);
-    setAsignaciones(actualizadas);
+    await api.asignaciones.asignar({ eventoId: eventoIdDetalle, usuarioId: Number(formAsignar.usuarioId), rol: formAsignar.rol });
+    setAsignaciones(await api.asignaciones.listar());
     setFormAsignar(FORM_ASIGNAR_VACIO);
   };
 
-  const handleQuitarAsignacion = (id) => {
+  const handleQuitarAsignacion = async (id) => {
     if (!window.confirm('¿Quitar a este usuario del evento?')) return;
-    setAsignaciones(quitarAsignacion(id));
+    await api.asignaciones.quitar(id);
+    setAsignaciones(prev => prev.filter(a => a.id !== id));
   };
 
   return (
@@ -83,7 +109,7 @@ export default function AdminGestionEventos() {
             <img src={eventoDetalle.imagen} alt={eventoDetalle.nombre} className="pi-ges-detalle-imagen" />
             <div className="pi-ges-detalle-info">
               <h2>{eventoDetalle.nombre}</h2>
-              <span><FaMapMarkerAlt /> {eventoDetalle.lugar} · {eventoDetalle.fecha}</span>
+              <span><FaMapMarkerAlt /> {eventoDetalle.lugar} · {formatearFecha(eventoDetalle.fecha)}</span>
             </div>
           </div>
 
@@ -118,7 +144,7 @@ export default function AdminGestionEventos() {
                       <tr key={a.id}>
                         <td>{usuario.nombre}</td>
                         <td>{usuario.email}</td>
-                        <td><span className="pi-ges-badge">{a.rol}</span></td>
+                        <td><span className="pi-ges-badge">{ROLE_LABELS[a.rol] || a.rol}</span></td>
                         <td>
                           <button className="pi-ges-btn-quitar" onClick={() => handleQuitarAsignacion(a.id)} title="Quitar del evento">
                             <FaTrash />
@@ -149,7 +175,7 @@ export default function AdminGestionEventos() {
                 onChange={(e) => setFormAsignar({ ...formAsignar, rol: e.target.value })}
               >
                 {ROLES_ASIGNABLES.map(rol => (
-                  <option key={rol} value={rol}>{rol}</option>
+                  <option key={rol} value={rol}>{ROLE_LABELS[rol] || rol}</option>
                 ))}
               </select>
               <button type="submit" className="pi-ges-btn-asignar"><FaUserPlus /> Asignar</button>
@@ -168,6 +194,37 @@ export default function AdminGestionEventos() {
             </button>
           </div>
 
+          {solicitudes.length > 0 && (
+            <section className="pi-ges-seccion">
+              <h3 className="pi-ges-seccion-titulo"><FaFileAlt /> Solicitudes de Clientes pendientes</h3>
+              <div className="pi-ges-tabla-wrapper">
+                <table className="pi-ges-tabla">
+                  <thead>
+                    <tr><th>Evento propuesto</th><th>Cliente</th><th>Lugar</th><th>Fecha</th><th></th></tr>
+                  </thead>
+                  <tbody>
+                    {solicitudes.map(s => (
+                      <tr key={s.id}>
+                        <td>{s.nombreEvento}</td>
+                        <td>{s.cliente?.nombre} ({s.cliente?.email})</td>
+                        <td>{s.lugar}</td>
+                        <td>{formatearFecha(s.fecha)}</td>
+                        <td style={{ display: 'flex', gap: '8px' }}>
+                          <button className="pi-ges-btn-asignar" onClick={() => aprobarSolicitud(s)}>
+                            <FaCheckCircle /> Aprobar
+                          </button>
+                          <button className="pi-ges-btn-quitar" onClick={() => rechazarSolicitud(s)} title="Rechazar">
+                            <FaBan />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          )}
+
           <div className="pi-ges-buscador">
             <FaSearch />
             <input
@@ -184,7 +241,7 @@ export default function AdminGestionEventos() {
                 <img src={ev.imagen} alt={ev.nombre} className="pi-ges-evento-imagen" />
                 <div className="pi-ges-evento-info">
                   <strong>{ev.nombre}</strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {ev.fecha}</span>
+                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
                   <span className="pi-ges-evento-usuarios"><FaUsers /> {contarAsignados(ev.id)} usuarios asignados</span>
                 </div>
               </button>
@@ -223,10 +280,17 @@ export default function AdminGestionEventos() {
                   />
                 </div>
                 <div className="pi-ges-input-group">
-                  <label>Fecha</label>
+                  <label>Fecha y hora de inicio</label>
                   <input
-                    type="text" name="fecha" value={formEvento.fecha} onChange={handleChangeFormEvento}
-                    placeholder="Ej: 20 Dic, 2027" required
+                    type="datetime-local" name="fecha" value={formEvento.fecha} onChange={handleChangeFormEvento}
+                    required
+                  />
+                </div>
+                <div className="pi-ges-input-group">
+                  <label>Fecha y hora de cierre</label>
+                  <input
+                    type="datetime-local" name="fechaFin" value={formEvento.fechaFin} onChange={handleChangeFormEvento}
+                    min={formEvento.fecha || undefined} required
                   />
                 </div>
                 <div className="pi-ges-input-group">

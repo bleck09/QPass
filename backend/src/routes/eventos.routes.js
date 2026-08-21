@@ -16,18 +16,31 @@ eventosRouter.get('/:id', async (req, res) => {
 });
 
 eventosRouter.post('/', requireAuth, requireRol('Admin'), async (req, res) => {
-  const { nombre, lugar, fecha, fechaISO, hora, imagen } = req.body;
+  const { nombre, lugar, fecha, fechaFin, imagen, qrPrefijo, qrAncho, qrAlto } = req.body;
   const evento = await prisma.evento.create({
-    data: { nombre, lugar, fecha, hora, imagen, fechaISO: fechaISO ? new Date(fechaISO) : undefined },
+    data: {
+      nombre, lugar, imagen, qrPrefijo,
+      fecha: new Date(fecha),
+      fechaFin: new Date(fechaFin || fecha),
+      qrAncho: qrAncho ? Number(qrAncho) : undefined,
+      qrAlto: qrAlto ? Number(qrAlto) : undefined,
+      creadoPorId: req.usuario.id,
+    },
   });
   res.status(201).json(evento);
 });
 
 eventosRouter.patch('/:id', requireAuth, requireRol('Admin'), async (req, res) => {
-  const { nombre, lugar, fecha, fechaISO, hora, imagen } = req.body;
+  const { nombre, lugar, fecha, fechaFin, imagen, estado, qrPrefijo, qrAncho, qrAlto } = req.body;
   const evento = await prisma.evento.update({
     where: { id: req.params.id },
-    data: { nombre, lugar, fecha, hora, imagen, fechaISO: fechaISO ? new Date(fechaISO) : undefined },
+    data: {
+      nombre, lugar, imagen, estado, qrPrefijo,
+      fecha: fecha ? new Date(fecha) : undefined,
+      fechaFin: fechaFin ? new Date(fechaFin) : undefined,
+      qrAncho: qrAncho !== undefined ? Number(qrAncho) : undefined,
+      qrAlto: qrAlto !== undefined ? Number(qrAlto) : undefined,
+    },
   });
   res.json(evento);
 });

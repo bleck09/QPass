@@ -3,64 +3,23 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaTicketAlt, FaWallet, FaQrcode, FaUpload, FaPlus, FaTrash, FaUserPlus,
   FaCheckCircle, FaHourglassHalf, FaEnvelope, FaHistory,
-  FaStore, FaCoins, FaExclamationTriangle, FaKey, FaUserTag, FaIdCard,
+  FaStore, FaCoins, FaExclamationTriangle, FaUserTag, FaIdCard,
   FaSearch, FaTimes, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
-import { proximosEventos, eventosPasados } from '../../data/eventos.js';
+import api from '../../api/index.js';
+import { leerSesion } from '../../api/client.js';
+import { esVigente, conPrecioDesde, formatearFecha } from '../../utils/eventos.js';
 
 const MAX_ENTRADAS = 6;
 
-const categoriasEntradas = [
-  { id: 'general', nombre: 'General', descripcion: 'Acceso general al recinto del evento.', precio: 150, color: 'var(--cian-digital)' },
-  { id: 'vip', nombre: 'VIP', descripcion: 'Acceso a zona VIP con área preferencial.', precio: 300, color: 'var(--ambar-aviso)' },
-];
-
-// --- SOLICITUDES DE COMPRA Y REPORTES DE DATOS (compartidos con Admin vía localStorage) ---
-const CLAVE_SOLICITUDES = 'qpass_solicitudes_entradas';
-const CLAVE_REPORTES_ENTRADAS = 'qpass_reportes_entradas';
-
-const leerSolicitudes = () => {
-  const guardado = localStorage.getItem(CLAVE_SOLICITUDES);
-  return guardado ? JSON.parse(guardado) : [];
-};
-
-const guardarSolicitudes = (lista) => {
-  localStorage.setItem(CLAVE_SOLICITUDES, JSON.stringify(lista));
-};
-
-const leerReportesEntradas = () => {
-  const guardado = localStorage.getItem(CLAVE_REPORTES_ENTRADAS);
-  return guardado ? JSON.parse(guardado) : [];
-};
-
-const guardarReportesEntradas = (lista) => {
-  localStorage.setItem(CLAVE_REPORTES_ENTRADAS, JSON.stringify(lista));
-};
-
 const ETIQUETA_CAMPO = { nombre: 'Nombre completo', correo: 'Correo electrónico', celular: 'Celular' };
 
-const generarPassword = () => Math.random().toString(36).slice(-8);
+const COLORES_CATEGORIA = ['var(--cian-digital)', 'var(--ambar-aviso)', 'var(--coral-compra)', 'var(--indigo-profundo)'];
 
 const qrDe = (texto) =>
   `https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=${encodeURIComponent(texto)}`;
-
-const fechaHoraActual = () => {
-  const ahora = new Date();
-  return {
-    fecha: ahora.toLocaleDateString('es-BO'),
-    hora: ahora.toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
-  };
-};
-
-const historialInicial = [
-  { id: 1, tipo: 'recarga', detalle: 'Recarga inicial en boletería', monto: 200, unidad: 'pts', fecha: '13/08/2026', hora: '10:00' }
-];
-
-// Un evento vence cuando su fecha ya pasó. Usamos fechaISO cuando está disponible
-// (el catálogo compartido la trae); si no, caemos a `fecha` por compatibilidad con datos viejos guardados en localStorage.
-const esVigente = (evento) => new Date(evento.fechaISO || evento.fecha) >= new Date();
 
 // --- DATOS DE PAGO DEL NEGOCIO (QR genérico que se muestra al hacer clic en "Pagar") ---
 const DATOS_PAGO_NEGOCIO = {
@@ -68,56 +27,8 @@ const DATOS_PAGO_NEGOCIO = {
   qrUrl: qrDe('QPASS-PAGO-NEGOCIO'),
 };
 
-// Entradas de ejemplo de eventos YA PASADOS, para mostrar cómo se ve la sección
-// "Entradas pasadas" (los datos de entradas de eventos pasados ya no se pueden reportar).
-const comprasSeedPasadas = (usuario) => [
-  {
-    id: 900001,
-    compradorNombre: usuario.nombre,
-    compradorEmail: usuario.email,
-    evento: {
-      nombre: 'Feria Gastronómica La Paz 2025', fecha: '2025-11-20', fechaISO: '2025-11-20',
-      imagen: 'https://images.unsplash.com/photo-1555244162-803834f70033?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    },
-    entradas: [
-      {
-        id: 900001, isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '71234567',
-        categoriaId: 'general', precio: 50, password: null, qrUrl: qrDe(`QPASS-${usuario.email}`),
-      },
-    ],
-    montoTotal: 50,
-    comprobante: { nombreArchivo: 'comprobante_feria.jpg', previewUrl: 'https://placehold.co/150x150/e3e6ee/1A2B6B?text=Recibo' },
-    estado: 'confirmado',
-    fecha: '15/11/2025',
-    hora: '19:00',
-  },
-  {
-    id: 900002,
-    compradorNombre: usuario.nombre,
-    compradorEmail: usuario.email,
-    evento: {
-      nombre: 'Oktoberfest 2025', fecha: '2025-10-04', fechaISO: '2025-10-04',
-      imagen: 'https://images.unsplash.com/photo-1575037614876-c38db4ce8445?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80',
-    },
-    entradas: [
-      {
-        id: 900002, isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '71234567',
-        categoriaId: 'vip', precio: 120, password: null, qrUrl: qrDe(`QPASS-${usuario.email}`),
-      },
-    ],
-    montoTotal: 120,
-    comprobante: { nombreArchivo: 'comprobante_oktoberfest.jpg', previewUrl: 'https://placehold.co/150x150/e3e6ee/1A2B6B?text=Recibo' },
-    estado: 'confirmado',
-    fecha: '28/09/2025',
-    hora: '17:30',
-  },
-];
-
 export default function UsuarioNormal() {
-  const [usuario] = useState(() => {
-    const guardado = localStorage.getItem('usuarioProyectoIngresos');
-    return guardado ? JSON.parse(guardado) : { nombre: 'Vladimir Chambi', email: 'vladimir@univalle.edu' };
-  });
+  const [usuario] = useState(() => leerSesion() || { nombre: 'Invitado', email: '' });
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -129,26 +40,37 @@ export default function UsuarioNormal() {
     ? 'saldo'
     : 'misentradas';
 
+  const [proximosEventos, setProximosEventos] = useState([]);
+  const [eventosPasados, setEventosPasados] = useState([]);
+  const [categoriasEntradas, setCategoriasEntradas] = useState([]);
+
+  useEffect(() => {
+    api.eventos.listar().then(async (todos) => {
+      const proximos = todos.filter(esVigente);
+      setProximosEventos(await conPrecioDesde(proximos));
+      setEventosPasados(todos.filter(ev => !esVigente(ev)));
+    });
+  }, []);
+
   // Evento para el que se está comprando: llega desde "Adquirir Entradas" en la pestaña Eventos.
   // Si se entra directo a /usuarionormal/comprar (sin pasar por ahí), caemos al primer evento disponible.
   const eventoSeleccionado = location.state?.evento || proximosEventos[0];
 
+  useEffect(() => {
+    if (!eventoSeleccionado) return;
+    api.categoriasTicket.listar(eventoSeleccionado.id).then(lista => {
+      setCategoriasEntradas(lista.map((c, i) => ({ ...c, color: COLORES_CATEGORIA[i % COLORES_CATEGORIA.length] })));
+    });
+  }, [eventoSeleccionado?.id]);
+
   // --- ESTADOS DE SIMULACIÓN Y LÓGICA DE NEGOCIO ---
   const [yaTieneEntrada] = useState(false);
 
-  // --- ESTADOS DE COMPRAS (persistidas para que Admin las vea en detalle) ---
-  const [compras, setCompras] = useState(() => {
-    const propias = leerSolicitudes().filter(c => c.compradorEmail === usuario.email);
-    // Primera vez que entra: sembramos una compra de ejemplo de un evento ya pasado,
-    // para que Mis Entradas no se vea vacío en el mockup.
-    return propias.length > 0 ? propias : comprasSeedPasadas(usuario);
-  });
+  // --- ESTADOS DE COMPRAS (traídas del backend; Admin las aprueba desde su panel) ---
+  const [compras, setCompras] = useState([]);
 
-  // Sincronizamos cada cambio con el resto de solicitudes guardadas (de otros compradores).
-  useEffect(() => {
-    const otras = leerSolicitudes().filter(c => c.compradorEmail !== usuario.email);
-    guardarSolicitudes([...otras, ...compras]);
-  }, [compras, usuario.email]);
+  const recargarCompras = () => api.compras.mias().then(setCompras);
+  useEffect(() => { recargarCompras(); }, []);
 
   // --- MIS ENTRADAS: mostrar u ocultar las entradas de eventos ya pasados ---
   const [mostrarPasadas, setMostrarPasadas] = useState(false);
@@ -163,9 +85,10 @@ export default function UsuarioNormal() {
   const [entradaReportando, setEntradaReportando] = useState(null);
   const [camposReporte, setCamposReporte] = useState([]);
   const [descripcionReporte, setDescripcionReporte] = useState('');
-  const [entradasReportadas, setEntradasReportadas] = useState(
-    () => leerReportesEntradas().filter(r => r.compradorEmail === usuario.email).map(r => r.entradaId)
-  );
+  const [entradasReportadas, setEntradasReportadas] = useState([]);
+  useEffect(() => {
+    api.reportesEntrada.listar().then(lista => setEntradasReportadas(lista.map(r => r.entradaId)));
+  }, []);
 
   // El carrito arranca vacío: cada entrada (la tuya incluida) se agrega eligiendo una categoría abajo.
   const [entradasCart, setEntradasCart] = useState([]);
@@ -175,38 +98,14 @@ export default function UsuarioNormal() {
   // Al hacer clic en "Pagar" se muestra primero el QR del negocio; solo después se habilita subir el comprobante.
   const [pagoIniciado, setPagoIniciado] = useState(false);
 
-  // --- ESTADOS DE SALDO ---
-  const [historial] = useState(historialInicial);
-
-  const saldo = useMemo(
-    () => historial.reduce((total, item) => {
-      if (item.tipo === 'recarga') return total + item.monto;
-      if (item.tipo === 'compra_qr') return total - item.monto;
-      return total;
-    }, 0),
-    [historial]
-  );
-
-  const totalRecargado = useMemo(
-    () => historial.filter(item => item.tipo === 'recarga').reduce((total, item) => total + item.monto, 0),
-    [historial]
-  );
-
-  const totalGastado = useMemo(
-    () => historial.filter(item => item.tipo === 'compra_qr').reduce((total, item) => total + item.monto, 0),
-    [historial]
-  );
-
-  const montoTotalEntradas = entradasCart.reduce((acc, entrada) => acc + entrada.precio, 0);
+  const montoTotalEntradas = entradasCart.reduce((acc, entrada) => acc + Number(entrada.precio), 0);
 
   // Cada compra con su evento resuelto y si ese evento sigue vigente (para Mis Entradas).
   const comprasConEvento = useMemo(() => {
     return compras
-      .map(compra => {
-        const evento = compra.evento || proximosEventos[0];
-        return { ...compra, evento, vigente: esVigente(evento) };
-      })
-      .sort((a, b) => new Date(b.evento.fechaISO || b.evento.fecha) - new Date(a.evento.fechaISO || a.evento.fecha));
+      .filter(compra => compra.evento)
+      .map(compra => ({ ...compra, vigente: esVigente(compra.evento) }))
+      .sort((a, b) => new Date(b.evento.fecha) - new Date(a.evento.fecha));
   }, [compras]);
 
   // Tu entrada propia ya aprobada de un evento próximo: se destaca como "Tu Manilla Digital".
@@ -218,12 +117,32 @@ export default function UsuarioNormal() {
     return titular ? { ...titular, evento: compraDestacada.evento, compraId: compraDestacada.id } : null;
   }, [comprasConEvento]);
 
+  // --- ESTADO DE SALDO (billetera personal del usuario: la misma en cualquier evento) ---
+  const [historial, setHistorial] = useState([]);
+  const [saldo, setSaldo] = useState(0);
+
+  useEffect(() => {
+    if (!usuario?.id) return;
+    api.usuarios.obtener(usuario.id).then(u => setSaldo(Number(u.saldo)));
+    api.transacciones.listar({ usuarioId: usuario.id }).then(setHistorial);
+  }, [usuario?.id]);
+
+  const totalRecargado = useMemo(
+    () => historial.filter(t => t.tipo === 'recarga').reduce((total, t) => total + Number(t.monto), 0),
+    [historial]
+  );
+
+  const totalGastado = useMemo(
+    () => historial.filter(t => t.tipo === 'consumo').reduce((total, t) => total + Number(t.monto), 0),
+    [historial]
+  );
+
   // Cuenta regresiva hasta la fecha/hora del evento destacado (mismo cálculo que el contador de App.jsx).
   const [tiempoRestante, setTiempoRestante] = useState(null);
 
   useEffect(() => {
     if (!entradaDestacada) return;
-    const fechaObjetivo = `${entradaDestacada.evento.fechaISO || entradaDestacada.evento.fecha}T${entradaDestacada.evento.hora || '00:00'}:00`;
+    const fechaObjetivo = entradaDestacada.evento.fecha;
 
     const calcularTiempo = () => {
       const diferencia = +new Date(fechaObjetivo) - +new Date();
@@ -269,8 +188,8 @@ export default function UsuarioNormal() {
     const nuevoId = `cart-${siguienteIdCartRef.current++}`;
     const esMiEntrada = !yaTieneEntrada && !entradasCart.some(ent => ent.isTitular);
     const nuevaEntrada = esMiEntrada
-      ? { id: nuevoId, isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaId: cat.id, precio: cat.precio }
-      : { id: nuevoId, isTitular: false, nombre: '', correo: '', celular: '', categoriaId: cat.id, precio: cat.precio };
+      ? { id: nuevoId, isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaTicketId: cat.id, precio: cat.precio }
+      : { id: nuevoId, isTitular: false, nombre: '', correo: '', celular: '', categoriaTicketId: cat.id, precio: cat.precio };
     setEntradasCart([...entradasCart, nuevaEntrada]);
   };
 
@@ -280,7 +199,7 @@ export default function UsuarioNormal() {
     setEntradasCart(entradasCart.map(ent => {
       if (ent.id === id) {
         const updated = { ...ent, [campo]: valor };
-        if (campo === 'categoriaId') {
+        if (campo === 'categoriaTicketId') {
           const cat = categoriasEntradas.find(c => c.id === valor);
           updated.precio = cat ? cat.precio : 0;
         }
@@ -298,7 +217,7 @@ export default function UsuarioNormal() {
     reader.readAsDataURL(file);
   };
 
-  const handleEnviarComprobante = () => {
+  const handleEnviarComprobante = async () => {
     setErrorForm('');
     if (entradasCart.length === 0) return setErrorForm('Agrega al menos una entrada antes de continuar.');
     if (!comprobante) return setErrorForm('Debes subir el comprobante de pago para continuar.');
@@ -309,41 +228,24 @@ export default function UsuarioNormal() {
     const correos = entradasCart.map(e => e.correo.toLowerCase());
     if (correos.length !== new Set(correos).size) return setErrorForm('Cada entrada necesita un correo electrónico único.');
 
-    const { fecha, hora } = fechaHoraActual();
-    setCompras(prev => [
-      {
-        id: Date.now(),
-        compradorNombre: usuario.nombre,
-        compradorEmail: usuario.email,
-        evento: eventoSeleccionado,
-        entradas: [...entradasCart],
-        montoTotal: montoTotalEntradas,
-        comprobante,
-        estado: 'pendiente',
-        fecha,
-        hora,
-      },
-      ...prev,
-    ]);
+    try {
+      await api.compras.crear({
+        eventoId: eventoSeleccionado.id,
+        entradas: entradasCart.map(({ isTitular, nombre, correo, celular, categoriaTicketId }) => ({ isTitular, nombre, correo, celular, categoriaTicketId })),
+        comprobanteUrl: comprobante.previewUrl,
+        comprobanteNombreArchivo: comprobante.nombreArchivo,
+      });
+      await recargarCompras();
 
-    setEntradasCart([]);
-    setComprobante(null);
-    setPagoIniciado(false);
+      setEntradasCart([]);
+      setComprobante(null);
+      setPagoIniciado(false);
 
-    // La solicitud recién creada aparece como pendiente en Mis Entradas.
-    navigate('/usuarionormal');
-  };
-
-  const simularConfirmacionAdmin = (compraId) => {
-    setCompras(prev => prev.map(c => {
-      if (c.id !== compraId) return c;
-      const entradasConfirmadas = c.entradas.map(ent => ({
-        ...ent,
-        password: ent.isTitular ? null : generarPassword(),
-        qrUrl: qrDe(`QPASS-${ent.correo}`),
-      }));
-      return { ...c, estado: 'confirmado', entradas: entradasConfirmadas };
-    }));
+      // La solicitud recién creada aparece como pendiente en Mis Entradas.
+      navigate('/usuarionormal');
+    } catch (err) {
+      setErrorForm(err.message);
+    }
   };
 
   // --- REVISAR MI SOLICITUD ---
@@ -366,7 +268,7 @@ export default function UsuarioNormal() {
   };
 
   // Solo aplica mientras la solicitud sigue pendiente: aún se puede corregir sin generar un reporte.
-  const guardarRevision = () => {
+  const guardarRevision = async () => {
     setErrorRevision('');
     const incompleto = entradasEdicion.some(ent => !ent.nombre.trim() || !ent.correo.trim() || !ent.celular.trim());
     if (incompleto) return setErrorRevision('Completa nombre, correo y celular de cada entrada.');
@@ -374,8 +276,13 @@ export default function UsuarioNormal() {
     const correos = entradasEdicion.map(ent => ent.correo.toLowerCase());
     if (correos.length !== new Set(correos).size) return setErrorRevision('Cada entrada necesita un correo electrónico único.');
 
-    setCompras(prev => prev.map(c => c.id === compraEnRevision.id ? { ...c, entradas: entradasEdicion } : c));
-    cerrarRevision();
+    try {
+      await api.compras.corregirEntradas(compraEnRevision.id, entradasEdicion);
+      await recargarCompras();
+      cerrarRevision();
+    } catch (err) {
+      setErrorRevision(err.message);
+    }
   };
 
   // Una vez aprobada la solicitud ya no se edita directo: se reporta el/los dato(s) mal puestos para que Admin los corrija.
@@ -397,29 +304,13 @@ export default function UsuarioNormal() {
 
   // Genera un reporte por cada dato marcado (nombre, correo y/o celular), así se pueden
   // reportar varios datos mal puestos de una sola vez en lugar de solo uno.
-  const enviarReporte = () => {
+  const enviarReporte = async () => {
     if (!entradaReportando || camposReporte.length === 0 || !descripcionReporte.trim()) return;
 
     const { compraId, entrada } = entradaReportando;
-    const { fecha, hora } = fechaHoraActual();
-
-    const nuevosReportes = camposReporte.map((campo, i) => ({
-      id: Date.now() + i,
-      compraId,
-      entradaId: entrada.id,
-      participanteNombre: entrada.nombre,
-      correoActual: entrada.correo,
-      celularActual: entrada.celular,
-      campo,
-      descripcion: descripcionReporte.trim(),
-      compradorNombre: usuario.nombre,
-      compradorEmail: usuario.email,
-      estado: 'pendiente',
-      fecha,
-      hora,
-    }));
-
-    guardarReportesEntradas([...nuevosReportes, ...leerReportesEntradas()]);
+    await Promise.all(camposReporte.map(campo =>
+      api.reportesEntrada.crear({ compraId, entradaId: entrada.id, campo, descripcion: descripcionReporte.trim() })
+    ));
     setEntradasReportadas(prev => [...prev, entrada.id]);
     cancelarReporte();
   };
@@ -474,7 +365,7 @@ export default function UsuarioNormal() {
 
         <div className="pi-usr-compra-card-info">
           <strong>{compra.evento.nombre}</strong>
-          <span><FaCalendarAlt /> {compra.evento.fecha}</span>
+          <span><FaCalendarAlt /> {formatearFecha(compra.evento.fecha)}</span>
           <span><FaTicketAlt /> Lote de {compra.entradas.length} entrada(s) · Bs. {compra.montoTotal}</span>
         </div>
 
@@ -482,11 +373,6 @@ export default function UsuarioNormal() {
           <button className="pi-usr-btn-revisar" onClick={() => abrirRevision(compra)}>
             <FaSearch /> Ver detalles
           </button>
-          {compra.estado === 'pendiente' && (
-            <button className="pi-usr-btn-demo" onClick={() => simularConfirmacionAdmin(compra.id)}>
-              Simular Aprobación (Demo)
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -530,7 +416,7 @@ export default function UsuarioNormal() {
                   <img src={ev.imagen} alt={ev.nombre} />
                   <div className="pi-usr-evento-pasado-info">
                     <strong>{ev.nombre}</strong>
-                    <span><FaMapMarkerAlt /> {ev.lugar} · {ev.fecha}</span>
+                    <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
                   </div>
                 </div>
               ))}
@@ -551,7 +437,7 @@ export default function UsuarioNormal() {
               <span className="pi-usr-evento-header-eyebrow">Comprando entradas para</span>
               <h3>{eventoSeleccionado.nombre}</h3>
               <span className="texto-ayuda">
-                <FaCalendarAlt /> {eventoSeleccionado.fecha} · <FaMapMarkerAlt /> {eventoSeleccionado.lugar}
+                <FaCalendarAlt /> {formatearFecha(eventoSeleccionado.fecha)} · <FaMapMarkerAlt /> {eventoSeleccionado.lugar}
               </span>
             </div>
           </div>
@@ -584,7 +470,7 @@ export default function UsuarioNormal() {
               ) : (
                 <div className="pi-usr-cart-list">
                   {entradasCart.map((entrada, index) => {
-                    const catSeleccionada = categoriasEntradas.find(c => c.id === entrada.categoriaId);
+                    const catSeleccionada = categoriasEntradas.find(c => c.id === entrada.categoriaTicketId);
                     return (
                       <div key={entrada.id} className="pi-usr-ticket-row" style={{ borderLeftColor: catSeleccionada.color }}>
                         <div className="pi-usr-ticket-row-top">
@@ -631,7 +517,7 @@ export default function UsuarioNormal() {
                 </p>
                 <div className="pi-usr-categorias-grid">
                   {categoriasEntradas.map(cat => {
-                    const cantidad = entradasCart.filter(ent => ent.categoriaId === cat.id).length;
+                    const cantidad = entradasCart.filter(ent => ent.categoriaTicketId === cat.id).length;
                     const alMaximo = entradasCart.length >= MAX_ENTRADAS;
                     return (
                       <button
@@ -786,15 +672,16 @@ export default function UsuarioNormal() {
                         <td>
                           <span className="pi-usr-tipo-celda">
                             {item.tipo === 'recarga' && <><FaCoins color="var(--verde-recarga-texto)" /> Recarga de Saldo</>}
-                            {item.tipo === 'compra_qr' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
-                            {item.tipo === 'entrada' && <><FaTicketAlt color="var(--coral-compra)" /> Pago de Entrada</>}
+                            {item.tipo === 'consumo' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
+                            {item.tipo === 'devolucion' && <><FaTicketAlt color="var(--coral-compra)" /> Devolución</>}
+                            {item.tipo === 'ajuste' && <><FaCoins color="var(--verde-recarga-texto)" /> Ajuste</>}
                           </span>
                         </td>
-                        <td>{item.detalle}</td>
-                        <td className={item.tipo === 'recarga' ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
-                          {item.tipo === 'recarga' ? '+' : item.tipo === 'compra_qr' ? '-' : ''}{item.monto} {item.unidad}
+                        <td>{item.nota || '—'}</td>
+                        <td className={item.tipo === 'recarga' || item.tipo === 'ajuste' ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
+                          {item.tipo === 'recarga' || item.tipo === 'ajuste' ? '+' : '-'}{Number(item.monto)} pts
                         </td>
-                        <td style={{color: 'var(--texto-secundario)', fontSize: '13px'}}>{item.fecha} {item.hora}</td>
+                        <td style={{color: 'var(--texto-secundario)', fontSize: '13px'}}>{new Date(item.createdAt).toLocaleString('es-BO')}</td>
                       </tr>
                     ))
                   )}
@@ -813,22 +700,20 @@ export default function UsuarioNormal() {
           {entradaDestacada && (
             <div className="pi-usr-manilla-destacada" style={{ backgroundImage: `url(${entradaDestacada.evento.imagen})` }}>
               <div className="pi-usr-manilla-overlay">
-                <img src={entradaDestacada.qrUrl} alt="Tu código QR" className="manilla-qr" />
+                <img src={qrDe(entradaDestacada.codigoQrVinculado?.codigo || `QPASS-${entradaDestacada.id}`)} alt="Tu código QR" className="manilla-qr" />
                 <div className="manilla-info">
                   <span className="pi-usr-qr-titulo"><FaQrcode /> Tu Manilla Digital</span>
                   <h3>{entradaDestacada.evento.nombre}</h3>
                   <div className="manilla-datos">
                     <span>
-                      <FaCalendarAlt /> {entradaDestacada.evento.fecha}
-                      {entradaDestacada.evento.hora ? ` · ${entradaDestacada.evento.hora}` : ''}
+                      <FaCalendarAlt /> {formatearFecha(entradaDestacada.evento.fecha)}
                     </span>
                     <span><FaMapMarkerAlt /> {entradaDestacada.evento.lugar}</span>
-                    {(() => {
-                      const cat = categoriasEntradas.find(c => c.id === entradaDestacada.categoriaId);
-                      return cat && (
-                        <span className="pi-usr-badge" style={{ background: cat.color, color: 'var(--blanco)' }}>{cat.nombre}</span>
-                      );
-                    })()}
+                    {entradaDestacada.categoriaTicket && (
+                      <span className="pi-usr-badge" style={{ background: 'var(--cian-digital)', color: 'var(--blanco)' }}>
+                        {entradaDestacada.categoriaTicket.nombre}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -927,7 +812,7 @@ export default function UsuarioNormal() {
 
             <div className="pi-usr-modal-body">
               <p className="texto-ayuda">
-                Lote de {compraEnRevision.entradas.length} entrada(s) · {compraEnRevision.fecha} · {compraEnRevision.hora}
+                Lote de {compraEnRevision.entradas.length} entrada(s) · {formatearFecha(compraEnRevision.createdAt)}
               </p>
 
               {compraEnRevision.estado === 'pendiente' ? (
@@ -1025,10 +910,7 @@ export default function UsuarioNormal() {
                           </div>
 
                           <div className="pi-usr-entrada-qr">
-                            <img src={ent.qrUrl} alt="QR" className="qr-miniatura" />
-                            {!ent.isTitular && ent.password && (
-                              <span className="pi-usr-credencial-linea"><FaKey /> Pass temporal: <strong>{ent.password}</strong></span>
-                            )}
+                            <img src={qrDe(ent.codigoQrVinculado?.codigo || `QPASS-${ent.id}`)} alt="QR" className="qr-miniatura" />
                           </div>
 
                           {reportando && formularioReporte}

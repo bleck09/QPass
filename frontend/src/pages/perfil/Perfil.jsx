@@ -1,28 +1,30 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   FaCamera, FaSave, FaCheckCircle, FaExclamationTriangle, FaUserShield,
   FaCalendarAlt, FaIdBadge, FaPhone, FaMapMarkerAlt, FaUserEdit,
   FaIdCard, FaBirthdayCake, FaEdit, FaTimes, FaCheck, FaEnvelope, FaQuoteLeft, FaUser
 } from 'react-icons/fa';
 import { EVENTO_USUARIO_ACTUALIZADO } from '../../layout/MenuLateral';
+import { leerSesion, guardarSesion } from '../../api/client.js';
+import { ROLE_LABELS } from '../../constants/roles.js';
+import api from '../../api/index.js';
 import './Perfil.css';
-
-const leerUsuarioGuardado = () => {
-  const guardado = localStorage.getItem('usuarioProyectoIngresos');
-  return guardado ? JSON.parse(guardado) : null;
-};
 
 const getIniciales = (nombre = 'Usuario') => nombre.substring(0, 2).toUpperCase();
 
+// El backend devuelve fechaNacimiento como datetime ISO; el <input type="date"> necesita solo la parte yyyy-mm-dd.
+const soloFecha = (iso) => (iso ? iso.slice(0, 10) : '');
+
 export default function Perfil() {
-  const [usuario, setUsuarioState] = useState(leerUsuarioGuardado);
+  const sesion = leerSesion();
+  const [usuario, setUsuarioState] = useState(sesion);
 
   // Estados de datos
-  const [foto, setFoto] = useState(usuario?.foto || '');
-  const [celular, setCelular] = useState(usuario?.celular || '');
-  const [ciudad, setCiudad] = useState(usuario?.ciudad || '');
-  const [biografia, setBiografia] = useState(usuario?.biografia || '');
-  const [fechaNacimiento, setFechaNacimiento] = useState(usuario?.fechaNacimiento || '');
+  const [foto, setFoto] = useState(sesion?.foto || '');
+  const [celular, setCelular] = useState('');
+  const [ciudad, setCiudad] = useState('');
+  const [biografia, setBiografia] = useState('');
+  const [fechaNacimiento, setFechaNacimiento] = useState('');
 
   // Datos NO editables
   const nombre = usuario?.nombre || '';
@@ -35,9 +37,22 @@ export default function Perfil() {
   const [contraseñaConfirmar, setContraseñaConfirmar] = useState('');
 
   // Estados de UI
-  const [activeTab, setActiveTab] = useState('cuenta'); 
-  const [isEditing, setIsEditing] = useState(false); 
+  const [activeTab, setActiveTab] = useState('cuenta');
+  const [isEditing, setIsEditing] = useState(false);
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
+
+  // La sesión solo trae id/nombre/email/rol/foto; el resto del perfil se carga aparte.
+  useEffect(() => {
+    if (!sesion) return;
+    api.usuarios.obtener(sesion.id).then(completo => {
+      setUsuarioState(completo);
+      setFoto(completo.foto || '');
+      setCelular(completo.celular || '');
+      setCiudad(completo.ciudad || '');
+      setBiografia(completo.biografia || '');
+      setFechaNacimiento(soloFecha(completo.fechaNacimiento));
+    });
+  }, [sesion?.id]);
 
   // Fecha máxima para el calendario (HOY)
   const fechaHoyStr = new Date().toISOString().split('T')[0];
@@ -66,9 +81,9 @@ export default function Perfil() {
   const circunferencia = 2 * Math.PI * 45;
   const strokeOffset = circunferencia - (progreso / 100) * circunferencia;
 
-  if (!usuario) return null; 
+  if (!usuario) return null;
 
-  const fechaCreacion = usuario?.fechaCreacion || '15 Oct 2025';
+  const fechaCreacion = usuario?.createdAt ? soloFecha(usuario.createdAt) : '';
 
   const handleFotoUpload = (e) => {
     const file = e.target.files[0];
@@ -82,7 +97,7 @@ export default function Perfil() {
     setCelular(usuario?.celular || '');
     setCiudad(usuario?.ciudad || '');
     setBiografia(usuario?.biografia || '');
-    setFechaNacimiento(usuario?.fechaNacimiento || '');
+    setFechaNacimiento(soloFecha(usuario?.fechaNacimiento));
     setIsEditing(false);
   };
 
@@ -95,7 +110,7 @@ export default function Perfil() {
     }
   };
 
-  const guardarCambios = () => {
+  const guardarCambios = async () => {
     setMensaje({ texto: '', tipo: '' });
 
     // VALIDACIÓN: Celular debe tener exactamente 8 dígitos si se llenó
@@ -114,31 +129,30 @@ export default function Perfil() {
       }
     }
 
-    const usuarioActualizado = { 
-      ...usuario, 
-      foto, 
-      fechaNacimiento,
-      celular: celular.trim(),
-      ciudad: ciudad.trim(),
-      biografia: biografia.trim()
-    };
+    try {
+      const actualizado = await api.usuarios.actualizar(usuario.id, {
+        foto,
+        fechaNacimiento: fechaNacimiento || undefined,
+        celular: celular.trim(),
+        ciudad: ciudad.trim(),
+        biografia: biografia.trim(),
+      });
 
-    localStorage.setItem('usuarioProyectoIngresos', JSON.stringify(usuarioActualizado));
-    window.dispatchEvent(new Event(EVENTO_USUARIO_ACTUALIZADO));
+      setUsuarioState(actualizado);
+      guardarSesion({ ...sesion, foto: actualizado.foto });
+      window.dispatchEvent(new Event(EVENTO_USUARIO_ACTUALIZADO));
 
-    setUsuarioState(usuarioActualizado);
-    setIsEditing(false);
-    setMensaje({ texto: 'Perfil actualizado exitosamente.', tipo: 'exito' });
-    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
+      setIsEditing(false);
+      setMensaje({ texto: 'Perfil actualizado exitosamente.', tipo: 'exito' });
+      setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
+    } catch (err) {
+      setMensaje({ texto: err.message, tipo: 'error' });
+    }
   };
 
-  const guardarSeguridad = () => {
+  const guardarSeguridad = async () => {
     if (!contraseñaActual || !contraseñaNueva || !contraseñaConfirmar) {
       setMensaje({ texto: 'Completa todos los campos de contraseña.', tipo: 'error' });
-      return;
-    }
-    if (contraseñaActual !== usuario.pass) {
-      setMensaje({ texto: 'La contraseña actual no es correcta.', tipo: 'error' });
       return;
     }
     if (contraseñaNueva.length < 6) {
@@ -150,15 +164,16 @@ export default function Perfil() {
       return;
     }
 
-    const usuarioActualizado = { ...usuario, pass: contraseñaNueva };
-    localStorage.setItem('usuarioProyectoIngresos', JSON.stringify(usuarioActualizado));
-    setUsuarioState(usuarioActualizado);
-    
-    setContraseñaActual('');
-    setContraseñaNueva('');
-    setContraseñaConfirmar('');
-    setMensaje({ texto: 'Contraseña actualizada de forma segura.', tipo: 'exito' });
-    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
+    try {
+      await api.usuarios.cambiarPassword(usuario.id, contraseñaActual, contraseñaNueva);
+      setContraseñaActual('');
+      setContraseñaNueva('');
+      setContraseñaConfirmar('');
+      setMensaje({ texto: 'Contraseña actualizada de forma segura.', tipo: 'exito' });
+      setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
+    } catch (err) {
+      setMensaje({ texto: err.message, tipo: 'error' });
+    }
   };
 
   return (
@@ -187,7 +202,7 @@ export default function Perfil() {
           <h2 className="pi-perfil-sidebar-name">{nombre}</h2>
           
           <div className="pi-perfil-role-badge">
-            <FaIdBadge /> {usuario.rol}
+            <FaIdBadge /> {ROLE_LABELS[usuario.rol] || usuario.rol}
           </div>
 
           <div style={{ fontSize: '13px', color: 'var(--texto-secundario)', marginBottom: '20px', fontWeight: '600' }}>
