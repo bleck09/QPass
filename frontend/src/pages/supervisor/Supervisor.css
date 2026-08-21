@@ -204,3 +204,14 @@
 .toggle-option.active-in {
   background-color: var(--blanco); color: var(--verde-recarga); box-shadow: 0 4px 10px rgba(0,0,0,0.05); border: 2px solid var(--verde-recarga);
 }
+
+.toggle-option.sin-foto {
+  opacity: 0.55;
+}
+
+.pi-sup-hint-foto {
+  margin: 8px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ambar-aviso-texto, #b7791f);
+}

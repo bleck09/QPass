@@ -10,7 +10,7 @@ import './UsuarioNormal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { esVigente, conPrecioDesde, formatearFecha } from '../../utils/eventos.js';
+import { esVigente, conPrecioDesde, formatearFecha, imagenEvento } from '../../utils/eventos.js';
 
 const MAX_ENTRADAS = 6;
 
@@ -63,9 +63,6 @@ export default function UsuarioNormal() {
     });
   }, [eventoSeleccionado?.id]);
 
-  // --- ESTADOS DE SIMULACIÓN Y LÓGICA DE NEGOCIO ---
-  const [yaTieneEntrada] = useState(false);
-
   // --- ESTADOS DE COMPRAS (traídas del backend; Admin las aprueba desde su panel) ---
   const [compras, setCompras] = useState([]);
 
@@ -108,11 +105,21 @@ export default function UsuarioNormal() {
       .sort((a, b) => new Date(b.evento.fecha) - new Date(a.evento.fecha));
   }, [compras]);
 
-  // Tu entrada propia ya aprobada de un evento próximo: se destaca como "Tu Manilla Digital".
-  const entradaDestacada = useMemo(() => {
-    const compraDestacada = comprasConEvento.find(compra =>
-      compra.vigente && compra.estado === 'confirmado' && compra.entradas.some(ent => ent.isTitular)
+  // Ya tienes tu propia entrada (pendiente o aprobada) para el evento que se está comprando:
+  // a partir de aquí, cada entrada nueva que agregues es para un invitado, no para ti.
+  const yaTieneEntrada = useMemo(() => {
+    if (!eventoSeleccionado) return false;
+    return comprasConEvento.some(c =>
+      c.evento.id === eventoSeleccionado.id && c.estado !== 'rechazado' && c.entradas.some(e => e.isTitular)
     );
+  }, [comprasConEvento, eventoSeleccionado]);
+
+  // Tu entrada propia ya aprobada del evento próximo más cercano: se destaca como "Tu Manilla Digital".
+  const entradaDestacada = useMemo(() => {
+    const candidatas = comprasConEvento
+      .filter(compra => compra.vigente && compra.estado === 'confirmado' && compra.entradas.some(ent => ent.isTitular))
+      .sort((a, b) => new Date(a.evento.fecha) - new Date(b.evento.fecha)); // más próximo primero
+    const compraDestacada = candidatas[0];
     const titular = compraDestacada?.entradas.find(ent => ent.isTitular);
     return titular ? { ...titular, evento: compraDestacada.evento, compraId: compraDestacada.id } : null;
   }, [comprasConEvento]);
@@ -315,12 +322,18 @@ export default function UsuarioNormal() {
     cancelarReporte();
   };
 
+  // El correo de tu propia entrada (titular) es el de tu cuenta, con la que ya iniciaste
+  // sesión — no tiene sentido "reportarlo mal puesto"; solo se puede reportar en invitados.
+  const camposReportables = entradaReportando?.entrada?.isTitular
+    ? Object.keys(ETIQUETA_CAMPO).filter(c => c !== 'correo')
+    : Object.keys(ETIQUETA_CAMPO);
+
   // Formulario reutilizado tanto dentro de "Revisar mi solicitud" como en Mis Entradas.
   const formularioReporte = (
     <div className="pi-usr-form-reporte">
       <label>¿Qué datos están mal? (puedes marcar varios)</label>
       <div className="pi-usr-checks-reporte">
-        {Object.keys(ETIQUETA_CAMPO).map(campo => (
+        {camposReportables.map(campo => (
           <label key={campo} className="pi-usr-check-campo">
             <input type="checkbox" checked={camposReporte.includes(campo)} onChange={() => toggleCampoReporte(campo)} />
             {ETIQUETA_CAMPO[campo]}
@@ -352,13 +365,19 @@ export default function UsuarioNormal() {
   // imagen del evento (para diferenciarlas de un vistazo) y sin mostrar el QR ahí mismo;
   // el QR y los datos de cada persona se ven al entrar a "Ver detalles".
   const renderCompraCard = (compra) => (
-    <div key={compra.id} className="pi-usr-compra-card" style={{ backgroundImage: `url(${compra.evento.imagen})` }}>
+    <div key={compra.id} className="pi-usr-compra-card" style={{ backgroundImage: `url(${imagenEvento(compra.evento)})` }}>
       <div className="pi-usr-compra-card-overlay">
         <div className="pi-usr-compra-card-badges">
-          {compra.estado === 'confirmado' ? (
+          {compra.estado === 'confirmado' && (
             <span className="pi-usr-badge pi-usr-badge-ok"><FaCheckCircle /> Aprobado</span>
-          ) : (
+          )}
+          {compra.estado === 'pendiente' && (
             <span className="pi-usr-badge pi-usr-badge-pend"><FaHourglassHalf /> En revisión</span>
+          )}
+          {compra.estado === 'rechazado' && (
+            <span className="pi-usr-badge pi-usr-badge-pend" title={compra.motivoRechazo || ''}>
+              <FaExclamationTriangle /> Rechazada
+            </span>
           )}
           {!compra.vigente && <span className="pi-usr-badge pi-usr-badge-pasado">Evento pasado</span>}
         </div>
@@ -413,7 +432,7 @@ export default function UsuarioNormal() {
             <div className="pi-usr-eventos-pasados-grid">
               {eventosPasados.map(ev => (
                 <div key={ev.id} className="pi-usr-evento-pasado-card">
-                  <img src={ev.imagen} alt={ev.nombre} />
+                  <img src={imagenEvento(ev)} alt={ev.nombre} />
                   <div className="pi-usr-evento-pasado-info">
                     <strong>{ev.nombre}</strong>
                     <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -432,7 +451,7 @@ export default function UsuarioNormal() {
         <div className="pi-usr-comprar">
 
           <div className="pi-usr-evento-header">
-            <img src={eventoSeleccionado.imagen} alt={eventoSeleccionado.nombre} />
+            <img src={imagenEvento(eventoSeleccionado)} alt={eventoSeleccionado.nombre} />
             <div>
               <span className="pi-usr-evento-header-eyebrow">Comprando entradas para</span>
               <h3>{eventoSeleccionado.nombre}</h3>
@@ -448,7 +467,7 @@ export default function UsuarioNormal() {
               <FaUserPlus className="nota-icon" />
               <div>
                 <strong>Comprando para terceros (Invitados)</strong>
-                <p>El sistema detecta que <b>ya cuentas con una entrada</b> asignada a tu cuenta. Todas las entradas que agregues abajo serán para tus invitados y se les enviará el QR a sus correos.</p>
+                <p>El sistema detecta que <b>ya cuentas con una entrada</b> asignada a tu cuenta. Todas las entradas que agregues abajo serán para tus invitados: al aprobarse la compra, cada uno recibe su propia cuenta. La manilla física con su código QR se la entrega Supervisor al recogerla en el evento.</p>
               </div>
             </div>
           ) : (
@@ -698,9 +717,16 @@ export default function UsuarioNormal() {
       {pestana === 'misentradas' && (
         <div className="pi-usr-mis-entradas">
           {entradaDestacada && (
-            <div className="pi-usr-manilla-destacada" style={{ backgroundImage: `url(${entradaDestacada.evento.imagen})` }}>
+            <div className="pi-usr-manilla-destacada" style={{ backgroundImage: `url(${imagenEvento(entradaDestacada.evento)})` }}>
               <div className="pi-usr-manilla-overlay">
-                <img src={qrDe(entradaDestacada.codigoQrVinculado?.codigo || `QPASS-${entradaDestacada.id}`)} alt="Tu código QR" className="manilla-qr" />
+                {entradaDestacada.codigoQrVinculado ? (
+                  <img src={qrDe(entradaDestacada.codigoQrVinculado.codigo)} alt="Tu código QR" className="manilla-qr" />
+                ) : (
+                  <div className="manilla-qr manilla-qr-pendiente">
+                    <FaHourglassHalf size={28} />
+                    <span>Manilla aún sin vincular</span>
+                  </div>
+                )}
                 <div className="manilla-info">
                   <span className="pi-usr-qr-titulo"><FaQrcode /> Tu Manilla Digital</span>
                   <h3>{entradaDestacada.evento.nombre}</h3>
@@ -815,6 +841,19 @@ export default function UsuarioNormal() {
                 Lote de {compraEnRevision.entradas.length} entrada(s) · {formatearFecha(compraEnRevision.createdAt)}
               </p>
 
+              {compraEnRevision.estado === 'rechazado' && (
+                <>
+                  <div className="pi-usr-alerta-error">
+                    <FaExclamationTriangle /> Esta solicitud fue rechazada
+                    {compraEnRevision.motivoRechazo ? `: ${compraEnRevision.motivoRechazo}` : '.'}
+                  </div>
+                  <p className="texto-ayuda">Si crees que fue un error, contacta al organizador o realiza una nueva compra.</p>
+                  <div className="pi-usr-modal-acciones">
+                    <button className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
+                  </div>
+                </>
+              )}
+
               {compraEnRevision.estado === 'pendiente' ? (
                 <>
                   <p className="texto-ayuda">
@@ -870,7 +909,7 @@ export default function UsuarioNormal() {
                     </button>
                   </div>
                 </>
-              ) : (
+              ) : compraEnRevision.estado === 'confirmado' ? (
                 <>
                   <p className="texto-ayuda">
                     Tu solicitud ya fue aprobada, así que los datos no se pueden editar directamente. Si el nombre,
@@ -910,7 +949,11 @@ export default function UsuarioNormal() {
                           </div>
 
                           <div className="pi-usr-entrada-qr">
-                            <img src={qrDe(ent.codigoQrVinculado?.codigo || `QPASS-${ent.id}`)} alt="QR" className="qr-miniatura" />
+                            {ent.codigoQrVinculado ? (
+                              <img src={qrDe(ent.codigoQrVinculado.codigo)} alt="QR" className="qr-miniatura" />
+                            ) : (
+                              <span className="texto-ayuda"><FaHourglassHalf /> Manilla aún sin vincular</span>
+                            )}
                           </div>
 
                           {reportando && formularioReporte}
@@ -923,7 +966,7 @@ export default function UsuarioNormal() {
                     <button className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
                   </div>
                 </>
-              )}
+              ) : null}
             </div>
           </div>
         </div>

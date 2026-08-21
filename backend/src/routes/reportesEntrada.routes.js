@@ -32,6 +32,10 @@ reportesEntradaRouter.post('/', requireAuth, async (req, res) => {
   const { compraId, entradaId, campo, descripcion } = req.body;
   const entrada = await prisma.entrada.findUnique({ where: { id: entradaId } });
   if (!entrada) return res.status(404).json({ error: 'Entrada no encontrada' });
+  // El correo del titular es el de su propia cuenta (ya autenticada); no se reporta.
+  if (campo === 'correo' && entrada.isTitular) {
+    return res.status(400).json({ error: 'No puedes reportar el correo de tu propia entrada' });
+  }
 
   const reporte = await prisma.reporteEntrada.create({
     data: { eventoId: entrada.eventoId, compraId, entradaId, campo, descripcion },

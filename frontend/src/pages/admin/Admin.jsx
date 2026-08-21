@@ -92,23 +92,26 @@ function Podio({ lista, valorKey, unidad }) {
 export default function Admin({ soloLectura = false, eventosPermitidos = null } = {}) {
   const location = useLocation();
   const navigate = useNavigate();
-  // /admin/reportes abre directamente el apartado de Incidencias (accesible también
-  // desde el menú lateral), sin pasar por la tarjeta del dashboard.
+  // /admin/reportes y /admin/solicitudes abren directo su apartado (accesibles también desde
+  // el menú lateral o desde los accesos rápidos de Gestión de Eventos), sin pasar por la
+  // tarjeta del dashboard. Si llegan con state.eventoId (ej. desde Gestión de Eventos), se
+  // abren ya sobre ese evento específico.
   const enReportes = location.pathname.endsWith('/reportes');
+  const enSolicitudes = location.pathname.endsWith('/solicitudes');
+  const eventoIdDesdeState = location.state?.eventoId || '';
 
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
-  const [eventoId, setEventoId] = useState('');
-  // /admin/reportes entra directo al dashboard del evento actual, sin pasar por la selección.
+  const [eventoId, setEventoId] = useState(eventoIdDesdeState);
   // En modo solo lectura (ej. Cliente) también se salta la selección si ya tiene un evento
   // asignado, para que vea su proyecto directamente en vez de una pantalla vacía.
-  const [eventoSeleccionado, setEventoSeleccionado] = useState(enReportes);
-  const [vistaDetalle, setVistaDetalle] = useState(null); // null | entradas | recargadores | devoluciones | negocios | supervisores | incidencias
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(enReportes || enSolicitudes || !!eventoIdDesdeState);
+  const [vistaDetalle, setVistaDetalle] = useState(enSolicitudes ? 'solicitudesEntradas' : null); // null | entradas | recargadores | devoluciones | negocios | supervisores | incidencias | solicitudesEntradas
   const [itemSeleccionado, setItemSeleccionado] = useState(null); // id de la persona/negocio abierto dentro de una vista
   const [busqueda, setBusqueda] = useState('');
   const [filtroEntradas, setFiltroEntradas] = useState(null); // null (todas) | ingresado | pendiente | salio
 
   const vistaActual = enReportes ? 'incidencias' : vistaDetalle;
-  const mostrarSelectorEventos = !eventoSeleccionado && !enReportes;
+  const mostrarSelectorEventos = !eventoSeleccionado && !enReportes && !enSolicitudes;
 
   useEffect(() => {
     api.eventos.listar().then(todos => {
@@ -212,6 +215,13 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
         nombre: entradasPorId.get(entradaId)?.nombre, correo: entradasPorId.get(entradaId)?.correo, password,
       })));
     }
+  };
+
+  const rechazarSolicitudCompra = async (compra) => {
+    const motivo = window.prompt(`¿Por qué se rechaza la solicitud de ${compra.comprador.nombre}? (lo verá el comprador)`);
+    if (motivo === null) return;
+    const actualizada = await api.compras.rechazar(compra.id, motivo);
+    setSolicitudes(prev => prev.map(c => c.id === actualizada.id ? actualizada : c));
   };
 
   const abrirCorreccion = (reporte) => {
@@ -357,8 +367,8 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     setItemSeleccionado(null);
     setVistaDetalle(null);
     setFiltroEntradas(null);
-    // Si se entró directo por /admin/reportes, "volver" regresa al dashboard real.
-    if (enReportes) navigate('/admin');
+    // Si se entró directo por /admin/reportes o /admin/solicitudes, "volver" regresa al dashboard real.
+    if (enReportes || enSolicitudes) navigate('/admin');
   };
 
   const seleccionarEvento = (id) => {
@@ -1038,17 +1048,26 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                       <td>{compra.entradas.length}</td>
                       <td className="pi-dash-monto-celda">Bs. {compra.montoTotal}</td>
                       <td>
-                        {compra.estado === 'confirmado'
-                          ? <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Aprobado</span>
-                          : <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> En revisión</span>}
+                        {compra.estado === 'confirmado' && <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Aprobado</span>}
+                        {compra.estado === 'pendiente' && <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> En revisión</span>}
+                        {compra.estado === 'rechazado' && (
+                          <span className="pi-dash-badge pi-dash-badge-salio" title={compra.motivoRechazo || ''}>
+                            <FaExclamationTriangle /> Rechazado
+                          </span>
+                        )}
                       </td>
                       <td>{new Date(compra.createdAt).toLocaleDateString('es-BO')}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '8px' }}>
                           {!soloLectura && compra.estado === 'pendiente' && (
-                            <button className="pi-dash-btn-ver" onClick={() => aprobarSolicitud(compra)}>
-                              <FaCheckCircle /> Aprobar
-                            </button>
+                            <>
+                              <button className="pi-dash-btn-ver" onClick={() => aprobarSolicitud(compra)}>
+                                <FaCheckCircle /> Aprobar
+                              </button>
+                              <button className="pi-dash-btn-ver" onClick={() => rechazarSolicitudCompra(compra)}>
+                                <FaExclamationTriangle /> Rechazar
+                              </button>
+                            </>
                           )}
                           <button className="pi-dash-btn-ver" onClick={() => toggleSolicitud(compra.id)}>
                             {solicitudAbierta === compra.id ? 'Ocultar' : 'Ver detalle'}
@@ -1059,8 +1078,22 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                     {solicitudAbierta === compra.id && (
                       <tr>
                         <td colSpan={6} className="pi-dash-solicitud-detalle-celda">
-                          <div className="pi-dash-solicitud-detalle">
-                            <table className="pi-dash-tabla">
+                          <div className="pi-dash-solicitud-detalle" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+                            <div style={{ flex: '0 0 auto' }}>
+                              <p style={{ fontWeight: 700, marginBottom: '8px' }}>Comprobante de pago</p>
+                              {compra.comprobanteUrl ? (
+                                <a href={compra.comprobanteUrl} target="_blank" rel="noopener noreferrer">
+                                  <img
+                                    src={compra.comprobanteUrl}
+                                    alt={`Comprobante de ${compra.comprador.nombre}`}
+                                    style={{ maxWidth: '220px', maxHeight: '280px', borderRadius: '8px', border: '1px solid var(--borde-suave)', objectFit: 'contain' }}
+                                  />
+                                </a>
+                              ) : (
+                                <span className="pi-dash-sin-resultados">Sin comprobante</span>
+                              )}
+                            </div>
+                            <table className="pi-dash-tabla" style={{ flex: '1 1 320px' }}>
                               <thead>
                                 <tr><th>Persona</th><th>Nombre</th><th>Correo</th><th>Celular</th><th>Categoría</th></tr>
                               </thead>

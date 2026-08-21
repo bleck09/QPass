@@ -9,11 +9,15 @@ const CODIGO_ACTIVO = { codigosQr: { where: { anulado: false }, take: 1 } };
 // escaneo (Recargador/Ayudante/Devolución) puedan mostrarlo sin una segunda llamada.
 const CON_SALDO = { usuario: { select: { id: true, saldo: true } } };
 
+// Una compra pendiente o rechazada no es un asistente real todavía: no debe aparecer para
+// escanear, recargar, cobrar, ni vincular manilla en ninguna pantalla operativa.
+const SOLO_CONFIRMADAS = { compra: { estado: 'confirmado' } };
+
 entradasRouter.get('/', requireAuth, async (req, res) => {
   const { eventoId, estadoIngreso } = req.query;
   if (!eventoId) return res.status(400).json({ error: 'eventoId es requerido' });
   const entradas = await prisma.entrada.findMany({
-    where: { eventoId, estadoIngreso: estadoIngreso || undefined },
+    where: { eventoId, estadoIngreso: estadoIngreso || undefined, ...SOLO_CONFIRMADAS },
     include: { categoriaTicket: true, ...CODIGO_ACTIVO, ...CON_SALDO },
   });
   res.json(entradas.map(({ codigosQr, ...e }) => ({ ...e, codigoQrVinculado: codigosQr[0] || null })));
@@ -23,12 +27,13 @@ entradasRouter.get('/', requireAuth, async (req, res) => {
 entradasRouter.get('/buscar/:codigo', requireAuth, async (req, res) => {
   const codigoQr = await prisma.codigoQr.findUnique({
     where: { codigo: req.params.codigo },
-    include: { entrada: { include: { categoriaTicket: true, ...CON_SALDO } } },
+    include: { entrada: { include: { categoriaTicket: true, compra: { select: { estado: true } }, ...CON_SALDO } } },
   });
-  if (!codigoQr || codigoQr.anulado || !codigoQr.entrada) {
+  if (!codigoQr || codigoQr.anulado || !codigoQr.entrada || codigoQr.entrada.compra?.estado !== 'confirmado') {
     return res.status(404).json({ error: 'Código no vinculado a ninguna entrada activa' });
   }
-  res.json({ ...codigoQr.entrada, codigoQrVinculado: { id: codigoQr.id, codigo: codigoQr.codigo } });
+  const { compra, ...entrada } = codigoQr.entrada;
+  res.json({ ...entrada, codigoQrVinculado: { id: codigoQr.id, codigo: codigoQr.codigo } });
 });
 
 entradasRouter.get('/:id', requireAuth, async (req, res) => {
@@ -50,17 +55,35 @@ entradasRouter.get('/:id/registros', requireAuth, async (req, res) => {
   res.json(registros);
 });
 
-// Vincula una pulsera/QR física del pool (sin asignar) a esta entrada.
+// Vincula una pulsera/QR física del pool (sin asignar) a esta entrada. Si la entrada ya tenía
+// otro código activo (ej. "cambiar manilla"), ese anterior se anula primero para que no queden
+// dos códigos activos apuntando a la misma persona.
 entradasRouter.post('/:id/vincular-qr', requireAuth, async (req, res) => {
   const { codigoQrId } = req.body;
+  const entradaActual = await prisma.entrada.findUnique({ where: { id: req.params.id }, include: { compra: true } });
+  if (!entradaActual) return res.status(404).json({ error: 'Entrada no encontrada' });
+  if (entradaActual.compra?.estado !== 'confirmado') {
+    return res.status(409).json({ error: 'Esta compra todavía no está aprobada' });
+  }
+
   const codigoQr = await prisma.codigoQr.findUnique({ where: { id: codigoQrId } });
   if (!codigoQr) return res.status(404).json({ error: 'Código no encontrado' });
   if (codigoQr.entradaId) return res.status(409).json({ error: 'Ese código ya está vinculado a otra entrada' });
 
-  await prisma.codigoQr.update({
-    where: { id: codigoQrId },
-    data: { entradaId: req.params.id, asignadoPorId: req.usuario.id, asignadoEn: new Date() },
-  });
+  const anteriorActivo = await prisma.codigoQr.findFirst({ where: { entradaId: req.params.id, anulado: false } });
+
+  await prisma.$transaction([
+    ...(anteriorActivo
+      ? [prisma.codigoQr.update({
+          where: { id: anteriorActivo.id },
+          data: { anulado: true, motivoAnulacion: 'Reemplazada al vincular una nueva', anuladoPorId: req.usuario.id, anuladoEn: new Date() },
+        })]
+      : []),
+    prisma.codigoQr.update({
+      where: { id: codigoQrId },
+      data: { entradaId: req.params.id, asignadoPorId: req.usuario.id, asignadoEn: new Date() },
+    }),
+  ]);
 
   const entrada = await prisma.entrada.findUnique({
     where: { id: req.params.id },
@@ -84,29 +107,24 @@ entradasRouter.post('/:id/anular-qr', requireAuth, async (req, res) => {
   res.status(204).end();
 });
 
-// Control de acceso (Supervisor): cada escaneo queda en el historial, siempre con foto.
-entradasRouter.post('/:id/ingreso', requireAuth, async (req, res) => {
+// Control de acceso (Supervisor): la foto solo es obligatoria en el PRIMER registro de la
+// entrada (identifica quién retiró la manilla); en los siguientes ingresos/salidas de esa
+// misma persona ya no hace falta volver a tomarla.
+const registrarMovimiento = async (req, res, tipo) => {
   const { foto } = req.body;
-  if (!foto) return res.status(400).json({ error: 'Foto de seguridad obligatoria' });
+  const yaTieneRegistro = await prisma.registroIngreso.findFirst({ where: { entradaId: req.params.id } });
+  if (!yaTieneRegistro && !foto) {
+    return res.status(400).json({ error: 'Foto de seguridad obligatoria en el primer ingreso' });
+  }
 
   const [, entrada] = await prisma.$transaction([
     prisma.registroIngreso.create({
-      data: { entradaId: req.params.id, tipo: 'ingreso', foto, registradoPorId: req.usuario.id },
+      data: { entradaId: req.params.id, tipo, foto: foto || undefined, registradoPorId: req.usuario.id },
     }),
-    prisma.entrada.update({ where: { id: req.params.id }, data: { estadoIngreso: 'ingresado' } }),
+    prisma.entrada.update({ where: { id: req.params.id }, data: { estadoIngreso: tipo === 'ingreso' ? 'ingresado' : 'salio' } }),
   ]);
   res.json(entrada);
-});
+};
 
-entradasRouter.post('/:id/salida', requireAuth, async (req, res) => {
-  const { foto } = req.body;
-  if (!foto) return res.status(400).json({ error: 'Foto de seguridad obligatoria' });
-
-  const [, entrada] = await prisma.$transaction([
-    prisma.registroIngreso.create({
-      data: { entradaId: req.params.id, tipo: 'salida', foto, registradoPorId: req.usuario.id },
-    }),
-    prisma.entrada.update({ where: { id: req.params.id }, data: { estadoIngreso: 'salio' } }),
-  ]);
-  res.json(entrada);
-});
+entradasRouter.post('/:id/ingreso', requireAuth, (req, res) => registrarMovimiento(req, res, 'ingreso'));
+entradasRouter.post('/:id/salida', requireAuth, (req, res) => registrarMovimiento(req, res, 'salida'));

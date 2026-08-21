@@ -58,8 +58,24 @@ usuariosRouter.post('/:id/password', requireAuth, async (req, res) => {
   if (!valido) return res.status(401).json({ error: 'La contraseña actual no es correcta' });
 
   const passwordHash = await bcrypt.hash(passwordNueva, 10);
-  await prisma.usuario.update({ where: { id }, data: { passwordHash } });
+  await prisma.$transaction([
+    prisma.usuario.update({ where: { id }, data: { passwordHash } }),
+    prisma.cambioPassword.create({ data: { usuarioId: id, origen: 'self' } }),
+  ]);
   res.status(204).end();
+});
+
+// Auditoría de cambios de contraseña: el propio usuario o un Admin pueden verla.
+usuariosRouter.get('/:id/cambios-password', requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (req.usuario.id !== id && req.usuario.rol !== 'Admin') {
+    return res.status(403).json({ error: 'No autorizado' });
+  }
+  const cambios = await prisma.cambioPassword.findMany({
+    where: { usuarioId: id },
+    orderBy: { createdAt: 'desc' },
+  });
+  res.json(cambios);
 });
 
 usuariosRouter.delete('/:id', requireAuth, requireRol('Admin'), async (req, res) => {

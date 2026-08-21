@@ -26,6 +26,14 @@ codigosQrRouter.get('/', requireAuth, async (req, res) => {
   res.json(codigos);
 });
 
+// Paso previo a vincular: revisa si el código escaneado existe, a qué evento pertenece y si
+// ya está tomado, ANTES de asignarlo a nadie.
+codigosQrRouter.get('/buscar/:codigo', requireAuth, async (req, res) => {
+  const codigoQr = await prisma.codigoQr.findUnique({ where: { codigo: req.params.codigo } });
+  if (!codigoQr) return res.status(404).json({ error: 'Ese código no existe en el sistema' });
+  res.json(codigoQr);
+});
+
 // Genera `cantidad` códigos únicos nuevos para el evento (se suman a los ya generados).
 // prefijo: 1 a 3 letras elegidas por el Admin; el resto es aleatorio y no se repite (codigo es @unique en la BD).
 codigosQrRouter.post('/generar', requireAuth, requireRol('Admin'), async (req, res) => {

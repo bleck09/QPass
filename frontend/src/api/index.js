@@ -3,6 +3,9 @@ import { apiGet, apiPost, apiPatch, apiPut, apiDelete, qs } from './client.js';
 export const auth = {
   login: (email, password) => apiPost('/auth/login', { email, password }),
   registro: (datos) => apiPost('/auth/registro', datos),
+  recuperarSolicitar: (email) => apiPost('/auth/recuperar/solicitar', { email }),
+  recuperarVerificar: (email, codigo) => apiPost('/auth/recuperar/verificar', { email, codigo }),
+  recuperarRestablecer: (email, codigo, passwordNueva) => apiPost('/auth/recuperar/restablecer', { email, codigo, passwordNueva }),
 };
 
 export const usuarios = {
@@ -10,6 +13,7 @@ export const usuarios = {
   obtener: (id) => apiGet(`/usuarios/${id}`),
   actualizar: (id, datos) => apiPatch(`/usuarios/${id}`, datos),
   cambiarPassword: (id, passwordActual, passwordNueva) => apiPost(`/usuarios/${id}/password`, { passwordActual, passwordNueva }),
+  historialPassword: (id) => apiGet(`/usuarios/${id}/cambios-password`),
   eliminar: (id) => apiDelete(`/usuarios/${id}`),
 };
 
@@ -38,6 +42,7 @@ export const compras = {
   listar: (params) => apiGet(`/compras${qs(params)}`),
   corregirEntradas: (id, entradas) => apiPatch(`/compras/${id}/entradas`, { entradas }),
   aprobar: (id) => apiPost(`/compras/${id}/aprobar`),
+  rechazar: (id, motivoRechazo) => apiPost(`/compras/${id}/rechazar`, { motivoRechazo }),
 };
 
 export const entradas = {
@@ -53,6 +58,7 @@ export const entradas = {
 
 export const codigosQr = {
   listar: (params) => apiGet(`/codigos-qr${qs(params)}`),
+  buscarPorCodigo: (codigo) => apiGet(`/codigos-qr/buscar/${encodeURIComponent(codigo)}`),
   generar: (datos) => apiPost('/codigos-qr/generar', datos),
   eliminarNoVinculados: (eventoId) => apiDelete(`/codigos-qr${qs({ eventoId })}`),
 };

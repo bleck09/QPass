@@ -4,6 +4,7 @@ import {
   MdEmail, MdLock, MdArrowBack, MdVisibility, MdVisibilityOff 
 } from 'react-icons/md';
 import { FaShieldAlt, FaEnvelopeOpenText, FaKey } from 'react-icons/fa';
+import api from '../../api/index.js';
 import './RecuperarContra.css';
 
 export default function RecuperarContra() {
@@ -18,6 +19,9 @@ export default function RecuperarContra() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // No hay servicio de correo: el backend devuelve el código en la respuesta para poder
+  // probar el flujo. En producción esto no existiría y el código llegaría solo por correo.
+  const [codigoDemo, setCodigoDemo] = useState('');
 
   // --- ESTADOS DE UI ---
   const inputRefs = useRef([]);
@@ -36,7 +40,7 @@ export default function RecuperarContra() {
   // ==========================================
   // PASO 1: ENVIAR CORREO
   // ==========================================
-  const handlePedirCodigo = (e) => {
+  const handlePedirCodigo = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -45,13 +49,14 @@ export default function RecuperarContra() {
       return;
     }
 
-    // Aquí consultarías a tu base de datos si el correo existe.
-    // Para la prueba, asumiremos que es válido y pasamos al Paso 2.
-    setSuccess('Buscando cuenta...');
-    setTimeout(() => {
-      setSuccess('');
+    try {
+      const { codigoDemo: codigo } = await api.auth.recuperarSolicitar(email);
+      setCodigoDemo(codigo);
+      setOtp(['', '', '', '', '', '']);
       setStep(2);
-    }, 1000);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   // ==========================================
@@ -76,34 +81,42 @@ export default function RecuperarContra() {
     }
   };
 
-  const handleVerificarCodigo = (e) => {
+  const handleVerificarCodigo = async (e) => {
     e.preventDefault();
     setError('');
-    
+
     const codigoIngresado = otp.join('');
-    
+
     if (codigoIngresado.length < 6) {
       setError('Debes ingresar los 6 dígitos del código.');
       return;
     }
 
-    // SIMULACIÓN: El código correcto será siempre 123456
-    if (codigoIngresado !== '123456') {
-      setError('Código incorrecto. Para esta prueba usa: 123456');
-      return;
+    try {
+      await api.auth.recuperarVerificar(email, codigoIngresado);
+      setStep(3);
+    } catch (err) {
+      setError(err.message);
     }
+  };
 
-    setSuccess('¡Código verificado correctamente!');
-    setTimeout(() => {
-      setSuccess('');
-      setStep(3); // Pasamos a cambiar contraseña
-    }, 1000);
+  const handleReenviarCodigo = async () => {
+    setError('');
+    try {
+      const { codigoDemo: codigo } = await api.auth.recuperarSolicitar(email);
+      setCodigoDemo(codigo);
+      setOtp(['', '', '', '', '', '']);
+      setSuccess('Se generó un nuevo código.');
+      setTimeout(() => setSuccess(''), 3000);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   // ==========================================
   // PASO 3: CAMBIAR CONTRASEÑA
   // ==========================================
-  const handleRestablecerContra = (e) => {
+  const handleRestablecerContra = async (e) => {
     e.preventDefault();
     setError('');
 
@@ -120,11 +133,15 @@ export default function RecuperarContra() {
       return;
     }
 
-    // Aquí harías el UPDATE en la base de datos
-    setSuccess('¡Contraseña actualizada con éxito! Redirigiendo al login...');
-    setTimeout(() => {
-      navigate('/login');
-    }, 2500);
+    try {
+      await api.auth.recuperarRestablecer(email, otp.join(''), password);
+      setSuccess('¡Contraseña actualizada con éxito! Redirigiendo al login...');
+      setTimeout(() => {
+        navigate('/login');
+      }, 2500);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const estiloDinamico = {
@@ -206,8 +223,13 @@ export default function RecuperarContra() {
               </div>
               <h2 className="pi-recover-title">Código de Seguridad</h2>
               <p className="pi-recover-subtitle">
-                Hemos enviado un código de 6 dígitos a <strong>{email}</strong>. Ingrésalo a continuación para continuar.
+                Generamos un código de 6 dígitos para <strong>{email}</strong>. Ingrésalo a continuación para continuar.
               </p>
+              {codigoDemo && (
+                <p className="pi-recover-subtitle" style={{ fontWeight: 'bold' }}>
+                  Modo desarrollo (sin envío de correo real): tu código es <strong>{codigoDemo}</strong>
+                </p>
+              )}
 
               <form onSubmit={handleVerificarCodigo} className="pi-recover-form">
                 <div className="otp-inputs-container">
@@ -233,7 +255,7 @@ export default function RecuperarContra() {
                   VERIFICAR CÓDIGO
                 </button>
               </form>
-              <p className="otp-resend">¿No lo recibiste? <button type="button">Reenviar código</button></p>
+              <p className="otp-resend">¿No lo recibiste? <button type="button" onClick={handleReenviarCodigo}>Reenviar código</button></p>
             </div>
           )}
 

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   FaMapMarkerAlt, FaSearch, FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
-  FaUsers, FaHourglassHalf
+  FaUsers, FaHourglassHalf, FaExclamationTriangle
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { formatearFecha } from '../../utils/eventos.js';
+import EscanerQr from '../../components/EscanerQr.jsx';
 import './GestionEntrega.css';
 
 export default function GestionEntrega() {
@@ -12,20 +13,22 @@ export default function GestionEntrega() {
 
   const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
   const [participantes, setParticipantes] = useState([]);
-  const [codigosDisponibles, setCodigosDisponibles] = useState([]);
   const [busqueda, setBusqueda] = useState('');
 
   const [participanteVinculando, setParticipanteVinculando] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
-  const [codigoEscaneado, setCodigoEscaneado] = useState(null);
+  const [codigoValidado, setCodigoValidado] = useState(null);
+  const [errorCodigo, setErrorCodigo] = useState('');
+  const [validando, setValidando] = useState(false);
 
   useEffect(() => { api.eventos.listar().then(setEventos); }, []);
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
+  // Solo aparecen aquí las compras ya aprobadas por Admin (el backend ya filtra las
+  // pendientes/rechazadas): no tiene sentido entregarle manilla a alguien sin entrada confirmada.
   const refrescarEvento = (eventoId) => {
     api.entradas.listar({ eventoId }).then(setParticipantes);
-    api.codigosQr.listar({ eventoId, disponibles: true }).then(setCodigosDisponibles);
   };
 
   const abrirEvento = (ev) => {
@@ -53,28 +56,45 @@ export default function GestionEntrega() {
 
   const abrirVincular = (participante) => {
     setParticipanteVinculando(participante);
-    setCodigoEscaneado(null);
+    setCodigoValidado(null);
+    setErrorCodigo('');
+    setEscaneando(false);
   };
 
   const cerrarVincular = () => {
     setParticipanteVinculando(null);
-    setCodigoEscaneado(null);
+    setCodigoValidado(null);
+    setErrorCodigo('');
     setEscaneando(false);
   };
 
-  const simularEscaneo = () => {
-    if (codigosDisponibles.length === 0) return;
-    setEscaneando(true);
-    setTimeout(() => {
-      const elegido = codigosDisponibles[Math.floor(Math.random() * codigosDisponibles.length)];
-      setCodigoEscaneado(elegido);
-      setEscaneando(false);
-    }, 700);
+  // Al detectar un código con la cámara, primero se le pregunta a la base si existe, si es de
+  // este evento y si ya está tomado — recién si pasa todo eso se ofrece confirmar el vínculo.
+  const handleCodigoDetectado = async (codigo) => {
+    setEscaneando(false);
+    setValidando(true);
+    setErrorCodigo('');
+    try {
+      const codigoQr = await api.codigosQr.buscarPorCodigo(codigo);
+      if (codigoQr.eventoId !== eventoIdDetalle) {
+        setErrorCodigo('Este código no pertenece a este evento.');
+      } else if (codigoQr.anulado) {
+        setErrorCodigo('Este código fue anulado y ya no se puede usar.');
+      } else if (codigoQr.entradaId) {
+        setErrorCodigo('Este código ya está vinculado a otra persona.');
+      } else {
+        setCodigoValidado(codigoQr);
+      }
+    } catch (err) {
+      setErrorCodigo(err.message);
+    } finally {
+      setValidando(false);
+    }
   };
 
   const confirmarVinculo = async () => {
-    if (!codigoEscaneado || !participanteVinculando) return;
-    await api.entradas.vincularQr(participanteVinculando.id, codigoEscaneado.id);
+    if (!codigoValidado || !participanteVinculando) return;
+    await api.entradas.vincularQr(participanteVinculando.id, codigoValidado.id);
     refrescarEvento(eventoIdDetalle);
     cerrarVincular();
   };
@@ -203,37 +223,44 @@ export default function GestionEntrega() {
             </div>
 
             <div className="pi-entrega-modal-body">
-              <div className="pi-entrega-camara-simulada">
-                <FaQrcode size={56} />
-                <span>
-                  {escaneando ? 'Escaneando...' : codigoEscaneado ? 'Código detectado' : 'Apunta la cámara al código QR'}
-                </span>
-              </div>
-
-              {codigoEscaneado ? (
+              {escaneando ? (
+                <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
+              ) : validando ? (
+                <div className="pi-entrega-camara-simulada">
+                  <FaQrcode size={56} />
+                  <span>Verificando código...</span>
+                </div>
+              ) : codigoValidado ? (
                 <div className="pi-entrega-codigo-detectado">
                   <FaCheckCircle color="var(--verde-recarga-texto)" />
-                  <span>{codigoEscaneado.codigo}</span>
+                  <span>Código <strong>{codigoValidado.codigo}</strong> listo para vincular a <strong>{participanteVinculando.nombre}</strong></span>
                 </div>
               ) : (
-                <button
-                  className="pi-entrega-btn-escanear"
-                  onClick={simularEscaneo}
-                  disabled={escaneando || codigosDisponibles.length === 0}
-                >
-                  <FaQrcode /> {escaneando ? 'Escaneando...' : 'Escanear Código QR'}
-                </button>
+                <div className="pi-entrega-camara-simulada">
+                  <FaQrcode size={56} />
+                  <span>Apunta la cámara al código QR de la manilla</span>
+                </div>
               )}
 
-              {codigosDisponibles.length === 0 && !codigoEscaneado && (
-                <p className="pi-entrega-aviso">
-                  No hay códigos QR sin vincular para este evento. Pídele al Admin que genere más desde "Generar QR".
+              {errorCodigo && (
+                <p className="pi-entrega-aviso pi-entrega-aviso-error">
+                  <FaExclamationTriangle /> {errorCodigo}
                 </p>
+              )}
+
+              {!escaneando && !codigoValidado && (
+                <button
+                  className="pi-entrega-btn-escanear"
+                  onClick={() => { setErrorCodigo(''); setEscaneando(true); }}
+                  disabled={validando}
+                >
+                  <FaQrcode /> {errorCodigo ? 'Escanear otro código' : 'Escanear Código QR'}
+                </button>
               )}
 
               <div className="pi-entrega-modal-acciones">
                 <button className="pi-entrega-btn-cancelar" onClick={cerrarVincular}>Cancelar</button>
-                <button className="pi-entrega-btn-confirmar" onClick={confirmarVinculo} disabled={!codigoEscaneado}>
+                <button className="pi-entrega-btn-confirmar" onClick={confirmarVinculo} disabled={!codigoValidado}>
                   <FaLink /> Vincular
                 </button>
               </div>

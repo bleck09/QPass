@@ -1,0 +1,60 @@
+.pi-escaner-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.pi-escaner-qr-video-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.pi-escaner-qr-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pi-escaner-qr-marco {
+  position: absolute;
+  inset: 12%;
+  border: 3px solid var(--cian-digital, #00b4d8);
+  border-radius: 12px;
+  pointer-events: none;
+}
+
+.pi-escaner-qr-cargando {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pi-escaner-qr-error {
+  color: var(--rojo-error-texto, #c0392b);
+  text-align: center;
+  padding: 20px;
+}
+
+.pi-escaner-qr-btn-cancelar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid var(--borde-suave, #ddd);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 600;
+  cursor: pointer;
+}

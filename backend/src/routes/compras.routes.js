@@ -18,6 +18,19 @@ comprasRouter.post('/', requireAuth, async (req, res) => {
     return res.status(400).json({ error: 'Agrega al menos una entrada' });
   }
 
+  const titularesEnLote = entradas.filter(e => e.isTitular).length;
+  if (titularesEnLote > 1) {
+    return res.status(400).json({ error: 'Solo puede haber una entrada tuya (titular) por compra' });
+  }
+  if (titularesEnLote === 1) {
+    const yaTiene = await prisma.entrada.findFirst({
+      where: { eventoId, usuarioId: req.usuario.id, isTitular: true, compra: { estado: { not: 'rechazado' } } },
+    });
+    if (yaTiene) {
+      return res.status(409).json({ error: 'Ya tienes una entrada para este evento; las demás deben ser para invitados' });
+    }
+  }
+
   const categorias = await prisma.categoriaTicket.findMany({
     where: { id: { in: entradas.map(e => e.categoriaTicketId) } },
   });
@@ -76,7 +89,10 @@ comprasRouter.get('/mias', requireAuth, async (req, res) => {
     },
     orderBy: { createdAt: 'desc' },
   });
-  res.json(compras);
+  res.json(compras.map(compra => ({
+    ...compra,
+    entradas: compra.entradas.map(({ codigosQr, ...e }) => ({ ...e, codigoQrVinculado: codigosQr[0] || null })),
+  })));
 });
 
 comprasRouter.get('/', requireAuth, requireRol('Admin', 'Cliente'), async (req, res) => {
@@ -141,7 +157,10 @@ comprasRouter.post('/:id/aprobar', requireAuth, requireRol('Admin'), async (req,
     });
   });
 
-  const actualizada = await prisma.compra.findUnique({ where: { id: compra.id }, include: { entradas: true } });
+  const actualizada = await prisma.compra.findUnique({
+    where: { id: compra.id },
+    include: { entradas: { include: { categoriaTicket: true } }, comprador: { select: { id: true, nombre: true, email: true } } },
+  });
   res.json({ ...actualizada, passwordsGeneradas });
 });
 
@@ -168,6 +187,9 @@ comprasRouter.post('/:id/rechazar', requireAuth, requireRol('Admin'), async (req
     }),
   ]);
 
-  const actualizada = await prisma.compra.findUnique({ where: { id: compra.id }, include: { entradas: true } });
+  const actualizada = await prisma.compra.findUnique({
+    where: { id: compra.id },
+    include: { entradas: { include: { categoriaTicket: true } }, comprador: { select: { id: true, nombre: true, email: true } } },
+  });
   res.json(actualizada);
 });

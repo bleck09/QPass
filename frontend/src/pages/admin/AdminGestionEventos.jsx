@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode,
-  FaCheckCircle, FaBan, FaFileAlt
+  FaCheckCircle, FaBan, FaFileAlt, FaClipboardList
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
@@ -27,6 +27,14 @@ export default function AdminGestionEventos() {
   const [mostrarFormCrear, setMostrarFormCrear] = useState(false);
   const [formEvento, setFormEvento] = useState(FORM_EVENTO_VACIO);
   const [formAsignar, setFormAsignar] = useState(FORM_ASIGNAR_VACIO);
+  const [comprasPendientes, setComprasPendientes] = useState(0);
+
+  useEffect(() => {
+    if (!eventoIdDetalle) return;
+    api.compras.listar({ eventoId: eventoIdDetalle }).then(lista =>
+      setComprasPendientes(lista.filter(c => c.estado === 'pendiente').length)
+    );
+  }, [eventoIdDetalle]);
 
   useEffect(() => {
     api.eventos.listar().then(setEventos);
@@ -116,6 +124,10 @@ export default function AdminGestionEventos() {
           <div className="pi-ges-accesos-rapidos">
             <button onClick={() => navigate('/AdminCrearTickets', { state: { eventoId: eventoDetalle.id } })}>
               <FaTicketAlt /> Tickets del Evento
+            </button>
+            <button onClick={() => navigate('/admin/solicitudes', { state: { eventoId: eventoDetalle.id } })}>
+              <FaClipboardList /> Solicitudes de Entradas
+              {comprasPendientes > 0 && <span className="pi-ges-badge-contador">{comprasPendientes}</span>}
             </button>
             <button onClick={() => navigate('/admin/qr', { state: { eventoId: eventoDetalle.id } })}>
               <FaQrcode /> Generar QR

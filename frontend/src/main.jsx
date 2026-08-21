@@ -49,6 +49,10 @@ const router = createBrowserRouter([
     element: <MenuLateral><Admin /></MenuLateral>,
   },
   {
+    path: "/admin/solicitudes",
+    element: <MenuLateral><Admin /></MenuLateral>,
+  },
+  {
     path: "/admin/eventos",
     element: <MenuLateral><AdminGestionEventos /></MenuLateral>,
   },

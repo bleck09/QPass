@@ -127,8 +127,38 @@ model Usuario {
   solicitudesEnviadas   SolicitudEvento[]      @relation("ClienteQueSolicita")
   solicitudesResueltas  SolicitudEvento[]      @relation("AdminQueResuelveSolicitud")
   eventosCreados        Evento[]               @relation("AdminQueCreaEvento")
+  codigosRecuperacion   CodigoRecuperacion[]
+  cambiosPassword       CambioPassword[]
 
   @@map("usuarios")
+}
+
+// Código de 6 dígitos para "Olvidé mi contraseña". Se invalidan los códigos previos sin usar
+// de ese usuario al pedir uno nuevo, así solo el último emitido es válido.
+model CodigoRecuperacion {
+  id        String   @id @default(cuid())
+  usuarioId Int
+  codigo    String // 6 dígitos numéricos
+  usado     Boolean  @default(false)
+  expiraEn  DateTime
+  createdAt DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("codigos_recuperacion")
+}
+
+// Auditoría de cada cambio de contraseña, para que el propio usuario (y Admin) puedan ver
+// si hubo un cambio que no reconocen.
+model CambioPassword {
+  id        String   @id @default(cuid())
+  usuarioId Int
+  origen    String // 'self' (cambio normal, sabiendo la actual) | 'recuperacion' (código de 6 dígitos)
+  createdAt DateTime @default(now())
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  @@map("cambios_password")
 }
 
 // Un Evento se puede crear de DOS formas: (1) Admin lo crea directo, sin pasar por
@@ -319,7 +349,8 @@ model RegistroIngreso {
   id              String              @id @default(cuid())
   entradaId       String
   tipo            TipoRegistroIngreso
-  foto            String              // obligatoria
+  foto            String? // obligatoria solo en el primer registro de la Entrada (identifica
+                           // quién retira la manilla); en los siguientes ingresos/salidas es opcional.
   registradoPorId Int
   createdAt       DateTime            @default(now())
 

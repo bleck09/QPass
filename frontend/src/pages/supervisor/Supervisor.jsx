@@ -7,6 +7,8 @@ import {
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { formatearFecha } from '../../utils/eventos.js';
+import EscanerQr from '../../components/EscanerQr.jsx';
+import CapturarFoto from '../../components/CapturarFoto.jsx';
 import './Supervisor.css';
 import './GestionEntrega.css';
 
@@ -18,7 +20,10 @@ export default function Supervisor() {
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [historialTarjeta, setHistorialTarjeta] = useState([]);
   const [fotoCapturadaTemporal, setFotoCapturadaTemporal] = useState(null);
+  const [capturandoFoto, setCapturandoFoto] = useState(false);
   const [escaneando, setEscaneando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+  const [errorEscaneo, setErrorEscaneo] = useState('');
 
   const [filtro, setFiltro] = useState('todos');
   const [busqueda, setBusqueda] = useState('');
@@ -58,36 +63,39 @@ export default function Supervisor() {
   }, [participantes, filtro, busqueda]);
 
   // ========================================================
-  // LÓGICA DE ESCANEO GENERAL
+  // ESCANEO REAL: abre la cámara, lee el QR y recién ahí le pregunta a la base quién es.
   // ========================================================
-  const simularEscaneoGeneral = () => {
-    if (participantes.length === 0) return;
+  const iniciarEscaneo = () => {
+    setErrorEscaneo('');
     setEscaneando(true);
-    setTimeout(() => {
-      // Tomamos alguien al azar para simular
-      const elegido = participantes[Math.floor(Math.random() * participantes.length)];
-      setEscaneando(false);
+  };
+
+  const handleCodigoDetectado = async (codigo) => {
+    setEscaneando(false);
+    setBuscando(true);
+    try {
+      const entrada = await api.entradas.buscarPorCodigo(codigo);
       setFotoCapturadaTemporal(null);
       setAlertaToggle('');
-      setTarjetaQR(elegido);
-      api.entradas.registros(elegido.id).then(setHistorialTarjeta);
-    }, 700);
+      setTarjetaQR(entrada);
+      api.entradas.registros(entrada.id).then(setHistorialTarjeta);
+    } catch (err) {
+      setErrorEscaneo(err.message);
+    } finally {
+      setBuscando(false);
+    }
   };
 
   // ========================================================
   // FUNCIONES DE CÁMARA
   // ========================================================
-  const tomarFotoPuerta = () => {
-    setFotoCapturadaTemporal('https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80');
-    setAlertaToggle('');
-  };
-
   const descartarFoto = () => setFotoCapturadaTemporal(null);
 
   const cerrarTarjeta = () => {
     setTarjetaQR(null);
     setHistorialTarjeta([]);
     setFotoCapturadaTemporal(null);
+    setCapturandoFoto(false);
     setAlertaToggle('');
   };
 
@@ -98,12 +106,15 @@ export default function Supervisor() {
   };
 
   // ========================================================
-  // REGISTRAR INGRESO / SALIDA — cada escaneo exige una foto nueva (anti-préstamo de manilla),
-  // no se reutiliza ninguna foto guardada de una vez anterior.
+  // REGISTRAR INGRESO / SALIDA — la foto solo es obligatoria la primera vez que esta entrada
+  // pasa por control (identifica quién retiró la manilla). Si ya tiene un registro previo,
+  // ya no hace falta volver a tomarla para entrar o salir de nuevo.
   // ========================================================
+  const requiereFoto = historialTarjeta.length === 0;
+
   const registrarMovimiento = async (tipo) => {
-    if (!fotoCapturadaTemporal) {
-      setAlertaToggle('Toma una foto antes de registrar el movimiento.');
+    if (requiereFoto && !fotoCapturadaTemporal) {
+      setAlertaToggle('Toma una foto antes de registrar el primer ingreso.');
       return;
     }
     setAlertaToggle('');
@@ -147,11 +158,17 @@ export default function Supervisor() {
         </div>
 
         <div className="pi-sup-simuladores">
-          <button className="pi-sup-btn-escanear-general" onClick={simularEscaneoGeneral} disabled={escaneando}>
-            <FaQrcode /> {escaneando ? 'Escaneando...' : 'Escanear Código QR'}
+          <button className="pi-sup-btn-escanear-general" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
+            <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
           </button>
         </div>
       </div>
+
+      {errorEscaneo && (
+        <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginBottom: '16px' }}>
+          <FaExclamationTriangle /> {errorEscaneo}
+        </p>
+      )}
 
       {/* --- ESTADÍSTICAS --- */}
       <div className="pi-sup-stats-grid">
@@ -205,13 +222,10 @@ export default function Supervisor() {
                 <th>Documento</th>
                 <th>Entrada</th>
                 <th>Estado Actual</th>
-                <th>Último Movimiento</th>
               </tr>
             </thead>
             <tbody>
               {listaFiltrada.map(p => {
-                const historial = historialDe(p);
-                const ultimoHistorial = historial.length > 0 ? historial[historial.length - 1] : null;
                 return (
                   <tr key={p.id}>
                     <td>
@@ -227,9 +241,6 @@ export default function Supervisor() {
                       {p.estadoIngreso === 'salio' && <span className="pi-sup-badge pi-sup-badge-out">Salió</span>}
                       {p.estadoIngreso === 'pendiente' && <span className="pi-sup-badge pi-sup-badge-pend">Pendiente</span>}
                     </td>
-                    <td className="col-historial">
-                      {ultimoHistorial ? `${ultimoHistorial.tipo} a las ${ultimoHistorial.hora}` : '—'}
-                    </td>
                   </tr>
                 );
               })}
@@ -237,6 +248,16 @@ export default function Supervisor() {
           </table>
         </div>
       </div>
+
+      {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
+      {escaneando && (
+        <div className="pi-sup-modal-overlay" onClick={() => setEscaneando(false)}>
+          <div className="pi-sup-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ textAlign: 'center', marginBottom: '14px' }}><FaQrcode /> Escanear manilla</h3>
+            <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
+          </div>
+        </div>
+      )}
 
       {/* =========================================================
           MODAL DE CONTROL DINÁMICO (INTERRUPTOR)
@@ -264,23 +285,32 @@ export default function Supervisor() {
                 <span className="foto-label text-gray">FOTO DE PERFIL</span>
               </div>
 
-              {/* Cada escaneo pide una foto nueva — no se reutiliza ninguna guardada de antes. */}
-              <div className="foto-box">
-                {fotoCapturadaTemporal ? (
-                  <div className="foto-capturada-container">
-                    <img src={fotoCapturadaTemporal} alt="Captura" className="foto-img border-cyan" />
-                    <button className="btn-retake" onClick={descartarFoto} title="Volver a tomar"><FaSyncAlt /></button>
-                    <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
-                  </div>
-                ) : (
-                  <div className="foto-placeholder" onClick={tomarFotoPuerta}>
-                    <FaCamera size={26}/>
-                    <span>Tomar Foto<br/>Obligatoria</span>
-                  </div>
-                )}
-              </div>
+              {/* La foto solo es obligatoria en el primer registro de esta entrada. */}
+              {!capturandoFoto && (
+                <div className="foto-box">
+                  {fotoCapturadaTemporal ? (
+                    <div className="foto-capturada-container">
+                      <img src={fotoCapturadaTemporal} alt="Captura" className="foto-img border-cyan" />
+                      <button className="btn-retake" onClick={descartarFoto} title="Volver a tomar"><FaSyncAlt /></button>
+                      <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
+                    </div>
+                  ) : (
+                    <div className="foto-placeholder" onClick={() => setCapturandoFoto(true)}>
+                      <FaCamera size={26}/>
+                      <span>{requiereFoto ? <>Tomar Foto<br/>Obligatoria</> : <>Tomar Foto<br/>(opcional)</>}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
             </div>
+
+            {capturandoFoto && (
+              <CapturarFoto
+                onCapturada={(foto) => { setFotoCapturadaTemporal(foto); setCapturandoFoto(false); }}
+                onCancelar={() => setCapturandoFoto(false)}
+              />
+            )}
 
             <h2 className="pi-sup-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
@@ -327,26 +357,29 @@ export default function Supervisor() {
             </div>
 
             {/* =========================================
-                FOOTER: cada escaneo exige foto nueva, sin importar el estado actual
+                FOOTER: la foto solo es obligatoria en el primer ingreso de esta entrada.
+                Puede alternar ingreso/salida tantas veces como haga falta (ej. alguien
+                que sale y vuelve a entrar) — no hay límite de ciclos.
             ========================================= */}
             <div className="pi-sup-modal-footer">
               <div className="pi-sup-toggle-switch">
                 <button
-                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'salio' ? 'active-out' : ''}`}
+                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'salio' ? 'active-out' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
                   onClick={() => registrarMovimiento('salida')}
-                  disabled={!fotoCapturadaTemporal}
                 >
                   <FaSignOutAlt /> REGISTRAR SALIDA
                 </button>
 
                 <button
-                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''}`}
+                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
                   onClick={() => registrarMovimiento('ingreso')}
-                  disabled={!fotoCapturadaTemporal}
                 >
                   <FaSignInAlt /> REGISTRAR INGRESO
                 </button>
               </div>
+              {requiereFoto && !fotoCapturadaTemporal && (
+                <p className="pi-sup-hint-foto">Toma la foto de la puerta (arriba) para poder registrar el primer ingreso.</p>
+              )}
             </div>
 
           </div>

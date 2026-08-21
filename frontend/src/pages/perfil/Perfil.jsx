@@ -35,6 +35,7 @@ export default function Perfil() {
   const [contraseñaActual, setContraseñaActual] = useState('');
   const [contraseñaNueva, setContraseñaNueva] = useState('');
   const [contraseñaConfirmar, setContraseñaConfirmar] = useState('');
+  const [historialPassword, setHistorialPassword] = useState([]);
 
   // Estados de UI
   const [activeTab, setActiveTab] = useState('cuenta');
@@ -52,6 +53,7 @@ export default function Perfil() {
       setBiografia(completo.biografia || '');
       setFechaNacimiento(soloFecha(completo.fechaNacimiento));
     });
+    api.usuarios.historialPassword(sesion.id).then(setHistorialPassword);
   }, [sesion?.id]);
 
   // Fecha máxima para el calendario (HOY)
@@ -169,6 +171,7 @@ export default function Perfil() {
       setContraseñaActual('');
       setContraseñaNueva('');
       setContraseñaConfirmar('');
+      setHistorialPassword(await api.usuarios.historialPassword(usuario.id));
       setMensaje({ texto: 'Contraseña actualizada de forma segura.', tipo: 'exito' });
       setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
     } catch (err) {
@@ -377,6 +380,21 @@ export default function Perfil() {
                   <button className="btn-guardar-toggle" onClick={guardarSeguridad}>
                     <FaSave style={{marginRight: '5px'}}/> Actualizar Seguridad
                   </button>
+                </div>
+
+                <div className="pi-perfil-data-block full-width" style={{marginTop: '10px'}}>
+                  <span className="data-label"><FaUserShield/> Historial de cambios de contraseña</span>
+                  {historialPassword.length === 0 ? (
+                    <p className="data-value-p empty">Todavía no registras ningún cambio de contraseña.</p>
+                  ) : (
+                    <ul style={{ margin: '8px 0 0', paddingLeft: '18px' }}>
+                      {historialPassword.map(c => (
+                        <li key={c.id} style={{ fontSize: '13px', color: 'var(--texto-secundario)' }}>
+                          {new Date(c.createdAt).toLocaleString('es-BO')} — {c.origen === 'recuperacion' ? 'por recuperación con código' : 'cambio manual'}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             )}

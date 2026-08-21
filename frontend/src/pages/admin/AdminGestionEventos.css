@@ -212,6 +212,20 @@
   color: var(--indigo-profundo);
 }
 
+.pi-ges-badge-contador {
+  background-color: var(--coral-compra, #e63946);
+  color: var(--blanco);
+  border-radius: 999px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 /* --- SECCIÓN USUARIOS ASIGNADOS --- */
 .pi-ges-seccion {
   background: var(--blanco);
