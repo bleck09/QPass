@@ -5,8 +5,12 @@ import { requireAuth, requireRol } from '../middleware/auth.js';
 export const eventosRouter = Router();
 
 eventosRouter.get('/', async (req, res) => {
-  const eventos = await prisma.evento.findMany({ orderBy: { createdAt: 'desc' } });
-  res.json(eventos);
+  const [eventos, preciosMin] = await Promise.all([
+    prisma.evento.findMany({ orderBy: { createdAt: 'desc' } }),
+    prisma.categoriaTicket.groupBy({ by: ['eventoId'], _min: { precio: true } }),
+  ]);
+  const precioPorEvento = new Map(preciosMin.map(p => [p.eventoId, Number(p._min.precio)]));
+  res.json(eventos.map(e => ({ ...e, precioDesde: precioPorEvento.get(e.id) ?? null })));
 });
 
 eventosRouter.get('/:id', async (req, res) => {

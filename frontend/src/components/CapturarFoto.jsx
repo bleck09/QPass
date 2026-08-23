@@ -13,12 +13,18 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [error, setError] = useState('');
+  const [avisoNoListo, setAvisoNoListo] = useState(false);
 
   useEffect(() => {
     let activo = true;
     let stream;
 
-    navigator.mediaDevices?.getUserMedia({ video: { facingMode: 'environment' } })
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('Este navegador no permite acceder a la cámara en esta conexión. Si estás entrando por una IP de red (no https:// ni localhost), el navegador bloquea la cámara por seguridad — hace falta HTTPS.');
+      return () => {};
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       .then((s) => {
         if (!activo) { s.getTracks().forEach(t => t.stop()); return; }
         stream = s;
@@ -35,6 +41,10 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
 
   const capturar = () => {
     const video = videoRef.current;
+    if (!video?.videoWidth) {
+      setAvisoNoListo(true);
+      return;
+    }
     const canvas = canvasRef.current;
     const escala = Math.min(1, ANCHO_MAXIMO / video.videoWidth);
     canvas.width = Math.round(video.videoWidth * escala);
@@ -53,6 +63,9 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
         </div>
       )}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
+      {avisoNoListo && !error && (
+        <p className="pi-captura-foto-error">La cámara todavía no está lista. Espera un segundo y volvé a intentar.</p>
+      )}
       <div className="pi-captura-foto-acciones">
         <button type="button" className="pi-captura-foto-btn-cancelar" onClick={onCancelar}>
           <FaTimes /> Cancelar

@@ -8,7 +8,7 @@ import {
 import './PaginaPrincipal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
 import api from '../../api/index.js';
-import { esVigente, conPrecioDesde, formatearFecha } from '../../utils/eventos.js';
+import { esVigente, formatearFecha } from '../../utils/eventos.js';
 
 export default function PaginaPrincipal() {
   const navigate = useNavigate();
@@ -17,14 +17,13 @@ export default function PaginaPrincipal() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    api.eventos.listar().then(async (todos) => {
-      const proximos = todos.filter(esVigente);
-      setProximosEventos(await conPrecioDesde(proximos));
+    api.eventos.listar().then((todos) => {
+      setProximosEventos(todos.filter(esVigente));
       setEventosPasados(todos.filter(ev => !esVigente(ev)));
     });
   }, []);
 
-  const verEvento = () => navigate('/evento');
+  const verEvento = (evento) => navigate(`/evento/${evento.id}`);
 
   return (
     <div className="qpass-home-container">

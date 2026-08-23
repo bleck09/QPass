@@ -27,6 +27,45 @@
   border: 3px solid var(--cian-digital, #00b4d8);
   border-radius: 12px;
   pointer-events: none;
+  overflow: hidden;
+}
+
+.pi-escaner-qr-marco.activo {
+  animation: pi-escaner-pulso 1.8s ease-in-out infinite;
+}
+
+.pi-escaner-qr-linea {
+  position: absolute;
+  left: 4%;
+  right: 4%;
+  height: 2px;
+  background: var(--cian-digital, #00b4d8);
+  box-shadow: 0 0 8px 1px var(--cian-digital, #00b4d8);
+  animation: pi-escaner-barrido 1.8s ease-in-out infinite;
+}
+
+.pi-escaner-qr-estado {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  text-align: center;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+
+@keyframes pi-escaner-pulso {
+  0%, 100% { border-color: var(--cian-digital, #00b4d8); }
+  50% { border-color: rgba(0, 180, 216, 0.35); }
+}
+
+@keyframes pi-escaner-barrido {
+  0% { top: 2%; }
+  50% { top: 96%; }
+  100% { top: 2%; }
 }
 
 .pi-escaner-qr-cargando {

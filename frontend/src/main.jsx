@@ -33,7 +33,7 @@ import RecuperarContra from './pages/publico/RecuperarContra.jsx'
 const router = createBrowserRouter([
   // 2. ACTUALIZAMOS LAS RUTAS PÚBLICAS PRINCIPALES
   { path: "/", element: <PaginaPrincipal /> }, // La vista corporativa global de QPass
-  { path: "/evento", element: <App /> },       // La vista específica del evento (Landing del cliente)
+  { path: "/evento/:id", element: <App /> },   // La vista específica del evento (Landing del cliente)
   { path: "/login", element: <Login /> },
    { path: "/Registrar", element: <Registrar/> },   
    { path: "/recuperar", element: <RecuperarContra/> }, 

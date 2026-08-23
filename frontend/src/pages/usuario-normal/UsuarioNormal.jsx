@@ -10,7 +10,7 @@ import './UsuarioNormal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { esVigente, conPrecioDesde, formatearFecha, imagenEvento } from '../../utils/eventos.js';
+import { esVigente, formatearFecha, imagenEvento } from '../../utils/eventos.js';
 
 const MAX_ENTRADAS = 6;
 
@@ -45,9 +45,8 @@ export default function UsuarioNormal() {
   const [categoriasEntradas, setCategoriasEntradas] = useState([]);
 
   useEffect(() => {
-    api.eventos.listar().then(async (todos) => {
-      const proximos = todos.filter(esVigente);
-      setProximosEventos(await conPrecioDesde(proximos));
+    api.eventos.listar().then((todos) => {
+      setProximosEventos(todos.filter(esVigente));
       setEventosPasados(todos.filter(ev => !esVigente(ev)));
     });
   }, []);

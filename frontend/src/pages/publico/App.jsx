@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt,
   FaQrcode, FaMapMarkedAlt, FaStore, FaTimes,
   FaArrowLeft, FaCheck
 } from 'react-icons/fa';
 import api from '../../api/index.js';
-import { esVigente } from '../../utils/eventos.js';
 import './App.css';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
@@ -49,6 +48,7 @@ const defaultLandingData = {
 
 export default function App() {
   const navigate = useNavigate();
+  const { id } = useParams();
 
   // FIX DEL SCROLL
   useEffect(() => {
@@ -65,8 +65,9 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState({ dias: 0, horas: 0, minutos: 0, seg: 0 });
 
   useEffect(() => {
-    api.eventos.listar().then(async (todos) => {
-      const activo = todos.find(esVigente) || todos[0];
+    if (!id) return;
+
+    api.eventos.obtener(id).then(async (activo) => {
       if (!activo) return;
       setEvento(activo);
 
@@ -87,7 +88,7 @@ export default function App() {
 
       api.puestos.listar({ eventoId: activo.id }).then(setMapaPuestos);
     });
-  }, []);
+  }, [id]);
 
   // LÓGICA DEL CONTADOR
   useEffect(() => {
@@ -102,6 +103,8 @@ export default function App() {
           minutos: Math.floor((diferencia / 1000 / 60) % 60),
           seg: Math.floor((diferencia / 1000) % 60)
         });
+      } else {
+        setTimeLeft({ dias: 0, horas: 0, minutos: 0, seg: 0 });
       }
     };
     calcularTiempo();
@@ -110,7 +113,11 @@ export default function App() {
   }, [evento?.fecha]);
 
   const handleLoginClick = () => navigate('/login');
-  const handleVolverInicio = () => navigate('/'); 
+  const handleVolverInicio = () => navigate('/');
+
+  const fechaEventoMostrada = new Date(evento?.fecha || defaultLandingData.fechaEvento);
+  const diaEvento = fechaEventoMostrada.getDate();
+  const mesEvento = fechaEventoMostrada.toLocaleString('es-BO', { month: 'long' });
 
   const estiloDinamico = {
     '--color-primario': data.colorPrimario || defaultLandingData.colorPrimario,
@@ -203,8 +210,8 @@ export default function App() {
         <div className="massive-date-container">
           <span className="date-subtitle">Tu próxima experiencia será el</span>
           <div className="date-huge">
-            <span className="date-number">23</span>
-            <span className="date-month">Febrero</span>
+            <span className="date-number">{diaEvento}</span>
+            <span className="date-month">{mesEvento.charAt(0).toUpperCase() + mesEvento.slice(1)}</span>
           </div>
           <p className="date-description">
             Prepárate para vivir el mejor evento del año. Asegura tu lugar antes de que se agoten las entradas y sé parte de la historia.

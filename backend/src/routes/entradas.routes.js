@@ -7,7 +7,10 @@ export const entradasRouter = Router();
 const CODIGO_ACTIVO = { codigosQr: { where: { anulado: false }, take: 1 } };
 // El saldo vive en Usuario, no en Entrada — se incluye así para que las pantallas de
 // escaneo (Recargador/Ayudante/Devolución) puedan mostrarlo sin una segunda llamada.
-const CON_SALDO = { usuario: { select: { id: true, saldo: true } } };
+// La foto también viene de acá: Entrada.foto nunca se escribe en ningún flujo (compra,
+// aprobación, etc.), así que la única "foto de perfil" real que existe es la que el usuario
+// carga en su Perfil — solo aplica a titulares con cuenta, los invitados no tienen una.
+const CON_SALDO = { usuario: { select: { id: true, saldo: true, foto: true } } };
 
 // Una compra pendiente o rechazada no es un asistente real todavía: no debe aparecer para
 // escanear, recargar, cobrar, ni vincular manilla en ninguna pantalla operativa.
@@ -112,6 +115,18 @@ entradasRouter.post('/:id/anular-qr', requireAuth, async (req, res) => {
 // misma persona ya no hace falta volver a tomarla.
 const registrarMovimiento = async (req, res, tipo) => {
   const { foto } = req.body;
+  const entradaActual = await prisma.entrada.findUnique({ where: { id: req.params.id } });
+  if (!entradaActual) return res.status(404).json({ error: 'Entrada no encontrada' });
+
+  // Evita salidas sin haber ingresado antes, e ingresos/salidas duplicados consecutivos
+  // (ej. dos "salida" seguidas sin un ingreso en el medio).
+  if (tipo === 'salida' && entradaActual.estadoIngreso !== 'ingresado') {
+    return res.status(409).json({ error: 'Esta entrada no está adentro — no se puede registrar una salida' });
+  }
+  if (tipo === 'ingreso' && entradaActual.estadoIngreso === 'ingresado') {
+    return res.status(409).json({ error: 'Esta entrada ya está registrada como ingresada' });
+  }
+
   const yaTieneRegistro = await prisma.registroIngreso.findFirst({ where: { entradaId: req.params.id } });
   if (!yaTieneRegistro && !foto) {
     return res.status(400).json({ error: 'Foto de seguridad obligatoria en el primer ingreso' });
@@ -121,9 +136,14 @@ const registrarMovimiento = async (req, res, tipo) => {
     prisma.registroIngreso.create({
       data: { entradaId: req.params.id, tipo, foto: foto || undefined, registradoPorId: req.usuario.id },
     }),
-    prisma.entrada.update({ where: { id: req.params.id }, data: { estadoIngreso: tipo === 'ingreso' ? 'ingresado' : 'salio' } }),
+    prisma.entrada.update({
+      where: { id: req.params.id },
+      data: { estadoIngreso: tipo === 'ingreso' ? 'ingresado' : 'salio' },
+      include: { categoriaTicket: true, ...CODIGO_ACTIVO, ...CON_SALDO },
+    }),
   ]);
-  res.json(entrada);
+  const { codigosQr, ...resto } = entrada;
+  res.json({ ...resto, codigoQrVinculado: codigosQr[0] || null });
 };
 
 entradasRouter.post('/:id/ingreso', requireAuth, (req, res) => registrarMovimiento(req, res, 'ingreso'));

@@ -23,7 +23,12 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
     let animationId;
     let stream;
 
-    navigator.mediaDevices?.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } })
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError('Este navegador no permite acceder a la cámara en esta conexión. Si estás entrando por una IP de red (no https:// ni localhost), el navegador bloquea la cámara por seguridad — hace falta HTTPS.');
+      return () => {};
+    }
+
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } })
       .then((s) => {
         if (!activo) { s.getTracks().forEach(t => t.stop()); return; }
         stream = s;
@@ -103,8 +108,11 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
       ) : (
         <div className="pi-escaner-qr-video-wrapper">
           <video ref={videoRef} playsInline muted className="pi-escaner-qr-video" />
-          <div className="pi-escaner-qr-marco" />
+          <div className={`pi-escaner-qr-marco ${listo ? 'activo' : ''}`}>
+            {listo && <div className="pi-escaner-qr-linea" />}
+          </div>
           {!listo && <div className="pi-escaner-qr-cargando">Iniciando cámara...</div>}
+          {listo && <span className="pi-escaner-qr-estado">Buscando código...</span>}
         </div>
       )}
       <canvas ref={canvasRef} style={{ display: 'none' }} />

@@ -129,6 +129,43 @@
 }
 .btn-retake:hover { background-color: var(--rojo-error-suave); transform: scale(1.1); }
 
+/* Confirmación visual de que la captura se tomó — sin esto, pasar de la vista de
+   cámara a la miniatura es un cambio silencioso y fácil de no notar. */
+.foto-recien-capturada { animation: pi-sup-foto-pop 0.35s ease-out; }
+
+.foto-badge-ok {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--verde-recarga, #2e9e5b);
+  color: var(--blanco);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  animation: pi-sup-badge-ok 1.8s ease forwards;
+}
+
+@keyframes pi-sup-foto-pop {
+  0% { transform: scale(0.8); opacity: 0; }
+  60% { transform: scale(1.05); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pi-sup-badge-ok {
+  0% { opacity: 0; transform: translateX(-50%) translateY(4px); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  75% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
 /* Textos de la tarjeta */
 .pi-sup-tarjeta-nombre { margin: 15px 20px 20px 20px; font-size: 22px; color: var(--azul-noche); font-weight: 800; }
 
@@ -158,6 +195,11 @@
 .historial-list::-webkit-scrollbar-thumb { background: var(--borde-medio); border-radius: 4px; }
 
 .historial-item { display: flex; align-items: center; gap: 12px; padding: 10px 16px; background-color: var(--gris-niebla); border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--texto-principal); }
+
+.historial-foto-thumb {
+  width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0;
+  border: 2px solid var(--blanco); box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+}
 .item-in { border-left: 4px solid var(--verde-recarga); color: var(--verde-recarga-texto); }
 .item-out { border-left: 4px solid var(--ambar-aviso); color: var(--ambar-aviso-texto); }
 
@@ -165,7 +207,7 @@
    FOOTER (BOTONES Y TOGGLE SWITCH)
 ======================================================= */
 .pi-sup-modal-footer {
-  display: flex; gap: 15px; width: 100%; padding: 20px; background-color: var(--blanco); border-top: 1px solid var(--borde-suave);
+  display: flex; flex-direction: column; gap: 15px; width: 100%; padding: 20px; background-color: var(--blanco); border-top: 1px solid var(--borde-suave);
 }
 
 /* Para Primer Ingreso */

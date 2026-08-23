@@ -113,16 +113,28 @@ export default function Supervisor() {
   const requiereFoto = historialTarjeta.length === 0;
 
   const registrarMovimiento = async (tipo) => {
+    if (tipo === 'salida' && tarjetaQR.estadoIngreso !== 'ingresado') {
+      setAlertaToggle('Esta entrada no está adentro — no se puede registrar una salida.');
+      return;
+    }
+    if (tipo === 'ingreso' && tarjetaQR.estadoIngreso === 'ingresado') {
+      setAlertaToggle('Esta entrada ya está registrada como ingresada.');
+      return;
+    }
     if (requiereFoto && !fotoCapturadaTemporal) {
       setAlertaToggle('Toma una foto antes de registrar el primer ingreso.');
       return;
     }
     setAlertaToggle('');
-    const actualizado = tipo === 'salida'
-      ? await api.entradas.salida(tarjetaQR.id, fotoCapturadaTemporal)
-      : await api.entradas.ingreso(tarjetaQR.id, fotoCapturadaTemporal);
-    setFotoCapturadaTemporal(null);
-    actualizarParticipante(actualizado);
+    try {
+      const actualizado = tipo === 'salida'
+        ? await api.entradas.salida(tarjetaQR.id, fotoCapturadaTemporal)
+        : await api.entradas.ingreso(tarjetaQR.id, fotoCapturadaTemporal);
+      setFotoCapturadaTemporal(null);
+      actualizarParticipante(actualizado);
+    } catch (err) {
+      setAlertaToggle(err.message);
+    }
   };
 
   if (!eventoDetalle) {
@@ -279,8 +291,8 @@ export default function Supervisor() {
             <div className="pi-sup-fotos-comparacion dual-photo">
 
               <div className="foto-box">
-                {tarjetaQR.foto
-                  ? <img src={tarjetaQR.foto} alt="Perfil" className="foto-img" />
+                {(tarjetaQR.usuario?.foto || tarjetaQR.foto)
+                  ? <img src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt="Perfil" className="foto-img" />
                   : <div className="foto-placeholder"><FaIdCard size={26} /></div>}
                 <span className="foto-label text-gray">FOTO DE PERFIL</span>
               </div>
@@ -289,8 +301,9 @@ export default function Supervisor() {
               {!capturandoFoto && (
                 <div className="foto-box">
                   {fotoCapturadaTemporal ? (
-                    <div className="foto-capturada-container">
+                    <div className="foto-capturada-container foto-recien-capturada">
                       <img src={fotoCapturadaTemporal} alt="Captura" className="foto-img border-cyan" />
+                      <span className="foto-badge-ok"><FaCheckCircle /> Foto capturada</span>
                       <button className="btn-retake" onClick={descartarFoto} title="Volver a tomar"><FaSyncAlt /></button>
                       <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
                     </div>
@@ -345,7 +358,9 @@ export default function Supervisor() {
                 <div className="historial-list">
                   {historialTarjeta.map((mov) => (
                     <div key={mov.id} className={`historial-item ${mov.tipo === 'ingreso' ? 'item-in' : 'item-out'}`}>
-                      {mov.tipo === 'ingreso' ? <FaSignInAlt/> : <FaSignOutAlt/>}
+                      {mov.foto
+                        ? <img src={mov.foto} alt="Foto del registro" className="historial-foto-thumb" />
+                        : (mov.tipo === 'ingreso' ? <FaSignInAlt/> : <FaSignOutAlt/>)}
                       <span>
                         {mov.tipo === 'ingreso' ? 'Entrada' : 'Salida'} registrada el {formatearFecha(mov.createdAt)}
                         {' '}por {mov.registradoPor?.nombre}
@@ -364,14 +379,14 @@ export default function Supervisor() {
             <div className="pi-sup-modal-footer">
               <div className="pi-sup-toggle-switch">
                 <button
-                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'salio' ? 'active-out' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
+                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'salio' ? 'active-out' : ''} ${tarjetaQR.estadoIngreso !== 'ingresado' ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
                   onClick={() => registrarMovimiento('salida')}
                 >
                   <FaSignOutAlt /> REGISTRAR SALIDA
                 </button>
 
                 <button
-                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
+                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''} ${tarjetaQR.estadoIngreso === 'ingresado' ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
                   onClick={() => registrarMovimiento('ingreso')}
                 >
                   <FaSignInAlt /> REGISTRAR INGRESO
