@@ -349,8 +349,9 @@ model RegistroIngreso {
   id              String              @id @default(cuid())
   entradaId       String
   tipo            TipoRegistroIngreso
-  foto            String? // obligatoria solo en el primer registro de la Entrada (identifica
-                           // quién retira la manilla); en los siguientes ingresos/salidas es opcional.
+  foto            String? // copia histórica de la foto tomada en ESTE movimiento puntual, para
+                           // el historial de auditoría. La foto de referencia vigente vive en
+                           // Entrada.foto (una sola por persona-evento, ver entradas.routes.js).
   registradoPorId Int
   createdAt       DateTime            @default(now())
 

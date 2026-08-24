@@ -7,6 +7,7 @@ import {
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { formatearFecha } from '../../utils/eventos.js';
+import EscanerQr from '../../components/EscanerQr.jsx';
 import './Recargador.css';
 import '../supervisor/GestionEntrega.css';
 
@@ -23,9 +24,10 @@ export default function Recargador() {
 
   const [eventos, setEventos] = useState([]);
   const [eventoDetalle, setEventoDetalle] = useState(null);
-  const [entradasEvento, setEntradasEvento] = useState([]);
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+  const [errorEscaneo, setErrorEscaneo] = useState('');
   const [monto, setMonto] = useState('');
   const [recargaExitosa, setRecargaExitosa] = useState(null);
   const [historial, setHistorial] = useState([]);
@@ -49,9 +51,6 @@ export default function Recargador() {
 
   const abrirEvento = (ev) => {
     setEventoDetalle(ev);
-    api.entradas.listar({ eventoId: ev.id }).then(lista =>
-      setEntradasEvento(lista.filter(e => e.usuarioId).map(e => ({ ...e, saldo: Number(e.usuario?.saldo ?? 0) })))
-    );
     api.transacciones.listar({ eventoId: ev.id, tipo: 'recarga' }).then(lista =>
       setHistorial(lista.filter(t => t.operador.id === sesion.id))
     );
@@ -71,16 +70,28 @@ export default function Recargador() {
     [historial]
   );
 
-  const handleSimularEscaneo = () => {
-    if (entradasEvento.length === 0) return;
+  const iniciarEscaneo = () => {
+    setErrorEscaneo('');
     setEscaneando(true);
-    setMonto('');
-    setRecargaExitosa(null);
-    setTimeout(() => {
-      const elegido = entradasEvento[Math.floor(Math.random() * entradasEvento.length)];
-      setEscaneando(false);
-      setTarjetaQR(elegido);
-    }, 700);
+  };
+
+  const handleCodigoDetectado = async (codigo) => {
+    setEscaneando(false);
+    setBuscando(true);
+    try {
+      const entrada = await api.entradas.buscarPorCodigo(codigo);
+      if (!entrada.usuarioId) {
+        setErrorEscaneo('Este participante no tiene una cuenta con billetera — no se le puede recargar.');
+        return;
+      }
+      setMonto('');
+      setRecargaExitosa(null);
+      setTarjetaQR({ ...entrada, saldo: Number(entrada.usuario?.saldo ?? 0) });
+    } catch (err) {
+      setErrorEscaneo(err.message);
+    } finally {
+      setBuscando(false);
+    }
   };
 
   const cerrarTarjeta = () => {
@@ -206,9 +217,24 @@ export default function Recargador() {
           <FaQrcode size={70} color="var(--cian-digital)" />
           <h3>Escanea el código QR del participante</h3>
           <p>Apunta la cámara al código QR para cargar sus datos y registrar la recarga.</p>
-          <button className="pi-rec-btn-escanear" onClick={handleSimularEscaneo} disabled={escaneando}>
-            <FaQrcode /> {escaneando ? 'Escaneando...' : 'Simular Escaneo QR'}
+          <button className="pi-rec-btn-escanear" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
+            <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
           </button>
+          {errorEscaneo && (
+            <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginTop: '12px' }}>
+              <FaExclamationTriangle /> {errorEscaneo}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
+      {escaneando && (
+        <div className="pi-rec-modal-overlay" onClick={() => setEscaneando(false)}>
+          <div className="pi-rec-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ textAlign: 'center', marginBottom: '14px' }}><FaQrcode /> Escanear manilla</h3>
+            <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
+          </div>
         </div>
       )}
 
@@ -407,7 +433,9 @@ export default function Recargador() {
                   <FaCheckCircle /> Código QR Válido
                 </div>
 
-                {tarjetaQR.foto && <img src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-rec-tarjeta-foto" />}
+                {(tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
+                  <img src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-rec-tarjeta-foto" />
+                )}
                 <h2 className="pi-rec-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
                 <div className="pi-rec-tarjeta-datos">

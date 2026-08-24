@@ -7,9 +7,8 @@ export const entradasRouter = Router();
 const CODIGO_ACTIVO = { codigosQr: { where: { anulado: false }, take: 1 } };
 // El saldo vive en Usuario, no en Entrada — se incluye así para que las pantallas de
 // escaneo (Recargador/Ayudante/Devolución) puedan mostrarlo sin una segunda llamada.
-// La foto también viene de acá: Entrada.foto nunca se escribe en ningún flujo (compra,
-// aprobación, etc.), así que la única "foto de perfil" real que existe es la que el usuario
-// carga en su Perfil — solo aplica a titulares con cuenta, los invitados no tienen una.
+// La foto de referencia real para invitados sin cuenta es Entrada.foto (una sola por persona
+// por evento, ver registrarMovimiento); Usuario.foto solo aplica a titulares con cuenta.
 const CON_SALDO = { usuario: { select: { id: true, saldo: true, foto: true } } };
 
 // Una compra pendiente o rechazada no es un asistente real todavía: no debe aparecer para
@@ -21,9 +20,14 @@ entradasRouter.get('/', requireAuth, async (req, res) => {
   if (!eventoId) return res.status(400).json({ error: 'eventoId es requerido' });
   const entradas = await prisma.entrada.findMany({
     where: { eventoId, estadoIngreso: estadoIngreso || undefined, ...SOLO_CONFIRMADAS },
-    include: { categoriaTicket: true, ...CODIGO_ACTIVO, ...CON_SALDO },
+    include: { categoriaTicket: true, ...CODIGO_ACTIVO, ...CON_SALDO, registrosIngreso: { select: { tipo: true } } },
   });
-  res.json(entradas.map(({ codigosQr, ...e }) => ({ ...e, codigoQrVinculado: codigosQr[0] || null })));
+  res.json(entradas.map(({ codigosQr, registrosIngreso, ...e }) => ({
+    ...e,
+    codigoQrVinculado: codigosQr[0] || null,
+    vecesIngreso: registrosIngreso.filter((r) => r.tipo === 'ingreso').length,
+    vecesSalida: registrosIngreso.filter((r) => r.tipo === 'salida').length,
+  })));
 });
 
 // Resuelve la Entrada dueña de una pulsera/QR físico escaneado (Recargador, Ayudante, Devolución, Supervisor).
@@ -110,9 +114,10 @@ entradasRouter.post('/:id/anular-qr', requireAuth, async (req, res) => {
   res.status(204).end();
 });
 
-// Control de acceso (Supervisor): la foto solo es obligatoria en el PRIMER registro de la
-// entrada (identifica quién retiró la manilla); en los siguientes ingresos/salidas de esa
-// misma persona ya no hace falta volver a tomarla.
+// Control de acceso (Supervisor): la foto es UNA sola por Entrada (persona-evento), guardada en
+// Entrada.foto. Es obligatoria mientras esa entrada no tenga foto todavía (primera vez, o si se
+// perdió/nunca se tomó); una vez que existe, se reutiliza en cada ingreso/salida siguiente y no
+// hace falta volver a tomarla (el supervisor puede retomarla manualmente si quiere corregirla).
 const registrarMovimiento = async (req, res, tipo) => {
   const { foto } = req.body;
   const entradaActual = await prisma.entrada.findUnique({ where: { id: req.params.id } });
@@ -127,9 +132,8 @@ const registrarMovimiento = async (req, res, tipo) => {
     return res.status(409).json({ error: 'Esta entrada ya está registrada como ingresada' });
   }
 
-  const yaTieneRegistro = await prisma.registroIngreso.findFirst({ where: { entradaId: req.params.id } });
-  if (!yaTieneRegistro && !foto) {
-    return res.status(400).json({ error: 'Foto de seguridad obligatoria en el primer ingreso' });
+  if (!entradaActual.foto && !foto) {
+    return res.status(400).json({ error: 'Foto de seguridad obligatoria — esta entrada todavía no tiene una foto registrada' });
   }
 
   const [, entrada] = await prisma.$transaction([
@@ -138,7 +142,7 @@ const registrarMovimiento = async (req, res, tipo) => {
     }),
     prisma.entrada.update({
       where: { id: req.params.id },
-      data: { estadoIngreso: tipo === 'ingreso' ? 'ingresado' : 'salio' },
+      data: { estadoIngreso: tipo === 'ingreso' ? 'ingresado' : 'salio', foto: foto || undefined },
       include: { categoriaTicket: true, ...CODIGO_ACTIVO, ...CON_SALDO },
     }),
   ]);

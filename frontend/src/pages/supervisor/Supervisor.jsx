@@ -106,11 +106,18 @@ export default function Supervisor() {
   };
 
   // ========================================================
-  // REGISTRAR INGRESO / SALIDA — la foto solo es obligatoria la primera vez que esta entrada
-  // pasa por control (identifica quién retiró la manilla). Si ya tiene un registro previo,
-  // ya no hace falta volver a tomarla para entrar o salir de nuevo.
+  // REGISTRAR INGRESO / SALIDA — la foto es UNA sola por Entrada (persona-evento), guardada en
+  // Entrada.foto. Es obligatoria mientras esa entrada no tenga foto todavía (primera vez, o si
+  // se olvidó tomarla); una vez que existe, se reutiliza en cada ingreso/salida siguiente y no
+  // hace falta volver a tomarla. El supervisor puede retomarla manualmente si quiere corregirla.
   // ========================================================
-  const requiereFoto = historialTarjeta.length === 0;
+  const requiereFoto = !tarjetaQR?.usuario?.foto && !tarjetaQR?.foto;
+
+  // "Foto de perfil" real (la que el usuario cargó en su cuenta) casi nunca existe — la
+  // mayoría son invitados sin cuenta. Para esos casos la referencia es Entrada.foto, la
+  // foto tomada la primera vez que esta entrada pasó por control.
+  const fotoReferencia = tarjetaQR?.usuario?.foto || tarjetaQR?.foto || null;
+  const fotoReferenciaLabel = tarjetaQR?.usuario?.foto ? 'FOTO DE PERFIL' : 'FOTO REGISTRADA';
 
   const registrarMovimiento = async (tipo) => {
     if (tipo === 'salida' && tarjetaQR.estadoIngreso !== 'ingresado') {
@@ -122,7 +129,7 @@ export default function Supervisor() {
       return;
     }
     if (requiereFoto && !fotoCapturadaTemporal) {
-      setAlertaToggle('Toma una foto antes de registrar el primer ingreso.');
+      setAlertaToggle('Toma una foto de esta entrada antes de registrar el movimiento.');
       return;
     }
     setAlertaToggle('');
@@ -233,6 +240,8 @@ export default function Supervisor() {
                 <th>Participante</th>
                 <th>Documento</th>
                 <th>Entrada</th>
+                <th>Ingresos</th>
+                <th>Salidas</th>
                 <th>Estado Actual</th>
               </tr>
             </thead>
@@ -248,6 +257,8 @@ export default function Supervisor() {
                     </td>
                     <td>{p.documento || '—'}</td>
                     <td>{p.categoriaTicket?.nombre || '—'}</td>
+                    <td>{p.vecesIngreso}</td>
+                    <td>{p.vecesSalida}</td>
                     <td>
                       {p.estadoIngreso === 'ingresado' && <span className="pi-sup-badge pi-sup-badge-ok">Adentro</span>}
                       {p.estadoIngreso === 'salio' && <span className="pi-sup-badge pi-sup-badge-out">Salió</span>}
@@ -287,17 +298,8 @@ export default function Supervisor() {
               </div>
             </div>
 
-            {/* FOTOS SUPERPUESTAS */}
-            <div className="pi-sup-fotos-comparacion dual-photo">
-
-              <div className="foto-box">
-                {(tarjetaQR.usuario?.foto || tarjetaQR.foto)
-                  ? <img src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt="Perfil" className="foto-img" />
-                  : <div className="foto-placeholder"><FaIdCard size={26} /></div>}
-                <span className="foto-label text-gray">FOTO DE PERFIL</span>
-              </div>
-
-              {/* La foto solo es obligatoria en el primer registro de esta entrada. */}
+            {/* FOTO (un solo círculo: la recién tomada, o la última que hay, o el botón para tomar una) */}
+            <div className="pi-sup-fotos-comparacion single-photo">
               {!capturandoFoto && (
                 <div className="foto-box">
                   {fotoCapturadaTemporal ? (
@@ -307,15 +309,20 @@ export default function Supervisor() {
                       <button className="btn-retake" onClick={descartarFoto} title="Volver a tomar"><FaSyncAlt /></button>
                       <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
                     </div>
+                  ) : fotoReferencia ? (
+                    <div className="foto-capturada-container">
+                      <img src={fotoReferencia} alt="Referencia" className="foto-img" />
+                      <button className="btn-retake" onClick={() => setCapturandoFoto(true)} title="Tomar una nueva"><FaCamera /></button>
+                      <span className="foto-label text-gray">{fotoReferenciaLabel}</span>
+                    </div>
                   ) : (
                     <div className="foto-placeholder" onClick={() => setCapturandoFoto(true)}>
                       <FaCamera size={26}/>
-                      <span>{requiereFoto ? <>Tomar Foto<br/>Obligatoria</> : <>Tomar Foto<br/>(opcional)</>}</span>
+                      <span>Tomar Foto<br/>Obligatoria</span>
                     </div>
                   )}
                 </div>
               )}
-
             </div>
 
             {capturandoFoto && (
@@ -393,7 +400,7 @@ export default function Supervisor() {
                 </button>
               </div>
               {requiereFoto && !fotoCapturadaTemporal && (
-                <p className="pi-sup-hint-foto">Toma la foto de la puerta (arriba) para poder registrar el primer ingreso.</p>
+                <p className="pi-sup-hint-foto">Toma la foto de la puerta (arriba) para poder registrar el ingreso o salida.</p>
               )}
             </div>
 
