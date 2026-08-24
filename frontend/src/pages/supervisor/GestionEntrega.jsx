@@ -4,11 +4,13 @@ import {
   FaUsers, FaHourglassHalf, FaExclamationTriangle
 } from 'react-icons/fa';
 import api from '../../api/index.js';
+import { leerSesion } from '../../api/client.js';
 import { formatearFecha } from '../../utils/eventos.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import './GestionEntrega.css';
 
 export default function GestionEntrega() {
+  const sesion = leerSesion();
   const [eventos, setEventos] = useState([]);
 
   const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
@@ -21,7 +23,7 @@ export default function GestionEntrega() {
   const [errorCodigo, setErrorCodigo] = useState('');
   const [validando, setValidando] = useState(false);
 
-  useEffect(() => { api.eventos.listar().then(setEventos); }, []);
+  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
@@ -196,6 +198,10 @@ export default function GestionEntrega() {
             <h2>Gestión de Entrega</h2>
             <p>Selecciona un evento para buscar participantes y vincular sus códigos QR.</p>
           </div>
+
+          {eventos.length === 0 && (
+            <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+          )}
 
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (

@@ -14,6 +14,8 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
   const canvasRef = useRef(null);
   const [error, setError] = useState('');
   const [avisoNoListo, setAvisoNoListo] = useState(false);
+  const [camaras, setCamaras] = useState([]);
+  const [camaraId, setCamaraId] = useState('');
 
   useEffect(() => {
     let activo = true;
@@ -24,12 +26,32 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
       return () => {};
     }
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
-      .then((s) => {
+    const constraints = camaraId
+      ? { video: { deviceId: { exact: camaraId } } }
+      : { video: { facingMode: 'environment' } };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(async (s) => {
         if (!activo) { s.getTracks().forEach(t => t.stop()); return; }
         stream = s;
         videoRef.current.srcObject = s;
         videoRef.current.play();
+
+        // Recién con permiso concedido el navegador entrega los labels de las cámaras.
+        // Si hay más de una, mostramos el selector; con una sola, no hace falta.
+        if (camaras.length === 0) {
+          try {
+            const dispositivos = await navigator.mediaDevices.enumerateDevices();
+            const videos = dispositivos.filter(d => d.kind === 'videoinput');
+            if (activo && videos.length > 1) {
+              setCamaras(videos);
+              const idActual = s.getVideoTracks()[0]?.getSettings().deviceId;
+              if (idActual) setCamaraId(idActual);
+            }
+          } catch {
+            // no se pudo listar cámaras, seguimos con la que ya está activa
+          }
+        }
       })
       .catch(() => setError('No se pudo acceder a la cámara. Revisa los permisos del navegador.'));
 
@@ -37,7 +59,8 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
       activo = false;
       stream?.getTracks().forEach(t => t.stop());
     };
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camaraId]);
 
   const capturar = () => {
     const video = videoRef.current;
@@ -58,9 +81,24 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
       {error ? (
         <p className="pi-captura-foto-error">{error}</p>
       ) : (
-        <div className="pi-captura-foto-video-wrapper">
-          <video ref={videoRef} playsInline muted className="pi-captura-foto-video" />
-        </div>
+        <>
+          {camaras.length > 1 && (
+            <select
+              className="pi-captura-foto-select-camara"
+              value={camaraId}
+              onChange={(e) => setCamaraId(e.target.value)}
+            >
+              {camaras.map((c, i) => (
+                <option key={c.deviceId} value={c.deviceId}>
+                  {c.label || `Cámara ${i + 1}`}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="pi-captura-foto-video-wrapper">
+            <video ref={videoRef} playsInline muted className="pi-captura-foto-video" />
+          </div>
+        </>
       )}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       {avisoNoListo && !error && (

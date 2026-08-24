@@ -6,6 +6,7 @@ import {
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
+import EscanerQr from '../../components/EscanerQr.jsx';
 import './Ayudante.css';
 
 export default function Ayudante() {
@@ -13,13 +14,14 @@ export default function Ayudante() {
   const [puestosAsignados, setPuestosAsignados] = useState(null); // null = cargando
   const [puesto, setPuesto] = useState(null);
   const [productos, setProductos] = useState([]);
-  const [entradasEvento, setEntradasEvento] = useState([]);
 
   const [pestana, setPestana] = useState('vender'); // vender | historial
   const [carrito, setCarrito] = useState([]);
 
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
+  const [buscando, setBuscando] = useState(false);
+  const [errorEscaneo, setErrorEscaneo] = useState('');
   const [ventaExitosa, setVentaExitosa] = useState(null);
   const [ventas, setVentas] = useState([]);
 
@@ -32,9 +34,6 @@ export default function Ayudante() {
   const seleccionarPuesto = (p) => {
     setPuesto(p);
     api.productos.listar(p.id).then(setProductos);
-    api.entradas.listar({ eventoId: p.eventoId }).then(lista =>
-      setEntradasEvento(lista.filter(e => e.usuarioId).map(e => ({ ...e, saldo: Number(e.usuario?.saldo ?? 0) })))
-    );
     api.ventas.listar({ puestoId: p.id }).then(setVentas);
   };
 
@@ -77,16 +76,28 @@ export default function Ayudante() {
   const vaciarCarrito = () => setCarrito([]);
 
   // --- LÓGICA DE COBRO ---
-  // No hay cámara real: se simula el escaneo eligiendo una entrada al azar del evento
-  // (mismo patrón que Supervisor/Recargador/Devolución).
   const iniciarCobro = () => {
-    if (carrito.length === 0 || entradasEvento.length === 0) return;
+    if (carrito.length === 0) return;
+    setErrorEscaneo('');
     setEscaneando(true);
-    setTimeout(() => {
-      const elegido = entradasEvento[Math.floor(Math.random() * entradasEvento.length)];
-      setEscaneando(false);
-      setTarjetaQR(elegido);
-    }, 700);
+  };
+
+  const handleCodigoDetectado = async (codigo) => {
+    setEscaneando(false);
+    setBuscando(true);
+    try {
+      const entrada = await api.entradas.buscarPorCodigo(codigo);
+      if (!entrada.usuarioId) {
+        setErrorEscaneo('Este participante no tiene una cuenta con billetera — no se le puede cobrar.');
+        return;
+      }
+      setVentaExitosa(null);
+      setTarjetaQR({ ...entrada, saldo: Number(entrada.usuario?.saldo ?? 0) });
+    } catch (err) {
+      setErrorEscaneo(err.message);
+    } finally {
+      setBuscando(false);
+    }
   };
 
   const cerrarTarjeta = () => {
@@ -255,10 +266,25 @@ export default function Ayudante() {
               type="button"
               className="pi-ayu-btn-escanear"
               onClick={iniciarCobro}
-              disabled={carrito.length === 0 || escaneando}
+              disabled={carrito.length === 0 || escaneando || buscando}
             >
-              <FaQrcode /> {escaneando ? 'Escaneando...' : 'Escanear QR para cobrar'}
+              <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear QR para cobrar'}
             </button>
+            {errorEscaneo && (
+              <p className="pi-ayu-alerta-error">
+                <FaExclamationTriangle /> {errorEscaneo}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
+      {escaneando && (
+        <div className="pi-ayu-modal-overlay" onClick={() => setEscaneando(false)}>
+          <div className="pi-ayu-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
+            <h3 style={{ textAlign: 'center', marginBottom: '14px' }}><FaQrcode /> Escanear manilla</h3>
+            <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
           </div>
         </div>
       )}

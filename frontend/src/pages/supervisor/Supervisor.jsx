@@ -6,6 +6,7 @@ import {
   FaMapMarkerAlt, FaArrowLeft
 } from 'react-icons/fa';
 import api from '../../api/index.js';
+import { leerSesion } from '../../api/client.js';
 import { formatearFecha } from '../../utils/eventos.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
@@ -13,6 +14,7 @@ import './Supervisor.css';
 import './GestionEntrega.css';
 
 export default function Supervisor() {
+  const sesion = leerSesion();
   const [eventos, setEventos] = useState([]);
   const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
   const [participantes, setParticipantes] = useState([]);
@@ -29,7 +31,7 @@ export default function Supervisor() {
   const [busqueda, setBusqueda] = useState('');
   const [alertaToggle, setAlertaToggle] = useState(''); // Mensaje de error interno del modal
 
-  useEffect(() => { api.eventos.listar().then(setEventos); }, []);
+  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
@@ -150,17 +152,21 @@ export default function Supervisor() {
         <div className="pi-sup-header">
           <h2>Punto de Control de Accesos</h2>
         </div>
-        <div className="pi-entrega-eventos-grid">
-          {eventos.map(ev => (
-            <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
-              <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
-              <div className="pi-entrega-evento-info">
-                <strong>{ev.nombre}</strong>
-                <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-              </div>
-            </button>
-          ))}
-        </div>
+        {eventos.length === 0 ? (
+          <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+        ) : (
+          <div className="pi-entrega-eventos-grid">
+            {eventos.map(ev => (
+              <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
+                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <div className="pi-entrega-evento-info">
+                  <strong>{ev.nombre}</strong>
+                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

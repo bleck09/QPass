@@ -309,6 +309,8 @@
 .pi-usr-tabla tbody tr:hover { background-color: var(--gris-niebla); }
 
 .pi-usr-tipo-celda { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.pi-usr-detalle-consumo { color: var(--texto-secundario); font-size: 13px; }
+.pi-usr-detalle-consumo strong { color: var(--texto-principal); }
 .pi-usr-monto-positivo { color: var(--verde-recarga-texto); font-weight: 700; }
 .pi-usr-monto-negativo { color: var(--rojo-error); font-weight: 700; }
 

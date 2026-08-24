@@ -17,6 +17,8 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
   const canvasRef = useRef(null);
   const [error, setError] = useState('');
   const [listo, setListo] = useState(false);
+  const [camaras, setCamaras] = useState([]);
+  const [camaraId, setCamaraId] = useState('');
 
   useEffect(() => {
     let activo = true;
@@ -28,12 +30,32 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
       return () => {};
     }
 
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } })
-      .then((s) => {
+    const constraints = camaraId
+      ? { video: { deviceId: { exact: camaraId }, width: { ideal: 640 }, height: { ideal: 480 } } }
+      : { video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } };
+
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(async (s) => {
         if (!activo) { s.getTracks().forEach(t => t.stop()); return; }
         stream = s;
         videoRef.current.srcObject = s;
         videoRef.current.play();
+
+        // Recién con permiso concedido el navegador entrega los labels de las cámaras.
+        // Si hay más de una, mostramos el selector; con una sola, no hace falta.
+        if (camaras.length === 0) {
+          try {
+            const dispositivos = await navigator.mediaDevices.enumerateDevices();
+            const videos = dispositivos.filter(d => d.kind === 'videoinput');
+            if (activo && videos.length > 1) {
+              setCamaras(videos);
+              const idActual = s.getVideoTracks()[0]?.getSettings().deviceId;
+              if (idActual) setCamaraId(idActual);
+            }
+          } catch {
+            // no se pudo listar cámaras, seguimos con la que ya está activa
+          }
+        }
 
         let yaAvisoListo = false;
         const marcarListo = () => {
@@ -99,21 +121,36 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
       stream?.getTracks().forEach(t => t.stop());
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [camaraId]);
 
   return (
     <div className="pi-escaner-qr">
       {error ? (
         <p className="pi-escaner-qr-error">{error}</p>
       ) : (
-        <div className="pi-escaner-qr-video-wrapper">
-          <video ref={videoRef} playsInline muted className="pi-escaner-qr-video" />
-          <div className={`pi-escaner-qr-marco ${listo ? 'activo' : ''}`}>
-            {listo && <div className="pi-escaner-qr-linea" />}
+        <>
+          {camaras.length > 1 && (
+            <select
+              className="pi-escaner-qr-select-camara"
+              value={camaraId}
+              onChange={(e) => { setListo(false); setCamaraId(e.target.value); }}
+            >
+              {camaras.map((c, i) => (
+                <option key={c.deviceId} value={c.deviceId}>
+                  {c.label || `Cámara ${i + 1}`}
+                </option>
+              ))}
+            </select>
+          )}
+          <div className="pi-escaner-qr-video-wrapper">
+            <video ref={videoRef} playsInline muted className="pi-escaner-qr-video" />
+            <div className={`pi-escaner-qr-marco ${listo ? 'activo' : ''}`}>
+              {listo && <div className="pi-escaner-qr-linea" />}
+            </div>
+            {!listo && <div className="pi-escaner-qr-cargando">Iniciando cámara...</div>}
+            {listo && <span className="pi-escaner-qr-estado">Buscando código...</span>}
           </div>
-          {!listo && <div className="pi-escaner-qr-cargando">Iniciando cámara...</div>}
-          {listo && <span className="pi-escaner-qr-estado">Buscando código...</span>}
-        </div>
+        </>
       )}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       <button type="button" className="pi-escaner-qr-btn-cancelar" onClick={onCancelar}>

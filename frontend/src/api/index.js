@@ -22,6 +22,16 @@ export const eventos = {
   obtener: (id) => apiGet(`/eventos/${id}`),
   crear: (datos) => apiPost('/eventos', datos),
   actualizar: (id, datos) => apiPatch(`/eventos/${id}`, datos),
+  // Solo los eventos donde Admin asignó a este usuario con este rol (Supervisor, Recargador,
+  // Devolucion, UsuarioNegocio): evita que un operador vea/opere eventos que no le tocan.
+  misAsignados: async (usuarioId, rol) => {
+    const [todos, asignados] = await Promise.all([
+      apiGet('/eventos'),
+      apiGet(`/asignaciones${qs({ usuarioId, rol })}`),
+    ]);
+    const idsAsignados = new Set(asignados.map(a => a.eventoId));
+    return todos.filter(ev => idsAsignados.has(ev.id));
+  },
 };
 
 export const asignaciones = {
