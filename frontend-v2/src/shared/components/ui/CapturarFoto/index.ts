@@ -1,0 +1,1 @@
+export { CapturarFoto } from './CapturarFoto';

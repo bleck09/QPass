@@ -1,0 +1,23 @@
+.selector {
+  max-width: 340px;
+  margin-bottom: var(--space-6);
+}
+
+.grid {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  align-items: start;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.pie {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}

@@ -1,0 +1,103 @@
+/* Sidebar — fijo en escritorio; hoja lateral en móvil (Manual 3.3). */
+
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  background: var(--color-superficie);
+  border-right: 1px solid var(--color-borde);
+}
+
+@media (min-width: 64rem) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    height: 100dvh;
+    overflow-y: auto;
+  }
+}
+
+/* Móvil: oculto fuera de pantalla; se muestra como drawer. */
+@media (max-width: 63.99rem) {
+  .sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    width: min(84vw, var(--sidebar-ancho));
+    z-index: var(--z-modal);
+    transform: translateX(-100%);
+    transition: transform var(--duration-normal) var(--ease-out);
+    box-shadow: var(--shadow-xl);
+  }
+  .abierto {
+    transform: translateX(0);
+  }
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-4);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.01em;
+  color: var(--color-text-titulo);
+}
+
+.marca svg {
+  width: 28px;
+  height: 28px;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-3);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secundario);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .item:hover {
+    background: var(--color-superficie-2);
+    color: var(--color-text);
+  }
+}
+
+/* Ítem activo: color + peso + indicador (Manual 3.1), no solo color. */
+.activo {
+  background: var(--color-action-suave);
+  color: var(--color-action-texto);
+  font-weight: var(--weight-semibold);
+  box-shadow: inset 3px 0 0 var(--color-action);
+}
+
+.espaciador {
+  flex: 1;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-overlay);
+  background: var(--color-overlay);
+}
+
+@media (min-width: 64rem) {
+  .overlay {
+    display: none;
+  }
+}

@@ -1,0 +1,9 @@
+.volver {
+  margin-bottom: var(--space-4);
+}
+
+.enlace {
+  font-size: var(--text-sm);
+  color: var(--color-action-texto);
+  font-weight: var(--weight-medium);
+}

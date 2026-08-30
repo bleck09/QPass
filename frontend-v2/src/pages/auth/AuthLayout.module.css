@@ -1,0 +1,48 @@
+.pagina {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  padding: var(--space-6) var(--space-4);
+  background: var(--color-bg-alterno);
+}
+
+.card {
+  width: 100%;
+  max-width: 440px;
+  padding: clamp(var(--space-6), 5vw, var(--space-10));
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-sm);
+}
+
+.ancho {
+  max-width: 560px;
+}
+
+.marca {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-titulo);
+  margin-bottom: var(--space-6);
+}
+
+.marca img {
+  width: 32px;
+  height: 32px;
+}
+
+.titulo {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  margin-bottom: var(--space-1);
+}
+
+.subtitulo {
+  font-size: var(--text-sm);
+  color: var(--color-text-secundario);
+  margin-bottom: var(--space-6);
+}

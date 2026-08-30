@@ -1,0 +1,80 @@
+.detalle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.comprador {
+  font-size: var(--text-sm);
+  color: var(--color-text-secundario);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+}
+
+.comprobante {
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-borde);
+}
+
+.entradas {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  list-style: none;
+  padding: 0;
+  font-size: var(--text-sm);
+}
+
+.entradas li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-superficie-2);
+  border-radius: var(--radius-sm);
+}
+
+.pass {
+  font-family: var(--font-mono);
+  padding: 2px var(--space-2);
+  background: var(--color-aviso-bg);
+  color: var(--color-aviso-texto);
+  border-radius: var(--radius-sm);
+}
+
+.acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-borde);
+}
+
+.botones {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+@media (max-width: 30rem) {
+  .botones {
+    flex-direction: column-reverse;
+  }
+  .botones > * {
+    width: 100%;
+  }
+}

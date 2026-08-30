@@ -1,0 +1,41 @@
+.grid {
+  display: grid;
+  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+
+.enlace {
+  text-decoration: none;
+}
+
+.enlace :global(.card),
+.enlace > * {
+  transition:
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+@media (hover: hover) {
+  .enlace:hover > * {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
+  }
+}
+
+.label {
+  font-size: var(--text-sm);
+  color: var(--color-text-secundario);
+}
+
+.valor {
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-titulo);
+  line-height: 1.1;
+  margin: var(--space-2) 0;
+}
+
+.nota {
+  font-size: var(--text-xs);
+  color: var(--color-text-ayuda);
+}

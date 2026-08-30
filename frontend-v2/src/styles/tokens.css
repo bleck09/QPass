@@ -1,0 +1,286 @@
+/* ============================================================================
+ * tokens.css — Sistema de diseño de QPass.
+ * Anexo A (color) + Manual UI/UX 2026 (Partes 4, 5, 7, 16, 20).
+ *
+ * 3 niveles de token:
+ *   NIVEL 1 (primitivos): --teal-500, --space-4 ... valor crudo, sin significado.
+ *   NIVEL 2 (semánticos): --color-action, --color-text ... apuntan al nivel 1.
+ *   NIVEL 3 (componente): viven en cada *.module.css y apuntan al nivel 2.
+ * En los componentes SOLO se usan tokens de nivel 2 o 3. Nunca --teal-500 directo.
+ * ========================================================================= */
+
+:root {
+  /* ---------------------------------------------------------------------
+   * NIVEL 1 — PRIMITIVOS
+   * ------------------------------------------------------------------- */
+
+  /* Primario: TEAL, hue 195° en OKLCH. Escala perceptualmente uniforme
+   * (L baja pareja, C sube al centro). Ver Anexo A A6. */
+  --teal-50: oklch(0.98 0.015 195);
+  --teal-100: oklch(0.95 0.032 195);
+  --teal-200: oklch(0.9 0.055 195);
+  --teal-300: oklch(0.83 0.082 195);
+  --teal-400: oklch(0.74 0.105 195);
+  --teal-500: oklch(0.66 0.118 195); /* base de marca */
+  --teal-600: oklch(0.57 0.115 195); /* fondo del botón primario (contraste OK con blanco) */
+  --teal-700: oklch(0.48 0.098 195); /* activo / texto de color */
+  --teal-800: oklch(0.39 0.076 195);
+  --teal-900: oklch(0.3 0.055 195);
+  --teal-950: oklch(0.22 0.04 195);
+
+  /* Neutrales TINTADOS con el tono del primario (croma 0.004–0.018).
+   * Es lo que hace que la interfaz se sienta de una pieza (Anexo A A6). */
+  --gray-0: oklch(1 0 0); /* blanco puro */
+  --gray-50: oklch(0.985 0.004 195);
+  --gray-100: oklch(0.968 0.006 195);
+  --gray-200: oklch(0.925 0.009 195); /* borde estándar */
+  --gray-300: oklch(0.87 0.012 195); /* borde de input */
+  --gray-400: oklch(0.71 0.015 195); /* placeholder, icono apagado */
+  --gray-500: oklch(0.6 0.016 195); /* texto secundario (mínimo legible) */
+  --gray-600: oklch(0.5 0.017 195); /* texto de apoyo */
+  --gray-700: oklch(0.41 0.016 195); /* cuerpo alterno / label */
+  --gray-800: oklch(0.32 0.014 195); /* subtítulos */
+  --gray-900: oklch(0.23 0.012 195); /* texto principal */
+  --gray-950: oklch(0.17 0.012 195); /* fondo de marca oscuro */
+
+  /* Semánticos — Anexo A A9, valores fijos. No rediseñar. */
+  --green-50: #f0fdf4;
+  --green-500: #16a34a;
+  --green-600: #15803d;
+  --green-700: #166534;
+
+  --red-50: #fef2f2;
+  --red-400: #f87171;
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+  --red-700: #b91c1c;
+
+  --amber-50: #fffbeb;
+  --amber-500: #d97706;
+  --amber-600: #b45309;
+  --amber-700: #92400e;
+
+  --blue-50: #eff6ff;
+  --blue-400: #60a5fa;
+  --blue-500: #2563eb;
+  --blue-600: #1d4ed8;
+  --blue-700: #1e40af;
+
+  /* Tipografía fluida (Manual 5.2). clamp(min, preferido, max). */
+  --font-body:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+    Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'Roboto Mono', monospace;
+
+  --text-xs: clamp(0.75rem, 0.73rem + 0.1vw, 0.8125rem);
+  --text-sm: clamp(0.875rem, 0.85rem + 0.15vw, 0.9375rem);
+  --text-base: clamp(1rem, 0.96rem + 0.2vw, 1.0625rem);
+  --text-lg: clamp(1.125rem, 1.05rem + 0.4vw, 1.375rem);
+  --text-xl: clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem);
+  --text-2xl: clamp(1.75rem, 1.45rem + 1.4vw, 2.5rem);
+  --text-3xl: clamp(2.25rem, 1.7rem + 2.5vw, 3.5rem);
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* Espaciado base 4/8 (Manual 4.1). Prohibido inventar valores fuera de esto. */
+  --space-0: 0;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Forma (Manual 7.3). */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Sombras — nunca negro puro; tono del primario con alpha (Anexo A A7). */
+  --shadow-xs: 0 1px 2px oklch(0.23 0.012 195 / 0.06);
+  --shadow-sm:
+    0 1px 3px oklch(0.23 0.012 195 / 0.1), 0 1px 2px oklch(0.23 0.012 195 / 0.06);
+  --shadow-md:
+    0 4px 8px -2px oklch(0.23 0.012 195 / 0.1),
+    0 2px 4px -2px oklch(0.23 0.012 195 / 0.06);
+  --shadow-lg:
+    0 12px 16px -4px oklch(0.23 0.012 195 / 0.08),
+    0 4px 6px -2px oklch(0.23 0.012 195 / 0.04);
+  --shadow-xl: 0 20px 24px -4px oklch(0.23 0.012 195 / 0.1);
+
+  /* Movimiento (Manual 7.3, 13.1). */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+
+  /* Elevación (Manual 7.3). Prohibido z-index: 9999 en cualquier parte. */
+  --z-base: 0;
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-overlay: 1200;
+  --z-modal: 1300;
+  --z-popover: 1400;
+  --z-toast: 1500;
+
+  /* Layout */
+  --contenedor-max: 1280px;
+  --lectura-max: 68ch;
+  --sidebar-ancho: 260px;
+  --header-alto: 60px;
+
+  /* ---------------------------------------------------------------------
+   * NIVEL 2 — SEMÁNTICOS (modo claro)
+   * ------------------------------------------------------------------- */
+
+  --color-bg: var(--gray-0);
+  --color-bg-alterno: var(--gray-50);
+  --color-superficie: var(--gray-0);
+  --color-superficie-2: var(--gray-50);
+  --color-superficie-elevada: var(--gray-0);
+  --color-overlay: oklch(0.17 0.012 195 / 0.5);
+
+  --color-borde: var(--gray-200);
+  --color-borde-fuerte: var(--gray-300);
+  --color-borde-input: var(--gray-300);
+
+  --color-text: var(--gray-900);
+  --color-text-titulo: var(--gray-900);
+  --color-text-subtitulo: var(--gray-800);
+  --color-text-secundario: var(--gray-600);
+  --color-text-ayuda: var(--gray-500);
+  --color-text-desactivado: var(--gray-400);
+  --color-text-sobre-color: var(--gray-0);
+
+  /* Primario / acción */
+  --color-action: var(--teal-600);
+  --color-action-hover: var(--teal-700);
+  --color-action-activo: var(--teal-800);
+  --color-action-suave: var(--teal-50);
+  --color-action-suave-hover: var(--teal-100);
+  --color-action-texto: var(--teal-700);
+  --color-foco: var(--teal-600);
+
+  /* Semánticos */
+  --color-exito: var(--green-500);
+  --color-exito-bg: var(--green-50);
+  --color-exito-texto: var(--green-600);
+  --color-error: var(--red-600);
+  --color-error-bg: var(--red-50);
+  --color-error-texto: var(--red-700);
+  --color-aviso: var(--amber-500);
+  --color-aviso-bg: var(--amber-50);
+  --color-aviso-texto: var(--amber-600);
+  --color-info: var(--blue-500);
+  --color-info-bg: var(--blue-50);
+  --color-info-texto: var(--blue-600);
+
+  --color-desactivado-bg: var(--gray-200);
+  --color-icono: var(--gray-600);
+  --color-icono-decorativo: var(--gray-400);
+
+  color-scheme: light;
+}
+
+/* ============================================================================
+ * MODO OSCURO — traducción (Anexo A A12), no inversión.
+ * Se activa por preferencia del sistema o por data-theme="dark" en <html>.
+ * ========================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-bg: var(--gray-950);
+    --color-bg-alterno: var(--gray-900);
+    --color-superficie: var(--gray-900);
+    --color-superficie-2: oklch(0.2 0.012 195);
+    --color-superficie-elevada: oklch(0.26 0.013 195);
+    --color-overlay: oklch(0.1 0.01 195 / 0.6);
+
+    --color-borde: oklch(0.32 0.014 195);
+    --color-borde-fuerte: oklch(0.4 0.015 195);
+    --color-borde-input: oklch(0.4 0.015 195);
+
+    --color-text: oklch(0.93 0.006 195);
+    --color-text-titulo: oklch(0.95 0.005 195);
+    --color-text-subtitulo: oklch(0.88 0.006 195);
+    --color-text-secundario: oklch(0.72 0.012 195);
+    --color-text-ayuda: oklch(0.64 0.014 195);
+    --color-text-desactivado: var(--gray-500);
+
+    --color-action: var(--teal-500);
+    --color-action-hover: var(--teal-400);
+    --color-action-activo: var(--teal-300);
+    --color-action-suave: oklch(0.3 0.055 195 / 0.25);
+    --color-action-suave-hover: oklch(0.3 0.055 195 / 0.4);
+    --color-action-texto: var(--teal-300);
+    --color-foco: var(--teal-400);
+
+    --color-error: var(--red-400);
+    --color-error-texto: var(--red-400);
+    --color-info: var(--blue-400);
+    --color-info-texto: var(--blue-400);
+
+    --color-desactivado-bg: oklch(0.32 0.014 195);
+    --color-icono: oklch(0.72 0.012 195);
+    --color-icono-decorativo: var(--gray-500);
+
+    color-scheme: dark;
+  }
+}
+
+/* Toggle manual: gana sobre la preferencia del sistema en ambos sentidos. */
+:root[data-theme='dark'] {
+  --color-bg: var(--gray-950);
+  --color-bg-alterno: var(--gray-900);
+  --color-superficie: var(--gray-900);
+  --color-superficie-2: oklch(0.2 0.012 195);
+  --color-superficie-elevada: oklch(0.26 0.013 195);
+  --color-overlay: oklch(0.1 0.01 195 / 0.6);
+
+  --color-borde: oklch(0.32 0.014 195);
+  --color-borde-fuerte: oklch(0.4 0.015 195);
+  --color-borde-input: oklch(0.4 0.015 195);
+
+  --color-text: oklch(0.93 0.006 195);
+  --color-text-titulo: oklch(0.95 0.005 195);
+  --color-text-subtitulo: oklch(0.88 0.006 195);
+  --color-text-secundario: oklch(0.72 0.012 195);
+  --color-text-ayuda: oklch(0.64 0.014 195);
+  --color-text-desactivado: var(--gray-500);
+
+  --color-action: var(--teal-500);
+  --color-action-hover: var(--teal-400);
+  --color-action-activo: var(--teal-300);
+  --color-action-suave: oklch(0.3 0.055 195 / 0.25);
+  --color-action-suave-hover: oklch(0.3 0.055 195 / 0.4);
+  --color-action-texto: var(--teal-300);
+  --color-foco: var(--teal-400);
+
+  --color-error: var(--red-400);
+  --color-error-texto: var(--red-400);
+  --color-info: var(--blue-400);
+  --color-info-texto: var(--blue-400);
+
+  --color-desactivado-bg: oklch(0.32 0.014 195);
+  --color-icono: oklch(0.72 0.012 195);
+  --color-icono-decorativo: var(--gray-500);
+
+  color-scheme: dark;
+}

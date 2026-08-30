@@ -1,0 +1,77 @@
+.detalle {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.cliente {
+  font-size: var(--text-sm);
+  color: var(--color-text-secundario);
+}
+
+.datos {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: 1fr 1fr;
+}
+
+.datos .ancho {
+  grid-column: 1 / -1;
+}
+
+.datos dt {
+  font-size: var(--text-xs);
+  color: var(--color-text-ayuda);
+}
+
+.datos dd {
+  font-size: var(--text-sm);
+}
+
+.bloque h4 {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-2);
+}
+
+.bloque ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-left: var(--space-4);
+  font-size: var(--text-sm);
+  color: var(--color-text-secundario);
+}
+
+.acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-borde);
+}
+
+.botones {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+@media (max-width: 30rem) {
+  .datos {
+    grid-template-columns: 1fr;
+  }
+  .botones {
+    flex-direction: column-reverse;
+  }
+  .botones > * {
+    width: 100%;
+  }
+}

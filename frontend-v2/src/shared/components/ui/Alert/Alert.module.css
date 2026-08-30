@@ -1,0 +1,42 @@
+/* Anexo A A7: fondo tono-50 + borde izq 4px tono-500 + icono tono-600 +
+ * título tono-900 + texto tono-800. */
+.alerta {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border-left: 4px solid;
+  font-size: var(--text-sm);
+}
+
+.icono {
+  flex-shrink: 0;
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-normal);
+}
+
+.titulo {
+  font-weight: var(--weight-semibold);
+  margin-bottom: 2px;
+}
+
+.info {
+  background: var(--color-info-bg);
+  border-left-color: var(--color-info);
+  color: var(--color-info-texto);
+}
+.exito {
+  background: var(--color-exito-bg);
+  border-left-color: var(--color-exito);
+  color: var(--color-exito-texto);
+}
+.aviso {
+  background: var(--color-aviso-bg);
+  border-left-color: var(--color-aviso);
+  color: var(--color-aviso-texto);
+}
+.error {
+  background: var(--color-error-bg);
+  border-left-color: var(--color-error);
+  color: var(--color-error-texto);
+}

@@ -1,0 +1,1 @@
+export { EscanerQr } from './EscanerQr';

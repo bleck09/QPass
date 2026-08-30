@@ -1,0 +1,29 @@
+.shell {
+  display: grid;
+  grid-template-columns: 1fr;
+  min-height: 100dvh;
+  background: var(--color-bg-alterno);
+}
+
+@media (min-width: 64rem) {
+  .shell {
+    grid-template-columns: var(--sidebar-ancho) 1fr;
+  }
+}
+
+.main {
+  min-width: 0;
+  padding: var(--space-6) clamp(var(--space-4), 3vw, var(--space-10));
+  padding-bottom: var(--space-16);
+}
+
+@media (min-width: 64rem) {
+  .main {
+    padding-top: var(--space-8);
+  }
+}
+
+.contenido {
+  max-width: var(--contenedor-max);
+  margin-inline: auto;
+}

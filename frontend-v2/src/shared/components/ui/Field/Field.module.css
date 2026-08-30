@@ -1,0 +1,76 @@
+/* Campo de formulario — Manual 8.3. Label arriba, 44px, borde visible,
+ * hint y error debajo. */
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.label {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--color-text-subtitulo);
+}
+
+.opcional {
+  margin-left: var(--space-1);
+  font-weight: var(--weight-regular);
+  color: var(--color-text-ayuda);
+}
+
+.control {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-3) var(--space-4);
+  font-size: 1rem; /* nunca menos: iOS haría zoom */
+  color: var(--color-text);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde-input);
+  border-radius: var(--radius-md);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.control::placeholder {
+  color: var(--color-text-desactivado);
+}
+
+.control:focus-visible {
+  outline: 2px solid var(--color-foco);
+  outline-offset: 2px;
+}
+
+.control:disabled {
+  background: var(--color-superficie-2);
+  color: var(--color-text-desactivado);
+  cursor: not-allowed;
+}
+
+.textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.invalido {
+  border-color: var(--color-error);
+}
+
+.hint {
+  font-size: var(--text-sm);
+  color: var(--color-text-ayuda);
+}
+
+.error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-error-texto);
+}
+
+.error::before {
+  content: '⚠';
+  font-size: 0.9em;
+}

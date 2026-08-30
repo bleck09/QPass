@@ -1,0 +1,25 @@
+.encabezado {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.descripcion {
+  font-size: var(--text-sm);
+  color: var(--color-text-secundario);
+  max-width: 60ch;
+}
+
+.accion {
+  flex-shrink: 0;
+}
+
+@media (max-width: 30rem) {
+  .accion,
+  .accion > * {
+    width: 100%;
+  }
+}

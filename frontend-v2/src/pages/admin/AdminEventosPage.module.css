@@ -1,0 +1,6 @@
+/* Grid intrínseco: se acomoda solo, sin media queries (Manual 4.3). */
+.grid {
+  display: grid;
+  gap: var(--space-6);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}

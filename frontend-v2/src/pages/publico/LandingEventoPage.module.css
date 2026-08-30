@@ -1,0 +1,141 @@
+.pagina {
+  min-height: 100dvh;
+  background: var(--l-fondo);
+  color: var(--l-parrafo);
+}
+
+.centro {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.hero {
+  background-size: cover;
+  background-position: center;
+  background-color: color-mix(in oklab, var(--l-fondo), black 20%);
+}
+
+.heroContenido {
+  max-width: 900px;
+  margin-inline: auto;
+  padding: clamp(var(--space-16), 14vw, var(--space-24)) var(--space-6);
+  text-align: center;
+}
+
+.titulo {
+  color: var(--l-titulo);
+  font-size: var(--text-3xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.02em;
+}
+
+.lugar {
+  margin-top: var(--space-3);
+  color: var(--l-parrafo);
+  font-size: var(--text-lg);
+}
+
+.cta {
+  display: inline-block;
+  margin-top: var(--space-8);
+  padding: var(--space-4) var(--space-8);
+  border-radius: var(--radius-md);
+  background: var(--l-boton);
+  color: var(--l-fondo);
+  font-weight: var(--weight-semibold);
+  text-decoration: none;
+}
+
+.main {
+  max-width: 800px;
+  margin-inline: auto;
+  padding: var(--space-16) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+.info {
+  font-size: var(--text-lg);
+  line-height: var(--leading-normal);
+}
+
+.seccion h2 {
+  color: var(--l-titulo);
+  font-size: var(--text-xl);
+  margin-bottom: var(--space-5);
+}
+
+.tickets,
+.cronograma {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tickets li,
+.cronograma li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: color-mix(in oklab, var(--l-fondo), white 8%);
+  border-radius: var(--radius-md);
+}
+
+.precio {
+  color: var(--l-primario);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.hora {
+  color: var(--l-primario);
+  font-weight: var(--weight-semibold);
+  min-width: 5ch;
+}
+
+.actividades {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.actividad {
+  padding: var(--space-5);
+  background: color-mix(in oklab, var(--l-fondo), white 8%);
+  border-radius: var(--radius-lg);
+}
+
+.actividad h3 {
+  color: var(--l-titulo);
+  font-size: var(--text-base);
+  margin-bottom: var(--space-2);
+}
+
+.icono {
+  font-size: var(--text-2xl);
+  display: block;
+  margin-bottom: var(--space-2);
+}
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  max-width: 800px;
+  margin-inline: auto;
+  padding: var(--space-8) var(--space-6);
+  border-top: 1px solid color-mix(in oklab, var(--l-fondo), white 12%);
+  font-size: var(--text-sm);
+}
+
+.footer a {
+  color: var(--l-parrafo);
+  text-decoration: none;
+  font-weight: var(--weight-bold);
+}

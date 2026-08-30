@@ -1,0 +1,60 @@
+.tarjeta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde);
+  border-radius: var(--radius-lg);
+}
+
+.cabecera {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.foto {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  background: var(--color-action-suave);
+  color: var(--color-action-texto);
+  display: grid;
+  place-items: center;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+}
+
+.nombre {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.sub {
+  font-size: var(--text-sm);
+  color: var(--color-text-secundario);
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.saldo {
+  font-size: var(--text-sm);
+  color: var(--color-text-secundario);
+}
+
+.acciones {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-borde);
+}
