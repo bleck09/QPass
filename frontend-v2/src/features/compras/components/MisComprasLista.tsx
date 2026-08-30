@@ -17,9 +17,11 @@ interface MisComprasListaProps {
   compras: Compra[];
   /** Habilita "Reportar dato" en las entradas de compras confirmadas. */
   onReportar?: (compraId: string, entradaId: string) => void;
+  /** Habilita "Revisar / corregir" en las compras pendientes. */
+  onRevisar?: (compra: Compra) => void;
 }
 
-export function MisComprasLista({ compras, onReportar }: MisComprasListaProps) {
+export function MisComprasLista({ compras, onReportar, onRevisar }: MisComprasListaProps) {
   return (
     <div className={styles.lista}>
       {compras.map((c) => (
@@ -36,6 +38,14 @@ export function MisComprasLista({ compras, onReportar }: MisComprasListaProps) {
             <Alert tipo="error" titulo="Motivo del rechazo">
               {c.motivoRechazo}
             </Alert>
+          )}
+
+          {onRevisar && c.estado === 'pendiente' && (
+            <div className={styles.revisar}>
+              <Button variante="secundario" tamano="sm" onClick={() => onRevisar(c)}>
+                Revisar / corregir datos
+              </Button>
+            </div>
           )}
 
           <ul className={styles.entradas}>

@@ -12,6 +12,7 @@ export { EncabezadoPagina } from './EncabezadoPagina';
 export { SubirImagen } from './SubirImagen';
 export { ColorInput } from './ColorInput';
 export { EscanerQr } from './EscanerQr';
+export { CodigoQr } from './CodigoQr';
 export { CapturarFoto } from './CapturarFoto';
 export { Tabs, type Tab } from './Tabs';
 export { Podio, type ItemPodio } from './Podio';

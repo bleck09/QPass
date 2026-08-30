@@ -4,25 +4,14 @@
  * El título de cada pantalla se pone con useTituloPagina() (LayoutContext).
  * ========================================================================= */
 
-import { createContext, useContext, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { useSesion } from '@/features/auth';
 import { ROL_LABEL } from '@/shared/constants/roles';
 import { Sidebar } from './Sidebar';
 import { Header } from './Header';
+import { LayoutContext, type LayoutCtx } from './layout-context';
 import styles from './AppLayout.module.css';
-
-interface LayoutCtx {
-  setTitulo: (t: string) => void;
-}
-
-const LayoutContext = createContext<LayoutCtx | null>(null);
-
-export function useLayout(): LayoutCtx {
-  const ctx = useContext(LayoutContext);
-  if (!ctx) throw new Error('useLayout debe usarse dentro de <AppLayout>');
-  return ctx;
-}
 
 const CLAVE_COLAPSADO = 'qpass_sidebar_colapsado';
 

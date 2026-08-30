@@ -1,4 +1,6 @@
 export { PuestoCard } from './PuestoCard';
+export { MapaRecintoPanel } from './components/MapaRecintoPanel';
+export { MapaRecintoPublico } from './components/MapaRecintoPublico';
 export {
   usePuestos,
   useProductosDePuesto,

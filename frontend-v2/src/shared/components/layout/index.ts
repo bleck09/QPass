@@ -1,1 +1,2 @@
-export { AppLayout, useLayout } from './AppLayout';
+export { AppLayout } from './AppLayout';
+export { useLayout } from './layout-context';

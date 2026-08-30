@@ -1,29 +1,13 @@
 /* ============================================================================
- * SesionContext — estado de sesión del usuario (token + datos), único en la app.
- * Se inicializa desde localStorage y se sincroniza al iniciar/cerrar sesión.
+ * SesionProvider — estado de sesión del usuario (token + datos), único en la
+ * app. Se inicializa desde localStorage y se sincroniza al iniciar/cerrar
+ * sesión. El objeto de contexto y el hook useSesion viven en ./sesion-context.
  * ========================================================================= */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type ReactNode,
-} from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { storage, type Sesion } from '@/lib/storage';
 import type { UsuarioAutenticado } from '../types/auth.types';
-
-interface SesionContextValor {
-  usuario: UsuarioAutenticado | null;
-  estaAutenticado: boolean;
-  iniciarSesion: (sesion: Sesion) => void;
-  cerrarSesion: () => void;
-  /** Actualiza campos del usuario en sesión (ej. tras editar el perfil). */
-  actualizarUsuario: (parcial: Partial<UsuarioAutenticado>) => void;
-}
-
-const SesionContext = createContext<SesionContextValor | null>(null);
+import { SesionContext, type SesionContextValor } from './sesion-context';
 
 export function SesionProvider({ children }: { children: ReactNode }) {
   const [sesion, setSesion] = useState<Sesion | null>(() => storage.leerSesion());
@@ -65,10 +49,4 @@ export function SesionProvider({ children }: { children: ReactNode }) {
   );
 
   return <SesionContext.Provider value={valor}>{children}</SesionContext.Provider>;
-}
-
-export function useSesion(): SesionContextValor {
-  const ctx = useContext(SesionContext);
-  if (!ctx) throw new Error('useSesion debe usarse dentro de <SesionProvider>');
-  return ctx;
 }

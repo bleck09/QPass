@@ -1,0 +1,17 @@
+.qr {
+  display: block;
+  /* El QR debe ir sobre blanco para que un lector lo capte; no es un color de
+     tema, es un requisito funcional del formato. */
+  background: #fff;
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  image-rendering: pixelated;
+}
+
+.fallback {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  word-break: break-all;
+  color: var(--color-text-secundario);
+}

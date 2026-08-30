@@ -1,12 +1,24 @@
 /* ============================================================================
- * ClienteEventosPage (/cliente) — el Cliente ve sus solicitudes de evento y
- * puede crear una nueva o editar las que sigan pendientes/rechazadas.
+ * ClienteEventosPage (/cliente) — el Cliente gestiona sus solicitudes de evento
+ * y, en una segunda pestaña, ve el dashboard (solo lectura) de sus eventos
+ * aprobados.
  * ========================================================================= */
 
 import { useState } from 'react';
-import { Button, EncabezadoPagina, Modal } from '@/shared/components/ui';
+import {
+  Button,
+  EncabezadoPagina,
+  Modal,
+  Select,
+  Tabs,
+  type Tab,
+} from '@/shared/components/ui';
 import { EstadoCargando, EstadoError, EstadoVacio } from '@/shared/components/feedback';
 import { useTituloPagina } from '@/shared/hooks/useTituloPagina';
+import { ROLES } from '@/shared/constants/roles';
+import { useSesion } from '@/features/auth';
+import { useMisEventosAsignados } from '@/features/eventos';
+import { DashboardEvento } from '@/features/dashboard';
 import {
   SolicitudCard,
   SolicitudForm,
@@ -22,12 +34,21 @@ type Dialogo =
   | { tipo: 'editar'; solicitud: SolicitudEvento }
   | null;
 
+const TABS: Tab[] = [
+  { id: 'solicitudes', label: 'Mis solicitudes' },
+  { id: 'dashboard', label: 'Dashboard del evento' },
+];
+
 export function ClienteEventosPage() {
   useTituloPagina('Mis eventos');
+  const { usuario } = useSesion();
 
+  const [tab, setTab] = useState('solicitudes');
   const { data: solicitudes, isPending, isError, refetch } = useSolicitudes();
-  const [dialogo, setDialogo] = useState<Dialogo>(null);
+  const misEventos = useMisEventosAsignados(usuario?.id, ROLES.CLIENTE);
+  const [eventoId, setEventoId] = useState('');
 
+  const [dialogo, setDialogo] = useState<Dialogo>(null);
   const crear = useCrearSolicitud();
   const editar = useActualizarSolicitud(
     dialogo?.tipo === 'editar' ? dialogo.solicitud.id : '',
@@ -48,30 +69,69 @@ export function ClienteEventosPage() {
         }
       />
 
-      {isPending && <EstadoCargando filas={3} />}
-      {isError && (
-        <EstadoError mensaje="No pudimos cargar tus solicitudes." onReintentar={refetch} />
-      )}
-      {solicitudes && solicitudes.length === 0 && (
-        <EstadoVacio
-          titulo="Aún no tienes solicitudes"
-          descripcion="Crea la primera para proponer tu evento."
-          accion={
-            <Button onClick={() => setDialogo({ tipo: 'crear' })}>Solicitar evento</Button>
-          }
-        />
-      )}
-      {solicitudes && solicitudes.length > 0 && (
-        <div className={styles.grid}>
-          {solicitudes.map((s) => (
-            <SolicitudCard
-              key={s.id}
-              solicitud={s}
-              onEditar={(sol) => setDialogo({ tipo: 'editar', solicitud: sol })}
+      <Tabs tabs={TABS} activa={tab} onCambiar={setTab}>
+        {tab === 'solicitudes' && (
+          <>
+            {isPending && <EstadoCargando filas={3} />}
+            {isError && (
+              <EstadoError
+                mensaje="No pudimos cargar tus solicitudes."
+                onReintentar={refetch}
+              />
+            )}
+            {solicitudes && solicitudes.length === 0 && (
+              <EstadoVacio
+                titulo="Aún no tienes solicitudes"
+                descripcion="Crea la primera para proponer tu evento."
+                accion={
+                  <Button onClick={() => setDialogo({ tipo: 'crear' })}>
+                    Solicitar evento
+                  </Button>
+                }
+              />
+            )}
+            {solicitudes && solicitudes.length > 0 && (
+              <div className={styles.grid}>
+                {solicitudes.map((s) => (
+                  <SolicitudCard
+                    key={s.id}
+                    solicitud={s}
+                    onEditar={(sol) => setDialogo({ tipo: 'editar', solicitud: sol })}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {tab === 'dashboard' &&
+          (misEventos.isPending ? (
+            <EstadoCargando filas={4} />
+          ) : !misEventos.data || misEventos.data.length === 0 ? (
+            <EstadoVacio
+              titulo="Todavía no tienes un evento activo"
+              descripcion="Cuando el administrador apruebe tu solicitud, aquí verás su actividad."
             />
+          ) : (
+            <div className={styles.dash}>
+              <div className={styles.selector}>
+                <Select
+                  label="Evento"
+                  value={eventoId}
+                  onChange={(e) => setEventoId(e.target.value)}
+                >
+                  <option value="">Selecciona un evento…</option>
+                  {misEventos.data.map((ev) => (
+                    <option key={ev.id} value={ev.id}>
+                      {ev.nombre}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {eventoId && <DashboardEvento eventoId={eventoId} soloLectura />}
+            </div>
           ))}
-        </div>
-      )}
+      </Tabs>
 
       <Modal
         abierto={dialogo !== null}

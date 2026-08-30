@@ -1,6 +1,6 @@
 /* ============================================================================
  * LandingEventoPage (/evento/:id) — página pública del evento, con los colores
- * definidos por el organizador. No usa el layout ni los tokens de la app.
+ * definidos por el organizador. No usa el layout de la app.
  * ========================================================================= */
 
 import { Link, useParams } from 'react-router-dom';
@@ -8,9 +8,10 @@ import { Spinner } from '@/shared/components/ui';
 import { formatearFechaHora } from '@/shared/utils/formatearFecha';
 import { formatearMoneda } from '@/shared/utils/formatearMoneda';
 import { RUTAS } from '@/shared/constants/rutas';
-import { useEvento } from '@/features/eventos';
+import { ContadorRegresivo, useEvento } from '@/features/eventos';
 import { useCategoriasTicket } from '@/features/categorias-ticket';
 import { useLandingConfig } from '@/features/landing-config';
+import { usePuestos, MapaRecintoPublico } from '@/features/puestos';
 import styles from './LandingEventoPage.module.css';
 
 export function LandingEventoPage() {
@@ -18,6 +19,7 @@ export function LandingEventoPage() {
   const evento = useEvento(id);
   const landing = useLandingConfig(id);
   const categorias = useCategoriasTicket(id);
+  const puestos = usePuestos(id);
 
   if (evento.isPending || landing.isPending) {
     return (
@@ -37,6 +39,13 @@ export function LandingEventoPage() {
   }
 
   const l = landing.data;
+  const ev = evento.data;
+  const cats = categorias.data ?? [];
+  const puestosActivos = (puestos.data ?? []).filter((p) => p.estadoActivo);
+  // Sin campo "destacado" en el backend: se recomienda la del medio si hay 3+.
+  const idxRecomendado = cats.length >= 3 ? 1 : -1;
+  const fecha = new Date(ev.fecha);
+
   const estilo = {
     '--l-fondo': l?.colorFondo ?? '#0b1120',
     '--l-primario': l?.colorPrimario ?? '#0f7d8c',
@@ -47,6 +56,37 @@ export function LandingEventoPage() {
 
   return (
     <div className={styles.pagina} style={estilo}>
+      <nav className={styles.navbar}>
+        <Link to={RUTAS.INICIO} className={styles.marca}>
+          QPass
+        </Link>
+        <ul className={styles.navLinks}>
+          {cats.length > 0 && (
+            <li>
+              <a href="#entradas">Entradas</a>
+            </li>
+          )}
+          {l?.actividades && l.actividades.length > 0 && (
+            <li>
+              <a href="#actividades">Actividades</a>
+            </li>
+          )}
+          {puestosActivos.length > 0 && (
+            <li>
+              <a href="#mapa">Mapa</a>
+            </li>
+          )}
+          {l?.cronograma && l.cronograma.length > 0 && (
+            <li>
+              <a href="#cronograma">Cronograma</a>
+            </li>
+          )}
+        </ul>
+        <Link to={RUTAS.LOGIN} className={styles.navCta}>
+          Iniciar sesión
+        </Link>
+      </nav>
+
       <header
         className={styles.hero}
         style={
@@ -58,9 +98,9 @@ export function LandingEventoPage() {
         }
       >
         <div className={styles.heroContenido}>
-          <h1 className={styles.titulo}>{l?.titulo ?? evento.data.nombre}</h1>
+          <h1 className={styles.titulo}>{l?.titulo ?? ev.nombre}</h1>
           <p className={styles.lugar}>
-            {evento.data.lugar} · {formatearFechaHora(evento.data.fecha)}
+            {ev.lugar} · {formatearFechaHora(ev.fecha)}
           </p>
           <Link to={RUTAS.LOGIN} className={styles.cta}>
             Iniciar sesión para comprar
@@ -71,14 +111,29 @@ export function LandingEventoPage() {
       <main className={styles.main}>
         {l?.informacion && <p className={styles.info}>{l.informacion}</p>}
 
-        {categorias.data && categorias.data.length > 0 && (
-          <section className={styles.seccion}>
+        <section className={styles.seccion}>
+          <div className={styles.fechaGigante}>
+            <span className={styles.fechaNum}>{fecha.getDate()}</span>
+            <span className={styles.fechaMes}>
+              {fecha.toLocaleDateString('es-BO', { month: 'long' })}
+            </span>
+          </div>
+          <div className={styles.contadorWrap}>
+            <ContadorRegresivo fecha={ev.fecha} />
+          </div>
+        </section>
+
+        {cats.length > 0 && (
+          <section id="entradas" className={styles.seccion}>
             <h2>Entradas</h2>
             <ul className={styles.tickets}>
-              {categorias.data.map((c) => (
+              {cats.map((c, i) => (
                 <li key={c.id}>
                   <span>
                     <strong>{c.nombre}</strong>
+                    {i === idxRecomendado && (
+                      <span className={styles.recomendado}>Recomendada</span>
+                    )}
                     {c.descripcion && <span> — {c.descripcion}</span>}
                   </span>
                   <span className={styles.precio}>{formatearMoneda(c.precio)}</span>
@@ -89,7 +144,7 @@ export function LandingEventoPage() {
         )}
 
         {l?.actividades && l.actividades.length > 0 && (
-          <section className={styles.seccion}>
+          <section id="actividades" className={styles.seccion}>
             <h2>Actividades</h2>
             <div className={styles.actividades}>
               {l.actividades.map((a, i) => (
@@ -103,8 +158,18 @@ export function LandingEventoPage() {
           </section>
         )}
 
+        {puestosActivos.length > 0 && (
+          <section id="mapa" className={styles.seccion}>
+            <h2>Mapa del recinto</h2>
+            <p className={styles.info}>
+              Toca un puesto para ver sus productos y precios.
+            </p>
+            <MapaRecintoPublico puestos={puestosActivos} />
+          </section>
+        )}
+
         {l?.cronograma && l.cronograma.length > 0 && (
-          <section className={styles.seccion}>
+          <section id="cronograma" className={styles.seccion}>
             <h2>Cronograma</h2>
             <ul className={styles.cronograma}>
               {l.cronograma.map((c, i) => (

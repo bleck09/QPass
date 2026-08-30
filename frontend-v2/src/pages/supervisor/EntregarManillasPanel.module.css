@@ -7,3 +7,7 @@
 .selector {
   max-width: 340px;
 }
+
+.aviso {
+  color: var(--color-text-secundario);
+}

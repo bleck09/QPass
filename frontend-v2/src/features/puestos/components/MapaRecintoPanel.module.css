@@ -1,0 +1,69 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.barra {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.hint {
+  color: var(--color-text-secundario);
+  font-size: var(--text-sm);
+}
+
+.acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* --- Celda "Elemento" de la lista --- */
+.celdaElemento {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.miniatura,
+.sinMiniatura {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+  object-fit: cover;
+}
+
+.sinMiniatura {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-superficie-2);
+  color: var(--color-icono-decorativo);
+  border: 1px solid var(--color-borde);
+}
+
+/* --- Formulario del modal --- */
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.formFila {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+.pieModal {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}

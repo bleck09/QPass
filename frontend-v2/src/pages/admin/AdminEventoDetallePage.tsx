@@ -14,12 +14,14 @@ import { CategoriaTicketPanel } from '@/features/categorias-ticket';
 import { CodigosQrPanel } from '@/features/codigos-qr';
 import { AsignacionesPanel } from '@/features/asignaciones';
 import { LandingConfigPanel } from '@/features/landing-config';
+import { MapaRecintoPanel } from '@/features/puestos';
 import styles from './AdminEventoDetallePage.module.css';
 
 const TABS: Tab[] = [
   { id: 'tickets', label: 'Categorías de ticket' },
   { id: 'qr', label: 'Códigos QR' },
   { id: 'personal', label: 'Personal' },
+  { id: 'recinto', label: 'Recinto' },
   { id: 'landing', label: 'Landing pública' },
 ];
 
@@ -52,6 +54,7 @@ export function AdminEventoDetallePage() {
           />
         )}
         {tab === 'personal' && <AsignacionesPanel eventoId={evento.id} />}
+        {tab === 'recinto' && <MapaRecintoPanel eventoId={evento.id} />}
         {tab === 'landing' && (
           <LandingConfigPanel eventoId={evento.id} nombreEvento={evento.nombre} />
         )}

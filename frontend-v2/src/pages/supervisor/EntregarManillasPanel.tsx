@@ -150,7 +150,7 @@ export function EntregarManillasPanel() {
         }
       >
         {anular.isError && <Alert tipo="error">{anular.error.mensaje}</Alert>}
-        <p style={{ color: 'var(--color-text-secundario)' }}>
+        <p className={styles.aviso}>
           Se anulará la manilla <strong>{anularA?.codigoQrVinculado?.codigo}</strong>{' '}
           de {anularA?.nombre}. El saldo no se mueve. Luego podrás vincular una
           manilla nueva.

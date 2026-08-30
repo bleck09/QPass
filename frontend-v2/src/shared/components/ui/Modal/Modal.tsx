@@ -4,7 +4,7 @@
  * fondo. El body no scrollea mientras está abierto.
  * ========================================================================= */
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { Button } from '../Button';
 import styles from './Modal.module.css';
 
@@ -29,6 +29,7 @@ export function Modal({
   bloquearCierreFuera = false,
 }: ModalProps) {
   const ref = useRef<HTMLDialogElement>(null);
+  const tituloId = useId();
 
   useEffect(() => {
     const dlg = ref.current;
@@ -59,11 +60,11 @@ export function Modal({
         onCerrar();
       }}
       onClick={handleClicFondo}
-      aria-labelledby="modal-titulo"
+      aria-labelledby={tituloId}
     >
       <div className={styles.panel}>
         <header className={styles.header}>
-          <h2 id="modal-titulo" className={styles.titulo}>
+          <h2 id={tituloId} className={styles.titulo}>
             {titulo}
           </h2>
           <button

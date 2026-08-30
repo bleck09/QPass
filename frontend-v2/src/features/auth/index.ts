@@ -1,5 +1,6 @@
 /* Punto de entrada público de la feature auth. */
-export { SesionProvider, useSesion } from './context/SesionContext';
+export { SesionProvider } from './context/SesionContext';
+export { useSesion } from './context/sesion-context';
 export { LoginForm } from './components/LoginForm';
 export { RegistroForm } from './components/RegistroForm';
 export { RecuperarForm } from './components/RecuperarForm';

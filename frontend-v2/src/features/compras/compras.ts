@@ -1,6 +1,7 @@
 /* Feature compras (compacta). Orden de compra de entradas (titular + invitados),
  * pago manual con comprobante, aprobación del Admin. */
 
+import { useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
@@ -118,6 +119,44 @@ export function useCompras(eventoId?: string) {
     queryKey: COMPRAS_KEYS.lista(eventoId),
     queryFn: () => comprasService.listar(eventoId),
   });
+}
+
+/** Una entrada del usuario en sesión, con los datos de su evento aplanados. */
+export interface MiEntrada extends EntradaCompra {
+  eventoNombre: string;
+  eventoFecha: string;
+  eventoLugar: string;
+  compraId: string;
+}
+
+/**
+ * Entradas del usuario en sesión, derivadas de sus compras confirmadas. El
+ * backend no expone "mis entradas" directo: la fuente real es compras.mias().
+ */
+export function useMisEntradas() {
+  const compras = useMisCompras();
+
+  const data = useMemo<MiEntrada[] | undefined>(() => {
+    if (!compras.data) return undefined;
+    return compras.data
+      .filter((c) => c.estado === 'confirmado')
+      .flatMap((c) =>
+        c.entradas.map((e) => ({
+          ...e,
+          eventoNombre: c.evento?.nombre ?? 'Evento',
+          eventoFecha: c.evento?.fecha ?? '',
+          eventoLugar: c.evento?.lugar ?? '',
+          compraId: c.id,
+        })),
+      );
+  }, [compras.data]);
+
+  return {
+    data,
+    isPending: compras.isPending,
+    isError: compras.isError,
+    refetch: compras.refetch,
+  };
 }
 
 export function useCrearCompra() {

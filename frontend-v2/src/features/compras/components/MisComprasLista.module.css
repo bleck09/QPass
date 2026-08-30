@@ -58,3 +58,7 @@
   text-align: right;
   color: var(--color-text-secundario);
 }
+
+.revisar {
+  margin: var(--space-2) 0 var(--space-3);
+}

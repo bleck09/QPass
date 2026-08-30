@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { RUTAS } from '@/shared/constants/rutas';
 import type { ApiError } from '@/lib/api/errors';
 import { authService } from '../services/auth.service';
-import { useSesion } from '../context/SesionContext';
+import { useSesion } from '../context/sesion-context';
 import type {
   LoginDto,
   RegistroDto,

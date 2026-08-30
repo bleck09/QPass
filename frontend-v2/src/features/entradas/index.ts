@@ -1,5 +1,6 @@
 export { EscanerEntrada } from './components/EscanerEntrada';
 export { TarjetaEntrada } from './components/TarjetaEntrada';
+export { PadronAsistentes } from './components/PadronAsistentes';
 export {
   useEntradas,
   useRegistrosEntrada,

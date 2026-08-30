@@ -32,6 +32,12 @@ export interface Puesto {
   descripcion: string | null;
   logo: string | null;
   categoria: string | null;
+  // Posición y tamaño en el plano del recinto (px lógicos). Los define el Admin
+  // desde el Diseñador del Recinto; el backend guarda el valor tal cual.
+  x: number;
+  y: number;
+  ancho: number;
+  alto: number;
   estadoActivo: boolean;
   createdAt: string;
   productos: Producto[];
@@ -55,7 +61,20 @@ const puestosService = {
   },
   async actualizar(
     id: string,
-    dto: Partial<Pick<Puesto, 'nombre' | 'descripcion' | 'logo' | 'categoria' | 'estadoActivo'>>,
+    dto: Partial<
+      Pick<
+        Puesto,
+        | 'nombre'
+        | 'descripcion'
+        | 'logo'
+        | 'categoria'
+        | 'estadoActivo'
+        | 'x'
+        | 'y'
+        | 'ancho'
+        | 'alto'
+      >
+    >,
   ): Promise<Puesto> {
     const { data } = await apiClient.patch<Puesto>(ENDPOINTS.PUESTOS.ACTUALIZAR(id), dto);
     return data;

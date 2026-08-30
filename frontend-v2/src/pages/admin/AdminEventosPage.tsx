@@ -13,6 +13,7 @@ import {
   Modal,
   Table,
   Td,
+  Textarea,
   Th,
 } from '@/shared/components/ui';
 import { EstadoCargando, EstadoError, EstadoVacio } from '@/shared/components/feedback';
@@ -31,6 +32,7 @@ import {
   useAprobarSolicitud,
   useRechazarSolicitud,
   useSolicitudes,
+  type SolicitudEvento,
 } from '@/features/solicitudes-evento';
 import { useTodasAsignaciones } from '@/features/asignaciones';
 import styles from './AdminEventosPage.module.css';
@@ -49,6 +51,8 @@ export function AdminEventosPage() {
   const [busqueda, setBusqueda] = useState('');
   const [dialogo, setDialogo] = useState<Dialogo>(null);
   const [aFinalizar, setAFinalizar] = useState<Evento | null>(null);
+  const [aRechazar, setARechazar] = useState<SolicitudEvento | null>(null);
+  const [motivoRechazo, setMotivoRechazo] = useState('');
 
   const crear = useCrearEvento();
   const cerrar = useCerrarEvento();
@@ -123,11 +127,8 @@ export function AdminEventosPage() {
                         variante="terciario"
                         tamano="sm"
                         onClick={() => {
-                          const motivo = window.prompt(
-                            'Motivo del rechazo (lo verá el cliente):',
-                          );
-                          if (motivo != null)
-                            rechazar.mutate({ id: s.id, motivoRechazo: motivo });
+                          setMotivoRechazo('');
+                          setARechazar(s);
                         }}
                       >
                         Rechazar
@@ -225,6 +226,40 @@ export function AdminEventosPage() {
         ventas, devoluciones e ingresos/salidas de QR en ese evento. No se puede
         deshacer.
       </ConfirmarModal>
+
+      <Modal
+        abierto={aRechazar !== null}
+        onCerrar={() => setARechazar(null)}
+        titulo="Rechazar solicitud"
+        acciones={
+          <>
+            <Button variante="secundario" onClick={() => setARechazar(null)}>
+              Cancelar
+            </Button>
+            <Button
+              variante="destructivo"
+              cargando={rechazar.isPending}
+              onClick={() =>
+                aRechazar &&
+                rechazar.mutate(
+                  { id: aRechazar.id, motivoRechazo: motivoRechazo.trim() },
+                  { onSuccess: () => setARechazar(null) },
+                )
+              }
+            >
+              Rechazar
+            </Button>
+          </>
+        }
+      >
+        <Textarea
+          label="Motivo del rechazo"
+          hint="Lo verá el cliente en su solicitud."
+          rows={3}
+          value={motivoRechazo}
+          onChange={(e) => setMotivoRechazo(e.target.value)}
+        />
+      </Modal>
     </>
   );
 }

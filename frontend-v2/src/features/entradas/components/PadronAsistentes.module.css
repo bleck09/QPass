@@ -1,0 +1,95 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  font-size: var(--text-sm);
+  color: var(--color-text-secundario);
+}
+
+.statNum {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  color: var(--color-text-titulo);
+  font-variant-numeric: tabular-nums;
+}
+
+.controles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.segmentos {
+  display: inline-flex;
+  border: 1px solid var(--color-borde-fuerte);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.seg,
+.segActivo {
+  min-height: 40px;
+  padding: 0 var(--space-4);
+  border: none;
+  background: var(--color-superficie);
+  color: var(--color-text-secundario);
+  font: inherit;
+  cursor: pointer;
+}
+
+.seg + .seg,
+.seg + .segActivo,
+.segActivo + .seg {
+  border-left: 1px solid var(--color-borde);
+}
+
+.segActivo {
+  background: var(--color-action);
+  color: var(--color-text-sobre-color);
+  font-weight: var(--weight-semibold);
+}
+
+.buscar {
+  flex: 1 1 16rem;
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-size: 1rem;
+  border: 1px solid var(--color-borde-input);
+  border-radius: var(--radius-md);
+  background: var(--color-superficie);
+  color: var(--color-text);
+}
+
+.movimientos {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.movimientos li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  align-items: baseline;
+  padding: var(--space-3);
+  background: var(--color-superficie-2);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+}
+
+.movTipo {
+  font-weight: var(--weight-semibold);
+}
+
+.movPor {
+  color: var(--color-text-secundario);
+}
