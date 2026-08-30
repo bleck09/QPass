@@ -1,1 +1,0 @@
-export { CodigoQr } from './CodigoQr';

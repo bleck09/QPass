@@ -161,6 +161,19 @@ model CambioPassword {
   @@map("cambios_password")
 }
 
+// Idempotencia de operaciones sensibles (recargar/consumir/venta/devolver). Ver Anexo C10.
+// El cliente manda un header `Idempotency-Key` (UUID por intento). Si esa clave ya se
+// procesó, IdempotenciaInterceptor devuelve la respuesta guardada sin repetir la operación.
+// Un cron limpia las filas viejas (24-48hs alcanza para cubrir reintentos de red reales).
+model SolicitudIdempotente {
+  clave     String   @id
+  respuesta Json
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("solicitudes_idempotentes")
+}
+
 // Un Evento se puede crear de DOS formas: (1) Admin lo crea directo, sin pasar por
 // SolicitudEvento — solicitudOrigen queda null; o (2) se crea al aprobar una SolicitudEvento,
 // copiando sus datos — solicitudOrigen queda con esa relación. creadoPorId es siempre el

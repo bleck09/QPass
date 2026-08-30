@@ -1,1 +1,0 @@
-export { SubirImagen } from './SubirImagen';

@@ -8,9 +8,21 @@ services:
       POSTGRES_PASSWORD: qpass
       POSTGRES_DB: qpass
     ports:
-      - "5433:5432"
+      - '5433:5432'
     volumes:
       - qpass_postgres_data:/var/lib/postgresql/data
 
+  # Usado por BullMQ (colas de correo, ver C11). El backend arranca sin Redis;
+  # solo hace falta cuando se activen las colas.
+  redis:
+    image: redis:7
+    container_name: qpass_redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - qpass_redis_data:/data
+
 volumes:
   qpass_postgres_data:
+  qpass_redis_data:

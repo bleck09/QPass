@@ -1,1 +1,0 @@
-export { EncabezadoPagina } from './EncabezadoPagina';
