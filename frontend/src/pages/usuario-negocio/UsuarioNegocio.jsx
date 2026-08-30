@@ -3,12 +3,14 @@ import { useLocation } from 'react-router-dom';
 import {
   FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign,
   FaImage, FaListUl, FaUsers, FaBoxOpen, FaUpload, FaUserTie, FaHamburger,
-  FaUserFriends, FaCalendarAlt
+  FaUserFriends, FaMapMarkerAlt, FaArrowLeft
 } from 'react-icons/fa';
 import './UsuarioNegocio.css';
+import '../supervisor/GestionEntrega.css';
 import UsuNegoCreaAyudante from './UsuNegoCreaAyudante';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
+import { formatearFecha } from '../../utils/eventos.js';
 
 const initialStateFormPuesto = { nombre: '', descripcion: '', logo: '' };
 const initialStateFormProducto = { nombre: '', precio: '', imagen: '' };
@@ -31,7 +33,8 @@ export default function UsuarioNegocio() {
   }
 
   const [eventos, setEventos] = useState([]);
-  const [eventoId, setEventoId] = useState('');
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
+  const eventoId = eventoSeleccionado?.id || '';
   const [puestos, setPuestos] = useState([]);
 
   const [showModalPuesto, setShowModalPuesto] = useState(false);
@@ -43,12 +46,9 @@ export default function UsuarioNegocio() {
   const [formPuesto, setFormPuesto] = useState(initialStateFormPuesto);
   const [formProducto, setFormProducto] = useState(initialStateFormProducto);
 
-  useEffect(() => {
-    api.eventos.listar().then(lista => {
-      setEventos(lista);
-      setEventoId(prev => prev || lista[0]?.id || '');
-    });
-  }, []);
+  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
+
+  const volverALista = () => setEventoSeleccionado(null);
 
   const recargarPuestos = () => {
     if (!eventoId) return;
@@ -138,25 +138,49 @@ export default function UsuarioNegocio() {
     setPuestoSeleccionado({ ...puestoSeleccionado, productos: productosActualizados });
   };
 
+  if (!eventoSeleccionado) {
+    return (
+      <div className="pi-unegocio-container">
+        <div className="pi-unegocio-header-wrapper">
+          <div className="pi-unegocio-header">
+            <h2>Panel de Negocio</h2>
+            <p>Elige el evento en el que quieres administrar tus puestos.</p>
+          </div>
+        </div>
+        {eventos.length === 0 ? (
+          <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+        ) : (
+          <div className="pi-entrega-eventos-grid">
+            {eventos.map(ev => (
+              <button key={ev.id} className="pi-entrega-evento-card" onClick={() => setEventoSeleccionado(ev)}>
+                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <div className="pi-entrega-evento-info">
+                  <strong>{ev.nombre}</strong>
+                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="pi-unegocio-container">
-      
+
       {/* Cabecera y KPI */}
       <div className="pi-unegocio-header-wrapper">
         <div className="pi-unegocio-header">
-          <h2>Panel de Negocio</h2>
+          <button className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={volverALista}>
+            <FaArrowLeft /> Cambiar de evento
+          </button>
+          <h2>{eventoSeleccionado.nombre}</h2>
           <p>
-            {activeTab === 'puestos' 
+            {activeTab === 'puestos'
               ? 'Crea sucursales, administra sus menús y revisa su personal asignado.'
               : 'Gestiona a todo el personal que trabaja en tus puestos.'}
           </p>
-        </div>
-        
-        <div className="pi-unegocio-selector-evento">
-          <FaCalendarAlt />
-          <select value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
-            {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
-          </select>
         </div>
 
         <div className="pi-unegocio-kpi">

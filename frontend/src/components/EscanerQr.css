@@ -5,6 +5,15 @@
   gap: 14px;
 }
 
+.pi-escaner-qr-select-camara {
+  width: 100%;
+  max-width: 320px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--borde-suave, #ddd);
+  font-weight: 600;
+}
+
 .pi-escaner-qr-video-wrapper {
   position: relative;
   width: 100%;

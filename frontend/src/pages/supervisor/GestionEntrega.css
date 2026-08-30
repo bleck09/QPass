@@ -35,6 +35,12 @@
   text-decoration: underline;
 }
 
+.pi-entrega-sin-eventos {
+  color: var(--gris-medio);
+  font-size: 14px;
+  padding: 20px 0;
+}
+
 /* --- GRID DE EVENTOS --- */
 .pi-entrega-eventos-grid {
   display: grid;

@@ -5,6 +5,15 @@
   gap: 10px;
 }
 
+.pi-captura-foto-select-camara {
+  width: 100%;
+  max-width: 260px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--borde-suave, #ddd);
+  font-weight: 600;
+}
+
 .pi-captura-foto-video-wrapper {
   width: 100%;
   max-width: 260px;

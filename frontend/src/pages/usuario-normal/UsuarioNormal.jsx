@@ -695,7 +695,17 @@ export default function UsuarioNormal() {
                             {item.tipo === 'ajuste' && <><FaCoins color="var(--verde-recarga-texto)" /> Ajuste</>}
                           </span>
                         </td>
-                        <td>{item.nota || '—'}</td>
+                        <td>
+                          {item.tipo === 'consumo' && item.venta ? (
+                            <span className="pi-usr-detalle-consumo">
+                              <strong>{item.venta.puesto?.nombre}</strong>
+                              {' — '}
+                              {item.venta.items.map(i => `${i.cantidad}x ${i.nombreProducto}`).join(', ')}
+                            </span>
+                          ) : (
+                            item.nota || '—'
+                          )}
+                        </td>
                         <td className={item.tipo === 'recarga' || item.tipo === 'ajuste' ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
                           {item.tipo === 'recarga' || item.tipo === 'ajuste' ? '+' : '-'}{Number(item.monto)} pts
                         </td>

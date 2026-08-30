@@ -19,6 +19,7 @@ transaccionesRouter.get('/', requireAuth, async (req, res) => {
     include: {
       operador: { select: { id: true, nombre: true } },
       entrada: { select: { id: true, nombre: true, documento: true, foto: true } },
+      venta: { include: { puesto: { select: { id: true, nombre: true } }, items: true } },
     },
     orderBy: { createdAt: 'desc' },
   });

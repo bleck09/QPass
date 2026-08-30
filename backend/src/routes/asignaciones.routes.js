@@ -5,9 +5,13 @@ import { requireAuth, requireRol } from '../middleware/auth.js';
 export const asignacionesRouter = Router();
 
 asignacionesRouter.get('/', requireAuth, async (req, res) => {
-  const { eventoId } = req.query;
+  const { eventoId, usuarioId, rol } = req.query;
   const asignaciones = await prisma.asignacion.findMany({
-    where: eventoId ? { eventoId } : undefined,
+    where: {
+      eventoId: eventoId || undefined,
+      usuarioId: usuarioId ? Number(usuarioId) : undefined,
+      rol: rol || undefined,
+    },
     include: { usuario: { select: { id: true, nombre: true, email: true, foto: true } } },
   });
   res.json(asignaciones);

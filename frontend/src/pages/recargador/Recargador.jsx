@@ -47,7 +47,7 @@ export default function Recargador() {
   const [notaIncidenciaHist, setNotaIncidenciaHist] = useState('');
   const [historialReportados, setHistorialReportados] = useState([]);
 
-  useEffect(() => { api.eventos.listar().then(setEventos); }, []);
+  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
 
   const abrirEvento = (ev) => {
     setEventoDetalle(ev);
@@ -164,17 +164,21 @@ export default function Recargador() {
         <div className="pi-rec-header">
           <h2>Recarga de Puntos</h2>
         </div>
-        <div className="pi-entrega-eventos-grid">
-          {eventos.map(ev => (
-            <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
-              <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
-              <div className="pi-entrega-evento-info">
-                <strong>{ev.nombre}</strong>
-                <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-              </div>
-            </button>
-          ))}
-        </div>
+        {eventos.length === 0 ? (
+          <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+        ) : (
+          <div className="pi-entrega-eventos-grid">
+            {eventos.map(ev => (
+              <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
+                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <div className="pi-entrega-evento-info">
+                  <strong>{ev.nombre}</strong>
+                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     );
   }

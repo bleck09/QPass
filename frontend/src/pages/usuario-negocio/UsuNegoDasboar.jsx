@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import {
   FaStore, FaDollarSign, FaUsers, FaShoppingCart,
   FaChartBar, FaTrophy, FaMedal, FaArrowLeft, FaBoxOpen, FaEye,
-  FaUserTie, FaSearch, FaRegClock, FaTag, FaCalendarAlt
+  FaUserTie, FaSearch, FaRegClock, FaTag, FaMapMarkerAlt
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
+import { formatearFecha } from '../../utils/eventos.js';
 import './UsuNegoDasboar.css';
+import '../supervisor/GestionEntrega.css';
 
 const iniciales = (nombre = '') => nombre.substring(0, 2).toUpperCase();
 
@@ -70,7 +72,8 @@ const construirDashboard = async (eventoId, negocioId) => {
 export default function UsuNegoDasboar() {
   const sesion = leerSesion();
   const [eventos, setEventos] = useState([]);
-  const [eventoId, setEventoId] = useState('');
+  const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
+  const eventoId = eventoSeleccionado?.id || '';
   const [data, setData] = useState(DATA_VACIA);
   const [cargarGrafico, setCargarGrafico] = useState(false);
 
@@ -82,12 +85,9 @@ export default function UsuNegoDasboar() {
   const [sucursalSeleccionada, setSucursalSeleccionada] = useState(null);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
-  useEffect(() => {
-    api.eventos.listar().then(lista => {
-      setEventos(lista);
-      setEventoId(prev => prev || lista[0]?.id || '');
-    });
-  }, []);
+  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
+
+  const volverALista = () => setEventoSeleccionado(null);
 
   useEffect(() => {
     if (!eventoId) return;
@@ -104,6 +104,37 @@ export default function UsuNegoDasboar() {
   }, [vistaActual]);
 
   // ==============================================================
+  // RENDER: 0. SELECCIÓN DE EVENTO (antes de mostrar cualquier vista)
+  // ==============================================================
+  if (!eventoSeleccionado) {
+    return (
+      <div className="pi-dashboard-container animate-fade">
+        <div className="pi-dashboard-header">
+          <div>
+            <h2>Dashboard General</h2>
+            <p>Elige el evento del que quieres ver el resumen.</p>
+          </div>
+        </div>
+        {eventos.length === 0 ? (
+          <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+        ) : (
+          <div className="pi-entrega-eventos-grid">
+            {eventos.map(ev => (
+              <button key={ev.id} className="pi-entrega-evento-card" onClick={() => setEventoSeleccionado(ev)}>
+                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <div className="pi-entrega-evento-info">
+                  <strong>{ev.nombre}</strong>
+                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ==============================================================
   // RENDER: 1. VISTA DASHBOARD GENERAL
   // ==============================================================
   if (vistaActual === 'GENERAL') {
@@ -113,14 +144,11 @@ export default function UsuNegoDasboar() {
       <div className="pi-dashboard-container animate-fade">
         <div className="pi-dashboard-header">
           <div>
-            <h2>Dashboard General</h2>
+            <button className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={volverALista}>
+              <FaArrowLeft /> Cambiar de evento
+            </button>
+            <h2>{eventoSeleccionado.nombre}</h2>
             <p>Resumen global de todos tus puestos y personal asignado.</p>
-          </div>
-          <div className="pi-unegocio-selector-evento">
-            <FaCalendarAlt />
-            <select value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
-              {eventos.map(ev => <option key={ev.id} value={ev.id}>{ev.nombre}</option>)}
-            </select>
           </div>
         </div>
 
