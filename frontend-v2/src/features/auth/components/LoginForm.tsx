@@ -1,19 +1,31 @@
 /* ============================================================================
- * LoginForm — Manual 8.3/8.4. Una columna, labels arriba, autocomplete,
- * permite pegar la contraseña, no borra lo escrito ante un error (WCAG 3.3.8).
+ * LoginForm — port fiel del Login del frontend original (panel glass oscuro,
+ * inputs con icono, toggle de contraseña, botón ENTRAR, divisor, REGISTRARME).
+ * Lógica: react-hook-form + zod + hook useLogin.
  * ========================================================================= */
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
-import { Alert, Button, Input } from '@/shared/components/ui';
+import { FaBuilding } from 'react-icons/fa';
+import {
+  MdEmail,
+  MdLock,
+  MdVisibility,
+  MdVisibilityOff,
+} from 'react-icons/md';
+import { useNavigate } from 'react-router-dom';
 import { RUTAS } from '@/shared/constants/rutas';
 import { loginSchema, type LoginFormValues } from '../schemas/auth.schemas';
 import { useLogin } from '../hooks/useAuthMutations';
-import styles from './authForm.module.css';
+import { CampoAuth } from './CampoAuth';
+import styles from './authDark.module.css';
 
 export function LoginForm() {
   const login = useLogin();
+  const navigate = useNavigate();
+  const [verPass, setVerPass] = useState(false);
 
   const {
     register,
@@ -24,50 +36,69 @@ export function LoginForm() {
     mode: 'onBlur',
   });
 
-  const onSubmit = (valores: LoginFormValues) => {
-    login.mutate(valores);
-  };
-
   return (
-    <form className={styles.form} onSubmit={handleSubmit(onSubmit)} noValidate>
-      {login.isError && (
-        <Alert tipo="error">{login.error.mensaje}</Alert>
-      )}
+    <form
+      className={styles.form}
+      onSubmit={handleSubmit((v) => login.mutate(v))}
+      noValidate
+    >
+      {login.isError && <p className={styles.errorBox}>{login.error.mensaje}</p>}
 
-      <Input
+      <CampoAuth
         label="Correo electrónico"
         type="email"
         autoComplete="email"
         autoFocus
+        placeholder="usuario@qpass.com"
+        iconoIzq={<MdEmail size={20} />}
         error={errors.email?.message}
         {...register('email')}
       />
 
-      <Input
+      <CampoAuth
         label="Contraseña"
-        type="password"
+        type={verPass ? 'text' : 'password'}
         autoComplete="current-password"
+        placeholder="••••••••"
+        iconoIzq={<MdLock size={20} />}
+        adornoDer={
+          <button
+            type="button"
+            className={styles.ojo}
+            onClick={() => setVerPass((v) => !v)}
+            aria-label={verPass ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+          >
+            {verPass ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+          </button>
+        }
         error={errors.password?.message}
         {...register('password')}
       />
 
-      <div className={styles.pie}>
-        <Button type="submit" anchoCompleto cargando={login.isPending}>
-          {login.isPending ? 'Ingresando…' : 'Iniciar sesión'}
-        </Button>
-
-        <p className={styles.enlaceFila}>
-          <Link to={RUTAS.RECUPERAR} className={styles.enlace}>
-            ¿Olvidaste tu contraseña?
-          </Link>
-        </p>
-        <p className={styles.enlaceFila}>
-          ¿No tienes cuenta?{' '}
-          <Link to={RUTAS.REGISTRO} className={styles.enlace}>
-            Crear cuenta
-          </Link>
-        </p>
+      <div className={styles.opciones}>
+        <label className={styles.check}>
+          <input type="checkbox" /> Recordarme
+        </label>
+        <Link to={RUTAS.RECUPERAR} className={styles.olvide}>
+          ¿Olvidó su contraseña?
+        </Link>
       </div>
+
+      <button type="submit" className={styles.btnEntrar} disabled={login.isPending}>
+        {login.isPending ? 'Entrando…' : 'ENTRAR →'}
+      </button>
+
+      <div className={styles.divider}>
+        <span>o</span>
+      </div>
+
+      <button
+        type="button"
+        className={styles.btnSecundario}
+        onClick={() => navigate(RUTAS.REGISTRO)}
+      >
+        REGISTRARME <FaBuilding />
+      </button>
     </form>
   );
 }

@@ -1,6 +1,55 @@
-/* Grid intrínseco: se acomoda solo, sin media queries (Manual 4.3). */
+.seccion {
+  margin-bottom: var(--space-8);
+}
+
+.h2 {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  margin-bottom: var(--space-4);
+}
+
+.filaAcciones {
+  display: inline-flex;
+  gap: var(--space-2);
+}
+
+.buscador {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 420px;
+  margin-bottom: var(--space-6);
+  padding: 0 var(--space-4);
+  background: var(--color-superficie);
+  border: 1px solid var(--color-borde-input);
+  border-radius: var(--radius-full);
+  color: var(--color-icono);
+}
+
+.buscador input {
+  flex: 1;
+  border: none;
+  background: none;
+  outline: none;
+  padding: var(--space-3) 0;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+}
+
+.buscador:focus-within {
+  border-color: var(--color-foco);
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.15);
+}
+
+/* Grid intrínseco (Manual 4.3). */
 .grid {
   display: grid;
   gap: var(--space-6);
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+
+.sinResultados {
+  grid-column: 1 / -1;
+  color: var(--color-text-secundario);
+  font-size: var(--text-sm);
 }

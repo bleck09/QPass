@@ -5,7 +5,7 @@
 
 import { useMutation } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { RUTA_INICIO_POR_ROL, RUTAS } from '@/shared/constants/rutas';
+import { RUTAS } from '@/shared/constants/rutas';
 import type { ApiError } from '@/lib/api/errors';
 import { authService } from '../services/auth.service';
 import { useSesion } from '../context/SesionContext';
@@ -19,13 +19,13 @@ import type {
 
 export function useLogin() {
   const { iniciarSesion } = useSesion();
-  const navigate = useNavigate();
 
   return useMutation<Awaited<ReturnType<typeof authService.login>>, ApiError, LoginDto>({
     mutationFn: authService.login,
+    // Solo guarda la sesión. El redirect lo hace <Navigate> en LoginPage cuando
+    // el contexto ya reflejó estaAutenticado=true (evita la race con el router).
     onSuccess: ({ token, usuario }) => {
       iniciarSesion({ token, usuario });
-      navigate(RUTA_INICIO_POR_ROL[usuario.rol], { replace: true });
     },
   });
 }

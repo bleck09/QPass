@@ -78,7 +78,18 @@
 }
 @media (hover: hover) {
   .destructivo:not(:disabled):hover {
-    --_bg: var(--red-700);
+    --_bg: var(--color-error-hover);
+  }
+}
+
+/* CTA de compra / confirmar pago (Anexo A A10 e-commerce: acento cálido) */
+.compra {
+  --_bg: var(--color-compra);
+  --_fg: #fff;
+}
+@media (hover: hover) {
+  .compra:not(:disabled):hover {
+    --_bg: var(--color-compra-hover);
   }
 }
 

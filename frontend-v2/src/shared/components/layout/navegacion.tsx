@@ -1,66 +1,67 @@
-/* Navegación por rol. Máximo 7 ítems (Manual 3.2 / Ley de Hick). */
+/* Navegación por rol. Rutas de v2, iconos y etiquetas al estilo del frontend
+ * original (react-icons/fa). Máximo ~7 ítems por rol (Ley de Hick). */
 
 import type { ReactNode } from 'react';
+import {
+  FaBoxOpen,
+  FaCalendarAlt,
+  FaCashRegister,
+  FaChartPie,
+  FaExclamationTriangle,
+  FaFileInvoiceDollar,
+  FaLink,
+  FaStore,
+  FaTicketAlt,
+  FaUserCircle,
+  FaUsers,
+} from 'react-icons/fa';
 import { ROLES, type Rol } from '@/shared/constants/roles';
 import { RUTAS } from '@/shared/constants/rutas';
-import {
-  IconoAlerta,
-  IconoBilletera,
-  IconoDevolucion,
-  IconoDocumento,
-  IconoEntrada,
-  IconoEvento,
-  IconoPanel,
-  IconoTicket,
-  IconoTienda,
-  IconoUsuario,
-  IconoUsuarios,
-} from '@/shared/components/ui/iconos';
 
 export interface ItemNav {
-  label: string;
+  titulo: string;
   ruta: string;
   icono: ReactNode;
-  /** Coincidencia exacta de ruta (para el ítem "inicio" de cada rol). */
   exacta?: boolean;
 }
 
 const NAV_POR_ROL: Record<Rol, ItemNav[]> = {
   [ROLES.ADMIN]: [
-    { label: 'Panel', ruta: RUTAS.ADMIN, icono: <IconoPanel />, exacta: true },
-    { label: 'Eventos', ruta: RUTAS.ADMIN_EVENTOS, icono: <IconoEvento /> },
-    { label: 'Solicitudes', ruta: RUTAS.ADMIN_SOLICITUDES, icono: <IconoDocumento /> },
-    { label: 'Compras', ruta: RUTAS.ADMIN_COMPRAS, icono: <IconoTicket /> },
-    { label: 'Usuarios', ruta: RUTAS.ADMIN_USUARIOS, icono: <IconoUsuarios /> },
-    { label: 'Incidencias', ruta: RUTAS.ADMIN_INCIDENCIAS, icono: <IconoAlerta /> },
+    { titulo: 'Dashboard General', ruta: RUTAS.ADMIN, icono: <FaChartPie />, exacta: true },
+    { titulo: 'Gestión de Eventos', ruta: RUTAS.ADMIN_EVENTOS, icono: <FaCalendarAlt /> },
+    { titulo: 'Solicitudes', ruta: RUTAS.ADMIN_SOLICITUDES, icono: <FaFileInvoiceDollar /> },
+    { titulo: 'Compras', ruta: RUTAS.ADMIN_COMPRAS, icono: <FaTicketAlt /> },
+    { titulo: 'Usuarios', ruta: RUTAS.ADMIN_USUARIOS, icono: <FaUsers /> },
+    { titulo: 'Incidencias', ruta: RUTAS.ADMIN_INCIDENCIAS, icono: <FaExclamationTriangle /> },
+    { titulo: 'Reportes de datos', ruta: RUTAS.ADMIN_REPORTES, icono: <FaFileInvoiceDollar /> },
   ],
   [ROLES.CLIENTE]: [
-    { label: 'Mis eventos', ruta: RUTAS.CLIENTE, icono: <IconoEvento />, exacta: true },
+    { titulo: 'Mis eventos', ruta: RUTAS.CLIENTE, icono: <FaCalendarAlt />, exacta: true },
   ],
   [ROLES.RECARGADOR]: [
-    { label: 'Recargar', ruta: RUTAS.RECARGADOR, icono: <IconoBilletera />, exacta: true },
+    { titulo: 'Mi Caja', ruta: RUTAS.RECARGADOR, icono: <FaCashRegister />, exacta: true },
   ],
   [ROLES.SUPERVISOR]: [
-    { label: 'Control de acceso', ruta: RUTAS.SUPERVISOR, icono: <IconoEntrada />, exacta: true },
+    { titulo: 'Control de acceso', ruta: RUTAS.SUPERVISOR, icono: <FaLink />, exacta: true },
   ],
   [ROLES.DEVOLUCION]: [
-    { label: 'Devoluciones', ruta: RUTAS.DEVOLUCION, icono: <IconoDevolucion />, exacta: true },
+    { titulo: 'Devoluciones', ruta: RUTAS.DEVOLUCION, icono: <FaBoxOpen />, exacta: true },
   ],
   [ROLES.USUARIO_NORMAL]: [
-    { label: 'Inicio', ruta: RUTAS.USUARIO, icono: <IconoPanel />, exacta: true },
+    { titulo: 'Inicio', ruta: RUTAS.USUARIO, icono: <FaChartPie />, exacta: true },
   ],
   [ROLES.USUARIO_NEGOCIO]: [
-    { label: 'Mi negocio', ruta: RUTAS.NEGOCIO, icono: <IconoTienda />, exacta: true },
+    { titulo: 'Mi Negocio', ruta: RUTAS.NEGOCIO, icono: <FaStore />, exacta: true },
   ],
   [ROLES.AYUDANTE]: [
-    { label: 'Cobrar', ruta: RUTAS.AYUDANTE, icono: <IconoTienda />, exacta: true },
+    { titulo: 'Vender / Cobrar', ruta: RUTAS.AYUDANTE, icono: <FaCashRegister />, exacta: true },
   ],
 };
 
 const ITEM_PERFIL: ItemNav = {
-  label: 'Mi perfil',
+  titulo: 'Mi Perfil',
   ruta: RUTAS.PERFIL,
-  icono: <IconoUsuario />,
+  icono: <FaUserCircle />,
 };
 
 export function navegacionDe(rol: Rol): ItemNav[] {

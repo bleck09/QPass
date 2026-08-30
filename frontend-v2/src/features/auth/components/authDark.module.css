@@ -1,0 +1,281 @@
+/* Estilos del formulario de auth sobre el panel glass oscuro (port de Login.css). */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  text-align: left;
+}
+
+.fila2 {
+  display: grid;
+  gap: 16px;
+}
+@media (min-width: 30rem) {
+  .fila2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.grupo {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  margin-bottom: 6px;
+  letter-spacing: 1px;
+}
+
+.opcional {
+  margin-left: 6px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: #64748b;
+}
+
+.wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.iconoIzq {
+  position: absolute;
+  left: 14px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+}
+
+.control {
+  width: 100%;
+  padding: 14px 14px 14px 44px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: #fff;
+  font-size: 15px;
+  outline: none;
+  transition: all 0.3s;
+}
+.control.conAdorno {
+  padding-right: 44px;
+}
+.control::placeholder {
+  color: #475569;
+}
+.control:focus {
+  border-color: #00b4d8;
+  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+}
+.control:focus ~ .iconoIzq {
+  color: #00b4d8;
+}
+.control[aria-invalid='true'] {
+  border-color: #f87171;
+}
+
+.ojo {
+  position: absolute;
+  right: 14px;
+  background: transparent;
+  border: none;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.3s;
+}
+.ojo:hover {
+  color: #00b4d8;
+}
+.ojo:active {
+  transform: scale(0.9);
+}
+
+.error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #fca5a5;
+}
+
+/* Opciones (recordarme / olvidé) */
+.opciones {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+.olvide {
+  color: #00b4d8;
+  text-decoration: none;
+  font-weight: 600;
+}
+.olvide:hover {
+  color: #fff;
+}
+
+/* Caja de error del submit */
+.errorBox {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+  font-weight: 600;
+}
+.okBox {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Botones */
+.btnEntrar {
+  width: 100%;
+  padding: 14px;
+  background: #00b4d8;
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(0, 180, 216, 0.3);
+  transition: all 0.3s;
+}
+.btnEntrar:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(0, 180, 216, 0.5);
+}
+.btnEntrar:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #64748b;
+  font-size: 13px;
+  margin: 10px 0;
+}
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.divider span {
+  padding: 0 10px;
+}
+
+.btnSecundario {
+  width: 100%;
+  padding: 14px;
+  background: transparent;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.3s;
+}
+.btnSecundario:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #fff;
+}
+
+.enlaceFila {
+  text-align: center;
+  font-size: 13px;
+  color: #94a3b8;
+}
+.enlace {
+  color: #00b4d8;
+  font-weight: 600;
+  text-decoration: none;
+}
+.enlace:hover {
+  color: #fff;
+}
+
+/* Acordeón de credenciales dev */
+.dev {
+  width: 100%;
+  max-width: 420px;
+}
+.devBtn {
+  width: 100%;
+  padding: 15px 20px;
+  border-radius: 12px;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.devBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+.devContent {
+  margin-top: 10px;
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  overflow-x: auto;
+}
+.devTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.devTable th,
+.devTable td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+.devTable th {
+  color: #cbd5e1;
+  font-weight: 700;
+}
+.devTable td {
+  color: #94a3b8;
+}
+.devTable tbody tr:last-child td {
+  border-bottom: none;
+}

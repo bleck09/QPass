@@ -1,7 +1,7 @@
 /* Feature transacciones (compacta). Ledger de movimientos de dinero. Las
  * operaciones sensibles (recarga/devolución) mandan Idempotency-Key. */
 
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { apiClient } from '@/lib/api/client';
 import { ENDPOINTS } from '@/lib/api/endpoints';
 import type { ApiError } from '@/lib/api/errors';
@@ -54,7 +54,21 @@ function claveIdempotencia(): string {
     : `k-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
+interface FiltrosTransacciones {
+  eventoId?: string;
+  usuarioId?: number;
+  entradaId?: string;
+  tipo?: TipoTransaccion;
+}
+
 const transaccionesService = {
+  async listar(filtros: FiltrosTransacciones): Promise<Transaccion[]> {
+    const { data } = await apiClient.get<Transaccion[]>(
+      ENDPOINTS.TRANSACCIONES.LISTAR,
+      { params: filtros },
+    );
+    return data;
+  },
   async recargar(dto: RecargaDto): Promise<RespuestaRecarga> {
     const { data } = await apiClient.post<RespuestaRecarga>(
       ENDPOINTS.TRANSACCIONES.RECARGA,
@@ -72,6 +86,14 @@ const transaccionesService = {
     return data;
   },
 };
+
+export function useTransacciones(filtros: FiltrosTransacciones) {
+  return useQuery<Transaccion[], ApiError>({
+    queryKey: ['transacciones', filtros],
+    queryFn: () => transaccionesService.listar(filtros),
+    enabled: Boolean(filtros.eventoId || filtros.usuarioId || filtros.entradaId),
+  });
+}
 
 export function useRecargar() {
   return useMutation<RespuestaRecarga, ApiError, RecargaDto>({

@@ -1,4 +1,4 @@
-export { useRecargar, useDevolver } from './transacciones';
+export { useRecargar, useDevolver, useTransacciones } from './transacciones';
 export type {
   Transaccion,
   TipoTransaccion,

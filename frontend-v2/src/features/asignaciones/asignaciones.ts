@@ -22,9 +22,9 @@ export interface CrearAsignacionDto {
 }
 
 const asignacionesService = {
-  async listar(eventoId: string): Promise<Asignacion[]> {
+  async listar(eventoId?: string): Promise<Asignacion[]> {
     const { data } = await apiClient.get<Asignacion[]>(ENDPOINTS.ASIGNACIONES.LISTAR, {
-      params: { eventoId },
+      params: eventoId ? { eventoId } : undefined,
     });
     return data;
   },
@@ -46,6 +46,13 @@ export function useAsignaciones(eventoId: string) {
     queryKey: ASIGNACIONES_KEYS.lista(eventoId),
     queryFn: () => asignacionesService.listar(eventoId),
     enabled: Boolean(eventoId),
+  });
+}
+
+export function useTodasAsignaciones() {
+  return useQuery<Asignacion[], ApiError>({
+    queryKey: ['asignaciones', 'todas'],
+    queryFn: () => asignacionesService.listar(),
   });
 }
 

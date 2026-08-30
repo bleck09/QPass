@@ -1,21 +1,84 @@
+/* Auth — modo dark / glassmorphism, port de Login.css. */
+
 .pagina {
-  display: grid;
-  place-items: center;
+  position: relative;
   min-height: 100dvh;
-  padding: var(--space-6) var(--space-4);
-  background: var(--color-bg-alterno);
+  display: flex;
+  flex-direction: column;
+  padding-bottom: var(--space-10);
+  background: #0b1120;
+  color: #fff;
+  overflow: hidden;
+}
+
+.glow {
+  position: absolute;
+  width: 600px;
+  height: 600px;
+  border-radius: var(--radius-full);
+  filter: blur(150px);
+  opacity: 0.2;
+  z-index: 0;
+  pointer-events: none;
+}
+.glowTL {
+  top: -200px;
+  left: -200px;
+  background: #00b4d8;
+}
+.glowBR {
+  bottom: -200px;
+  right: -200px;
+  background: #6366f1;
+}
+
+.topBar {
+  position: relative;
+  z-index: 10;
+  padding: 20px 5%;
+}
+.volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.3s;
+}
+.volver:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: #fff;
+}
+
+.contenido {
+  position: relative;
+  z-index: 10;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding: 20px;
 }
 
 .card {
   width: 100%;
-  max-width: 440px;
-  padding: clamp(var(--space-6), 5vw, var(--space-10));
-  background: var(--color-superficie);
-  border: 1px solid var(--color-borde);
-  border-radius: var(--radius-xl);
-  box-shadow: var(--shadow-sm);
+  max-width: 420px;
+  padding: 40px;
+  border-radius: 20px;
+  text-align: center;
+  background: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
 }
-
 .ancho {
   max-width: 560px;
 }
@@ -23,26 +86,27 @@
 .marca {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-2);
   font-size: var(--text-lg);
-  font-weight: var(--weight-bold);
-  color: var(--color-text-titulo);
-  margin-bottom: var(--space-6);
+  font-weight: 800;
+  color: #fff;
+  margin-bottom: 20px;
 }
-
 .marca img {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
 }
 
 .titulo {
-  font-size: var(--text-xl);
-  font-weight: var(--weight-bold);
-  margin-bottom: var(--space-1);
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  margin: 0 0 8px 0;
 }
-
 .subtitulo {
-  font-size: var(--text-sm);
-  color: var(--color-text-secundario);
-  margin-bottom: var(--space-6);
+  font-size: 14px;
+  color: #94a3b8;
+  line-height: 1.5;
+  margin: 0 0 30px 0;
 }

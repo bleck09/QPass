@@ -58,7 +58,7 @@ export function UsuarioInicioPage() {
                 </p>
               )}
               <div className={styles.accion}>
-                <Button tamano="sm" onClick={() => setComprarEn(e.id)}>
+                <Button variante="compra" tamano="sm" onClick={() => setComprarEn(e.id)}>
                   Comprar entradas
                 </Button>
               </div>

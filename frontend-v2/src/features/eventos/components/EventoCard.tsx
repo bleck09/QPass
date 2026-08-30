@@ -16,9 +16,15 @@ interface EventoCardProps {
   evento: Evento;
   onEditar: (evento: Evento) => void;
   onFinalizar: (evento: Evento) => void;
+  asignados?: number;
 }
 
-export function EventoCard({ evento, onEditar, onFinalizar }: EventoCardProps) {
+export function EventoCard({
+  evento,
+  onEditar,
+  onFinalizar,
+  asignados,
+}: EventoCardProps) {
   return (
     <article className={styles.card}>
       <div className={styles.medios}>
@@ -49,6 +55,12 @@ export function EventoCard({ evento, onEditar, onFinalizar }: EventoCardProps) {
             <div>
               <dt>Entradas desde</dt>
               <dd>{formatearMoneda(evento.precioDesde)}</dd>
+            </div>
+          )}
+          {asignados != null && (
+            <div>
+              <dt>Personal</dt>
+              <dd>{asignados} asignados</dd>
             </div>
           )}
         </dl>

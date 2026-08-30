@@ -12,7 +12,7 @@ import { AppLayout } from '@/shared/components/layout';
 import { RutaPrivada } from './guards/RutaPrivada';
 import { RutaPorRol } from './guards/RutaPorRol';
 
-import { InicioPage } from '@/pages/inicio/InicioPage';
+import { PaginaPrincipalPage } from '@/pages/publico/PaginaPrincipalPage';
 import { LandingEventoPage } from '@/pages/publico/LandingEventoPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { RegistroPage } from '@/pages/auth/RegistroPage';
@@ -36,7 +36,7 @@ import { AyudantePage } from '@/pages/ayudante/AyudantePage';
 import { PerfilPage } from '@/pages/perfil/PerfilPage';
 
 export const router = createBrowserRouter([
-  { path: RUTAS.INICIO, element: <InicioPage /> },
+  { path: RUTAS.INICIO, element: <PaginaPrincipalPage /> },
   { path: '/evento/:id', element: <LandingEventoPage /> },
   { path: RUTAS.LOGIN, element: <LoginPage /> },
   { path: RUTAS.REGISTRO, element: <RegistroPage /> },

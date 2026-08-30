@@ -14,3 +14,4 @@ export { ColorInput } from './ColorInput';
 export { EscanerQr } from './EscanerQr';
 export { CapturarFoto } from './CapturarFoto';
 export { Tabs, type Tab } from './Tabs';
+export { Podio, type ItemPodio } from './Podio';

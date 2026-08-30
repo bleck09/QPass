@@ -1,6 +1,7 @@
 export { AsignacionesPanel } from './AsignacionesPanel';
 export {
   useAsignaciones,
+  useTodasAsignaciones,
   useAsignar,
   useQuitarAsignacion,
   ASIGNACIONES_KEYS,

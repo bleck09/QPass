@@ -8,7 +8,12 @@ import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/shared/utils/cn';
 import styles from './Button.module.css';
 
-type Variante = 'primario' | 'secundario' | 'terciario' | 'destructivo';
+type Variante =
+  | 'primario'
+  | 'secundario'
+  | 'terciario'
+  | 'destructivo'
+  | 'compra';
 type Tamano = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {

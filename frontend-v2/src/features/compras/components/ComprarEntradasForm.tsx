@@ -188,7 +188,7 @@ export function ComprarEntradasForm({
         <Button variante="secundario" onClick={onCancelar}>
           Cancelar
         </Button>
-        <Button type="submit" cargando={cargando} disabled={sinCategorias}>
+        <Button type="submit" variante="compra" cargando={cargando} disabled={sinCategorias}>
           Enviar compra
         </Button>
       </div>

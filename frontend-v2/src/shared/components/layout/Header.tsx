@@ -1,83 +1,87 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSesion } from '@/features/auth';
-import { useTema } from '@/shared/hooks/useTema';
+import { FaBars, FaChevronDown, FaSignOutAlt, FaUserCircle } from 'react-icons/fa';
 import { RUTAS } from '@/shared/constants/rutas';
-import { ROL_LABEL } from '@/shared/constants/roles';
-import {
-  IconoLuna,
-  IconoMenu,
-  IconoSalir,
-  IconoSol,
-} from '@/shared/components/ui/iconos';
+import { useSesion, type UsuarioAutenticado } from '@/features/auth';
 import styles from './Header.module.css';
 
 interface HeaderProps {
   titulo: string;
-  onAbrirMenu: () => void;
+  usuario: UsuarioAutenticado;
+  rolLabel: string;
+  onAbrirMovil: () => void;
 }
 
-export function Header({ titulo, onAbrirMenu }: HeaderProps) {
-  const { usuario, cerrarSesion } = useSesion();
-  const { tema, alternar } = useTema();
+export function Header({ titulo, usuario, rolLabel, onAbrirMovil }: HeaderProps) {
+  const { cerrarSesion } = useSesion();
   const navigate = useNavigate();
+  const [abierto, setAbierto] = useState(false);
+
+  const iniciales = (usuario.nombre || usuario.email).substring(0, 2).toUpperCase();
 
   const salir = () => {
     cerrarSesion();
-    navigate(RUTAS.LOGIN, { replace: true });
+    navigate(RUTAS.INICIO);
   };
-
-  const iniciales = usuario?.nombre
-    ?.split(' ')
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join('')
-    .toUpperCase();
 
   return (
     <header className={styles.header}>
-      <button
-        type="button"
-        className={styles.menuBtn}
-        onClick={onAbrirMenu}
-        aria-label="Abrir menú"
-      >
-        <IconoMenu />
-      </button>
+      <div className={styles.left}>
+        <button
+          type="button"
+          className={styles.btnMovil}
+          onClick={onAbrirMovil}
+          aria-label="Abrir menú"
+        >
+          <FaBars size={20} />
+        </button>
+        <h1 className={styles.titulo}>{titulo}</h1>
+      </div>
 
-      <h1 className={styles.titulo}>{titulo}</h1>
-
-      <div className={styles.espaciador} />
-
-      <button
-        type="button"
-        className={styles.accion}
-        onClick={alternar}
-        aria-label={tema === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
-      >
-        {tema === 'dark' ? <IconoSol /> : <IconoLuna />}
-      </button>
-
-      <span className={styles.usuario}>
-        {usuario?.foto ? (
-          <img className={styles.avatar} src={usuario.foto} alt="" />
-        ) : (
-          <span className={styles.avatar} aria-hidden="true">
-            {iniciales}
+      <div className={styles.right}>
+        <button
+          type="button"
+          className={styles.perfilBtn}
+          onClick={() => setAbierto((v) => !v)}
+          aria-expanded={abierto}
+        >
+          <span className={styles.avatar}>
+            {usuario.foto ? (
+              <img src={usuario.foto} alt="" />
+            ) : (
+              iniciales
+            )}
           </span>
-        )}
-        <span className={styles.nombre}>
-          {usuario?.nombre} · {usuario ? ROL_LABEL[usuario.rol] : ''}
-        </span>
-      </span>
+          <span className={styles.infoPerfil}>
+            <span className={styles.nombre}>{usuario.nombre || 'Usuario'}</span>
+            <span className={styles.rol}>{rolLabel}</span>
+          </span>
+          <FaChevronDown size={12} />
+        </button>
 
-      <button
-        type="button"
-        className={styles.accion}
-        onClick={salir}
-        aria-label="Cerrar sesión"
-      >
-        <IconoSalir />
-      </button>
+        {abierto && (
+          <div className={styles.dropdown}>
+            <div className={styles.dropdownHead}>
+              <strong>{usuario.nombre || 'Usuario'}</strong>
+              <span>{usuario.email}</span>
+            </div>
+            <div className={styles.dropdownBody}>
+              <button
+                type="button"
+                onClick={() => {
+                  setAbierto(false);
+                  navigate(RUTAS.PERFIL);
+                }}
+              >
+                <FaUserCircle /> Mi Perfil
+              </button>
+              <button type="button" className={styles.btnLogout} onClick={salir}>
+                <FaSignOutAlt /> Cerrar Sesión
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </header>
   );
 }
