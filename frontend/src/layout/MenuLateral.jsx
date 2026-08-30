@@ -75,6 +75,17 @@ export default function MenuLateral({ children }) {
     return () => window.removeEventListener(EVENTO_USUARIO_ACTUALIZADO, actualizar);
   }, []);
 
+  // Toda capa que se despliega se cierra con ESC (Manual 3.3 / 8.6).
+  useEffect(() => {
+    const alTecla = (e) => {
+      if (e.key !== 'Escape') return;
+      setMenuPerfilAbierto(false);
+      setIsMobileOpen(false);
+    };
+    window.addEventListener('keydown', alTecla);
+    return () => window.removeEventListener('keydown', alTecla);
+  }, []);
+
   if (!usuario) {
     return <Navigate to="/login" replace />;
   }
@@ -90,9 +101,15 @@ export default function MenuLateral({ children }) {
 
   return (
     <div className="pi-layout-contenedor">
+      {/* Primer elemento enfocable: saltar directo al contenido (Manual 11.2) */}
+      <a href="#contenido" className="skip-link">Saltar al contenido</a>
       
       {isMobileOpen && (
-        <div className="pi-mobile-overlay" onClick={() => setIsMobileOpen(false)}></div>
+        <div
+          className="pi-mobile-overlay"
+          onClick={() => setIsMobileOpen(false)}
+          aria-hidden="true"
+        ></div>
       )}
 
       {/* --- MENÚ LATERAL --- */}
@@ -111,45 +128,58 @@ export default function MenuLateral({ children }) {
             )}
           </div>
           
-          <button className="pi-btn-collapse" onClick={() => setIsCollapsed(!isCollapsed)}>
+          <button
+            type="button"
+            className="pi-btn-collapse"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            aria-label={isCollapsed ? 'Expandir menú' : 'Contraer menú'}
+            aria-expanded={!isCollapsed}
+          >
             {isCollapsed ? <MdKeyboardArrowRight size={20} /> : <MdKeyboardArrowLeft size={20} />}
           </button>
         </div>
 
-        <nav className="pi-layout-nav">
+        <nav className="pi-layout-nav" aria-label="Navegación principal">
           {opcionesMenu.map((item, index) => {
-            const activo = location.pathname === item.ruta ? 'activo' : '';
+            const esActivo = location.pathname === item.ruta;
             return (
-              <div 
-                key={index} 
-                className={`pi-layout-nav-item ${activo}`}
+              <button
+                type="button"
+                key={index}
+                className={`pi-layout-nav-item ${esActivo ? 'activo' : ''}`}
+                aria-current={esActivo ? 'page' : undefined}
                 onClick={() => {
                   navigate(item.ruta);
-                  setIsMobileOpen(false); 
+                  setIsMobileOpen(false);
                 }}
                 title={isCollapsed ? item.titulo : ''}
               >
                 {/* Elementos fijos para la curva invertida */}
-                <div className="curve-top"></div>
-                <div className="curve-bottom"></div>
-                
-                <div className="pi-layout-nav-content">
-                  <span className="pi-layout-nav-icon">{item.icono}</span>
+                <span className="curve-top" aria-hidden="true"></span>
+                <span className="curve-bottom" aria-hidden="true"></span>
+
+                <span className="pi-layout-nav-content">
+                  <span className="pi-layout-nav-icon" aria-hidden="true">{item.icono}</span>
                   {!isCollapsed && <span className="pi-layout-nav-text">{item.titulo}</span>}
-                </div>
-              </div>
+                </span>
+              </button>
             );
           })}
         </nav>
 
         {/* Botón Salir */}
         <div className="pi-layout-logout-section">
-          <div className="pi-layout-nav-item logout-btn" onClick={handleCerrarSesion} title={isCollapsed ? "Cerrar Sesión" : ""}>
-            <div className="pi-layout-nav-content">
-              <span className="pi-layout-nav-icon"><FaSignOutAlt /></span>
+          <button
+            type="button"
+            className="pi-layout-nav-item logout-btn"
+            onClick={handleCerrarSesion}
+            title={isCollapsed ? 'Cerrar Sesión' : ''}
+          >
+            <span className="pi-layout-nav-content">
+              <span className="pi-layout-nav-icon" aria-hidden="true"><FaSignOutAlt /></span>
               {!isCollapsed && <span className="pi-layout-nav-text">Cerrar Sesión</span>}
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </aside>
 
@@ -159,41 +189,58 @@ export default function MenuLateral({ children }) {
           
           <header className="pi-layout-header">
             <div className="pi-layout-header-left">
-              <button className="pi-btn-mobile-menu" onClick={() => setIsMobileOpen(true)}>
+              <button
+                type="button"
+                className="pi-btn-mobile-menu"
+                onClick={() => setIsMobileOpen(true)}
+                aria-label="Abrir menú"
+              >
                 <FaBars size={20} />
               </button>
               <h3>Panel de {rolLabel}</h3>
             </div>
 
             <div className="pi-layout-header-right">
-              <div 
+              <button
+                type="button"
                 className="pi-layout-perfil-btn"
                 onClick={() => setMenuPerfilAbierto(!menuPerfilAbierto)}
+                aria-haspopup="menu"
+                aria-expanded={menuPerfilAbierto}
               >
                 <div className="pi-layout-avatar">
                   {usuario.foto
-                    ? <img src={usuario.foto} alt={usuario.nombre} className="pi-layout-avatar-img" />
+                    ? <img width="36" height="36" src={usuario.foto} alt={usuario.nombre} className="pi-layout-avatar-img" />
                     : getIniciales(usuario.nombre || usuario.email)}
                 </div>
                 <div className="pi-layout-info-perfil hide-on-mobile">
                   <span className="pi-layout-nombre">{usuario.nombre || 'Usuario'}</span>
                   <span className="pi-layout-rol-header">{rolLabel}</span>
                 </div>
-                <FaChevronDown size={12} color="var(--gris-medio)" />
-              </div>
+                <FaChevronDown size={12} color="var(--gris-medio)" aria-hidden="true" />
+              </button>
 
               {menuPerfilAbierto && (
-                <div className="pi-layout-dropdown">
+                <div className="pi-layout-dropdown" role="menu">
                   <div className="pi-layout-dropdown-header">
                     <strong>{usuario.nombre || 'Usuario'}</strong>
                     <span>{usuario.email}</span>
                   </div>
                   <div className="pi-layout-dropdown-body">
-                    <button onClick={() => { setMenuPerfilAbierto(false); navigate('/perfil'); }}>
-                      <FaUserCircle /> Mi Perfil
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => { setMenuPerfilAbierto(false); navigate('/perfil'); }}
+                    >
+                      <FaUserCircle aria-hidden="true" /> Mi Perfil
                     </button>
-                    <button className="btn-logout" onClick={handleCerrarSesion}>
-                      <FaSignOutAlt /> Cerrar Sesión
+                    <button
+                      type="button"
+                      role="menuitem"
+                      className="btn-logout"
+                      onClick={handleCerrarSesion}
+                    >
+                      <FaSignOutAlt aria-hidden="true" /> Cerrar Sesión
                     </button>
                   </div>
                 </div>
@@ -201,7 +248,7 @@ export default function MenuLateral({ children }) {
             </div>
           </header>
 
-          <main className="pi-layout-content">
+          <main id="contenido" className="pi-layout-content" tabIndex={-1}>
             {children}
           </main>
           

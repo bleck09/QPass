@@ -16,7 +16,7 @@
 
 /* --- BARRA SUPERIOR --- */
 .pi-recover-top-bar { padding: 20px 5%; position: relative; z-index: 10; }
-.pi-recover-btn-back { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.3s; }
+.pi-recover-btn-back { background: transparent; border: 1px solid rgba(255,255,255,0.2); color: #fff; display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: 600; font-size: 0.875rem; transition: all 0.3s; }
 .pi-recover-btn-back:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
 
 /* --- CONTENEDOR CENTRAL --- */
@@ -54,8 +54,8 @@
   box-shadow: 0 0 30px rgba(0, 180, 216, 0.2);
 }
 
-.pi-recover-title { font-size: 26px; font-weight: 800; margin: 0 0 10px 0; color: #ffffff; }
-.pi-recover-subtitle { font-size: 14px; color: #94A3B8; margin: 0 0 30px 0; line-height: 1.5; }
+.pi-recover-title { font-size: 1.625rem; font-weight: 800; margin: 0 0 8px 0; color: #ffffff; }
+.pi-recover-subtitle { font-size: 1rem; color: #94A3B8; margin: 0 0 32px 0; line-height: 1.5; }
 
 /* Animación de cambio de paso */
 .animate-fade { animation: fadeIn 0.4s ease-out forwards; }
@@ -67,15 +67,15 @@
 /* --- FORMULARIO --- */
 .pi-recover-form { width: 100%; text-align: left; display: flex; flex-direction: column; gap: 20px; }
 
-.pi-recover-input-group label { font-size: 11px; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; display: block; letter-spacing: 1px; }
+.pi-recover-input-group label { font-size: 0.75rem; font-weight: 700; color: #cbd5e1; margin-bottom: 8px; display: block; letter-spacing: 1px; }
 
 .pi-recover-input-wrapper { position: relative; display: flex; align-items: center; width: 100%; }
 .pi-recover-icon { position: absolute; left: 14px; color: #64748b; display: flex; align-items: center; transition: color 0.3s; }
 
 .pi-recover-input-wrapper input {
-  width: 100%; padding: 14px 45px 14px 45px;
+  width: 100%; padding: 16px 44px 16px 44px;
   background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px; color: #fff; font-size: 15px; outline: none; transition: all 0.3s;
+  border-radius: 12px; color: #fff; font-size: 1rem; outline: none; transition: all 0.3s;
 }
 .pi-recover-input-wrapper input::placeholder { color: #475569; }
 .pi-recover-input-wrapper input:focus { border-color: var(--color-primario, #00B4D8); box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.2); background: rgba(0, 0, 0, 0.4); }
@@ -87,35 +87,35 @@
 
 /* --- INPUTS DEL CÓDIGO (OTP) --- */
 .otp-inputs-container {
-  display: flex; justify-content: space-between; gap: 10px; margin: 10px 0; width: 100%;
+  display: flex; justify-content: space-between; gap: 8px; margin: 8px 0; width: 100%;
 }
 .otp-digit-input {
   width: 50px; height: 60px;
   background: rgba(0, 0, 0, 0.3); border: 2px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px; font-size: 24px; font-weight: 800; text-align: center; color: #fff;
+  border-radius: 12px; font-size: 1.5rem; font-weight: 800; text-align: center; color: #fff;
   transition: all 0.2s; outline: none;
 }
 .otp-digit-input:focus {
   border-color: #22c55e; box-shadow: 0 0 15px rgba(34, 197, 94, 0.3); background: rgba(0, 0, 0, 0.5); transform: translateY(-2px);
 }
-.otp-resend { margin-top: 20px; font-size: 13px; color: #94A3B8; text-align: center; width: 100%;}
+.otp-resend { margin-top: 20px; font-size: 0.8125rem; color: #94A3B8; text-align: center; width: 100%;}
 .otp-resend button { background: none; border: none; color: var(--color-primario, #00B4D8); font-weight: 700; cursor: pointer; }
 .otp-resend button:hover { text-decoration: underline; color: #fff; }
 
 /* --- ALERTAS Y BOTONES --- */
-.pi-recover-error { color: #fca5a5; background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 10px; border-radius: 8px; font-size: 13px; text-align: center; font-weight: 600; margin-top: 5px; }
-.pi-recover-success { color: #86efac; background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); padding: 10px; border-radius: 8px; font-size: 13px; text-align: center; font-weight: 600; margin-top: 5px; }
+.pi-recover-error { color: #fca5a5; background-color: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); padding: 8px; border-radius: 8px; font-size: 0.8125rem; text-align: center; font-weight: 600; margin-top: 4px; }
+.pi-recover-success { color: #86efac; background-color: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); padding: 8px; border-radius: 8px; font-size: 0.8125rem; text-align: center; font-weight: 600; margin-top: 4px; }
 
 .pi-recover-btn-submit { 
-  width: 100%; padding: 16px; margin-top: 5px; 
+  width: 100%; padding: 16px; margin-top: 4px; 
   background-color: var(--color-primario, #00B4D8); color: #fff; 
-  border: none; border-radius: 12px; font-size: 15px; font-weight: 800; 
+  border: none; border-radius: 12px; font-size: 1rem; font-weight: 800; 
   cursor: pointer; letter-spacing: 1px; box-shadow: 0 4px 15px rgba(0, 180, 216, 0.3); transition: all 0.3s; 
 }
 .pi-recover-btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0, 180, 216, 0.5); }
 
 /* --- RESPONSIVE --- */
 @media (max-width: 500px) {
-  .pi-recover-card { padding: 30px 20px; width: 90%; }
-  .otp-digit-input { width: 40px; height: 50px; font-size: 20px; }
+  .pi-recover-card { padding: 32px 20px; width: 90%; }
+  .otp-digit-input { width: 40px; height: 50px; font-size: 1.25rem; }
 }

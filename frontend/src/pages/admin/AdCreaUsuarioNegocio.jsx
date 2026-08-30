@@ -1,4 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaStore, FaUserTie, FaEnvelope, FaLock, FaPlus,
   FaTrash, FaSearch, FaTimes, FaUserShield, FaUsersCog
@@ -9,8 +14,33 @@ import './AdCreaUsuarioNegocio.css';
 const ROLES = ['Cliente', 'Recargador', 'Supervisor', 'Devolucion', 'UsuarioNormal', 'UsuarioNegocio'];
 
 export default function AdCreaUsuarioNegocio() {
-  const [usuarios, setUsuarios] = useState([]);
+  useTituloPagina('Usuarios');
+
+  // Lista de usuarios con estados cargando/error/reintentar (Manual 8.9).
+  const cargarUsuarios = useCallback(() => api.usuarios.listar(), []);
+  const {
+    data: usuarios,
+    setData: setUsuarios,
+    cargando: cargandoUsuarios,
+    error: errorUsuarios,
+    recargar: recargarUsuarios,
+  } = useApi(cargarUsuarios, { inicial: [] });
+
   const [showModal, setShowModal] = useState(false);
+  const [confirmar, DialogoConfirmar] = useConfirmar();
+
+  // Foco del modal de crear usuario (A1 / Manual 8.6)
+  const modalCrearUsuRef = useRef(null);
+  useFocoModal(modalCrearUsuRef, showModal);
+
+  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  useEffect(() => {
+    if (!showModal) return;
+    const alTecla = (e) => { if (e.key === "Escape") setShowModal(false); };
+    window.addEventListener("keydown", alTecla);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
+  }, [showModal]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroRol, setFiltroRol] = useState('Todos');
 
@@ -21,8 +51,6 @@ export default function AdCreaUsuarioNegocio() {
     rol: 'UsuarioNegocio'
   });
 
-  const recargarUsuarios = () => api.usuarios.listar().then(setUsuarios);
-  useEffect(() => { recargarUsuarios(); }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -37,10 +65,15 @@ export default function AdCreaUsuarioNegocio() {
   };
 
   const eliminarUsuario = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar a este usuario del sistema?')) {
-      await api.usuarios.eliminar(id);
-      setUsuarios(prev => prev.filter(u => u.id !== id));
-    }
+    const ok = await confirmar({
+      titulo: '¿Eliminar usuario?',
+      mensaje: 'Se eliminará a este usuario del sistema. Esta acción no se puede deshacer.',
+      textoConfirmar: 'Eliminar usuario',
+      peligroso: true,
+    });
+    if (!ok) return;
+    await api.usuarios.eliminar(id);
+    setUsuarios(prev => prev.filter(u => u.id !== id));
   };
 
   // Filtrado
@@ -71,7 +104,7 @@ export default function AdCreaUsuarioNegocio() {
       {/* Cabecera y KPI */}
       <div className="pi-adnegocio-header-wrapper">
         <div className="pi-adnegocio-header">
-          <h2>Gestión Global de Usuarios</h2>
+          <h1>Gestión global de usuarios</h1>
           <p>Administra, crea y filtra todas las cuentas operativas y clientes del sistema.</p>
         </div>
         
@@ -82,14 +115,14 @@ export default function AdCreaUsuarioNegocio() {
       <div className="pi-adnegocio-action-bar">
         {/* Pestañas de Filtro por Rol */}
         <div className="pi-adnegocio-tabs">
-          <button 
+          <button type="button" 
             className={`tab-btn ${filtroRol === 'Todos' ? 'active' : ''}`}
             onClick={() => setFiltroRol('Todos')}
           >
             Todos ({usuarios.length})
           </button>
           {ROLES.map(rol => (
-            <button 
+            <button type="button" 
               key={rol}
               className={`tab-btn ${filtroRol === rol ? 'active' : ''}`}
               onClick={() => setFiltroRol(rol)}
@@ -99,7 +132,7 @@ export default function AdCreaUsuarioNegocio() {
           ))}
         </div>
 
-        <button className="pi-adnegocio-btn-add" onClick={() => setShowModal(true)}>
+        <button type="button" className="pi-adnegocio-btn-add" onClick={() => setShowModal(true)}>
           <FaPlus /> Nuevo Usuario
         </button>
       </div>
@@ -116,16 +149,21 @@ export default function AdCreaUsuarioNegocio() {
       </div>
 
       {/* Tabla Principal */}
+      {errorUsuarios ? (
+        <EstadoError onReintentar={recargarUsuarios} />
+      ) : cargandoUsuarios ? (
+        <EstadoCarga filas={5} />
+      ) : (
       <div className="pi-adnegocio-card pi-adnegocio-list-section">
         <div className="pi-adnegocio-table-wrapper">
           <table className="pi-adnegocio-table">
             <thead>
               <tr>
-                <th>Usuario</th>
-                <th>Contacto</th>
-                <th>Rol / Tipo</th>
-                <th>CI / Celular</th>
-                <th style={{ textAlign: 'center' }}>Acción</th>
+                <th scope="col">Usuario</th>
+                <th scope="col">Contacto</th>
+                <th scope="col">Rol / Tipo</th>
+                <th scope="col">CI / Celular</th>
+                <th scope="col" style={{ textAlign: 'center' }}>Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -134,7 +172,7 @@ export default function AdCreaUsuarioNegocio() {
                   <td>
                     <div className="pi-adnegocio-item-info">
                       {user.foto ? (
-                        <img src={user.foto} alt="Perfil" className="pi-adnegocio-img" />
+                        <img width="40" height="40" src={user.foto} alt="Perfil" className="pi-adnegocio-img" />
                       ) : (
                         <div className="pi-adnegocio-no-img">
                           {user.rol === 'UsuarioNegocio' ? <FaStore /> : <FaUserTie />}
@@ -159,7 +197,7 @@ export default function AdCreaUsuarioNegocio() {
                     </span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    <button 
+                    <button type="button" 
                       className="pi-adnegocio-btn-delete"
                       onClick={() => eliminarUsuario(user.id)}
                       title="Eliminar Cuenta"
@@ -180,16 +218,17 @@ export default function AdCreaUsuarioNegocio() {
           </table>
         </div>
       </div>
+      )}
 
       {/* --- MODAL (VENTANA EMERGENTE) PARA CREAR --- */}
       {showModal && (
-        <div className="pi-adnegocio-modal-overlay">
-          <div className="pi-adnegocio-modal">
+        <div className="pi-adnegocio-modal-overlay" onClick={() => setShowModal(false)}>
+          <div ref={modalCrearUsuRef} tabIndex={-1} className="pi-adnegocio-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="adneg-modal-titulo">
             
             <div className="pi-adnegocio-modal-header">
-              <h2><FaUsersCog color="var(--indigo-profundo)" /> Registrar Nuevo Usuario</h2>
-              <button className="btn-close-modal" onClick={() => setShowModal(false)}>
-                <FaTimes />
+              <h2 id="adneg-modal-titulo"><FaUsersCog color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Nuevo Usuario</h2>
+              <button type="button" className="btn-close-modal" onClick={() => setShowModal(false)} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
@@ -201,10 +240,11 @@ export default function AdCreaUsuarioNegocio() {
               <form onSubmit={handleSubmit} className="pi-adnegocio-form">
                 
                 <div className="pi-adnegocio-input-group">
-                  <label>Tipo de Cuenta (Rol)</label>
+                  <label htmlFor="adneg-rol">Tipo de cuenta (rol)</label>
                   <div className="input-wrapper">
                     <FaUserShield className="input-icon" />
                     <select 
+                      id="adneg-rol"
                       name="rol" 
                       value={formData.rol} 
                       onChange={handleChange}
@@ -218,11 +258,13 @@ export default function AdCreaUsuarioNegocio() {
                 </div>
 
                 <div className="pi-adnegocio-input-group">
-                  <label>Nombre Completo / Encargado</label>
+                  <label htmlFor="adneg-nombre">Nombre completo / encargado</label>
                   <div className="input-wrapper">
                     <FaUserTie className="input-icon" />
                     <input 
                       type="text" 
+                      id="adneg-nombre"
+                      autoComplete="name"
                       name="nombre"
                       value={formData.nombre} 
                       onChange={handleChange} 
@@ -233,11 +275,13 @@ export default function AdCreaUsuarioNegocio() {
                 </div>
 
                 <div className="pi-adnegocio-input-group">
-                  <label>Correo Electrónico</label>
+                  <label htmlFor="adneg-email">Correo electrónico</label>
                   <div className="input-wrapper">
                     <FaEnvelope className="input-icon" />
                     <input 
                       type="email" 
+                      id="adneg-email"
+                      autoComplete="email"
                       name="email"
                       value={formData.email} 
                       onChange={handleChange} 
@@ -248,11 +292,13 @@ export default function AdCreaUsuarioNegocio() {
                 </div>
 
                 <div className="pi-adnegocio-input-group">
-                  <label>Contraseña Temporal</label>
+                  <label htmlFor="adneg-password">Contraseña temporal</label>
                   <div className="input-wrapper">
                     <FaLock className="input-icon" />
                     <input 
                       type="text" 
+                      id="adneg-password"
+                      autoComplete="new-password"
                       name="password"
                       value={formData.password} 
                       onChange={handleChange} 
@@ -277,6 +323,7 @@ export default function AdCreaUsuarioNegocio() {
         </div>
       )}
 
+      {DialogoConfirmar}
     </div>
   );
 }

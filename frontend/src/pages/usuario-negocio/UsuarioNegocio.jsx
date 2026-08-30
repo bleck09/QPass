@@ -1,4 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation } from 'react-router-dom';
 import {
   FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign,
@@ -16,6 +20,7 @@ const initialStateFormPuesto = { nombre: '', descripcion: '', logo: '' };
 const initialStateFormProducto = { nombre: '', precio: '', imagen: '' };
 
 export default function UsuarioNegocio() {
+  useTituloPagina('Mi negocio');
   const location = useLocation();
   const sesion = leerSesion();
 
@@ -32,10 +37,34 @@ export default function UsuarioNegocio() {
     setActiveTab(location.pathname.endsWith('/ayudantes') ? 'ayudantes' : 'puestos');
   }
 
-  const [eventos, setEventos] = useState([]);
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const eventoId = eventoSeleccionado?.id || '';
-  const [puestos, setPuestos] = useState([]);
+
+  // Cargas con estados cargando/error/reintentar (Manual 8.9): eventos asignados
+  // y puestos del evento. setPuestos (alias de setData) conserva las
+  // actualizaciones optimistas del catálogo de productos.
+  const cargarEventos = useCallback(
+    () => api.eventos.misAsignados(sesion.id, sesion.rol),
+    [sesion.id, sesion.rol],
+  );
+  const {
+    data: eventos,
+    cargando: cargandoEventos,
+    error: errorEventos,
+    recargar: recargarEventos,
+  } = useApi(cargarEventos, { inicial: [] });
+
+  const cargarPuestos = useCallback(
+    () => api.puestos.listar({ eventoId, negocioId: sesion.id }),
+    [eventoId, sesion.id],
+  );
+  const {
+    data: puestos,
+    setData: setPuestos,
+    cargando: cargandoPuestos,
+    error: errorPuestos,
+    recargar: recargarPuestos,
+  } = useApi(cargarPuestos, { inicial: [], activo: !!eventoId });
 
   const [showModalPuesto, setShowModalPuesto] = useState(false);
   const [showModalCatalogo, setShowModalCatalogo] = useState(false);
@@ -46,16 +75,7 @@ export default function UsuarioNegocio() {
   const [formPuesto, setFormPuesto] = useState(initialStateFormPuesto);
   const [formProducto, setFormProducto] = useState(initialStateFormProducto);
 
-  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
-
   const volverALista = () => setEventoSeleccionado(null);
-
-  const recargarPuestos = () => {
-    if (!eventoId) return;
-    api.puestos.listar({ eventoId, negocioId: sesion.id }).then(setPuestos);
-  };
-
-  useEffect(() => { recargarPuestos(); }, [eventoId]);
 
   // --- LÓGICA DE PUESTOS ---
   const handlePuestoChange = (e) => {
@@ -96,6 +116,33 @@ export default function UsuarioNegocio() {
     setPuestoSeleccionado(puesto);
     setShowModalAyudantesPuesto(true);
   };
+
+  const cerrarModales = () => {
+    setShowModalPuesto(false);
+    setShowModalCatalogo(false);
+    setShowModalAyudantesPuesto(false);
+  };
+
+  // Algún modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  const hayModalAbierto = showModalPuesto || showModalCatalogo || showModalAyudantesPuesto;
+
+  // Foco de cada modal (A1 / Manual 8.6)
+  const modalPuestoRef = useRef(null);
+  const modalCatalogoRef = useRef(null);
+  const modalAyudantesRef = useRef(null);
+  useFocoModal(modalPuestoRef, showModalPuesto);
+  useFocoModal(modalCatalogoRef, showModalCatalogo);
+  useFocoModal(modalAyudantesRef, showModalAyudantesPuesto);
+  useEffect(() => {
+    if (!hayModalAbierto) return;
+    const alTecla = (e) => { if (e.key === 'Escape') cerrarModales(); };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [hayModalAbierto]);
 
   const handleProductoChange = (e) => {
     setFormProducto({ ...formProducto, [e.target.name]: e.target.value });
@@ -143,17 +190,21 @@ export default function UsuarioNegocio() {
       <div className="pi-unegocio-container">
         <div className="pi-unegocio-header-wrapper">
           <div className="pi-unegocio-header">
-            <h2>Panel de Negocio</h2>
+            <h1>Panel de negocio</h1>
             <p>Elige el evento en el que quieres administrar tus puestos.</p>
           </div>
         </div>
-        {eventos.length === 0 ? (
+        {errorEventos ? (
+          <EstadoError onReintentar={recargarEventos} />
+        ) : cargandoEventos ? (
+          <EstadoCarga filas={3} />
+        ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (
               <button key={ev.id} className="pi-entrega-evento-card" onClick={() => setEventoSeleccionado(ev)}>
-                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
                   <strong>{ev.nombre}</strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -172,10 +223,10 @@ export default function UsuarioNegocio() {
       {/* Cabecera y KPI */}
       <div className="pi-unegocio-header-wrapper">
         <div className="pi-unegocio-header">
-          <button className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={volverALista}>
+          <button type="button" className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={volverALista}>
             <FaArrowLeft /> Cambiar de evento
           </button>
-          <h2>{eventoSeleccionado.nombre}</h2>
+          <h1>{eventoSeleccionado.nombre}</h1>
           <p>
             {activeTab === 'puestos'
               ? 'Crea sucursales, administra sus menús y revisa su personal asignado.'
@@ -195,30 +246,32 @@ export default function UsuarioNegocio() {
       <div className="pi-unegocio-action-bar">
         {/* TABS para cambiar entre Puestos y Ayudantes */}
         <div className="pi-unegocio-tabs">
-          <button className={activeTab === 'puestos' ? 'activo' : ''} onClick={() => setActiveTab('puestos')}>
-            <FaStore /> Mis Puestos
+          <button type="button" className={activeTab === 'puestos' ? 'activo' : ''} aria-current={activeTab === 'puestos' ? 'page' : undefined} onClick={() => setActiveTab('puestos')}>
+            <FaStore aria-hidden="true" /> Mis Puestos
           </button>
-          <button className={activeTab === 'ayudantes' ? 'activo' : ''} onClick={() => setActiveTab('ayudantes')}>
-            <FaUserFriends /> Mis Ayudantes
+          <button type="button" className={activeTab === 'ayudantes' ? 'activo' : ''} aria-current={activeTab === 'ayudantes' ? 'page' : undefined} onClick={() => setActiveTab('ayudantes')}>
+            <FaUserFriends aria-hidden="true" /> Mis Ayudantes
           </button>
         </div>
 
         {activeTab === 'puestos' && (
-          <button className="btn-primario" onClick={() => setShowModalPuesto(true)}>
+          <button type="button" className="btn-primario" onClick={() => setShowModalPuesto(true)}>
             <FaPlus /> Crear Nuevo Puesto
           </button>
         )}
       </div>
 
-      {activeTab === 'puestos' && (
+      {activeTab === 'puestos' && errorPuestos && <EstadoError onReintentar={recargarPuestos} />}
+      {activeTab === 'puestos' && !errorPuestos && cargandoPuestos && <EstadoCarga filas={4} />}
+      {activeTab === 'puestos' && !errorPuestos && !cargandoPuestos && (
       <div className="pi-unegocio-card">
         <div className="pi-unegocio-table-wrapper">
           <table className="pi-unegocio-table">
             <thead>
               <tr>
-                <th>Detalles del Puesto</th>
-                <th>Catálogo</th>
-                <th style={{ textAlign: 'center' }}>Ayudantes</th>
+                <th scope="col">Detalles del Puesto</th>
+                <th scope="col">Catálogo</th>
+                <th scope="col" style={{ textAlign: 'center' }}>Ayudantes</th>
               </tr>
             </thead>
             <tbody>
@@ -227,7 +280,7 @@ export default function UsuarioNegocio() {
                   <td>
                     <div className="item-info">
                       {puesto.logo ? (
-                        <img src={puesto.logo} alt="Logo" className="item-img" />
+                        <img width="48" height="48" src={puesto.logo} alt="Logo" className="item-img" />
                       ) : (
                         <div className="item-no-img"><FaStore /></div>
                       )}
@@ -240,7 +293,7 @@ export default function UsuarioNegocio() {
                   <td>
                     <div className="info-catalogo">
                       <span className="badge-info">{puesto.productos.length} Productos</span>
-                      <button className="btn-secundario-sm" onClick={() => abrirCatalogo(puesto)}>
+                      <button type="button" className="btn-secundario-sm" onClick={() => abrirCatalogo(puesto)}>
                         <FaListUl /> Ver Catálogo
                       </button>
                     </div>
@@ -248,7 +301,7 @@ export default function UsuarioNegocio() {
                   <td style={{ textAlign: 'center' }}>
                     <div className="info-catalogo" style={{ alignItems: 'center' }}>
                       <span className="badge-ayudantes">{puesto.ayudantes.length} Asignados</span>
-                      <button className="btn-secundario-sm" onClick={() => abrirModalAyudantesPuesto(puesto)}>
+                      <button type="button" className="btn-secundario-sm" onClick={() => abrirModalAyudantesPuesto(puesto)}>
                         <FaUsers /> Ver Equipo
                       </button>
                     </div>
@@ -276,36 +329,36 @@ export default function UsuarioNegocio() {
           MODAL 1: CREAR NUEVO PUESTO
       ========================================= */}
       {showModalPuesto && (
-        <div className="modal-overlay">
-          <div className="modal">
+        <div className="modal-overlay" onClick={() => setShowModalPuesto(false)}>
+          <div ref={modalPuestoRef} tabIndex={-1} className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="neg-modal-puesto-titulo">
             <div className="modal-header">
-              <h2><FaStore color="var(--indigo-profundo)" /> Registrar Puesto</h2>
-              <button className="btn-close-modal" onClick={() => setShowModalPuesto(false)}>
-                <FaTimes />
+              <h2 id="neg-modal-puesto-titulo"><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Puesto</h2>
+              <button type="button" className="btn-close-modal" onClick={() => setShowModalPuesto(false)} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
             <div className="modal-body">
               <form onSubmit={crearPuesto} className="formulario">
                 <div className="input-group">
-                  <label>Nombre del Puesto</label>
-                  <input type="text" name="nombre" value={formPuesto.nombre} onChange={handlePuestoChange} placeholder="Ej: Pollos Doña María" required />
+                  <label htmlFor="neg-puesto-nombre">Nombre del puesto</label>
+                  <input id="neg-puesto-nombre" type="text" name="nombre" value={formPuesto.nombre} onChange={handlePuestoChange} placeholder="Ej: Pollos Doña María" required />
                 </div>
                 <div className="input-group">
-                  <label>Breve Descripción</label>
-                  <input type="text" name="descripcion" value={formPuesto.descripcion} onChange={handlePuestoChange} placeholder="Ej: Venta de comida rápida y gaseosas" />
+                  <label htmlFor="neg-puesto-desc">Breve descripción</label>
+                  <input id="neg-puesto-desc" type="text" name="descripcion" value={formPuesto.descripcion} onChange={handlePuestoChange} placeholder="Ej: Venta de comida rápida y gaseosas" />
                 </div>
                 <div className="input-group">
-                  <label><FaImage /> Logo o Foto del Puesto (Opcional)</label>
+                  <label htmlFor="neg-puesto-logo"><FaImage aria-hidden="true" /> Logo o foto del puesto (opcional)</label>
                   {!formPuesto.logo ? (
                     <div className="upload-zone">
                       <FaUpload className="upload-icon" />
                       <span className="upload-text">Haz clic para subir el logo</span>
                       <span className="upload-subtext">PNG, JPG hasta 2MB</span>
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="upload-input-hidden" />
+                      <input id="neg-puesto-logo" type="file" accept="image/*" onChange={handleImageUpload} className="upload-input-hidden" />
                     </div>
                   ) : (
                     <div className="preview-zone">
-                      <img src={formPuesto.logo} alt="Vista previa" className="img-preview" />
+                      <img width="200" height="200" src={formPuesto.logo} alt="Vista previa" className="img-preview" />
                       <button type="button" className="btn-quitar-imagen" onClick={quitarImagen}><FaTimes /> Quitar imagen</button>
                     </div>
                   )}
@@ -324,13 +377,13 @@ export default function UsuarioNegocio() {
           MODAL 2: GESTIONAR CATÁLOGO (PRODUCTOS CON FOTO)
       ========================================= */}
       {showModalCatalogo && puestoSeleccionado && (
-        <div className="modal-overlay">
-          <div className="modal modal-grande">
+        <div className="modal-overlay" onClick={() => setShowModalCatalogo(false)}>
+          <div ref={modalCatalogoRef} tabIndex={-1} className="modal modal-grande" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="neg-modal-catalogo-titulo">
             
             <div className="modal-header">
-              <h2><FaBoxOpen color="var(--indigo-profundo)" /> Catálogo: {puestoSeleccionado.nombre}</h2>
-              <button className="btn-close-modal" onClick={() => setShowModalCatalogo(false)}>
-                <FaTimes />
+              <h2 id="neg-modal-catalogo-titulo"><FaBoxOpen color="var(--indigo-profundo)" aria-hidden="true" /> Catálogo: {puestoSeleccionado.nombre}</h2>
+              <button type="button" className="btn-close-modal" onClick={() => setShowModalCatalogo(false)} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
@@ -371,7 +424,7 @@ export default function UsuarioNegocio() {
                         </label>
                       ) : (
                         <div className="preview-small">
-                          <img src={formProducto.imagen} alt="Preview" />
+                          <img width="400" height="225" src={formProducto.imagen} alt="Preview" />
                           <button type="button" onClick={quitarImagenProducto} title="Quitar foto">
                             <FaTimes />
                           </button>
@@ -394,9 +447,9 @@ export default function UsuarioNegocio() {
                   <table className="pi-unegocio-table">
                     <thead>
                       <tr>
-                        <th>Producto</th>
-                        <th>Precio</th>
-                        <th style={{ textAlign: 'center' }}>Acción</th>
+                        <th scope="col">Producto</th>
+                        <th scope="col">Precio</th>
+                        <th scope="col" style={{ textAlign: 'center' }}>Acción</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -405,7 +458,7 @@ export default function UsuarioNegocio() {
                           <td>
                             <div className="item-info">
                               {producto.imagen ? (
-                                <img src={producto.imagen} alt="Prod" className="item-img img-cuadrada" />
+                                <img width="48" height="48" src={producto.imagen} alt="Prod" className="item-img img-cuadrada" />
                               ) : (
                                 <div className="item-no-img img-cuadrada"><FaHamburger /></div>
                               )}
@@ -416,7 +469,7 @@ export default function UsuarioNegocio() {
                             <span className="badge-precio">Bs. {Number(producto.precio).toFixed(2)}</span>
                           </td>
                           <td style={{ textAlign: 'center' }}>
-                            <button className="btn-eliminar" onClick={() => eliminarProducto(producto.id)} title="Eliminar producto">
+                            <button type="button" className="btn-eliminar" onClick={() => eliminarProducto(producto.id)} title="Eliminar producto">
                               <FaTrash />
                             </button>
                           </td>
@@ -441,12 +494,12 @@ export default function UsuarioNegocio() {
           MODAL 3: VER EQUIPO (AYUDANTES ASIGNADOS) ¡NUEVO!
       ========================================= */}
       {showModalAyudantesPuesto && puestoSeleccionado && (
-        <div className="modal-overlay">
-          <div className="modal">
+        <div className="modal-overlay" onClick={() => setShowModalAyudantesPuesto(false)}>
+          <div ref={modalAyudantesRef} tabIndex={-1} className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="neg-modal-ayudantes-titulo">
             <div className="modal-header">
-              <h2><FaUsers color="var(--indigo-profundo)" /> Equipo: {puestoSeleccionado.nombre}</h2>
-              <button className="btn-close-modal" onClick={() => setShowModalAyudantesPuesto(false)}>
-                <FaTimes />
+              <h2 id="neg-modal-ayudantes-titulo"><FaUsers color="var(--indigo-profundo)" aria-hidden="true" /> Equipo: {puestoSeleccionado.nombre}</h2>
+              <button type="button" className="btn-close-modal" onClick={() => setShowModalAyudantesPuesto(false)} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
             
@@ -456,8 +509,8 @@ export default function UsuarioNegocio() {
                   <table className="pi-unegocio-table">
                     <thead>
                       <tr>
-                        <th>Nombre del Ayudante</th>
-                        <th>Turno</th>
+                        <th scope="col">Nombre del Ayudante</th>
+                        <th scope="col">Turno</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -466,7 +519,7 @@ export default function UsuarioNegocio() {
                           <td>
                             <div className="item-info">
                               {asignacion.ayudante.foto ? (
-                                <img src={asignacion.ayudante.foto} alt="Ayudante" className="item-img" style={{borderRadius: '50%', width: '40px', height: '40px'}} />
+                                <img width="48" height="48" src={asignacion.ayudante.foto} alt="Ayudante" className="item-img" style={{borderRadius: '50%', width: '40px', height: '40px'}} />
                               ) : (
                                 <div className="item-no-img" style={{borderRadius: '50%', width: '40px', height: '40px'}}><FaUserTie /></div>
                               )}

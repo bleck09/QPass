@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useNavigate } from 'react-router-dom';
 import {
   FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
@@ -15,16 +20,49 @@ const FORM_EVENTO_VACIO = { nombre: '', lugar: '', fecha: '', fechaFin: '', imag
 const FORM_ASIGNAR_VACIO = { usuarioId: '', rol: ROLES_ASIGNABLES[0] };
 
 export default function AdminGestionEventos() {
+  useTituloPagina('Gestión de eventos');
   const navigate = useNavigate();
 
-  const [eventos, setEventos] = useState([]);
-  const [usuarios, setUsuarios] = useState([]);
-  const [asignaciones, setAsignaciones] = useState([]);
-  const [solicitudes, setSolicitudes] = useState([]);
+  // Carga primaria (4 listas en paralelo) con cargando/error/reintentar (Manual 8.9).
+  const cargarTodo = useCallback(async () => {
+    const [eventos, usuarios, asignaciones, solicitudes] = await Promise.all([
+      api.eventos.listar(),
+      api.usuarios.listar(),
+      api.asignaciones.listar(),
+      api.solicitudesEvento.listar({ estado: 'pendiente' }),
+    ]);
+    return { eventos, usuarios, asignaciones, solicitudes };
+  }, []);
+  const {
+    data: datos,
+    setData: setDatos,
+    cargando: cargandoDatos,
+    error: errorDatos,
+    recargar: recargarDatos,
+  } = useApi(cargarTodo, { inicial: { eventos: [], usuarios: [], asignaciones: [], solicitudes: [] } });
+  const { eventos, usuarios, asignaciones, solicitudes } = datos;
+  // Helpers para conservar las actualizaciones optimistas que había con setState.
+  const setEventos = (fn) => setDatos(d => ({ ...d, eventos: typeof fn === 'function' ? fn(d.eventos) : fn }));
+  const setAsignaciones = (fn) => setDatos(d => ({ ...d, asignaciones: typeof fn === 'function' ? fn(d.asignaciones) : fn }));
+  const setSolicitudes = (fn) => setDatos(d => ({ ...d, solicitudes: typeof fn === 'function' ? fn(d.solicitudes) : fn }));
 
   const [busqueda, setBusqueda] = useState('');
   const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
   const [mostrarFormCrear, setMostrarFormCrear] = useState(false);
+  const [confirmar, DialogoConfirmar] = useConfirmar();
+
+  // Foco del modal de crear evento (A1 / Manual 8.6)
+  const modalCrearRef = useRef(null);
+  useFocoModal(modalCrearRef, mostrarFormCrear);
+
+  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  useEffect(() => {
+    if (!mostrarFormCrear) return;
+    const alTecla = (e) => { if (e.key === "Escape") setMostrarFormCrear(false); };
+    window.addEventListener("keydown", alTecla);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
+  }, [mostrarFormCrear]);
   const [formEvento, setFormEvento] = useState(FORM_EVENTO_VACIO);
   const [formAsignar, setFormAsignar] = useState(FORM_ASIGNAR_VACIO);
   const [comprasPendientes, setComprasPendientes] = useState(0);
@@ -36,15 +74,13 @@ export default function AdminGestionEventos() {
     );
   }, [eventoIdDetalle]);
 
-  useEffect(() => {
-    api.eventos.listar().then(setEventos);
-    api.usuarios.listar().then(setUsuarios);
-    api.asignaciones.listar().then(setAsignaciones);
-    api.solicitudesEvento.listar({ estado: 'pendiente' }).then(setSolicitudes);
-  }, []);
-
   const aprobarSolicitud = async (s) => {
-    if (!window.confirm(`¿Aprobar "${s.nombreEvento}" y crear el evento real?`)) return;
+    const ok = await confirmar({
+      titulo: '¿Aprobar la solicitud?',
+      mensaje: `Se creará el evento real "${s.nombreEvento}" a partir de esta solicitud.`,
+      textoConfirmar: 'Aprobar y crear',
+    });
+    if (!ok) return;
     const nuevo = await api.solicitudesEvento.aprobar(s.id);
     setEventos(prev => [nuevo, ...prev]);
     setSolicitudes(prev => prev.filter(x => x.id !== s.id));
@@ -52,7 +88,13 @@ export default function AdminGestionEventos() {
   };
 
   const rechazarSolicitud = async (s) => {
-    const motivo = window.prompt('¿Por qué se rechaza esta solicitud? (el cliente lo verá)');
+    const motivo = await confirmar({
+      titulo: '¿Rechazar la solicitud?',
+      mensaje: `Se rechazará "${s.nombreEvento}". El cliente verá el motivo que escribas.`,
+      campoNota: { etiqueta: 'Motivo del rechazo', placeholder: 'Ej. faltan datos del lugar y la fecha', requerido: true },
+      textoConfirmar: 'Rechazar solicitud',
+      peligroso: true,
+    });
     if (motivo === null) return;
     await api.solicitudesEvento.rechazar(s.id, motivo);
     setSolicitudes(prev => prev.filter(x => x.id !== s.id));
@@ -100,42 +142,65 @@ export default function AdminGestionEventos() {
   };
 
   const handleQuitarAsignacion = async (id) => {
-    if (!window.confirm('¿Quitar a este usuario del evento?')) return;
+    const ok = await confirmar({
+      titulo: '¿Quitar al usuario?',
+      mensaje: 'Este usuario dejará de tener acceso a este evento con su rol asignado.',
+      textoConfirmar: 'Quitar del evento',
+      peligroso: true,
+    });
+    if (!ok) return;
     await api.asignaciones.quitar(id);
     setAsignaciones(prev => prev.filter(a => a.id !== id));
   };
+
+  if (errorDatos) {
+    return (
+      <div className="pi-ges-container">
+        <div className="pi-ges-header"><h1>Gestión de eventos</h1></div>
+        <EstadoError onReintentar={recargarDatos} />
+      </div>
+    );
+  }
+  if (cargandoDatos) {
+    return (
+      <div className="pi-ges-container">
+        <div className="pi-ges-header"><h1>Gestión de eventos</h1></div>
+        <EstadoCarga filas={5} />
+      </div>
+    );
+  }
 
   return (
     <div className="pi-ges-container">
       {eventoDetalle ? (
         <>
-          <button className="pi-ges-btn-volver" onClick={() => setEventoIdDetalle(null)}>
+          <button type="button" className="pi-ges-btn-volver" onClick={() => setEventoIdDetalle(null)}>
             <FaArrowLeft /> Volver a Gestión de Eventos
           </button>
 
           <div className="pi-ges-detalle-header">
-            <img src={eventoDetalle.imagen} alt={eventoDetalle.nombre} className="pi-ges-detalle-imagen" />
+            <img width="96" height="96" src={eventoDetalle.imagen} alt={eventoDetalle.nombre} className="pi-ges-detalle-imagen" />
             <div className="pi-ges-detalle-info">
-              <h2>{eventoDetalle.nombre}</h2>
+              <h1>{eventoDetalle.nombre}</h1>
               <span><FaMapMarkerAlt /> {eventoDetalle.lugar} · {formatearFecha(eventoDetalle.fecha)}</span>
             </div>
           </div>
 
           <div className="pi-ges-accesos-rapidos">
-            <button onClick={() => navigate('/AdminCrearTickets', { state: { eventoId: eventoDetalle.id } })}>
+            <button type="button" onClick={() => navigate('/AdminCrearTickets', { state: { eventoId: eventoDetalle.id } })}>
               <FaTicketAlt /> Tickets del Evento
             </button>
-            <button onClick={() => navigate('/admin/solicitudes', { state: { eventoId: eventoDetalle.id } })}>
+            <button type="button" onClick={() => navigate('/admin/solicitudes', { state: { eventoId: eventoDetalle.id } })}>
               <FaClipboardList /> Solicitudes de Entradas
               {comprasPendientes > 0 && <span className="pi-ges-badge-contador">{comprasPendientes}</span>}
             </button>
-            <button onClick={() => navigate('/admin/qr', { state: { eventoId: eventoDetalle.id } })}>
+            <button type="button" onClick={() => navigate('/admin/qr', { state: { eventoId: eventoDetalle.id } })}>
               <FaQrcode /> Generar QR
             </button>
-            <button onClick={() => navigate('/admin/config', { state: { eventoId: eventoDetalle.id } })}>
+            <button type="button" onClick={() => navigate('/admin/config', { state: { eventoId: eventoDetalle.id } })}>
               <FaCog /> Configurar Página
             </button>
-            <button onClick={() => navigate('/Mapa', { state: { eventoId: eventoDetalle.id } })}>
+            <button type="button" onClick={() => navigate('/Mapa', { state: { eventoId: eventoDetalle.id } })}>
               <FaMapMarkedAlt /> Mapa
             </button>
           </div>
@@ -146,7 +211,7 @@ export default function AdminGestionEventos() {
             <div className="pi-ges-tabla-wrapper">
               <table className="pi-ges-tabla">
                 <thead>
-                  <tr><th>Usuario</th><th>Correo</th><th>Rol en el evento</th><th></th></tr>
+                  <tr><th scope="col">Usuario</th><th scope="col">Correo</th><th scope="col">Rol en el evento</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
                 </thead>
                 <tbody>
                   {asignacionesDelEvento.map(a => {
@@ -158,7 +223,7 @@ export default function AdminGestionEventos() {
                         <td>{usuario.email}</td>
                         <td><span className="pi-ges-badge">{ROLE_LABELS[a.rol] || a.rol}</span></td>
                         <td>
-                          <button className="pi-ges-btn-quitar" onClick={() => handleQuitarAsignacion(a.id)} title="Quitar del evento">
+                          <button type="button" className="pi-ges-btn-quitar" onClick={() => handleQuitarAsignacion(a.id)} title="Quitar del evento">
                             <FaTrash />
                           </button>
                         </td>
@@ -198,10 +263,10 @@ export default function AdminGestionEventos() {
         <>
           <div className="pi-ges-header">
             <div>
-              <h2>Gestión de Eventos</h2>
+              <h1>Gestión de eventos</h1>
               <p>Crea eventos y asigna usuarios con su rol para cada uno.</p>
             </div>
-            <button className="pi-ges-btn-crear" onClick={() => setMostrarFormCrear(true)}>
+            <button type="button" className="pi-ges-btn-crear" onClick={() => setMostrarFormCrear(true)}>
               <FaPlus /> Crear Evento
             </button>
           </div>
@@ -212,7 +277,7 @@ export default function AdminGestionEventos() {
               <div className="pi-ges-tabla-wrapper">
                 <table className="pi-ges-tabla">
                   <thead>
-                    <tr><th>Evento propuesto</th><th>Cliente</th><th>Lugar</th><th>Fecha</th><th></th></tr>
+                    <tr><th scope="col">Evento propuesto</th><th scope="col">Cliente</th><th scope="col">Lugar</th><th scope="col">Fecha</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
                   </thead>
                   <tbody>
                     {solicitudes.map(s => (
@@ -222,10 +287,10 @@ export default function AdminGestionEventos() {
                         <td>{s.lugar}</td>
                         <td>{formatearFecha(s.fecha)}</td>
                         <td style={{ display: 'flex', gap: '8px' }}>
-                          <button className="pi-ges-btn-asignar" onClick={() => aprobarSolicitud(s)}>
+                          <button type="button" className="pi-ges-btn-asignar" onClick={() => aprobarSolicitud(s)}>
                             <FaCheckCircle /> Aprobar
                           </button>
-                          <button className="pi-ges-btn-quitar" onClick={() => rechazarSolicitud(s)} title="Rechazar">
+                          <button type="button" className="pi-ges-btn-quitar" onClick={() => rechazarSolicitud(s)} title="Rechazar">
                             <FaBan />
                           </button>
                         </td>
@@ -249,8 +314,8 @@ export default function AdminGestionEventos() {
 
           <div className="pi-ges-eventos-grid">
             {eventosFiltrados.map(ev => (
-              <button key={ev.id} className="pi-ges-evento-card" onClick={() => setEventoIdDetalle(ev.id)}>
-                <img src={ev.imagen} alt={ev.nombre} className="pi-ges-evento-imagen" />
+              <button type="button" key={ev.id} className="pi-ges-evento-card" onClick={() => setEventoIdDetalle(ev.id)}>
+                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-ges-evento-imagen" />
                 <div className="pi-ges-evento-info">
                   <strong>{ev.nombre}</strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -266,56 +331,56 @@ export default function AdminGestionEventos() {
       )}
 
       {mostrarFormCrear && (
-        <div className="pi-ges-modal-overlay">
-          <div className="pi-ges-modal">
+        <div className="pi-ges-modal-overlay" onClick={() => setMostrarFormCrear(false)}>
+          <div ref={modalCrearRef} tabIndex={-1} className="pi-ges-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="ges-modal-titulo">
             <div className="pi-ges-modal-header">
-              <h2><FaPlus /> Crear Evento</h2>
-              <button className="pi-ges-btn-close-modal" onClick={() => setMostrarFormCrear(false)}>
-                <FaTimes />
+              <h2 id="ges-modal-titulo"><FaPlus aria-hidden="true" /> Crear Evento</h2>
+              <button type="button" className="pi-ges-btn-close-modal" onClick={() => setMostrarFormCrear(false)} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
             <div className="pi-ges-modal-body">
               <form className="pi-ges-form" onSubmit={handleCrearEvento}>
                 <div className="pi-ges-input-group">
-                  <label>Nombre del evento</label>
+                  <label htmlFor="ev-nombre">Nombre del evento</label>
                   <input
-                    type="text" name="nombre" value={formEvento.nombre} onChange={handleChangeFormEvento}
+                    id="ev-nombre" type="text" name="nombre" value={formEvento.nombre} onChange={handleChangeFormEvento}
                     placeholder="Ej: Festival de Verano 2027" required
                   />
                 </div>
                 <div className="pi-ges-input-group">
-                  <label>Lugar</label>
+                  <label htmlFor="ev-lugar">Lugar</label>
                   <input
-                    type="text" name="lugar" value={formEvento.lugar} onChange={handleChangeFormEvento}
+                    id="ev-lugar" type="text" name="lugar" value={formEvento.lugar} onChange={handleChangeFormEvento}
                     placeholder="Ej: Campo Ferial, Cbba" required
                   />
                 </div>
                 <div className="pi-ges-input-group">
-                  <label>Fecha y hora de inicio</label>
+                  <label htmlFor="ev-fecha">Fecha y hora de inicio</label>
                   <input
-                    type="datetime-local" name="fecha" value={formEvento.fecha} onChange={handleChangeFormEvento}
+                    id="ev-fecha" type="datetime-local" name="fecha" value={formEvento.fecha} onChange={handleChangeFormEvento}
                     required
                   />
                 </div>
                 <div className="pi-ges-input-group">
-                  <label>Fecha y hora de cierre</label>
+                  <label htmlFor="ev-fechaFin">Fecha y hora de cierre</label>
                   <input
-                    type="datetime-local" name="fechaFin" value={formEvento.fechaFin} onChange={handleChangeFormEvento}
+                    id="ev-fechaFin" type="datetime-local" name="fechaFin" value={formEvento.fechaFin} onChange={handleChangeFormEvento}
                     min={formEvento.fecha || undefined} required
                   />
                 </div>
                 <div className="pi-ges-input-group">
-                  <label>Imagen (URL, opcional)</label>
+                  <label htmlFor="ev-imagen">Imagen (URL, opcional)</label>
                   <div className="pi-ges-input-wrapper">
-                    <FaImage className="pi-ges-input-icon" />
+                    <FaImage className="pi-ges-input-icon" aria-hidden="true" />
                     <input
-                      type="text" name="imagen" value={formEvento.imagen} onChange={handleChangeFormEvento}
+                      id="ev-imagen" type="text" name="imagen" value={formEvento.imagen} onChange={handleChangeFormEvento}
                       placeholder="https://..."
                     />
                   </div>
                   {formEvento.imagen && (
-                    <img src={formEvento.imagen} alt="Vista previa" className="pi-ges-imagen-preview" />
+                    <img width="320" height="100" src={formEvento.imagen} alt="Vista previa" className="pi-ges-imagen-preview" />
                   )}
                 </div>
 
@@ -330,6 +395,8 @@ export default function AdminGestionEventos() {
           </div>
         </div>
       )}
+
+      {DialogoConfirmar}
     </div>
   );
 }

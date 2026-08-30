@@ -1,5 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt,
   FaQrcode, FaMapMarkedAlt, FaStore, FaTimes,
@@ -55,40 +58,42 @@ export default function App() {
     window.scrollTo(0, 0);
   }, []);
 
-  const [evento, setEvento] = useState(null);
-  const [data, setData] = useState(defaultLandingData);
-  const [precios, setPrecios] = useState(defaultLandingData.precios);
-  const [mapaPuestos, setMapaPuestos] = useState([]);
+  // Carga de la página del evento con estados cargando/error/reintentar (Manual 8.9).
+  const cargarEvento = useCallback(async () => {
+    const activo = await api.eventos.obtener(id);
+    if (!activo) throw new Error('Evento no encontrado');
+    const [cfg, categorias, puestos] = await Promise.all([
+      api.landingConfig.obtener(activo.id).catch(() => null),
+      api.categoriasTicket.listar(activo.id).catch(() => []),
+      api.puestos.listar({ eventoId: activo.id }).catch(() => []),
+    ]);
+    return {
+      evento: activo,
+      data: cfg ? { ...defaultLandingData, ...cfg } : defaultLandingData,
+      precios: categorias.length > 0
+        ? categorias.map(c => ({
+            id: c.id, tipo: c.nombre, precio: `${c.precio} Bs`, destacado: false,
+            beneficios: [c.descripcion || 'Acceso al evento'],
+          }))
+        : defaultLandingData.precios,
+      mapaPuestos: puestos,
+    };
+  }, [id]);
+  const { data: carga, cargando, error, recargar } = useApi(cargarEvento, { inicial: null, activo: !!id });
+  const evento = carga?.evento ?? null;
+  const data = carga?.data ?? defaultLandingData;
+  const precios = carga?.precios ?? defaultLandingData.precios;
+  const mapaPuestos = carga?.mapaPuestos ?? [];
+
   const [puestoModal, setPuestoModal] = useState(null);
+
+  // Foco del modal de puesto (A1 / Manual 8.6)
+  const modalPuestoRef = useRef(null);
+  useFocoModal(modalPuestoRef, !!puestoModal);
 
   // ESTADOS DEL CONTADOR
   const [timeLeft, setTimeLeft] = useState({ dias: 0, horas: 0, minutos: 0, seg: 0 });
 
-  useEffect(() => {
-    if (!id) return;
-
-    api.eventos.obtener(id).then(async (activo) => {
-      if (!activo) return;
-      setEvento(activo);
-
-      api.landingConfig.obtener(activo.id)
-        .then(cfg => setData({ ...defaultLandingData, ...cfg }))
-        .catch(() => {});
-
-      api.categoriasTicket.listar(activo.id).then(categorias => {
-        if (categorias.length === 0) return;
-        setPrecios(categorias.map(c => ({
-          id: c.id,
-          tipo: c.nombre,
-          precio: `${c.precio} Bs`,
-          destacado: false,
-          beneficios: [c.descripcion || 'Acceso al evento'],
-        })));
-      });
-
-      api.puestos.listar({ eventoId: activo.id }).then(setMapaPuestos);
-    });
-  }, [id]);
 
   // LÓGICA DEL CONTADOR
   useEffect(() => {
@@ -115,6 +120,19 @@ export default function App() {
   const handleLoginClick = () => navigate('/login');
   const handleVolverInicio = () => navigate('/');
 
+  // Modal del puesto: ESC lo cierra y el fondo no scrollea mientras está abierto
+  // (Manual 8.6). Al cerrar se restaura el scroll.
+  useEffect(() => {
+    if (!puestoModal) return;
+    const alTecla = (e) => { if (e.key === 'Escape') setPuestoModal(null); };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [puestoModal]);
+
   const fechaEventoMostrada = new Date(evento?.fecha || defaultLandingData.fechaEvento);
   const diaEvento = fechaEventoMostrada.getDate();
   const mesEvento = fechaEventoMostrada.toLocaleString('es-BO', { month: 'long' });
@@ -137,18 +155,54 @@ export default function App() {
     }
   };
 
+  // Mientras carga o si el evento no existe / falla, no montamos la landing entera.
+  if (cargando || error) {
+    return (
+      <div className="pi-landing-container" style={estiloDinamico}>
+        <nav className="pi-landing-navbar">
+          <button type="button" className="pi-landing-logo" onClick={handleVolverInicio} aria-label="QPass, ir al inicio">
+            <FaQrcode className="logo-icon" aria-hidden="true" />
+            <span>QPass</span>
+          </button>
+        </nav>
+        <main id="contenido" style={{ padding: '32px 24px', maxWidth: '640px', margin: '0 auto' }}>
+          {error ? (
+            <EstadoError
+              onReintentar={recargar}
+              titulo="No se pudo cargar este evento"
+              mensaje="Puede que el enlace no sea válido o que haya un problema de conexión."
+            />
+          ) : (
+            <EstadoCarga filas={6} etiqueta="Cargando el evento…" />
+          )}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="pi-landing-container" style={estiloDinamico}>
-      
+
       {/* BARRA DE NAVEGACIÓN */}
       <nav className="pi-landing-navbar">
-        <div className="pi-landing-volver" onClick={handleVolverInicio}>
-          <FaArrowLeft />
-        </div>
-        <div className="pi-landing-logo" onClick={handleVolverInicio} style={{cursor: 'pointer'}}>
-          <FaQrcode className="logo-icon" />
+        {/* Botones reales, no <div onClick>: operables con teclado (Manual Parte 9). */}
+        <button
+          type="button"
+          className="pi-landing-volver"
+          onClick={handleVolverInicio}
+          aria-label="Volver al inicio"
+        >
+          <FaArrowLeft aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          className="pi-landing-logo"
+          onClick={handleVolverInicio}
+          aria-label="QPass, ir al inicio"
+        >
+          <FaQrcode className="logo-icon" aria-hidden="true" />
           <span>QPass</span>
-        </div>
+        </button>
         <ul className="pi-landing-nav-links">
           <li><a href="#entradas">Entradas</a></li>
           <li><a href="#actividades">Actividades</a></li>
@@ -163,6 +217,8 @@ export default function App() {
       <div className="bg-glow glow-top-left"></div>
       <div className="bg-glow glow-bottom-right"></div>
 
+      {/* Landmark principal de la pantalla (Manual 11) */}
+      <main id="contenido">
       {/* SECCIÓN HERO */}
       <header id="inicio" className="pi-landing-hero">
         <div className="pi-landing-hero-content">
@@ -175,12 +231,18 @@ export default function App() {
           </div>
         </div>
         <div className="pi-landing-hero-image">
-          <img src={data.imagen} alt="Evento QPass" className="floating-img" />
+          <img
+            src={data.imagen}
+            alt={data.titulo || 'Imagen del evento'}
+            className="floating-img"
+            width="520"
+            height="520"
+          />
         </div>
       </header>
 {/* SECCIÓN PRECIOS Y ENTRADAS */}
       <section id="entradas" className="pi-landing-section pricing-section">
-        <h2 className="pricing-title">OUR PRICES</h2>
+        <h2 className="pricing-title">Nuestros precios</h2>
         <div className="pricing-grid">
           {precios.map((plan) => (
             <div key={plan.id} className={`pricing-card ${plan.destacado ? 'destacado' : ''}`}>
@@ -190,14 +252,14 @@ export default function App() {
               </div>
               <ul className="pricing-features">
                 {plan.beneficios.map((ben, idx) => (
-                  <li key={idx}><FaCheck className="check-icon"/> {ben}</li>
+                  <li key={idx}><FaCheck className="check-icon" aria-hidden="true"/> {ben}</li>
                 ))}
               </ul>
               <div className="pricing-price">
                 <span className="price-amount">{plan.precio}</span>
               </div>
               <button className="btn-pricing" onClick={handleLoginClick}>
-                ADQUIRIR AHORA
+                Adquirir ahora
               </button>
             </div>
           ))}
@@ -277,7 +339,9 @@ export default function App() {
         <div className="pi-landing-mapa-wrapper glass-panel">
           <div className="pi-landing-mapa-canvas">
             {mapaPuestos.filter(p => p.estadoActivo).map((puesto) => (
-              <div 
+              // Cada puesto del mapa es un botón: se puede abrir con Tab + Enter.
+              <button
+                type="button"
                 key={puesto.id}
                 className="pi-landing-puesto-box"
                 style={{
@@ -285,6 +349,7 @@ export default function App() {
                   width: `${puesto.ancho}px`, height: `${puesto.alto}px`
                 }}
                 onClick={() => setPuestoModal(puesto)}
+                aria-label={`Ver puesto ${puesto.nombre}`}
               >
                 {puesto.logo ? (
                   <div className="box-fondo-img" style={{ backgroundImage: `url(${puesto.logo})` }}>
@@ -292,11 +357,11 @@ export default function App() {
                   </div>
                 ) : (
                   <div className="box-fondo-color">
-                    <FaStore className="puesto-icon-dinamico" />
+                    <FaStore className="puesto-icon-dinamico" aria-hidden="true" />
                     <strong>{puesto.nombre}</strong>
                   </div>
                 )}
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -323,6 +388,7 @@ export default function App() {
           })}
         </div>
       </section>
+      </main>
 
       {/* FOOTER */}
       <footer className="pi-landing-footer glass-footer">
@@ -333,14 +399,27 @@ export default function App() {
         <p>&copy; {new Date().getFullYear()} QPass - Gestión de Accesos Inteligente. Todos los derechos reservados.</p>
       </footer>
 
-      {/* MODAL PUESTO */}
+      {/* MODAL PUESTO — role/aria-modal + cierre con ESC y clic en el fondo (Manual 8.6) */}
       {puestoModal && (
         <div className="pi-landing-modal-overlay" onClick={() => setPuestoModal(null)}>
-          <div className="pi-landing-modal glass-modal" onClick={e => e.stopPropagation()}>
+          <div
+            ref={modalPuestoRef}
+            tabIndex={-1}
+            className="pi-landing-modal glass-modal"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-puesto-titulo"
+          >
             <div className="pi-landing-modal-header">
-              <h2>{puestoModal.nombre}</h2>
-              <button className="btn-close-modal" onClick={() => setPuestoModal(null)}>
-                <FaTimes />
+              <h2 id="modal-puesto-titulo">{puestoModal.nombre}</h2>
+              <button
+                type="button"
+                className="btn-close-modal"
+                onClick={() => setPuestoModal(null)}
+                aria-label="Cerrar"
+              >
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
             <div className="pi-landing-modal-body">
@@ -350,7 +429,7 @@ export default function App() {
               ) : (
                 <ul className="pricing-features">
                   {puestoModal.productos.map(p => (
-                    <li key={p.id}><FaCheck className="check-icon" /> {p.nombre} — {p.precio} Bs</li>
+                    <li key={p.id}><FaCheck className="check-icon" aria-hidden="true" /> {p.nombre} — {p.precio} Bs</li>
                   ))}
                 </ul>
               )}

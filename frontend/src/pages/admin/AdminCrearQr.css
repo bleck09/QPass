@@ -13,29 +13,30 @@
   gap: 16px;
 }
 
+.pi-adqr-header h1,
 .pi-adqr-header h2 {
   display: flex;
   align-items: center;
   gap: 8px;
   color: var(--texto-principal);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
 }
 
 .pi-adqr-header p {
   color: var(--texto-secundario);
-  font-size: 14px;
+  font-size: 1rem;
   margin-top: 4px;
 }
 
 .pi-adqr-selector-evento {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background: var(--blanco);
   border: 1px solid var(--borde-suave);
   border-radius: 10px;
-  padding: 10px 16px;
+  padding: 8px 16px;
   color: var(--indigo-profundo);
   font-weight: 600;
 }
@@ -43,7 +44,7 @@
 .pi-adqr-selector-evento select {
   border: none;
   outline: none;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-principal);
   background: none;
@@ -59,21 +60,21 @@
 .pi-adqr-kpi-card {
   background: var(--blanco);
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .pi-adqr-kpi-card .numero {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--texto-principal);
 }
 
 .pi-adqr-kpi-card .label {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
 }
 
@@ -86,7 +87,7 @@
 }
 
 .pi-adqr-subtitulo {
-  font-size: 16px;
+  font-size: 1rem;
   color: var(--texto-principal);
 }
 
@@ -101,7 +102,7 @@
 
 .pi-adqr-acciones-lista {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 /* --- FORMULARIO --- */
@@ -114,10 +115,10 @@
 
 .pi-adqr-input-group label {
   display: block;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--texto-principal);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
 
 .pi-adqr-input-wrapper {
@@ -129,17 +130,17 @@
 .pi-adqr-input-icon {
   position: absolute;
   left: 12px;
-  color: var(--gris-medio);
-  font-size: 14px;
+  color: var(--texto-secundario);
+  font-size: 0.875rem;
 }
 
 .pi-adqr-input-wrapper input {
   width: 200px;
-  padding: 10px 10px 10px 38px;
+  padding: 8px 8px 8px 40px;
   border: 1px solid var(--borde-medio);
   border-radius: 8px;
   outline: none;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-family: inherit;
   color: var(--texto-principal);
   transition: border-color 0.2s;
@@ -156,9 +157,9 @@
   background-color: var(--indigo-profundo);
   color: var(--blanco);
   border: none;
-  padding: 11px 20px;
+  padding: 12px 20px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -175,9 +176,9 @@
   background-color: var(--verde-recarga);
   color: var(--texto-sobre-vivo);
   border: none;
-  padding: 9px 16px;
+  padding: 8px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -194,9 +195,9 @@
   background-color: var(--rojo-error-suave);
   color: var(--rojo-error-texto);
   border: none;
-  padding: 9px 16px;
+  padding: 8px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -209,7 +210,7 @@
 
 .pi-adqr-empty {
   text-align: center;
-  padding: 30px !important;
+  padding: 32px !important;
   color: var(--texto-secundario);
 }
 
@@ -220,7 +221,7 @@
   justify-content: center;
   gap: 16px;
   margin-bottom: 16px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
 }
 
@@ -248,7 +249,7 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid var(--borde-suave);
   border-radius: 10px;
   background: var(--gris-niebla);
@@ -262,7 +263,7 @@
 
 .pi-adqr-chip svg {
   color: var(--indigo-profundo);
-  font-size: 20px;
+  font-size: 1.25rem;
 }
 
 /* --- MODAL DE VISTA PREVIA DE UN QR --- */
@@ -273,7 +274,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: var(--z-dropdown);
 }
 
 .pi-adqr-modal {
@@ -303,7 +304,7 @@
   right: 10px;
   border: none;
   background: none;
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--texto-secundario);
   cursor: pointer;
 }
@@ -320,7 +321,7 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  padding: 14px;
+  padding: 16px;
   border: 1px solid var(--borde-suave);
   border-radius: 10px;
   background: var(--gris-niebla);
@@ -350,7 +351,7 @@
 }
 
 .pi-adqr-codigo {
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 700;
   color: var(--texto-principal);
   text-align: center;
@@ -363,7 +364,7 @@
   align-items: center;
   gap: 12px;
   margin-bottom: 16px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
 }
 

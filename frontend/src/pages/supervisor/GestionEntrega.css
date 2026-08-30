@@ -5,16 +5,17 @@
   gap: 20px;
 }
 
+.pi-entrega-header h1,
 .pi-entrega-header h2 {
   color: var(--texto-principal);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
-  margin: 0 0 5px 0;
+  margin: 0 0 4px 0;
 }
 
 .pi-entrega-header p {
   color: var(--texto-secundario);
-  font-size: 14px;
+  font-size: 1rem;
   margin: 0;
 }
 
@@ -25,7 +26,7 @@
   background: none;
   border: none;
   color: var(--indigo-profundo);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
   padding: 0;
@@ -36,8 +37,8 @@
 }
 
 .pi-entrega-sin-eventos {
-  color: var(--gris-medio);
-  font-size: 14px;
+  color: var(--texto-secundario);
+  font-size: 0.875rem;
   padding: 20px 0;
 }
 
@@ -46,7 +47,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, 240px);
   justify-content: start;
-  gap: 18px;
+  gap: 16px;
 }
 
 .pi-entrega-evento-card {
@@ -79,22 +80,22 @@
 }
 
 .pi-entrega-evento-info {
-  padding: 12px 14px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .pi-entrega-evento-info strong {
-  font-size: 15px;
+  font-size: 1rem;
   color: var(--texto-principal);
 }
 
 .pi-entrega-evento-info span {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 0.75rem;
   color: var(--texto-secundario);
 }
 
@@ -108,10 +109,10 @@
 .pi-entrega-stat-card {
   background: var(--blanco);
   border-radius: 12px;
-  padding: 18px;
+  padding: 16px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
@@ -123,7 +124,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--texto-sobre-oscuro);
 }
 
@@ -137,13 +138,13 @@
 }
 
 .pi-entrega-stat-info .numero {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--texto-principal);
 }
 
 .pi-entrega-stat-info .label {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
 }
 
@@ -154,8 +155,8 @@
   gap: 8px;
   background-color: var(--gris-niebla);
   border-radius: 8px;
-  padding: 10px 14px;
-  color: var(--gris-medio);
+  padding: 8px 16px;
+  color: var(--texto-secundario);
   max-width: 360px;
 }
 
@@ -163,7 +164,7 @@
   border: none;
   background: none;
   outline: none;
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--texto-principal);
   width: 100%;
 }
@@ -183,10 +184,10 @@
 
 .pi-entrega-tabla th {
   text-align: left;
-  font-size: 12px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
   padding: 12px;
   border-bottom: 1px solid var(--borde-suave);
 }
@@ -194,14 +195,14 @@
 .pi-entrega-tabla td {
   padding: 12px;
   border-bottom: 1px solid var(--borde-suave);
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--texto-principal);
 }
 
 .pi-entrega-fila-persona {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pi-entrega-mini-avatar {
@@ -214,10 +215,10 @@
 .pi-entrega-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: 20px;
 }
 
@@ -228,19 +229,19 @@
 
 .pi-entrega-badge-pend {
   background-color: var(--gris-niebla);
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
 }
 
 .pi-entrega-btn-vincular {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background-color: var(--indigo-profundo);
   color: var(--blanco);
   border: none;
-  padding: 8px 14px;
+  padding: 8px 16px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -253,7 +254,7 @@
 .pi-entrega-sin-resultados {
   text-align: center;
   color: var(--texto-secundario);
-  padding: 30px !important;
+  padding: 32px !important;
 }
 
 /* --- MODAL VINCULAR --- */
@@ -264,7 +265,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
+  z-index: var(--z-modal);
   padding: 20px;
   backdrop-filter: blur(4px);
 }
@@ -279,7 +280,7 @@
 }
 
 .pi-entrega-modal-header {
-  padding: 18px 24px;
+  padding: 16px 24px;
   background-color: var(--gris-niebla);
   border-bottom: 1px solid var(--borde-suave);
   display: flex;
@@ -290,18 +291,18 @@
 .pi-entrega-modal-header h3 {
   margin: 0;
   color: var(--texto-principal);
-  font-size: 16px;
+  font-size: 1rem;
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pi-entrega-btn-cerrar-modal {
   background: none;
   border: none;
-  color: var(--gris-medio);
-  font-size: 20px;
+  color: var(--texto-secundario);
+  font-size: 1.25rem;
   cursor: pointer;
 }
 
@@ -330,7 +331,7 @@
 }
 
 .pi-entrega-camara-simulada span {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--blanco);
 }
@@ -339,13 +340,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   background-color: var(--verde-recarga-suave);
   color: var(--verde-recarga-texto);
   border-radius: 8px;
   padding: 12px;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 0.8125rem;
   word-break: break-all;
   text-align: center;
 }
@@ -360,7 +361,7 @@
   border: none;
   padding: 12px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -376,10 +377,10 @@
 }
 
 .pi-entrega-aviso {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--ambar-aviso-texto);
   background-color: var(--ambar-aviso-suave);
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
   margin: 0;
   display: flex;
@@ -402,9 +403,9 @@
   background: var(--blanco);
   border: 1px solid var(--borde-medio);
   color: var(--texto-principal);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
-  padding: 10px 18px;
+  padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s;
@@ -421,9 +422,9 @@
   background: var(--indigo-profundo);
   border: none;
   color: var(--blanco);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
-  padding: 10px 18px;
+  padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s;

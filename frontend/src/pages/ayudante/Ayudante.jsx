@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaStore, FaShoppingCart, FaPlus, FaMinus, FaTrash, FaQrcode, FaTimes,
   FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle, FaHistory,
@@ -10,8 +14,21 @@ import EscanerQr from '../../components/EscanerQr.jsx';
 import './Ayudante.css';
 
 export default function Ayudante() {
+  useTituloPagina('Vender y cobrar');
   const sesion = leerSesion();
-  const [puestosAsignados, setPuestosAsignados] = useState(null); // null = cargando
+
+  // Carga primaria (puestos donde trabaja el ayudante) con cargando/error/reintentar (Manual 8.9).
+  const cargarPuestos = useCallback(
+    () => api.puestoAyudantes.listar({ ayudanteId: sesion.id }).then(lista => lista.map(a => a.puesto)),
+    [sesion.id],
+  );
+  const {
+    data: puestosAsignados,
+    cargando: cargandoPuestos,
+    error: errorPuestos,
+    recargar: recargarPuestos,
+  } = useApi(cargarPuestos, { inicial: [] });
+
   const [puesto, setPuesto] = useState(null);
   const [productos, setProductos] = useState([]);
 
@@ -20,16 +37,17 @@ export default function Ayudante() {
 
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
+
+  // Gestión de foco de los modales (A1 / Manual 8.6): el foco entra al modal,
+  // queda atrapado con Tab y vuelve al disparador al cerrar.
+  const modalEscanerRef = useRef(null);
+  const modalTarjetaRef = useRef(null);
+  useFocoModal(modalEscanerRef, escaneando);
+  useFocoModal(modalTarjetaRef, !!tarjetaQR);
   const [buscando, setBuscando] = useState(false);
   const [errorEscaneo, setErrorEscaneo] = useState('');
   const [ventaExitosa, setVentaExitosa] = useState(null);
   const [ventas, setVentas] = useState([]);
-
-  useEffect(() => {
-    api.puestoAyudantes.listar({ ayudanteId: sesion.id }).then(lista => {
-      setPuestosAsignados(lista.map(a => a.puesto));
-    });
-  }, []);
 
   const seleccionarPuesto = (p) => {
     setPuesto(p);
@@ -105,6 +123,23 @@ export default function Ayudante() {
     setVentaExitosa(null);
   };
 
+  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  const hayModalAbierto = escaneando || !!tarjetaQR;
+  useEffect(() => {
+    if (!hayModalAbierto) return;
+    const alTecla = (e) => {
+      if (e.key !== 'Escape') return;
+      setEscaneando(false);
+      cerrarTarjeta();
+    };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [hayModalAbierto]);
+
   const confirmarCobro = async () => {
     if (!tarjetaQR || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
 
@@ -120,13 +155,24 @@ export default function Ayudante() {
     setCarrito([]);
   };
 
-  if (puestosAsignados === null) return null;
+  if (errorPuestos || cargandoPuestos) {
+    return (
+      <div className="pi-ayu-container">
+        <div className="pi-ayu-header-wrapper">
+          <h1>Vender / cobrar</h1>
+        </div>
+        {errorPuestos
+          ? <EstadoError onReintentar={recargarPuestos} />
+          : <EstadoCarga filas={3} />}
+      </div>
+    );
+  }
 
   if (puestosAsignados.length === 0) {
     return (
       <div className="pi-ayu-container">
         <div className="pi-ayu-header-wrapper">
-          <h2>Vender / Cobrar</h2>
+          <h1>Vender / cobrar</h1>
         </div>
         <p className="pi-ayu-carrito-vacio">Todavía no tienes ningún puesto asignado. Pídele a tu Usuario Negocio que te asigne uno.</p>
       </div>
@@ -137,13 +183,13 @@ export default function Ayudante() {
     return (
       <div className="pi-ayu-container">
         <div className="pi-ayu-header-wrapper">
-          <h2>Selecciona tu puesto</h2>
+          <h1>Selecciona tu puesto</h1>
         </div>
         <div className="pi-ayu-productos-grid">
           {puestosAsignados.map(p => (
             <button key={p.id} type="button" className="pi-ayu-producto-card" onClick={() => seleccionarPuesto(p)}>
               {p.logo
-                ? <img src={p.logo} alt={p.nombre} className="pi-ayu-producto-img" />
+                ? <img width="160" height="90" src={p.logo} alt={p.nombre} className="pi-ayu-producto-img" />
                 : <div className="pi-ayu-producto-img-placeholder"><FaStore /></div>}
               <span className="pi-ayu-producto-nombre">{p.nombre}</span>
             </button>
@@ -160,14 +206,14 @@ export default function Ayudante() {
       <div className="pi-ayu-header-wrapper">
         <div className="pi-ayu-header-negocio">
           {puestosAsignados.length > 1 && (
-            <button className="pi-ayu-btn-quitar" onClick={() => setPuesto(null)} title="Cambiar de puesto"><FaArrowLeft /></button>
+            <button type="button" className="pi-ayu-btn-quitar" onClick={() => setPuesto(null)} aria-label="Cambiar de puesto"><FaArrowLeft aria-hidden="true" /></button>
           )}
           {puesto.logo
-            ? <img src={puesto.logo} alt={puesto.nombre} className="pi-ayu-logo-negocio" />
+            ? <img width="64" height="64" src={puesto.logo} alt={puesto.nombre} className="pi-ayu-logo-negocio" />
             : <div className="pi-ayu-logo-placeholder"><FaStore /></div>}
           <div>
             <span className="pi-ayu-eyebrow">Punto de venta</span>
-            <h2>{puesto.nombre}</h2>
+            <h1>{puesto.nombre}</h1>
             <p>{puesto.descripcion}</p>
           </div>
         </div>
@@ -182,11 +228,11 @@ export default function Ayudante() {
       </div>
 
       <div className="pi-ayu-tabs">
-        <button className={pestana === 'vender' ? 'activo' : ''} onClick={() => setPestana('vender')}>
-          <FaShoppingCart /> Vender
+        <button type="button" className={pestana === 'vender' ? 'activo' : ''} aria-current={pestana === 'vender' ? 'page' : undefined} onClick={() => setPestana('vender')}>
+          <FaShoppingCart aria-hidden="true" /> Vender
         </button>
-        <button className={pestana === 'historial' ? 'activo' : ''} onClick={() => setPestana('historial')}>
-          <FaHistory /> Historial ({ventas.length})
+        <button type="button" className={pestana === 'historial' ? 'activo' : ''} aria-current={pestana === 'historial' ? 'page' : undefined} onClick={() => setPestana('historial')}>
+          <FaHistory aria-hidden="true" /> Historial ({ventas.length})
         </button>
       </div>
 
@@ -202,7 +248,7 @@ export default function Ayudante() {
                 return (
                   <div className="pi-ayu-producto-card" key={producto.id}>
                     {producto.imagen
-                      ? <img src={producto.imagen} alt={producto.nombre} className="pi-ayu-producto-img" />
+                      ? <img width="160" height="90" src={producto.imagen} alt={producto.nombre} className="pi-ayu-producto-img" />
                       : <div className="pi-ayu-producto-img-placeholder"><FaHamburger /></div>}
                     <span className="pi-ayu-producto-nombre">{producto.nombre}</span>
                     <span className="pi-ayu-producto-precio">{Number(producto.precio)} pts</span>
@@ -282,8 +328,18 @@ export default function Ayudante() {
       {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
       {escaneando && (
         <div className="pi-ayu-modal-overlay" onClick={() => setEscaneando(false)}>
-          <div className="pi-ayu-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ textAlign: 'center', marginBottom: '14px' }}><FaQrcode /> Escanear manilla</h3>
+          <div
+            ref={modalEscanerRef}
+            tabIndex={-1}
+            className="pi-ayu-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="ayu-modal-escaner-titulo"
+          >
+            <h3 id="ayu-modal-escaner-titulo" style={{ textAlign: 'center', marginBottom: '14px' }}>
+              <FaQrcode aria-hidden="true" /> Escanear manilla
+            </h3>
             <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
           </div>
         </div>
@@ -296,12 +352,12 @@ export default function Ayudante() {
             <table className="pi-ayu-tabla">
               <thead>
                 <tr>
-                  <th>Cliente</th>
-                  <th>Documento</th>
-                  <th>Productos</th>
-                  <th>Total</th>
-                  <th>Fecha</th>
-                  <th>Hora</th>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Documento</th>
+                  <th scope="col">Productos</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Hora</th>
                 </tr>
               </thead>
               <tbody>
@@ -311,7 +367,7 @@ export default function Ayudante() {
                     <tr key={venta.id}>
                       <td>
                         <div className="pi-ayu-fila-persona">
-                          {venta.entrada?.foto && <img src={venta.entrada.foto} alt={venta.entrada.nombre} className="pi-ayu-mini-avatar" />}
+                          {venta.entrada?.foto && <img width="34" height="34" src={venta.entrada.foto} alt={venta.entrada.nombre} className="pi-ayu-mini-avatar" />}
                           <span>{venta.entrada?.nombre || '—'}</span>
                         </div>
                       </td>
@@ -343,8 +399,18 @@ export default function Ayudante() {
       {/* --- TARJETA GRANDE AL ESCANEAR QR --- */}
       {tarjetaQR && (
         <div className="pi-ayu-modal-overlay" onClick={cerrarTarjeta}>
-          <div className="pi-ayu-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
-            <button className="pi-ayu-btn-cerrar" onClick={cerrarTarjeta}><FaTimes /></button>
+          <div
+            ref={modalTarjetaRef}
+            tabIndex={-1}
+            className="pi-ayu-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Cobro a ${tarjetaQR.nombre}`}
+          >
+            <button type="button" className="pi-ayu-btn-cerrar" onClick={cerrarTarjeta} aria-label="Cerrar">
+              <FaTimes aria-hidden="true" />
+            </button>
 
             {ventaExitosa ? (
               <div className="pi-ayu-exito">
@@ -354,7 +420,7 @@ export default function Ayudante() {
                 <div className="pi-ayu-exito-saldo">
                   <FaWallet /> Saldo restante: <strong>{ventaExitosa.saldo} pts</strong>
                 </div>
-                <button className="pi-ayu-btn-confirmar" onClick={cerrarTarjeta}>Listo</button>
+                <button type="button" className="pi-ayu-btn-confirmar" onClick={cerrarTarjeta}>Listo</button>
               </div>
             ) : (
               <>
@@ -364,7 +430,7 @@ export default function Ayudante() {
                     : <><FaCheckCircle /> Código QR Válido</>}
                 </div>
 
-                {tarjetaQR.foto && <img src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-ayu-tarjeta-foto" />}
+                {tarjetaQR.foto && <img width="120" height="120" src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-ayu-tarjeta-foto" />}
                 <h2 className="pi-ayu-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
                 <div className="pi-ayu-tarjeta-datos">
@@ -405,7 +471,7 @@ export default function Ayudante() {
                 )}
 
                 <div className="pi-ayu-tarjeta-acciones">
-                  <button className="pi-ayu-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
+                  <button type="button" className="pi-ayu-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
                   <button
                     className="pi-ayu-btn-confirmar"
                     onClick={confirmarCobro}

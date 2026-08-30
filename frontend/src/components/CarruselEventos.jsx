@@ -74,11 +74,12 @@ export default function CarruselEventos({ eventos, onAdquirir }) {
               }}
             >
               <div className="card-image-bg">
-                <img src={imagenEvento(evento)} alt={evento.nombre} />
+                <img src={imagenEvento(evento)} alt={evento.nombre} width="400" height="240" loading="lazy" />
                 <div className="card-overlay-gradient"></div>
               </div>
 
-              <button className="btn-expand-icon glass-morphism"><FaExpandArrowsAlt/></button>
+              {/* Adorno visual sin acción: <span>, no un <button> muerto */}
+              <span className="btn-expand-icon glass-morphism" aria-hidden="true"><FaExpandArrowsAlt/></span>
 
               <div className="card-3d-content">
                 <h3>{evento.nombre}</h3>
@@ -86,8 +87,8 @@ export default function CarruselEventos({ eventos, onAdquirir }) {
 
                 <div className="card-3d-footer">
                   <div className="footer-info">
-                    <span><FaMapMarkerAlt/> {evento.lugar}</span>
-                    <span><FaCalendarAlt/> {formatearFecha(evento.fecha)}</span>
+                    <span><FaMapMarkerAlt aria-hidden="true"/> {evento.lugar}</span>
+                    <span><FaCalendarAlt aria-hidden="true"/> {formatearFecha(evento.fecha)}</span>
                   </div>
                   <div className="footer-price">
                     <span>Desde</span>
@@ -96,7 +97,7 @@ export default function CarruselEventos({ eventos, onAdquirir }) {
                 </div>
 
                 {isActive && (
-                  <button className="btn-solid btn-full mt-15" onClick={(e) => { e.stopPropagation(); onAdquirir(evento); }}>
+                  <button type="button" className="btn-solid btn-full mt-15" onClick={(e) => { e.stopPropagation(); onAdquirir(evento); }}>
                     Adquirir Entradas
                   </button>
                 )}
@@ -107,15 +108,19 @@ export default function CarruselEventos({ eventos, onAdquirir }) {
       </div>
 
       <div className="carousel-control-pill glass-morphism">
-        <button onClick={prevSlide}><FaChevronLeft/></button>
+        <button type="button" onClick={prevSlide} aria-label="Evento anterior">
+          <FaChevronLeft aria-hidden="true" />
+        </button>
         <div className="pill-info">
-          <img src={imagenEvento(eventos[activeIdx])} alt="thumb" />
+          <img src={imagenEvento(eventos[activeIdx])} alt="" width="400" height="240" />
           <div className="pill-text">
             <strong>{eventos[activeIdx].nombre}</strong>
             <span>{eventos[activeIdx].lugar}</span>
           </div>
         </div>
-        <button onClick={nextSlide}><FaChevronRight/></button>
+        <button type="button" onClick={nextSlide} aria-label="Evento siguiente">
+          <FaChevronRight aria-hidden="true" />
+        </button>
       </div>
     </>
   );

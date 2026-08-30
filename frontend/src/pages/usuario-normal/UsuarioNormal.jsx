@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaTicketAlt, FaWallet, FaQrcode, FaUpload, FaPlus, FaTrash, FaUserPlus,
@@ -28,6 +32,7 @@ const DATOS_PAGO_NEGOCIO = {
 };
 
 export default function UsuarioNormal() {
+  useTituloPagina('Mi panel');
   const [usuario] = useState(() => leerSesion() || { nombre: 'Invitado', email: '' });
 
   const location = useLocation();
@@ -40,27 +45,30 @@ export default function UsuarioNormal() {
     ? 'saldo'
     : 'misentradas';
 
-  const [proximosEventos, setProximosEventos] = useState([]);
-  const [eventosPasados, setEventosPasados] = useState([]);
   const [categoriasEntradas, setCategoriasEntradas] = useState([]);
 
-  useEffect(() => {
-    api.eventos.listar().then((todos) => {
-      setProximosEventos(todos.filter(esVigente));
-      setEventosPasados(todos.filter(ev => !esVigente(ev)));
-    });
-  }, []);
+  // Cartelera con estados cargando/error/reintentar (Manual 8.9).
+  const cargarEventos = useCallback(() => api.eventos.listar(), []);
+  const {
+    data: todosEventos,
+    cargando: cargandoEventos,
+    error: errorEventos,
+    recargar: recargarEventos,
+  } = useApi(cargarEventos, { inicial: [] });
+  const proximosEventos = todosEventos.filter(esVigente);
+  const eventosPasados = todosEventos.filter(ev => !esVigente(ev));
 
   // Evento para el que se está comprando: llega desde "Adquirir Entradas" en la pestaña Eventos.
   // Si se entra directo a /usuarionormal/comprar (sin pasar por ahí), caemos al primer evento disponible.
   const eventoSeleccionado = location.state?.evento || proximosEventos[0];
+  const eventoSeleccionadoId = eventoSeleccionado?.id;
 
   useEffect(() => {
-    if (!eventoSeleccionado) return;
-    api.categoriasTicket.listar(eventoSeleccionado.id).then(lista => {
+    if (!eventoSeleccionadoId) return;
+    api.categoriasTicket.listar(eventoSeleccionadoId).then(lista => {
       setCategoriasEntradas(lista.map((c, i) => ({ ...c, color: COLORES_CATEGORIA[i % COLORES_CATEGORIA.length] })));
     });
-  }, [eventoSeleccionado?.id]);
+  }, [eventoSeleccionadoId]);
 
   // --- ESTADOS DE COMPRAS (traídas del backend; Admin las aprueba desde su panel) ---
   const [compras, setCompras] = useState([]);
@@ -308,6 +316,37 @@ export default function UsuarioNormal() {
     setCamposReporte(prev => prev.includes(campo) ? prev.filter(c => c !== campo) : [...prev, campo]);
   };
 
+  // Cualquier modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  const hayModalAbierto = pagoIniciado || !!entradaReportando || !!compraEnRevision;
+
+  // Foco de cada modal (A1 / Manual 8.6): entra al abrir, atrapado con Tab, vuelve al disparador al cerrar.
+  const modalPagoRef = useRef(null);
+  const modalReporteRef = useRef(null);
+  const modalRevisionRef = useRef(null);
+  useFocoModal(modalPagoRef, pagoIniciado);
+  useFocoModal(modalReporteRef, !!entradaReportando && !compraEnRevision);
+  useFocoModal(modalRevisionRef, !!compraEnRevision);
+  useEffect(() => {
+    if (!hayModalAbierto) return;
+    const alTecla = (e) => {
+      if (e.key !== 'Escape') return;
+      setPagoIniciado(false);
+      cancelarReporte();
+      cerrarRevision();
+    };
+    window.addEventListener('keydown', alTecla);
+    // Bloqueo de scroll del fondo mientras el modal está abierto (patrón estándar).
+    // eslint-disable-next-line react-hooks/immutability
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+    // El handler solo llama a cerradores (setState); no necesita re-suscribirse
+    // cuando cambian esas funciones, solo cuando se abre/cierra un modal.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hayModalAbierto]);
+
   // Genera un reporte por cada dato marcado (nombre, correo y/o celular), así se pueden
   // reportar varios datos mal puestos de una sola vez en lugar de solo uno.
   const enviarReporte = async () => {
@@ -330,17 +369,20 @@ export default function UsuarioNormal() {
   // Formulario reutilizado tanto dentro de "Revisar mi solicitud" como en Mis Entradas.
   const formularioReporte = (
     <div className="pi-usr-form-reporte">
-      <label>¿Qué datos están mal? (puedes marcar varios)</label>
-      <div className="pi-usr-checks-reporte">
-        {camposReportables.map(campo => (
-          <label key={campo} className="pi-usr-check-campo">
-            <input type="checkbox" checked={camposReporte.includes(campo)} onChange={() => toggleCampoReporte(campo)} />
-            {ETIQUETA_CAMPO[campo]}
-          </label>
-        ))}
-      </div>
-      <label>Cuéntale a Admin cuáles son los datos correctos</label>
+      <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+        <legend>¿Qué datos están mal? (puedes marcar varios)</legend>
+        <div className="pi-usr-checks-reporte">
+          {camposReportables.map(campo => (
+            <label key={campo} className="pi-usr-check-campo">
+              <input type="checkbox" checked={camposReporte.includes(campo)} onChange={() => toggleCampoReporte(campo)} />
+              {ETIQUETA_CAMPO[campo]}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+      <label htmlFor="usr-reporte-desc">Cuéntale a Admin cuáles son los datos correctos</label>
       <textarea
+        id="usr-reporte-desc"
         rows={3}
         placeholder="Ej: el nombre correcto es Juan Pérez y el celular es 71234567"
         value={descripcionReporte}
@@ -348,13 +390,14 @@ export default function UsuarioNormal() {
         autoFocus
       />
       <div className="pi-usr-modal-acciones">
-        <button className="btn-cerrar-secundario" onClick={cancelarReporte}>Cancelar</button>
+        <button type="button" className="btn-cerrar-secundario" onClick={cancelarReporte}>Cancelar</button>
         <button
+          type="button"
           className="pi-usr-btn-enviar"
           onClick={enviarReporte}
           disabled={camposReporte.length === 0 || !descripcionReporte.trim()}
         >
-          <FaExclamationTriangle /> Enviar Reporte
+          <FaExclamationTriangle aria-hidden="true" /> Enviar Reporte
         </button>
       </div>
     </div>
@@ -388,7 +431,7 @@ export default function UsuarioNormal() {
         </div>
 
         <div className="pi-usr-compra-card-acciones">
-          <button className="pi-usr-btn-revisar" onClick={() => abrirRevision(compra)}>
+          <button type="button" className="pi-usr-btn-revisar" onClick={() => abrirRevision(compra)}>
             <FaSearch /> Ver detalles
           </button>
         </div>
@@ -400,16 +443,16 @@ export default function UsuarioNormal() {
     <div className="pi-usr-container">
 
       <div className="pi-usr-header">
-        <h2>Panel de Asistente</h2>
+        <h1>Panel de asistente</h1>
         <div className="pi-usr-tabs">
-          <button className={pestana === 'eventos' ? 'activo' : ''} onClick={() => navigate('/usuarionormal/eventos')}>
-            <FaCalendarAlt /> Eventos
+          <button type="button" className={pestana === 'eventos' ? 'activo' : ''} aria-current={pestana === 'eventos' ? 'page' : undefined} onClick={() => navigate('/usuarionormal/eventos')}>
+            <FaCalendarAlt aria-hidden="true" /> Eventos
           </button>
-          <button className={pestana === 'misentradas' ? 'activo' : ''} onClick={() => navigate('/usuarionormal')}>
-            <FaTicketAlt /> Mis Entradas
+          <button type="button" className={pestana === 'misentradas' ? 'activo' : ''} aria-current={pestana === 'misentradas' ? 'page' : undefined} onClick={() => navigate('/usuarionormal')}>
+            <FaTicketAlt aria-hidden="true" /> Mis Entradas
           </button>
-          <button className={pestana === 'saldo' ? 'activo' : ''} onClick={() => navigate('/usuarionormal/saldo')}>
-            <FaWallet /> Mi Saldo
+          <button type="button" className={pestana === 'saldo' ? 'activo' : ''} aria-current={pestana === 'saldo' ? 'page' : undefined} onClick={() => navigate('/usuarionormal/saldo')}>
+            <FaWallet aria-hidden="true" /> Mi Saldo
           </button>
         </div>
       </div>
@@ -420,10 +463,16 @@ export default function UsuarioNormal() {
       {pestana === 'eventos' && (
         <div className="pi-usr-eventos">
           <div className="pi-usr-eventos-panel">
-            <CarruselEventos
-              eventos={proximosEventos}
-              onAdquirir={(evento) => navigate('/usuarionormal/comprar', { state: { evento } })}
-            />
+            {errorEventos ? (
+              <EstadoError onReintentar={recargarEventos} titulo="No se pudo cargar la cartelera" />
+            ) : cargandoEventos ? (
+              <EstadoCarga filas={3} etiqueta="Cargando cartelera…" />
+            ) : (
+              <CarruselEventos
+                eventos={proximosEventos}
+                onAdquirir={(evento) => navigate('/usuarionormal/comprar', { state: { evento } })}
+              />
+            )}
           </div>
 
           <div className="pi-usr-card mt-20">
@@ -431,7 +480,7 @@ export default function UsuarioNormal() {
             <div className="pi-usr-eventos-pasados-grid">
               {eventosPasados.map(ev => (
                 <div key={ev.id} className="pi-usr-evento-pasado-card">
-                  <img src={imagenEvento(ev)} alt={ev.nombre} />
+                  <img src={imagenEvento(ev)} alt={ev.nombre} width="320" height="120" loading="lazy" />
                   <div className="pi-usr-evento-pasado-info">
                     <strong>{ev.nombre}</strong>
                     <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -450,7 +499,7 @@ export default function UsuarioNormal() {
         <div className="pi-usr-comprar">
 
           <div className="pi-usr-evento-header">
-            <img src={imagenEvento(eventoSeleccionado)} alt={eventoSeleccionado.nombre} />
+            <img src={imagenEvento(eventoSeleccionado)} alt={eventoSeleccionado.nombre} width="320" height="180" />
             <div>
               <span className="pi-usr-evento-header-eyebrow">Comprando entradas para</span>
               <h3>{eventoSeleccionado.nombre}</h3>
@@ -501,23 +550,23 @@ export default function UsuarioNormal() {
                             {catSeleccionada.nombre} · Bs.{catSeleccionada.precio}
                           </span>
 
-                          <button className="btn-eliminar-ticket" onClick={() => quitarEntrada(entrada.id)}>
-                            <FaTrash />
+                          <button type="button" className="btn-eliminar-ticket" onClick={() => quitarEntrada(entrada.id)} aria-label={`Quitar entrada de ${entrada.nombre || 'invitado'}`}>
+                            <FaTrash aria-hidden="true" />
                           </button>
                         </div>
 
                         <div className="pi-usr-ticket-inputs">
                           <div className="input-group">
-                            <label>Nombre Completo</label>
-                            <input type="text" placeholder="Ej: Ana López" value={entrada.nombre} onChange={(e) => actualizarEntrada(entrada.id, 'nombre', e.target.value)} disabled={entrada.isTitular} />
+                            <label htmlFor={`compra-nombre-${entrada.id}`}>Nombre completo</label>
+                            <input id={`compra-nombre-${entrada.id}`} type="text" autoComplete="name" placeholder="Ej: Ana López" value={entrada.nombre} onChange={(e) => actualizarEntrada(entrada.id, 'nombre', e.target.value)} disabled={entrada.isTitular} />
                           </div>
                           <div className="input-group">
-                            <label>Correo Electrónico</label>
-                            <input type="email" placeholder="Para enviar credenciales" value={entrada.correo} onChange={(e) => actualizarEntrada(entrada.id, 'correo', e.target.value)} disabled={entrada.isTitular} />
+                            <label htmlFor={`compra-correo-${entrada.id}`}>Correo electrónico</label>
+                            <input id={`compra-correo-${entrada.id}`} type="email" autoComplete="email" placeholder="Para enviar credenciales" value={entrada.correo} onChange={(e) => actualizarEntrada(entrada.id, 'correo', e.target.value)} disabled={entrada.isTitular} />
                           </div>
                           <div className="input-group">
-                            <label>Celular (WhatsApp)</label>
-                            <input type="tel" placeholder="Ej: 71234567" value={entrada.celular} onChange={(e) => actualizarEntrada(entrada.id, 'celular', e.target.value)} />
+                            <label htmlFor={`compra-celular-${entrada.id}`}>Celular (WhatsApp)</label>
+                            <input id={`compra-celular-${entrada.id}`} type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="Ej: 71234567" value={entrada.celular} onChange={(e) => actualizarEntrada(entrada.id, 'celular', e.target.value)} />
                           </div>
                         </div>
                       </div>
@@ -595,14 +644,24 @@ export default function UsuarioNormal() {
       {/* --- PANTALLA GRANDE DE PAGO: QR del negocio y luego subir el comprobante --- */}
       {pagoIniciado && (
         <div className="pi-usr-modal-overlay" onClick={() => setPagoIniciado(false)}>
-          <div className="pi-usr-modal pi-usr-modal-pago" onClick={(e) => e.stopPropagation()}>
+          <div
+            ref={modalPagoRef}
+            tabIndex={-1}
+            className="pi-usr-modal pi-usr-modal-pago"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="usr-modal-pago-titulo"
+          >
             <div className="pi-usr-modal-header">
-              <h3><FaQrcode color="var(--indigo-profundo)" /> Pagar entradas</h3>
-              <button className="pi-usr-btn-cerrar-modal" onClick={() => setPagoIniciado(false)}><FaTimes /></button>
+              <h3 id="usr-modal-pago-titulo"><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Pagar entradas</h3>
+              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={() => setPagoIniciado(false)} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
+              </button>
             </div>
             <div className="pi-usr-modal-body">
               <div className="pi-usr-qr-card pi-usr-qr-card-grande">
-                <img src={DATOS_PAGO_NEGOCIO.qrUrl} alt="QR de pago del negocio" />
+                <img width="200" height="200" src={DATOS_PAGO_NEGOCIO.qrUrl} alt="QR de pago del negocio" />
                 <div className="qr-info-text">
                   <span className="pi-usr-qr-titulo"><FaQrcode /> Escanea para pagar</span>
                   <span className="pi-usr-qr-nota">
@@ -621,7 +680,7 @@ export default function UsuarioNormal() {
                   </label>
                 ) : (
                   <div className="pi-usr-comprobante-preview-grande">
-                    <img src={comprobante.previewUrl} alt="Comprobante" />
+                    <img width="240" height="320" src={comprobante.previewUrl} alt="Comprobante" />
                     <div className="preview-info">
                       <span>{comprobante.nombreArchivo}</span>
                       <label htmlFor="pi-usr-file" className="btn-cambiar-archivo">Cambiar foto</label>
@@ -634,8 +693,8 @@ export default function UsuarioNormal() {
               {errorForm && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorForm}</div>}
 
               <div className="pi-usr-modal-acciones">
-                <button className="btn-cerrar-secundario" onClick={() => setPagoIniciado(false)}>Cerrar</button>
-                <button className="pi-usr-btn-enviar" onClick={handleEnviarComprobante}>
+                <button type="button" className="btn-cerrar-secundario" onClick={() => setPagoIniciado(false)}>Cerrar</button>
+                <button type="button" className="pi-usr-btn-enviar" onClick={handleEnviarComprobante}>
                   <FaCheckCircle /> Enviar Pago y Solicitar
                 </button>
               </div>
@@ -675,10 +734,10 @@ export default function UsuarioNormal() {
               <table className="pi-usr-tabla">
                 <thead>
                   <tr>
-                    <th>Movimiento</th>
-                    <th>Lugar / Detalle</th>
-                    <th>Monto</th>
-                    <th>Fecha / Hora</th>
+                    <th scope="col">Movimiento</th>
+                    <th scope="col">Lugar / Detalle</th>
+                    <th scope="col">Monto</th>
+                    <th scope="col">Fecha / Hora</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -729,7 +788,7 @@ export default function UsuarioNormal() {
             <div className="pi-usr-manilla-destacada" style={{ backgroundImage: `url(${imagenEvento(entradaDestacada.evento)})` }}>
               <div className="pi-usr-manilla-overlay">
                 {entradaDestacada.codigoQrVinculado ? (
-                  <img src={qrDe(entradaDestacada.codigoQrVinculado.codigo)} alt="Tu código QR" className="manilla-qr" />
+                  <img width="140" height="140" src={qrDe(entradaDestacada.codigoQrVinculado.codigo)} alt="Tu código QR" className="manilla-qr" />
                 ) : (
                   <div className="manilla-qr manilla-qr-pendiente">
                     <FaHourglassHalf size={28} />
@@ -802,7 +861,7 @@ export default function UsuarioNormal() {
             </div>
           )}
 
-          <button className="pi-usr-btn-toggle-pasadas" onClick={() => setMostrarPasadas(v => !v)}>
+          <button type="button" className="pi-usr-btn-toggle-pasadas" onClick={() => setMostrarPasadas(v => !v)}>
             <FaHistory /> {mostrarPasadas ? 'Ocultar entradas pasadas' : `Ver entradas pasadas (${comprasPasadas.length})`}
           </button>
 
@@ -823,10 +882,20 @@ export default function UsuarioNormal() {
       {/* --- REPORTAR ERROR DE DATOS (desde Mis Entradas) --- */}
       {entradaReportando && !compraEnRevision && (
         <div className="pi-usr-modal-overlay" onClick={cancelarReporte}>
-          <div className="pi-usr-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            ref={modalReporteRef}
+            tabIndex={-1}
+            className="pi-usr-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="usr-modal-reporte-titulo"
+          >
             <div className="pi-usr-modal-header">
-              <h3><FaExclamationTriangle color="var(--ambar-aviso-texto)" /> Reportar error de datos</h3>
-              <button className="pi-usr-btn-cerrar-modal" onClick={cancelarReporte}><FaTimes /></button>
+              <h3 id="usr-modal-reporte-titulo"><FaExclamationTriangle color="var(--ambar-aviso-texto)" aria-hidden="true" /> Reportar error de datos</h3>
+              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={cancelarReporte} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
+              </button>
             </div>
             <div className="pi-usr-modal-body">
               <p className="texto-ayuda">Entrada de: <strong>{entradaReportando.entrada.nombre}</strong></p>
@@ -839,10 +908,20 @@ export default function UsuarioNormal() {
       {/* --- REVISAR MI SOLICITUD --- */}
       {compraEnRevision && (
         <div className="pi-usr-modal-overlay" onClick={cerrarRevision}>
-          <div className="pi-usr-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            ref={modalRevisionRef}
+            tabIndex={-1}
+            className="pi-usr-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="usr-modal-revision-titulo"
+          >
             <div className="pi-usr-modal-header">
-              <h3><FaSearch color="var(--indigo-profundo)" /> Revisar mi solicitud</h3>
-              <button className="pi-usr-btn-cerrar-modal" onClick={cerrarRevision}><FaTimes /></button>
+              <h3 id="usr-modal-revision-titulo"><FaSearch color="var(--indigo-profundo)" aria-hidden="true" /> Revisar mi solicitud</h3>
+              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={cerrarRevision} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
+              </button>
             </div>
 
             <div className="pi-usr-modal-body">
@@ -858,7 +937,7 @@ export default function UsuarioNormal() {
                   </div>
                   <p className="texto-ayuda">Si crees que fue un error, contacta al organizador o realiza una nueva compra.</p>
                   <div className="pi-usr-modal-acciones">
-                    <button className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
+                    <button type="button" className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
                   </div>
                 </>
               )}
@@ -879,27 +958,34 @@ export default function UsuarioNormal() {
                         </span>
                         <div className="pi-usr-ticket-inputs">
                           <div className="input-group">
-                            <label>Nombre Completo</label>
+                            <label htmlFor={`rev-nombre-${ent.id}`}>Nombre completo</label>
                             <input
+                              id={`rev-nombre-${ent.id}`}
                               type="text"
+                              autoComplete="name"
                               value={ent.nombre}
                               onChange={(e) => actualizarEntradaEdicion(ent.id, 'nombre', e.target.value)}
                               disabled={ent.isTitular}
                             />
                           </div>
                           <div className="input-group">
-                            <label>Correo Electrónico</label>
+                            <label htmlFor={`rev-correo-${ent.id}`}>Correo electrónico</label>
                             <input
+                              id={`rev-correo-${ent.id}`}
                               type="email"
+                              autoComplete="email"
                               value={ent.correo}
                               onChange={(e) => actualizarEntradaEdicion(ent.id, 'correo', e.target.value)}
                               disabled={ent.isTitular}
                             />
                           </div>
                           <div className="input-group">
-                            <label>Celular (WhatsApp)</label>
+                            <label htmlFor={`rev-celular-${ent.id}`}>Celular (WhatsApp)</label>
                             <input
+                              id={`rev-celular-${ent.id}`}
                               type="tel"
+                              inputMode="numeric"
+                              autoComplete="tel-national"
                               value={ent.celular}
                               onChange={(e) => actualizarEntradaEdicion(ent.id, 'celular', e.target.value)}
                             />
@@ -912,8 +998,8 @@ export default function UsuarioNormal() {
                   {errorRevision && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorRevision}</div>}
 
                   <div className="pi-usr-modal-acciones">
-                    <button className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
-                    <button className="pi-usr-btn-enviar" onClick={guardarRevision}>
+                    <button type="button" className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
+                    <button type="button" className="pi-usr-btn-enviar" onClick={guardarRevision}>
                       <FaCheckCircle /> Guardar cambios
                     </button>
                   </div>
@@ -946,7 +1032,7 @@ export default function UsuarioNormal() {
                               entradasReportadas.includes(ent.id) ? (
                                 <span className="pi-usr-badge pi-usr-badge-pend"><FaExclamationTriangle /> Reportado</span>
                               ) : !reportando && (
-                                <button className="pi-usr-btn-reportar-entrada" onClick={() => iniciarReporte(compraEnRevision.id, ent)}>
+                                <button type="button" className="pi-usr-btn-reportar-entrada" onClick={() => iniciarReporte(compraEnRevision.id, ent)}>
                                   <FaExclamationTriangle /> Reportar error
                                 </button>
                               )
@@ -959,7 +1045,7 @@ export default function UsuarioNormal() {
 
                           <div className="pi-usr-entrada-qr">
                             {ent.codigoQrVinculado ? (
-                              <img src={qrDe(ent.codigoQrVinculado.codigo)} alt="QR" className="qr-miniatura" />
+                              <img width="80" height="80" src={qrDe(ent.codigoQrVinculado.codigo)} alt="QR" className="qr-miniatura" />
                             ) : (
                               <span className="texto-ayuda"><FaHourglassHalf /> Manilla aún sin vincular</span>
                             )}
@@ -972,7 +1058,7 @@ export default function UsuarioNormal() {
                   </div>
 
                   <div className="pi-usr-modal-acciones">
-                    <button className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
+                    <button type="button" className="btn-cerrar-secundario" onClick={cerrarRevision}>Cerrar</button>
                   </div>
                 </>
               ) : null}

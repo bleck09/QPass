@@ -14,16 +14,17 @@
 }
 
 /* Encabezado Principal h2: 22px bold */
+.pi-cliente-header h1,
 .pi-cliente-header h2 {
   color: var(--texto-principal);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
-  margin: 0 0 5px 0;
+  margin: 0 0 4px 0;
 }
 
 .pi-cliente-header p {
   color: var(--texto-secundario);
-  font-size: 14px;
+  font-size: 1rem;
   font-weight: 400;
   margin: 0;
 }
@@ -33,7 +34,7 @@
   padding: 12px 16px;
   border-radius: 8px;
   margin-bottom: 24px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
@@ -76,7 +77,7 @@
 .pi-cliente-card h3 {
   margin: 0 0 20px 0;
   color: var(--texto-principal);
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -87,7 +88,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
 .card-header-flex h3 {
@@ -99,7 +100,7 @@
 }
 
 .texto-ayuda {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
   margin-bottom: 20px;
   line-height: 1.5;
@@ -113,7 +114,7 @@
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 16px;
 }
 
@@ -123,7 +124,7 @@
 
 /* Label: 14px, semibold */
 .input-group label {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-principal);
 }
@@ -133,12 +134,12 @@
 .input-group input[type="time"],
 .input-group textarea {
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 16px;
   border: 1px solid var(--borde-medio);
   border-radius: 8px;
   outline: none;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 400;
   color: var(--texto-principal);
   background-color: var(--blanco);
@@ -157,8 +158,8 @@
 
 .input-group input::placeholder,
 .input-group textarea::placeholder {
-  color: var(--gris-medio);
-  font-size: 13px;
+  color: var(--texto-secundario);
+  font-size: 0.8125rem;
 }
 
 /* --- COLORES --- */
@@ -173,7 +174,7 @@
   align-items: center;
   gap: 12px;
   border: 1px solid var(--borde-medio);
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
   background-color: var(--gris-niebla);
 }
@@ -189,7 +190,7 @@
 }
 
 .color-picker-wrapper span {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--texto-principal);
   text-transform: uppercase;
@@ -198,7 +199,7 @@
 /* --- SUBIDA DE IMÁGENES Y PLANOS --- */
 .upload-zone {
   width: 100%;
-  padding: 25px 20px;
+  padding: 24px 20px;
   border: 2px dashed var(--borde-medio);
   border-radius: 12px;
   background-color: var(--gris-niebla);
@@ -217,13 +218,13 @@
 }
 
 .upload-icon {
-  font-size: 24px;
+  font-size: 1.5rem;
   color: var(--cian-digital);
   margin-bottom: 8px;
 }
 
 .upload-text {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--texto-principal);
 }
@@ -248,6 +249,7 @@
 /* Imagen rectangular (para planos y portadas) */
 .img-preview-rect {
   width: 100%;
+  aspect-ratio: 16 / 9;   /* reserva el alto antes de cargar: evita saltos de maquetación (Manual 8.10) */
   max-height: 200px;
   object-fit: contain;
   border-radius: 8px;
@@ -258,14 +260,14 @@
   background: var(--rojo-error-suave);
   color: var(--rojo-error-texto);
   border: none;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .btn-quitar-imagen:hover {
@@ -316,7 +318,7 @@
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
@@ -331,14 +333,14 @@
   background-color: var(--cian-digital-suave);
   color: var(--cian-digital-texto);
   border: none;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   transition: all 0.2s;
 }
 
@@ -381,16 +383,17 @@
 }
 
 /* Encabezado Principal h2: 22px bold */
+.pi-cliente-header h1,
 .pi-cliente-header h2 {
   color: var(--texto-principal);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
-  margin: 0 0 5px 0;
+  margin: 0 0 4px 0;
 }
 
 .pi-cliente-header p {
   color: var(--texto-secundario);
-  font-size: 14px;
+  font-size: 1rem;
   font-weight: 400;
   margin: 0;
 }
@@ -405,7 +408,7 @@
   padding: 12px 16px;
   border-radius: 8px;
   margin-bottom: 24px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
 }
 
@@ -448,7 +451,7 @@
 .pi-cliente-card h3 {
   margin: 0 0 20px 0;
   color: var(--texto-principal);
-  font-size: 17px;
+  font-size: 1.0625rem;
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -459,7 +462,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .card-header-flex h3 {
@@ -471,7 +474,7 @@
 }
 
 .texto-ayuda {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
   margin-bottom: 20px;
   line-height: 1.5;
@@ -495,7 +498,7 @@
 
 /* Label: 14px, semibold */
 .input-group label {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-principal);
 }
@@ -505,12 +508,12 @@
 .input-group input[type="time"],
 .input-group textarea {
   width: 100%;
-  padding: 10px 14px;
+  padding: 8px 16px;
   border: 1px solid var(--borde-medio);
   border-radius: 8px;
   outline: none;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 400;
   color: var(--texto-principal);
   background-color: var(--blanco);
@@ -529,8 +532,8 @@
 
 .input-group input::placeholder,
 .input-group textarea::placeholder {
-  color: var(--gris-medio);
-  font-size: 13px;
+  color: var(--texto-secundario);
+  font-size: 0.8125rem;
 }
 
 /* --- COLORES (Estilo de las imágenes provistas) --- */
@@ -561,7 +564,7 @@
 }
 
 .hex-text {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-secundario);
   font-family: 'Segoe UI', monospace;
@@ -571,7 +574,7 @@
 /* --- SUBIDA DE IMÁGENES Y PLANOS --- */
 .upload-zone {
   width: 100%;
-  padding: 25px 20px;
+  padding: 24px 20px;
   border: 2px dashed var(--borde-medio);
   border-radius: 12px;
   background-color: var(--gris-niebla);
@@ -590,13 +593,13 @@
 }
 
 .upload-icon {
-  font-size: 24px;
+  font-size: 1.5rem;
   color: var(--cian-digital);
   margin-bottom: 8px;
 }
 
 .upload-text {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--texto-principal);
 }
@@ -620,6 +623,7 @@
 
 .img-preview-rect {
   width: 100%;
+  aspect-ratio: 16 / 9;   /* reserva el alto antes de cargar: evita saltos de maquetación (Manual 8.10) */
   max-height: 200px;
   object-fit: contain;
   border-radius: 8px;
@@ -630,14 +634,14 @@
   background: var(--rojo-error-suave);
   color: var(--rojo-error-texto);
   border: none;
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .btn-quitar-imagen:hover {
@@ -674,7 +678,7 @@
   border: 1px solid var(--borde-medio);
   padding: 8px 12px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   outline: none;
 }
 
@@ -699,9 +703,9 @@
   background-color: var(--indigo-profundo);
   color: var(--blanco);
   border: none;
-  padding: 10px 20px;
+  padding: 8px 20px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
@@ -716,9 +720,9 @@
   background-color: var(--azul-noche);
   color: var(--blanco);
   border: none;
-  padding: 10px 20px;
+  padding: 8px 20px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
@@ -733,14 +737,14 @@
   background-color: var(--cian-digital-suave);
   color: var(--cian-digital-texto);
   border: none;
-  padding: 6px 14px;
+  padding: 8px 16px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   transition: all 0.2s;
 }
 
@@ -761,7 +765,7 @@
   justify-content: center;
   align-items: center;
   transition: all 0.2s;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .btn-eliminar-fila:hover {
@@ -777,7 +781,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
+  z-index: var(--z-modal);
   padding: 20px;
   backdrop-filter: blur(4px);
 }
@@ -801,7 +805,7 @@
 }
 
 .modal-header {
-  padding: 18px 24px;
+  padding: 16px 24px;
   background-color: var(--gris-niebla);
   border-bottom: 1px solid var(--borde-suave);
   display: flex;
@@ -812,18 +816,18 @@
 .modal-header h2 {
   margin: 0;
   color: var(--texto-principal);
-  font-size: 18px;
+  font-size: 1.125rem;
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .btn-close-modal {
   background: none;
   border: none;
-  color: var(--gris-medio);
-  font-size: 20px;
+  color: var(--texto-secundario);
+  font-size: 1.25rem;
   cursor: pointer;
 }
 
@@ -833,7 +837,7 @@
 .preview-container {
   display: flex;
   padding: 40px;
-  gap: 30px;
+  gap: 32px;
   align-items: center;
   overflow-y: auto;
 }
@@ -862,14 +866,14 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
   font-weight: 600;
 }
 
 /* Pestañas: Mi Propuesta / Dashboard General */
 .pi-cliente-tabs {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 24px;
   overflow-x: auto;
 }
@@ -881,9 +885,9 @@
   background: var(--gris-niebla);
   border: none;
   color: var(--texto-secundario);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
-  padding: 10px 18px;
+  padding: 8px 16px;
   border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s;
@@ -909,4 +913,14 @@
   .preview-image {
     text-align: center;
   }
+}
+/* .fila-dinamica ahora es <button> (accesible por teclado) — reset */
+button.fila-dinamica {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }

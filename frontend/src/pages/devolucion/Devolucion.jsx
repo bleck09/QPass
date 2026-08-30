@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaTimes, FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle,
@@ -14,16 +18,43 @@ import '../supervisor/GestionEntrega.css';
 import { ROLES } from '../../constants/roles.js';
 
 export default function Devolucion() {
+  useTituloPagina('Devoluciones');
   const sesion = leerSesion();
   const location = useLocation();
   const navigate = useNavigate();
   const pestana = location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
 
-  const [eventos, setEventos] = useState([]);
+  // Carga primaria (eventos asignados + negocios) con cargando/error/reintentar (Manual 8.9).
+  const cargarInicial = useCallback(async () => {
+    const [eventos, negociosRaw] = await Promise.all([
+      api.eventos.misAsignados(sesion.id, sesion.rol),
+      api.usuarios.listar({ rol: ROLES.USUARIO_NEGOCIO }),
+    ]);
+    return {
+      eventos,
+      negocios: negociosRaw.map(n => ({
+        ...n, tipo: 'Negocio', usuarioId: n.id, saldoDisponible: Number(n.saldo),
+      })),
+    };
+  }, [sesion.id, sesion.rol]);
+  const {
+    data: datosIniciales,
+    cargando: cargandoInicial,
+    error: errorInicial,
+    recargar: recargarInicial,
+  } = useApi(cargarInicial, { inicial: { eventos: [], negocios: [] } });
+  const { eventos, negocios } = datosIniciales;
+
   const [eventoDetalle, setEventoDetalle] = useState(null);
-  const [negocios, setNegocios] = useState([]);
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
+
+  // Gestión de foco de los modales (A1 / Manual 8.6): el foco entra al modal,
+  // queda atrapado con Tab y vuelve al disparador al cerrar.
+  const modalEscanerRef = useRef(null);
+  const modalTarjetaRef = useRef(null);
+  useFocoModal(modalEscanerRef, escaneando);
+  useFocoModal(modalTarjetaRef, !!tarjetaQR);
   const [buscando, setBuscando] = useState(false);
   const [errorEscaneo, setErrorEscaneo] = useState('');
   const [monto, setMonto] = useState('');
@@ -31,13 +62,6 @@ export default function Devolucion() {
   const [capturandoFotoCarnet, setCapturandoFotoCarnet] = useState(false);
   const [retiroExitoso, setRetiroExitoso] = useState(null);
   const [retiros, setRetiros] = useState([]);
-
-  useEffect(() => {
-    api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos);
-    api.usuarios.listar({ rol: ROLES.USUARIO_NEGOCIO }).then(lista =>
-      setNegocios(lista.map(n => ({ ...n, tipo: 'Negocio', usuarioId: n.id, saldoDisponible: Number(n.saldo) })))
-    );
-  }, []);
 
   const abrirEvento = (ev) => {
     setEventoDetalle(ev);
@@ -103,6 +127,23 @@ export default function Devolucion() {
     setRetiroExitoso(null);
   };
 
+  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  const hayModalAbierto = escaneando || !!tarjetaQR;
+  useEffect(() => {
+    if (!hayModalAbierto) return;
+    const alTecla = (e) => {
+      if (e.key !== 'Escape') return;
+      setEscaneando(false);
+      cerrarTarjeta();
+    };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [hayModalAbierto]);
+
   const confirmarRetiro = async () => {
     const valor = Number(monto);
     if (!tarjetaQR || !valor || valor <= 0 || valor > tarjetaQR.saldoDisponible || !fotoCarnet) return;
@@ -128,15 +169,19 @@ export default function Devolucion() {
     return (
       <div className="pi-dev-container">
         <div className="pi-dev-header">
-          <h2>Gestión de Devoluciones</h2>
+          <h1>Gestión de devoluciones</h1>
         </div>
-        {eventos.length === 0 ? (
+        {errorInicial ? (
+          <EstadoError onReintentar={recargarInicial} />
+        ) : cargandoInicial ? (
+          <EstadoCarga filas={3} />
+        ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (
               <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
-                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
                   <strong>{ev.nombre}</strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -154,23 +199,27 @@ export default function Devolucion() {
 
       <div className="pi-dev-header">
         <div>
-          <button className="pi-entrega-btn-volver" onClick={volverALista}>
+          <button type="button" className="pi-entrega-btn-volver" onClick={volverALista}>
             <FaArrowLeft /> Cambiar de evento
           </button>
-          <h2>{eventoDetalle.nombre}</h2>
+          <h1>{eventoDetalle.nombre}</h1>
         </div>
         <div className="pi-dev-tabs">
           <button
+            type="button"
             className={pestana === 'escanear' ? 'activo' : ''}
+            aria-current={pestana === 'escanear' ? 'page' : undefined}
             onClick={() => navigate('/devolucion')}
           >
-            <FaQrcode /> Escanear QR
+            <FaQrcode aria-hidden="true" /> Escanear QR
           </button>
           <button
+            type="button"
             className={pestana === 'historial' ? 'activo' : ''}
+            aria-current={pestana === 'historial' ? 'page' : undefined}
             onClick={() => navigate('/devolucion/historial')}
           >
-            <FaHistory /> Historial ({retiros.length})
+            <FaHistory aria-hidden="true" /> Historial ({retiros.length})
           </button>
         </div>
       </div>
@@ -181,7 +230,7 @@ export default function Devolucion() {
           <FaQrcode size={70} color="var(--cian-digital)" />
           <h3>Escanea el código QR del participante</h3>
           <p>Apunta la cámara a la manilla del participante para cargar sus datos y procesar el retiro.</p>
-          <button className="pi-dev-btn-escanear" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
+          <button type="button" className="pi-dev-btn-escanear" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
             <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
           </button>
           {errorEscaneo && (
@@ -194,7 +243,7 @@ export default function Devolucion() {
             Los Usuario Negocio todavía no tienen un código QR propio para escanear — mientras
             se implementa eso, elegí uno al azar de la lista para probar ese flujo.
           </p>
-          <button className="pi-dev-btn-escanear" onClick={handleSimularSeleccionNegocio} disabled={negocios.length === 0}>
+          <button type="button" className="pi-dev-btn-escanear" onClick={handleSimularSeleccionNegocio} disabled={negocios.length === 0}>
             <FaBuilding /> Simular selección de Negocio
           </button>
         </div>
@@ -203,8 +252,18 @@ export default function Devolucion() {
       {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
       {escaneando && (
         <div className="pi-dev-modal-overlay" onClick={() => setEscaneando(false)}>
-          <div className="pi-dev-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ textAlign: 'center', marginBottom: '14px' }}><FaQrcode /> Escanear manilla</h3>
+          <div
+            ref={modalEscanerRef}
+            tabIndex={-1}
+            className="pi-dev-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dev-modal-escaner-titulo"
+          >
+            <h3 id="dev-modal-escaner-titulo" style={{ textAlign: 'center', marginBottom: '14px' }}>
+              <FaQrcode aria-hidden="true" /> Escanear manilla
+            </h3>
             <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
           </div>
         </div>
@@ -228,14 +287,14 @@ export default function Devolucion() {
             <table className="pi-dev-tabla">
               <thead>
                 <tr>
-                  <th>Beneficiario</th>
-                  <th>Documento</th>
-                  <th>Tipo</th>
-                  <th>Carnet</th>
-                  <th>Monto</th>
-                  <th>Saldo Resultante</th>
-                  <th>Fecha</th>
-                  <th>Hora</th>
+                  <th scope="col">Beneficiario</th>
+                  <th scope="col">Documento</th>
+                  <th scope="col">Tipo</th>
+                  <th scope="col">Carnet</th>
+                  <th scope="col">Monto</th>
+                  <th scope="col">Saldo Resultante</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Hora</th>
                 </tr>
               </thead>
               <tbody>
@@ -243,7 +302,7 @@ export default function Devolucion() {
                   <tr key={item.id}>
                     <td>
                       <div className="pi-dev-fila-persona">
-                        {item.entrada?.foto && <img src={item.entrada.foto} alt={item.entrada.nombre} className="pi-dev-mini-avatar" />}
+                        {item.entrada?.foto && <img width="34" height="34" src={item.entrada.foto} alt={item.entrada.nombre} className="pi-dev-mini-avatar" />}
                         <span>{item.entrada?.nombre || '—'}</span>
                       </div>
                     </td>
@@ -255,7 +314,7 @@ export default function Devolucion() {
                     </td>
                     <td>
                       {item.fotoCarnetUrl
-                        ? <img src={item.fotoCarnetUrl} alt={`Carnet de ${item.entrada?.nombre}`} className="pi-dev-mini-carnet" />
+                        ? <img width="40" height="40" src={item.fotoCarnetUrl} alt={`Carnet de ${item.entrada?.nombre}`} className="pi-dev-mini-carnet" />
                         : <span className="pi-dev-sin-carnet">—</span>}
                     </td>
                     <td className="pi-dev-monto-celda">-{Number(item.monto)} pts</td>
@@ -280,8 +339,18 @@ export default function Devolucion() {
       {/* --- TARJETA GRANDE AL ESCANEAR QR --- */}
       {tarjetaQR && (
         <div className="pi-dev-modal-overlay" onClick={cerrarTarjeta}>
-          <div className="pi-dev-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
-            <button className="pi-dev-btn-cerrar" onClick={cerrarTarjeta}><FaTimes /></button>
+          <div
+            ref={modalTarjetaRef}
+            tabIndex={-1}
+            className="pi-dev-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Devolución de saldo a ${tarjetaQR.nombre}`}
+          >
+            <button type="button" className="pi-dev-btn-cerrar" onClick={cerrarTarjeta} aria-label="Cerrar">
+              <FaTimes aria-hidden="true" />
+            </button>
 
             {retiroExitoso ? (
               <div className="pi-dev-exito">
@@ -291,7 +360,7 @@ export default function Devolucion() {
                 <div className="pi-dev-exito-saldo">
                   <FaWallet /> Saldo restante: <strong>{retiroExitoso.saldo} pts</strong>
                 </div>
-                <button className="pi-dev-btn-confirmar" onClick={cerrarTarjeta}>Listo</button>
+                <button type="button" className="pi-dev-btn-confirmar" onClick={cerrarTarjeta}>Listo</button>
               </div>
             ) : (
               <>
@@ -300,7 +369,7 @@ export default function Devolucion() {
                 </div>
 
                 {(tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
-                  <img src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-dev-tarjeta-foto" />
+                  <img width="140" height="140" src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-dev-tarjeta-foto" />
                 )}
                 <h2 className="pi-dev-tarjeta-nombre">{tarjetaQR.nombre}</h2>
                 <span className={`pi-dev-badge-tipo ${tarjetaQR.tipo === 'Negocio' ? 'negocio' : 'normal'}`}>
@@ -325,10 +394,12 @@ export default function Devolucion() {
                 </div>
 
                 <div className="pi-dev-form-monto">
-                  <label><FaMoneyBillWave /> Monto a retirar (puntos)</label>
+                  <label htmlFor="dev-monto"><FaMoneyBillWave aria-hidden="true" /> Monto a retirar (puntos)</label>
                   <input
+                    id="dev-monto"
                     type="number"
                     min="1"
+                    inputMode="numeric"
                     placeholder="Ej: 50"
                     value={monto}
                     onChange={(e) => setMonto(e.target.value)}
@@ -351,7 +422,7 @@ export default function Devolucion() {
                 </div>
 
                 <div className="pi-dev-form-carnet">
-                  <label><FaIdCard /> Foto del carnet de quien retira</label>
+                  <p className="pi-dev-form-carnet-titulo"><FaIdCard aria-hidden="true" /> Foto del carnet de quien retira</p>
 
                   {capturandoFotoCarnet ? (
                     <CapturarFoto
@@ -360,7 +431,7 @@ export default function Devolucion() {
                     />
                   ) : fotoCarnet ? (
                     <div className="pi-dev-carnet-preview">
-                      <img src={fotoCarnet} alt="Carnet de quien retira" />
+                      <img width="200" height="150" src={fotoCarnet} alt="Carnet de quien retira" />
                       <button type="button" className="pi-dev-btn-retomar" onClick={() => setCapturandoFotoCarnet(true)}>
                         <FaRedo /> Tomar otra
                       </button>
@@ -373,7 +444,7 @@ export default function Devolucion() {
                 </div>
 
                 <div className="pi-dev-tarjeta-acciones">
-                  <button className="pi-dev-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
+                  <button type="button" className="pi-dev-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
                   <button
                     className="pi-dev-btn-confirmar"
                     onClick={confirmarRetiro}

@@ -15,7 +15,13 @@ const ANCHO_ANALISIS = 400;
 export default function EscanerQr({ onDetectado, onCancelar }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [error, setError] = useState('');
+  // El soporte de cámara se sabe al montar: se calcula como estado inicial en
+  // vez de con setState dentro del efecto.
+  const [error, setError] = useState(() =>
+    typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia
+      ? ''
+      : 'Este navegador no permite acceder a la cámara en esta conexión. Si estás entrando por una IP de red (no https:// ni localhost), el navegador bloquea la cámara por seguridad — hace falta HTTPS.',
+  );
   const [listo, setListo] = useState(false);
   const [camaras, setCamaras] = useState([]);
   const [camaraId, setCamaraId] = useState('');
@@ -25,10 +31,7 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
     let animationId;
     let stream;
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Este navegador no permite acceder a la cámara en esta conexión. Si estás entrando por una IP de red (no https:// ni localhost), el navegador bloquea la cámara por seguridad — hace falta HTTPS.');
-      return () => {};
-    }
+    if (!navigator.mediaDevices?.getUserMedia) return () => {};
 
     const constraints = camaraId
       ? { video: { deviceId: { exact: camaraId }, width: { ideal: 640 }, height: { ideal: 480 } } }
@@ -126,12 +129,13 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
   return (
     <div className="pi-escaner-qr">
       {error ? (
-        <p className="pi-escaner-qr-error">{error}</p>
+        <p className="pi-escaner-qr-error" role="alert">{error}</p>
       ) : (
         <>
           {camaras.length > 1 && (
             <select
               className="pi-escaner-qr-select-camara"
+              aria-label="Elegir cámara"
               value={camaraId}
               onChange={(e) => { setListo(false); setCamaraId(e.target.value); }}
             >
@@ -143,18 +147,28 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
             </select>
           )}
           <div className="pi-escaner-qr-video-wrapper">
-            <video ref={videoRef} playsInline muted className="pi-escaner-qr-video" />
-            <div className={`pi-escaner-qr-marco ${listo ? 'activo' : ''}`}>
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              className="pi-escaner-qr-video"
+              aria-label="Vista de la cámara para escanear el código QR"
+            />
+            <div className={`pi-escaner-qr-marco ${listo ? 'activo' : ''}`} aria-hidden="true">
               {listo && <div className="pi-escaner-qr-linea" />}
             </div>
-            {!listo && <div className="pi-escaner-qr-cargando">Iniciando cámara...</div>}
-            {listo && <span className="pi-escaner-qr-estado">Buscando código...</span>}
+            {!listo && (
+              <div className="pi-escaner-qr-cargando" role="status">Iniciando cámara...</div>
+            )}
+            {listo && (
+              <span className="pi-escaner-qr-estado" role="status">Buscando código...</span>
+            )}
           </div>
         </>
       )}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       <button type="button" className="pi-escaner-qr-btn-cancelar" onClick={onCancelar}>
-        <FaTimes /> Cancelar
+        <FaTimes aria-hidden="true" /> Cancelar
       </button>
     </div>
   );

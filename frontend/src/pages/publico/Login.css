@@ -52,7 +52,7 @@
   border-radius: 20px;
   cursor: pointer;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 0.875rem;
   transition: all 0.3s;
 }
 
@@ -90,16 +90,16 @@
 }
 
 .pi-login-title {
-  font-size: 28px;
+  font-size: 1.75rem;
   font-weight: 800;
   margin: 0 0 8px 0;
   color: #ffffff;
 }
 
 .pi-login-subtitle {
-  font-size: 14px;
+  font-size: 0.875rem;
   color: #94A3B8;
-  margin: 0 0 30px 0;
+  margin: 0 0 32px 0;
   line-height: 1.5;
 }
 
@@ -112,10 +112,10 @@
 }
 
 .pi-login-input-group label {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   color: #cbd5e1;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   display: block;
   letter-spacing: 1px;
 }
@@ -137,13 +137,13 @@
 
 .pi-login-input-wrapper input {
   width: 100%;
-  /* Modificamos el padding: agregamos 45px a la derecha para dar espacio al ojo */
-  padding: 14px 45px 14px 45px; 
+  /* Padding derecho ampliado para dejar sitio al botón del ojo */
+  padding: 16px 44px 16px 44px; 
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   color: #fff;
-  font-size: 15px;
+  font-size: 1rem;
   outline: none;
   transition: all 0.3s;
 }
@@ -193,7 +193,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .pi-login-checkbox {
@@ -219,9 +219,9 @@
   color: #fca5a5;
   background-color: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
-  padding: 10px;
+  padding: 8px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   text-align: center;
   font-weight: 600;
 }
@@ -229,12 +229,12 @@
 /* --- BOTONES --- */
 .pi-login-btn-enter {
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   background-color: var(--color-primario, #00B4D8);
   color: #fff;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
+  font-size: 1rem;
   font-weight: 800;
   cursor: pointer;
   letter-spacing: 1px;
@@ -252,8 +252,8 @@
   align-items: center;
   text-align: center;
   color: #64748b;
-  font-size: 13px;
-  margin: 10px 0;
+  font-size: 0.8125rem;
+  margin: 8px 0;
 }
 
 .pi-login-divider::before,
@@ -264,17 +264,17 @@
 }
 
 .pi-login-divider span {
-  padding: 0 10px;
+  padding: 0 8px;
 }
 
 .pi-login-btn-register {
   width: 100%;
-  padding: 14px;
+  padding: 16px;
   background: transparent;
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -296,7 +296,7 @@
 
 .pi-login-dev-btn {
   width: 100%;
-  padding: 15px 20px;
+  padding: 16px 20px;
   border-radius: 12px;
   color: #fff;
   border: none;
@@ -312,7 +312,7 @@
 }
 
 .pi-login-dev-content {
-  margin-top: 10px;
+  margin-top: 8px;
   padding: 20px;
   border-radius: 12px;
 }
@@ -320,12 +320,12 @@
 .pi-login-dev-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .pi-login-dev-table th, 
 .pi-login-dev-table td {
-  padding: 10px;
+  padding: 8px;
   text-align: left;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }

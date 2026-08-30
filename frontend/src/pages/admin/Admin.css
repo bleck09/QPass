@@ -13,9 +13,10 @@
   gap: 12px;
 }
 
+.pi-dash-header h1,
 .pi-dash-header h2 {
   color: var(--texto-principal);
-  font-size: 22px;
+  font-size: 1.375rem;
 }
 
 .pi-dash-header-titulo {
@@ -32,11 +33,11 @@
   background: none;
   border: none;
   color: var(--indigo-profundo);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
   padding: 0;
-  margin-right: 6px;
+  margin-right: 8px;
 }
 
 .pi-dash-btn-volver-evento:hover {
@@ -48,7 +49,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, 240px);
   justify-content: start;
-  gap: 18px;
+  gap: 16px;
 }
 
 .pi-dash-evento-card {
@@ -80,22 +81,22 @@
 }
 
 .pi-dash-evento-info {
-  padding: 12px 14px;
+  padding: 12px 16px;
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
 .pi-dash-evento-info strong {
-  font-size: 15px;
+  font-size: 1rem;
   color: var(--texto-principal);
 }
 
 .pi-dash-evento-info span {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 0.75rem;
   color: var(--texto-secundario);
 }
 
@@ -108,21 +109,21 @@
 .pi-dash-seccion {
   background: var(--blanco);
   border-radius: 14px;
-  padding: 22px 24px;
+  padding: 24px 24px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .pi-dash-seccion-titulo {
-  font-size: 17px;
+  font-size: 1.0625rem;
   color: var(--texto-principal);
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .pi-dash-subtitulo {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--texto-principal);
   margin-bottom: 12px;
@@ -136,18 +137,18 @@
 .pi-dash-stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 18px;
-  margin-bottom: 18px;
+  gap: 16px;
+  margin-bottom: 16px;
 }
 
 .pi-dash-stat-card {
   background: var(--gris-niebla);
   border: none;
   border-radius: 12px;
-  padding: 18px;
+  padding: 16px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   position: relative;
   width: 100%;
   text-align: left;
@@ -172,7 +173,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 1.25rem;
   color: var(--texto-sobre-oscuro);
 }
 
@@ -180,7 +181,7 @@
 .pi-dash-icon-ok { background-color: var(--verde-recarga); color: var(--texto-sobre-vivo); }
 .pi-dash-icon-pend { background-color: var(--ambar-aviso); color: var(--texto-sobre-vivo); }
 .pi-dash-icon-dentro { background-color: var(--cian-digital); color: var(--texto-sobre-vivo); }
-.pi-dash-icon-salio { background-color: var(--gris-medio); color: var(--texto-sobre-vivo); }
+.pi-dash-icon-salio { background-color: var(--texto-secundario); color: var(--texto-sobre-vivo); }
 
 .pi-dash-stat-info {
   display: flex;
@@ -188,13 +189,13 @@
 }
 
 .pi-dash-stat-info .numero {
-  font-size: 24px;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--texto-principal);
 }
 
 .pi-dash-stat-info .label {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
 }
 
@@ -202,9 +203,9 @@
   position: absolute;
   top: 14px;
   right: 14px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 3px 9px;
+  padding: 4px 8px;
   border-radius: 20px;
 }
 
@@ -214,7 +215,7 @@
   background-color: var(--borde-suave);
   border-radius: 20px;
   overflow: hidden;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .pi-dash-progreso-relleno {
@@ -227,13 +228,13 @@
 .pi-dash-btn-detalle {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background-color: var(--coral-compra);
   color: var(--texto-sobre-vivo);
   border: none;
-  padding: 11px 20px;
+  padding: 12px 20px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -254,7 +255,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background-color: var(--gris-niebla);
   border: 1px solid var(--borde-suave);
   border-radius: 12px;
@@ -270,19 +271,19 @@
 }
 
 .pi-dash-rol-icon {
-  font-size: 22px;
+  font-size: 1.375rem;
   color: var(--indigo-profundo);
   margin-bottom: 4px;
 }
 
 .pi-dash-rol-card .numero {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--texto-principal);
 }
 
 .pi-dash-rol-card .label {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--texto-secundario);
   text-align: center;
@@ -296,11 +297,11 @@
   background: none;
   border: none;
   color: var(--indigo-profundo);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   cursor: pointer;
   padding: 0;
-  margin-bottom: 18px;
+  margin-bottom: 16px;
 }
 
 .pi-dash-btn-volver:hover {
@@ -315,7 +316,7 @@
   background-color: var(--gris-niebla);
   border-radius: 8px;
   padding: 8px 12px;
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
   max-width: 320px;
   margin-bottom: 16px;
 }
@@ -324,7 +325,7 @@
   border: none;
   background: none;
   outline: none;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-principal);
   width: 100%;
 }
@@ -341,25 +342,25 @@
 
 .pi-dash-tabla th {
   text-align: left;
-  font-size: 12px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--gris-medio);
-  padding: 10px 12px;
+  color: var(--texto-secundario);
+  padding: 8px 12px;
   border-bottom: 1px solid var(--borde-suave);
 }
 
 .pi-dash-tabla td {
   padding: 12px;
   border-bottom: 1px solid var(--borde-suave);
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--texto-principal);
 }
 
 .pi-dash-fila-persona {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-weight: 600;
   color: var(--texto-principal);
 }
@@ -374,24 +375,24 @@
 .pi-dash-monto-celda {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-weight: 700;
 }
 
 .pi-dash-sin-resultados {
   text-align: center;
-  color: var(--gris-medio);
-  padding: 30px 0 !important;
+  color: var(--texto-secundario);
+  padding: 32px 0 !important;
 }
 
 /* --- BADGES --- */
 .pi-dash-badge {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12px;
+  gap: 8px;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: 20px;
 }
 
@@ -407,25 +408,25 @@
 
 .pi-dash-badge-salio {
   background-color: var(--borde-suave);
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
 }
 
 /* --- PODIO (TOP 3) --- */
 .pi-dash-podio {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 14px;
-  margin-bottom: 22px;
+  gap: 16px;
+  margin-bottom: 24px;
 }
 
 .pi-dash-podio-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background-color: var(--gris-niebla);
   border-radius: 12px;
-  padding: 18px 14px;
+  padding: 16px 16px;
   text-align: center;
 }
 
@@ -438,17 +439,17 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 0.875rem;
 }
 
 .pi-dash-podio-nombre {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--texto-principal);
 }
 
 .pi-dash-podio-valor {
-  font-size: 15px;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--indigo-profundo);
 }
@@ -463,21 +464,21 @@
 .pi-dash-resumen-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   background-color: var(--gris-niebla);
   border-radius: 12px;
-  padding: 18px;
+  padding: 16px;
 }
 
 .pi-dash-resumen-card .numero {
-  font-size: 20px;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--texto-principal);
   margin-top: 4px;
 }
 
 .pi-dash-resumen-card .label {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--texto-secundario);
 }
 
@@ -493,7 +494,7 @@
   gap: 12px;
   padding: 12px 4px;
   border-bottom: 1px solid var(--borde-suave);
-  font-size: 13px;
+  font-size: 0.8125rem;
 }
 
 .pi-dash-actividad-item:last-child {
@@ -522,8 +523,8 @@
 }
 
 .pi-dash-actividad-hora {
-  color: var(--gris-medio);
-  font-size: 12px;
+  color: var(--texto-secundario);
+  font-size: 0.75rem;
   min-width: 42px;
   text-align: right;
 }
@@ -534,7 +535,7 @@
   justify-content: space-between;
   align-items: center;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   margin-bottom: 16px;
 }
 
@@ -543,7 +544,7 @@
 }
 
 .pi-dash-detalle-total {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
 }
 
@@ -554,12 +555,12 @@
 .pi-dash-total-destacado {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   background-color: var(--verde-recarga-suave);
   color: var(--texto-principal);
   padding: 12px 16px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
   margin-bottom: 20px;
 }
 
@@ -570,12 +571,12 @@
 .pi-dash-btn-ver {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   border: 1px solid var(--borde-medio);
   background: var(--blanco);
-  padding: 6px 12px;
+  padding: 8px 12px;
   border-radius: 6px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   color: var(--texto-principal);
   cursor: pointer;
@@ -599,24 +600,24 @@
 }
 
 .pi-dash-incidencias-nota {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
-  margin-bottom: 18px;
+  margin-bottom: 16px;
   max-width: 640px;
 }
 
 .pi-dash-resolver-form {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .pi-dash-resolver-form input {
   width: 70px;
-  padding: 6px 8px;
+  padding: 8px 8px;
   border: 1px solid var(--borde-medio);
   border-radius: 6px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   outline: none;
 }
 
@@ -640,7 +641,7 @@
 
 .pi-dash-solicitud-detalle {
   background-color: var(--gris-niebla);
-  padding: 14px 20px;
+  padding: 16px 20px;
 }
 
 .pi-dash-solicitud-detalle .pi-dash-tabla {
@@ -651,6 +652,6 @@
 
 .pi-dash-solicitud-detalle .pi-dash-tabla th,
 .pi-dash-solicitud-detalle .pi-dash-tabla td {
-  font-size: 13px;
-  padding: 10px 12px;
+  font-size: 0.8125rem;
+  padding: 8px 12px;
 }

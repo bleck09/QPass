@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation } from 'react-router-dom';
 import {
   FaCalendarAlt, FaTicketAlt, FaPlus, FaTrash, FaTags, FaAlignLeft,
@@ -8,10 +12,24 @@ import api from '../../api/index.js';
 import './AdminCrearTickets.css';
 
 export default function AdminCrearTickets() {
+  useTituloPagina('Categorías de ticket');
   const location = useLocation();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
-  const [categorias, setCategorias] = useState([]);
+  const [confirmar, DialogoConfirmar] = useConfirmar();
+
+  // Categorías del evento con estados cargando/error/reintentar (Manual 8.9).
+  const cargarCategorias = useCallback(
+    () => api.categoriasTicket.listar(eventoId),
+    [eventoId],
+  );
+  const {
+    data: categorias,
+    setData: setCategorias,
+    cargando: cargandoCategorias,
+    error: errorCategorias,
+    recargar: recargarCategorias,
+  } = useApi(cargarCategorias, { inicial: [], activo: !!eventoId });
 
   const [formCategoria, setFormCategoria] = useState({ nombre: '', descripcion: '', cantidad: '', precio: '' });
 
@@ -21,11 +39,6 @@ export default function AdminCrearTickets() {
       setEventoId(prev => prev || lista[0]?.id);
     });
   }, []);
-
-  useEffect(() => {
-    if (!eventoId) return;
-    api.categoriasTicket.listar(eventoId).then(setCategorias);
-  }, [eventoId]);
 
   const totales = useMemo(() => {
     const totalCategorias = categorias.length;
@@ -55,7 +68,13 @@ export default function AdminCrearTickets() {
   };
 
   const eliminarCategoria = async (id) => {
-    if (!window.confirm('¿Eliminar esta categoría de ticket?')) return;
+    const ok = await confirmar({
+      titulo: '¿Eliminar la categoría?',
+      mensaje: 'Se eliminará esta categoría de ticket del evento.',
+      textoConfirmar: 'Eliminar',
+      peligroso: true,
+    });
+    if (!ok) return;
     await api.categoriasTicket.eliminar(id);
     setCategorias(prev => prev.filter(c => c.id !== id));
   };
@@ -65,7 +84,7 @@ export default function AdminCrearTickets() {
 
       <div className="pi-adtick-header">
         <div>
-          <h2>Tickets del Evento</h2>
+          <h1>Tickets del evento</h1>
           <p>Crea las categorías de ticket disponibles para cada evento: cantidad, descripción y precio.</p>
         </div>
         <div className="pi-adtick-selector-evento">
@@ -103,11 +122,12 @@ export default function AdminCrearTickets() {
         <form onSubmit={agregarCategoria} className="pi-adtick-form">
           <div className="pi-adtick-form-grid">
             <div className="pi-adtick-input-group">
-              <label>Nombre de la categoría</label>
+              <label htmlFor="tk-nombre">Nombre de la categoría</label>
               <div className="pi-adtick-input-wrapper">
                 <FaTags className="pi-adtick-input-icon" />
                 <input
                   type="text"
+                  id="tk-nombre"
                   name="nombre"
                   value={formCategoria.nombre}
                   onChange={handleChange}
@@ -118,12 +138,14 @@ export default function AdminCrearTickets() {
             </div>
 
             <div className="pi-adtick-input-group">
-              <label>Cantidad de tickets</label>
+              <label htmlFor="tk-cantidad">Cantidad de tickets</label>
               <div className="pi-adtick-input-wrapper">
                 <FaBoxes className="pi-adtick-input-icon" />
                 <input
                   type="number"
                   min="1"
+                  id="tk-cantidad"
+                  inputMode="numeric"
                   name="cantidad"
                   value={formCategoria.cantidad}
                   onChange={handleChange}
@@ -134,13 +156,15 @@ export default function AdminCrearTickets() {
             </div>
 
             <div className="pi-adtick-input-group">
-              <label>Precio (Bs.)</label>
+              <label htmlFor="tk-precio">Precio (Bs.)</label>
               <div className="pi-adtick-input-wrapper">
                 <FaDollarSign className="pi-adtick-input-icon" />
                 <input
                   type="number"
                   min="0"
                   step="0.50"
+                  id="tk-precio"
+                  inputMode="decimal"
                   name="precio"
                   value={formCategoria.precio}
                   onChange={handleChange}
@@ -151,11 +175,12 @@ export default function AdminCrearTickets() {
             </div>
 
             <div className="pi-adtick-input-group pi-adtick-input-descripcion">
-              <label>Descripción</label>
+              <label htmlFor="tk-descripcion">Descripción</label>
               <div className="pi-adtick-input-wrapper">
                 <FaAlignLeft className="pi-adtick-input-icon" />
                 <input
                   type="text"
+                  id="tk-descripcion"
                   name="descripcion"
                   value={formCategoria.descripcion}
                   onChange={handleChange}
@@ -176,15 +201,20 @@ export default function AdminCrearTickets() {
       {/* --- TABLA DE CATEGORÍAS --- */}
       <div className="pi-adtick-card">
         <h3 className="pi-adtick-subtitulo">Categorías creadas para este evento</h3>
+        {errorCategorias ? (
+          <EstadoError onReintentar={recargarCategorias} />
+        ) : cargandoCategorias ? (
+          <EstadoCarga filas={4} />
+        ) : (
         <div className="pi-adtick-table-wrapper">
           <table className="pi-adtick-table">
             <thead>
               <tr>
-                <th>Categoría</th>
-                <th>Descripción</th>
-                <th>Cantidad</th>
-                <th>Precio</th>
-                <th style={{ textAlign: 'center' }}>Acción</th>
+                <th scope="col">Categoría</th>
+                <th scope="col">Descripción</th>
+                <th scope="col">Cantidad</th>
+                <th scope="col">Precio</th>
+                <th scope="col" style={{ textAlign: 'center' }}>Acción</th>
               </tr>
             </thead>
             <tbody>
@@ -195,7 +225,7 @@ export default function AdminCrearTickets() {
                   <td>{cat.cantidad}</td>
                   <td className="pi-adtick-precio-celda">{cat.precio > 0 ? `Bs. ${cat.precio}` : 'Gratis'}</td>
                   <td style={{ textAlign: 'center' }}>
-                    <button className="pi-adtick-btn-delete" onClick={() => eliminarCategoria(cat.id)} title="Eliminar categoría">
+                    <button type="button" className="pi-adtick-btn-delete" onClick={() => eliminarCategoria(cat.id)} title="Eliminar categoría">
                       <FaTrash />
                     </button>
                   </td>
@@ -211,8 +241,10 @@ export default function AdminCrearTickets() {
             </tbody>
           </table>
         </div>
+        )}
       </div>
 
+      {DialogoConfirmar}
     </div>
   );
 }

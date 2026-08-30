@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   MdEmail, 
   MdLock, 
@@ -28,6 +29,7 @@ const credencialesDemo = [
 ].map(c => ({ ...c, label: ROLE_LABELS[c.rol], pass: '123456' }));
 
 export default function Login() {
+  useTituloPagina('Iniciar sesión');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); // <- Estado para ver contraseña
@@ -78,28 +80,31 @@ export default function Login() {
 
       {/* Botón de volver */}
       <div className="pi-login-top-bar">
-        <button className="pi-login-btn-back" onClick={() => navigate('/')}>
-          <MdArrowBack size={20} />
+        <button type="button" className="pi-login-btn-back" onClick={() => navigate('/')}>
+          <MdArrowBack size={20} aria-hidden="true" />
           Volver al inicio
         </button>
       </div>
 
-      <div className="pi-login-content">
+      {/* Landmark principal + único h1 de la pantalla (Manual 11) */}
+      <main className="pi-login-content" id="contenido">
         <div className="pi-login-card glass-panel">
-          <h2 className="pi-login-title">Iniciar Sesión</h2>
+          <h1 className="pi-login-title">Iniciar sesión</h1>
           <p className="pi-login-subtitle">Ingrese sus credenciales para acceder al portal de QPass.</p>
 
           <form onSubmit={handleLogin} className="pi-login-form">
             
-            {/* CORREO */}
+            {/* CORREO — label asociado por id + autocomplete (Manual 8.3) */}
             <div className="pi-login-input-group">
-              <label>CORREO ELECTRÓNICO</label>
+              <label htmlFor="login-email">Correo electrónico</label>
               <div className="pi-login-input-wrapper">
-                <span className="pi-login-icon">
+                <span className="pi-login-icon" aria-hidden="true">
                   <MdEmail size={20} />
                 </span>
                 <input
+                  id="login-email"
                   type="email"
+                  autoComplete="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="usuario@qpass.com"
@@ -110,27 +115,32 @@ export default function Login() {
 
             {/* CONTRASEÑA */}
             <div className="pi-login-input-group">
-              <label>CONTRASEÑA</label>
+              <label htmlFor="login-password">Contraseña</label>
               <div className="pi-login-input-wrapper">
-                <span className="pi-login-icon">
+                <span className="pi-login-icon" aria-hidden="true">
                   <MdLock size={20} />
                 </span>
                 <input
-                  type={showPassword ? "text" : "password"} // <- Alterna entre 'text' y 'password'
+                  id="login-password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
                   required
                 />
-                
-                {/* BOTÓN PARA VER/OCULTAR CONTRASEÑA */}
-                <button 
-                  type="button" 
-                  className="pi-login-eye-btn" 
+
+                {/* Ver/ocultar contraseña: aria-label + aria-pressed en vez de solo title */}
+                <button
+                  type="button"
+                  className="pi-login-eye-btn"
                   onClick={() => setShowPassword(!showPassword)}
-                  title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                  aria-pressed={showPassword}
                 >
-                  {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+                  {showPassword
+                    ? <MdVisibilityOff size={20} aria-hidden="true" />
+                    : <MdVisibility size={20} aria-hidden="true" />}
                 </button>
               </div>
             </div>
@@ -139,23 +149,23 @@ export default function Login() {
               <label className="pi-login-checkbox">
                 <input type="checkbox" /> Recordarme
               </label>
-              <a href="#" className="pi-login-forgot" onClick={(e) => { e.preventDefault(); navigate('/recuperar'); }}>¿Olvidó su contraseña?</a>
+              <Link to="/recuperar" className="pi-login-forgot">¿Olvidó su contraseña?</Link>
             </div>
 
             {error && <p className="pi-login-error">{error}</p>}
 
             <button type="submit" className="pi-login-btn-enter" disabled={cargando}>
-              {cargando ? 'Entrando…' : 'ENTRAR →'}
+              {cargando ? 'Entrando…' : 'Entrar →'}
             </button>
             
             <div className="pi-login-divider"><span>o</span></div>
 
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="pi-login-btn-register"
-              onClick={() => navigate('/registrar')} // <- AGREGA ESTO AQUÍ
+              onClick={() => navigate('/registrar')}
             >
-              REGISTRARME <FaBuilding style={{ marginLeft: '8px' }} />
+              Registrarme <FaBuilding style={{ marginLeft: '8px' }} aria-hidden="true" />
             </button>
           </form>
         </div>
@@ -178,9 +188,9 @@ export default function Login() {
               <table className="pi-login-dev-table">
                 <thead>
                   <tr>
-                    <th>Rol</th>
-                    <th>Usuario</th>
-                    <th>Contraseña</th>
+                    <th scope="col">Rol</th>
+                    <th scope="col">Usuario</th>
+                    <th scope="col">Contraseña</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -196,7 +206,7 @@ export default function Login() {
             </div>
           )}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

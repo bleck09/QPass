@@ -1,4 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaStore, FaDollarSign, FaUsers, FaShoppingCart,
   FaChartBar, FaTrophy, FaMedal, FaArrowLeft, FaBoxOpen, FaEye,
@@ -70,12 +73,35 @@ const construirDashboard = async (eventoId, negocioId) => {
 };
 
 export default function UsuNegoDasboar() {
+  useTituloPagina('Dashboard de negocio');
   const sesion = leerSesion();
-  const [eventos, setEventos] = useState([]);
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const eventoId = eventoSeleccionado?.id || '';
-  const [data, setData] = useState(DATA_VACIA);
   const [cargarGrafico, setCargarGrafico] = useState(false);
+
+  // Carga primaria (eventos asignados) y dashboard del evento, cada uno con sus
+  // estados cargando/error/reintentar (Manual 8.9).
+  const cargarEventos = useCallback(
+    () => api.eventos.misAsignados(sesion.id, sesion.rol),
+    [sesion.id, sesion.rol],
+  );
+  const {
+    data: eventos,
+    cargando: cargandoEventos,
+    error: errorEventos,
+    recargar: recargarEventos,
+  } = useApi(cargarEventos, { inicial: [] });
+
+  const cargarDashboard = useCallback(
+    () => construirDashboard(eventoId, sesion.id),
+    [eventoId, sesion.id],
+  );
+  const {
+    data,
+    cargando: cargandoData,
+    error: errorData,
+    recargar: recargarDashboard,
+  } = useApi(cargarDashboard, { inicial: DATA_VACIA, activo: !!eventoId });
 
   // SISTEMA DE VISTAS (PANTALLA COMPLETA)
   // 'GENERAL' | 'SUCURSAL' | 'AYUDANTES' | 'PRODUCTO'
@@ -85,14 +111,7 @@ export default function UsuNegoDasboar() {
   const [sucursalSeleccionada, setSucursalSeleccionada] = useState(null);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
 
-  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
-
   const volverALista = () => setEventoSeleccionado(null);
-
-  useEffect(() => {
-    if (!eventoId) return;
-    construirDashboard(eventoId, sesion.id).then(setData);
-  }, [eventoId]);
 
   // Efecto para animar barras sin error de React
   useEffect(() => {
@@ -111,17 +130,21 @@ export default function UsuNegoDasboar() {
       <div className="pi-dashboard-container animate-fade">
         <div className="pi-dashboard-header">
           <div>
-            <h2>Dashboard General</h2>
+            <h1>Dashboard general</h1>
             <p>Elige el evento del que quieres ver el resumen.</p>
           </div>
         </div>
-        {eventos.length === 0 ? (
+        {errorEventos ? (
+          <EstadoError onReintentar={recargarEventos} />
+        ) : cargandoEventos ? (
+          <EstadoCarga filas={3} />
+        ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (
               <button key={ev.id} className="pi-entrega-evento-card" onClick={() => setEventoSeleccionado(ev)}>
-                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
                   <strong>{ev.nombre}</strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -130,6 +153,25 @@ export default function UsuNegoDasboar() {
             ))}
           </div>
         )}
+      </div>
+    );
+  }
+
+  // Estados de la carga del dashboard (Manual 8.9), antes de cualquier vista.
+  if (errorData || cargandoData) {
+    return (
+      <div className="pi-dashboard-container animate-fade">
+        <div className="pi-dashboard-header">
+          <div>
+            <button className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={volverALista}>
+              <FaArrowLeft /> Cambiar de evento
+            </button>
+            <h1>{eventoSeleccionado.nombre}</h1>
+          </div>
+        </div>
+        {errorData
+          ? <EstadoError onReintentar={recargarDashboard} />
+          : <EstadoCarga filas={5} />}
       </div>
     );
   }
@@ -147,7 +189,7 @@ export default function UsuNegoDasboar() {
             <button className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={volverALista}>
               <FaArrowLeft /> Cambiar de evento
             </button>
-            <h2>{eventoSeleccionado.nombre}</h2>
+            <h1>{eventoSeleccionado.nombre}</h1>
             <p>Resumen global de todos tus puestos y personal asignado.</p>
           </div>
         </div>
@@ -289,7 +331,7 @@ export default function UsuNegoDasboar() {
             <FaArrowLeft /> Volver al dashboard
           </button>
           
-          <h2 className="pi-fullpage-title">Personal Asignado</h2>
+          <h1 className="pi-fullpage-title">Personal asignado</h1>
           
           <div className="pi-search-bar-dummy">
             <FaSearch className="search-icon" />
@@ -300,9 +342,9 @@ export default function UsuNegoDasboar() {
             <table className="pi-dashboard-table clean-table">
               <thead>
                 <tr>
-                  <th>Ayudante</th>
-                  <th>Rol</th>
-                  <th>Sucursales Asignadas</th>
+                  <th scope="col">Ayudante</th>
+                  <th scope="col">Rol</th>
+                  <th scope="col">Sucursales Asignadas</th>
                 </tr>
               </thead>
               <tbody>
@@ -346,7 +388,7 @@ export default function UsuNegoDasboar() {
             <button className="pi-btn-back-clean" onClick={() => setVistaActual('GENERAL')}>
               <FaArrowLeft /> Volver al dashboard
             </button>
-            <h2 style={{marginTop: '15px'}}>{sucursalSeleccionada.nombre}</h2>
+            <h1 style={{marginTop: '15px'}}>{sucursalSeleccionada.nombre}</h1>
             <p>Desglose de productos y rendimiento específico de este puesto.</p>
           </div>
         </div>
@@ -403,11 +445,11 @@ export default function UsuNegoDasboar() {
             <table className="pi-dashboard-table">
               <thead>
                 <tr>
-                  <th>Producto Vendido</th>
-                  <th style={{ textAlign: 'center' }}>Precio Unit.</th>
-                  <th style={{ textAlign: 'center' }}>Cantidad</th>
-                  <th style={{ textAlign: 'right' }}>Total Generado</th>
-                  <th style={{ textAlign: 'center' }}>Acciones</th>
+                  <th scope="col">Producto Vendido</th>
+                  <th scope="col" style={{ textAlign: 'center' }}>Precio Unit.</th>
+                  <th scope="col" style={{ textAlign: 'center' }}>Cantidad</th>
+                  <th scope="col" style={{ textAlign: 'right' }}>Total Generado</th>
+                  <th scope="col" style={{ textAlign: 'center' }}>Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -460,7 +502,7 @@ export default function UsuNegoDasboar() {
             <FaArrowLeft /> Volver a {sucursalSeleccionada.nombre}
           </button>
           
-          <h2 className="pi-fullpage-title">Historial: {productoSeleccionado.nombre}</h2>
+          <h1 className="pi-fullpage-title">Historial: {productoSeleccionado.nombre}</h1>
           
           <div className="pi-search-bar-dummy">
             <FaSearch className="search-icon" />
@@ -472,10 +514,10 @@ export default function UsuNegoDasboar() {
               <table className="pi-dashboard-table clean-table">
                 <thead>
                   <tr>
-                    <th>ID Venta</th>
-                    <th>Vendedor</th>
-                    <th>Hora</th>
-                    <th style={{textAlign: 'right'}}>Precio Pagado</th>
+                    <th scope="col">ID Venta</th>
+                    <th scope="col">Vendedor</th>
+                    <th scope="col">Hora</th>
+                    <th scope="col" style={{textAlign: 'right'}}>Precio Pagado</th>
                   </tr>
                 </thead>
                 <tbody>

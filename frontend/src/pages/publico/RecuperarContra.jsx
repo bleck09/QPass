@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useNavigate } from 'react-router-dom';
 import { 
   MdEmail, MdLock, MdArrowBack, MdVisibility, MdVisibilityOff 
@@ -8,6 +9,7 @@ import api from '../../api/index.js';
 import './RecuperarContra.css';
 
 export default function RecuperarContra() {
+  useTituloPagina('Recuperar contraseña');
   const navigate = useNavigate();
 
   // --- PASOS DEL FLUJO ---
@@ -173,7 +175,8 @@ export default function RecuperarContra() {
         )}
       </div>
 
-      <div className="pi-recover-content">
+      {/* Landmark principal de la pantalla (Manual 11) */}
+      <main className="pi-recover-content" id="contenido">
         <div className="pi-recover-card glass-panel">
           
           {/* =====================================
@@ -184,31 +187,34 @@ export default function RecuperarContra() {
               <div className="recover-icon-wrapper">
                 <FaShieldAlt size={40} />
               </div>
-              <h2 className="pi-recover-title">Recuperar Contraseña</h2>
+              {/* h1 del paso activo (solo se muestra un paso a la vez) */}
+              <h1 className="pi-recover-title">Recuperar contraseña</h1>
               <p className="pi-recover-subtitle">
                 Ingresa el correo electrónico asociado a tu cuenta. Te enviaremos un código de seguridad para verificar tu identidad.
               </p>
 
               <form onSubmit={handlePedirCodigo} className="pi-recover-form">
                 <div className="pi-recover-input-group">
-                  <label>CORREO ELECTRÓNICO REGISTRADO</label>
+                  <label htmlFor="rec-email">Correo electrónico registrado</label>
                   <div className="pi-recover-input-wrapper">
-                    <span className="pi-recover-icon"><MdEmail size={20} /></span>
-                    <input 
-                      type="email" 
-                      value={email} 
-                      onChange={(e) => setEmail(e.target.value)} 
-                      placeholder="usuario@qpass.com" 
-                      required 
+                    <span className="pi-recover-icon" aria-hidden="true"><MdEmail size={20} /></span>
+                    <input
+                      id="rec-email"
+                      type="email"
+                      autoComplete="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="usuario@qpass.com"
+                      required
                       autoFocus
                     />
                   </div>
                 </div>
 
-                {error && <p className="pi-recover-error">{error}</p>}
-                {success && <p className="pi-recover-success">{success}</p>}
+                {error && <p className="pi-recover-error" role="alert">{error}</p>}
+                {success && <p className="pi-recover-success" role="status">{success}</p>}
 
-                <button type="submit" className="pi-recover-btn-submit">ENVIAR CÓDIGO →</button>
+                <button type="submit" className="pi-recover-btn-submit">Enviar código →</button>
               </form>
             </div>
           )}
@@ -221,7 +227,7 @@ export default function RecuperarContra() {
               <div className="recover-icon-wrapper">
                 <FaEnvelopeOpenText size={40} />
               </div>
-              <h2 className="pi-recover-title">Código de Seguridad</h2>
+              <h1 className="pi-recover-title">Código de seguridad</h1>
               <p className="pi-recover-subtitle">
                 Generamos un código de 6 dígitos para <strong>{email}</strong>. Ingrésalo a continuación para continuar.
               </p>
@@ -232,27 +238,31 @@ export default function RecuperarContra() {
               )}
 
               <form onSubmit={handleVerificarCodigo} className="pi-recover-form">
-                <div className="otp-inputs-container">
+                <fieldset className="otp-inputs-container" style={{ border: 0, padding: 0, margin: 0 }}>
+                  <legend className="sr-only">Código de seguridad de 6 dígitos</legend>
                   {otp.map((digit, index) => (
                     <input
                       key={index}
                       ref={(el) => (inputRefs.current[index] = el)}
                       type="text"
+                      inputMode="numeric"
+                      autoComplete={index === 0 ? 'one-time-code' : 'off'}
                       maxLength="1"
                       className="otp-digit-input"
+                      aria-label={`Dígito ${index + 1} de 6`}
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
                       autoFocus={index === 0}
                     />
                   ))}
-                </div>
+                </fieldset>
 
-                {error && <p className="pi-recover-error">{error}</p>}
-                {success && <p className="pi-recover-success">{success}</p>}
+                {error && <p className="pi-recover-error" role="alert">{error}</p>}
+                {success && <p className="pi-recover-success" role="status">{success}</p>}
 
                 <button type="submit" className="pi-recover-btn-submit" style={{marginTop: '20px'}}>
-                  VERIFICAR CÓDIGO
+                  Verificar código
                 </button>
               </form>
               <p className="otp-resend">¿No lo recibiste? <button type="button" onClick={handleReenviarCodigo}>Reenviar código</button></p>
@@ -267,7 +277,7 @@ export default function RecuperarContra() {
               <div className="recover-icon-wrapper">
                 <FaKey size={40} />
               </div>
-              <h2 className="pi-recover-title">Crear nueva contraseña</h2>
+              <h1 className="pi-recover-title">Crear nueva contraseña</h1>
               <p className="pi-recover-subtitle">
                 Identidad verificada. Por favor, escribe una contraseña segura que no hayas usado antes.
               </p>
@@ -275,47 +285,57 @@ export default function RecuperarContra() {
               <form onSubmit={handleRestablecerContra} className="pi-recover-form">
                 
                 <div className="pi-recover-input-group">
-                  <label>NUEVA CONTRASEÑA</label>
+                  <label htmlFor="rec-password">Nueva contraseña</label>
                   <div className="pi-recover-input-wrapper">
-                    <span className="pi-recover-icon"><MdLock size={20} /></span>
-                    <input 
-                      type={showPassword ? "text" : "password"} 
-                      value={password} 
-                      onChange={(e) => setPassword(e.target.value)} 
-                      placeholder="Mínimo 6 caracteres" 
-                      required 
+                    <span className="pi-recover-icon" aria-hidden="true"><MdLock size={20} /></span>
+                    <input
+                      id="rec-password"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="Mínimo 6 caracteres"
+                      required
                       autoFocus
                     />
-                    <button type="button" className="pi-recover-eye-btn" onClick={() => setShowPassword(!showPassword)}>
-                      {showPassword ? <MdVisibilityOff size={20} /> : <MdVisibility size={20} />}
+                    <button
+                      type="button"
+                      className="pi-recover-eye-btn"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      aria-pressed={showPassword}
+                    >
+                      {showPassword ? <MdVisibilityOff size={20} aria-hidden="true" /> : <MdVisibility size={20} aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
 
                 <div className="pi-recover-input-group">
-                  <label>CONFIRMAR NUEVA CONTRASEÑA</label>
+                  <label htmlFor="rec-password-2">Confirmar nueva contraseña</label>
                   <div className="pi-recover-input-wrapper">
-                    <span className="pi-recover-icon"><MdLock size={20} /></span>
-                    <input 
-                      type={showPassword ? "text" : "password"} 
-                      value={confirmPassword} 
-                      onChange={(e) => setConfirmPassword(e.target.value)} 
-                      placeholder="Repite tu contraseña" 
-                      required 
+                    <span className="pi-recover-icon" aria-hidden="true"><MdLock size={20} /></span>
+                    <input
+                      id="rec-password-2"
+                      type={showPassword ? "text" : "password"}
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repite tu contraseña"
+                      required
                     />
                   </div>
                 </div>
 
-                {error && <p className="pi-recover-error">{error}</p>}
-                {success && <p className="pi-recover-success">{success}</p>}
+                {error && <p className="pi-recover-error" role="alert">{error}</p>}
+                {success && <p className="pi-recover-success" role="status">{success}</p>}
 
-                <button type="submit" className="pi-recover-btn-submit">RESTABLECER CONTRASEÑA</button>
+                <button type="submit" className="pi-recover-btn-submit">Restablecer contraseña</button>
               </form>
             </div>
           )}
 
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
 import {
   FaMapMarkerAlt, FaSearch, FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
   FaUsers, FaHourglassHalf, FaExclamationTriangle
@@ -7,11 +8,25 @@ import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { formatearFecha } from '../../utils/eventos.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import './GestionEntrega.css';
 
 export default function GestionEntrega() {
+  useTituloPagina('Entrega de manillas');
   const sesion = leerSesion();
-  const [eventos, setEventos] = useState([]);
+
+  // Carga primaria (eventos asignados) con estados cargando/error/reintentar (Manual 8.9).
+  const cargarEventos = useCallback(
+    () => api.eventos.misAsignados(sesion.id, sesion.rol),
+    [sesion.id, sesion.rol],
+  );
+  const {
+    data: eventos,
+    cargando: cargandoEventos,
+    error: errorEventos,
+    recargar: recargarEventos,
+  } = useApi(cargarEventos, { inicial: [] });
 
   const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
   const [participantes, setParticipantes] = useState([]);
@@ -22,8 +37,6 @@ export default function GestionEntrega() {
   const [codigoValidado, setCodigoValidado] = useState(null);
   const [errorCodigo, setErrorCodigo] = useState('');
   const [validando, setValidando] = useState(false);
-
-  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
@@ -111,7 +124,7 @@ export default function GestionEntrega() {
           </button>
 
           <div className="pi-entrega-header">
-            <h2>{eventoDetalle.nombre}</h2>
+            <h1>{eventoDetalle.nombre}</h1>
             <p>Busca a un participante y vincula su código QR de entrega.</p>
           </div>
 
@@ -153,11 +166,11 @@ export default function GestionEntrega() {
             <table className="pi-entrega-tabla">
               <thead>
                 <tr>
-                  <th>Participante</th>
-                  <th>Tipo de Entrada</th>
-                  <th>Correo</th>
-                  <th>Vínculo QR</th>
-                  <th></th>
+                  <th scope="col">Participante</th>
+                  <th scope="col">Tipo de Entrada</th>
+                  <th scope="col">Correo</th>
+                  <th scope="col">Vínculo QR</th>
+                  <th scope="col"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -165,7 +178,7 @@ export default function GestionEntrega() {
                   <tr key={p.id}>
                     <td>
                       <div className="pi-entrega-fila-persona">
-                        {p.foto && <img src={p.foto} alt={p.nombre} className="pi-entrega-mini-avatar" />}
+                        {p.foto && <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-entrega-mini-avatar" />}
                         <span>{p.nombre}</span>
                       </div>
                     </td>
@@ -195,18 +208,21 @@ export default function GestionEntrega() {
       ) : (
         <>
           <div className="pi-entrega-header">
-            <h2>Gestión de Entrega</h2>
+            <h1>Gestión de entrega</h1>
             <p>Selecciona un evento para buscar participantes y vincular sus códigos QR.</p>
           </div>
 
-          {eventos.length === 0 && (
+          {errorEventos ? (
+            <EstadoError onReintentar={recargarEventos} />
+          ) : cargandoEventos ? (
+            <EstadoCarga filas={3} />
+          ) : eventos.length === 0 ? (
             <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
-          )}
-
+          ) : (
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (
               <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
-                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
                   <strong>{ev.nombre}</strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -214,6 +230,7 @@ export default function GestionEntrega() {
               </button>
             ))}
           </div>
+          )}
         </>
       )}
 

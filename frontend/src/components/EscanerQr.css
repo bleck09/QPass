@@ -2,13 +2,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
 }
 
 .pi-escaner-qr-select-camara {
   width: 100%;
   max-width: 320px;
-  padding: 8px 10px;
+  padding: 8px 8px;
   border-radius: 8px;
   border: 1px solid var(--borde-suave, #ddd);
   font-weight: 600;
@@ -60,7 +60,7 @@
   bottom: 10px;
   text-align: center;
   color: #fff;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
   pointer-events: none;
@@ -85,7 +85,7 @@
   justify-content: center;
   color: #fff;
   background: rgba(0, 0, 0, 0.45);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
 }
 
@@ -98,7 +98,7 @@
 .pi-escaner-qr-btn-cancelar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   background: none;
   border: 1px solid var(--borde-suave, #ddd);
   border-radius: 8px;

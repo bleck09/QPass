@@ -1,0 +1,140 @@
+/* Diálogo de confirmación accesible — ver ConfirmarModal.jsx.
+   Reutiliza los tokens de index.css para no introducir valores sueltos. */
+
+.confirmar-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(10, 14, 39, 0.55);
+}
+
+.confirmar-modal {
+  width: 100%;
+  max-width: 420px;
+  background: var(--blanco);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: var(--space-8) var(--space-6) var(--space-6);
+  text-align: center;
+}
+
+.confirmar-modal:focus {
+  outline: none; /* el foco real va a los botones; el contenedor no lo muestra */
+}
+
+.confirmar-icono {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto var(--space-4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  font-size: 1.375rem;
+  background: var(--indigo-profundo-suave);
+  color: var(--indigo-profundo);
+}
+
+.confirmar-icono.es-peligroso {
+  background: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+}
+
+.confirmar-titulo {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  color: var(--texto-principal);
+}
+
+.confirmar-mensaje {
+  margin: 0 0 var(--space-6);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--texto-secundario);
+}
+
+/* Campo de nota (variante que reemplaza a window.prompt) */
+.confirmar-campo {
+  text-align: left;
+  margin: 0 0 var(--space-6);
+}
+
+.confirmar-campo label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--texto-principal);
+}
+
+.confirmar-nota {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--borde-medio);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--texto-principal);
+  background: var(--blanco);
+  resize: vertical;
+}
+
+.confirmar-nota:focus-visible {
+  border-color: var(--cian-digital);
+}
+
+.confirmar-acciones {
+  display: flex;
+  gap: var(--space-3);
+  justify-content: center;
+}
+
+.confirmar-btn {
+  flex: 1;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+.confirmar-btn-cancelar {
+  background: var(--blanco);
+  border-color: var(--borde-medio);
+  color: var(--texto-principal);
+}
+
+.confirmar-btn-cancelar:hover {
+  background: var(--gris-niebla);
+}
+
+.confirmar-btn-ok {
+  background: var(--indigo-profundo);
+  color: var(--texto-sobre-oscuro);
+}
+
+.confirmar-btn-ok:hover {
+  background: var(--indigo-profundo-hover);
+}
+
+.confirmar-btn-ok.es-peligroso {
+  background: var(--rojo-error);
+  color: var(--texto-sobre-vivo);
+}
+
+.confirmar-btn-ok.es-peligroso:hover {
+  background: var(--rojo-error-hover);
+}
+
+.confirmar-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

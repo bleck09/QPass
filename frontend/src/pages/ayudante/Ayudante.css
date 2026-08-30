@@ -14,6 +14,14 @@
   gap: 16px;
 }
 
+/* Pantallas de selección: el <h1> conserva el tamaño que tenía el <h2> (A3 / Manual 5.6) */
+.pi-ayu-header-wrapper > h1,
+.pi-ayu-header-wrapper > h2 {
+  font-size: 1.375rem;
+  color: var(--texto-principal);
+  margin: 0;
+}
+
 .pi-ayu-header-negocio {
   display: flex;
   align-items: center;
@@ -37,41 +45,42 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26px;
+  font-size: 1.625rem;
 }
 
 .pi-ayu-eyebrow {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--cian-digital-texto);
 }
 
+.pi-ayu-header-negocio h1,
 .pi-ayu-header-negocio h2 {
-  font-size: 22px;
+  font-size: 1.375rem;
   color: var(--texto-principal);
   margin: 2px 0 2px;
 }
 
 .pi-ayu-header-negocio p {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
 }
 
 .pi-ayu-kpi {
   background: var(--blanco);
   border-radius: 14px;
-  padding: 14px 22px;
+  padding: 16px 24px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
 
 .pi-ayu-kpi .micro-etiqueta {
-  font-size: 12px;
+  font-size: 0.75rem;
   color: var(--texto-secundario);
   font-weight: 600;
 }
@@ -79,16 +88,16 @@
 .pi-ayu-kpi .kpi-valor {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pi-ayu-kpi .kpi-icon {
   color: var(--coral-compra);
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 .pi-ayu-kpi .numero-grande {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   color: var(--texto-principal);
 }
@@ -96,7 +105,7 @@
 /* --- TABS --- */
 .pi-ayu-tabs {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   background-color: var(--gris-niebla);
   padding: 4px;
   border-radius: 10px;
@@ -109,9 +118,9 @@
   gap: 8px;
   border: none;
   background: none;
-  padding: 9px 16px;
+  padding: 8px 16px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--texto-secundario);
   cursor: pointer;
@@ -147,7 +156,7 @@
 }
 
 .pi-ayu-productos h3 {
-  font-size: 16px;
+  font-size: 1rem;
   color: var(--texto-principal);
   margin-bottom: 16px;
 }
@@ -155,7 +164,7 @@
 .pi-ayu-productos-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 .pi-ayu-producto-card {
@@ -165,7 +174,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   text-align: center;
 }
 
@@ -182,19 +191,19 @@
   align-items: center;
   justify-content: center;
   background-color: var(--gris-niebla);
-  color: var(--gris-medio);
-  font-size: 26px;
+  color: var(--texto-secundario);
+  font-size: 1.625rem;
 }
 
 .pi-ayu-producto-nombre {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--texto-principal);
   min-height: 34px;
 }
 
 .pi-ayu-producto-precio {
-  font-size: 15px;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--indigo-profundo);
 }
@@ -202,7 +211,7 @@
 .pi-ayu-btn-agregar {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   justify-content: center;
   border: none;
@@ -210,7 +219,7 @@
   color: var(--cian-digital-texto);
   padding: 8px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
   margin-top: 4px;
@@ -226,7 +235,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
   margin-top: 4px;
 }
@@ -242,7 +251,7 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  font-size: 11px;
+  font-size: 0.75rem;
 }
 
 .pi-ayu-producto-stepper button:hover {
@@ -251,7 +260,7 @@
 }
 
 .pi-ayu-producto-stepper span {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   color: var(--texto-principal);
   min-width: 16px;
@@ -268,22 +277,22 @@
   top: 20px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
 }
 
 .pi-ayu-carrito h3 {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: 1rem;
   color: var(--texto-principal);
 }
 
 .pi-ayu-carrito-vacio {
-  font-size: 13px;
-  color: var(--gris-medio);
+  font-size: 0.8125rem;
+  color: var(--texto-secundario);
   text-align: center;
-  padding: 20px 6px;
+  padding: 20px 8px;
 }
 
 .pi-ayu-carrito-lista {
@@ -298,7 +307,7 @@
   display: grid;
   grid-template-columns: 1fr auto auto auto;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .pi-ayu-carrito-item-info {
@@ -308,7 +317,7 @@
 }
 
 .pi-ayu-carrito-item-info .nombre {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   color: var(--texto-principal);
   overflow: hidden;
@@ -317,12 +326,12 @@
 }
 
 .pi-ayu-carrito-item-info .precio-unit {
-  font-size: 11px;
-  color: var(--gris-medio);
+  font-size: 0.75rem;
+  color: var(--texto-secundario);
 }
 
 .pi-ayu-carrito-subtotal {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
   color: var(--indigo-profundo);
   white-space: nowrap;
@@ -343,12 +352,12 @@
   align-items: center;
   padding-top: 12px;
   border-top: 1px solid var(--borde-suave);
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--texto-principal);
 }
 
 .pi-ayu-carrito-total strong {
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--indigo-profundo);
 }
 
@@ -358,7 +367,7 @@
   color: var(--texto-secundario);
   padding: 8px;
   border-radius: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
 }
@@ -371,13 +380,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   background-color: var(--cian-digital);
   color: var(--texto-sobre-vivo);
   border: none;
-  padding: 14px;
+  padding: 16px;
   border-radius: 10px;
-  font-size: 15px;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 180, 216, 0.35);
@@ -398,7 +407,7 @@
 .pi-ayu-tabla-wrapper {
   background: var(--blanco);
   border-radius: 14px;
-  padding: 18px 20px;
+  padding: 16px 20px;
   overflow-x: auto;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
@@ -410,25 +419,25 @@
 
 .pi-ayu-tabla th {
   text-align: left;
-  font-size: 12px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--gris-medio);
-  padding: 10px 12px;
+  color: var(--texto-secundario);
+  padding: 8px 12px;
   border-bottom: 1px solid var(--borde-suave);
 }
 
 .pi-ayu-tabla td {
   padding: 12px;
   border-bottom: 1px solid var(--borde-suave);
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--texto-principal);
 }
 
 .pi-ayu-fila-persona {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   font-weight: 600;
   color: var(--texto-principal);
 }
@@ -441,9 +450,9 @@
 }
 
 .pi-ayu-badge-items {
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
-  padding: 4px 10px;
+  padding: 4px 8px;
   border-radius: 20px;
   background-color: var(--indigo-profundo-suave);
   color: var(--indigo-profundo);
@@ -456,8 +465,8 @@
 
 .pi-ayu-sin-resultados {
   text-align: center;
-  color: var(--gris-medio);
-  padding: 30px 0 !important;
+  color: var(--texto-secundario);
+  padding: 32px 0 !important;
 }
 
 /* --- MODAL / TARJETA GRANDE AL ESCANEAR --- */
@@ -485,7 +494,7 @@
   max-height: 90vh;
   overflow-y: auto;
   border-radius: 20px;
-  padding: 32px 28px 26px;
+  padding: 32px 28px 24px;
   position: relative;
   text-align: center;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
@@ -503,7 +512,7 @@
   right: 16px;
   border: none;
   background-color: var(--gris-niebla);
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -517,9 +526,9 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 700;
-  padding: 7px 16px;
+  padding: 8px 16px;
   border-radius: 20px;
   margin-bottom: 20px;
   background-color: var(--verde-recarga-suave);
@@ -541,28 +550,28 @@
 }
 
 .pi-ayu-tarjeta-nombre {
-  margin-top: 14px;
-  font-size: 20px;
+  margin-top: 16px;
+  font-size: 1.25rem;
   color: var(--texto-principal);
 }
 
 .pi-ayu-tarjeta-datos {
-  margin-top: 18px;
+  margin-top: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
   text-align: left;
   background-color: var(--gris-niebla);
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 16px 16px;
 }
 
 .pi-ayu-tarjeta-dato {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 16px;
   color: var(--indigo-profundo);
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
 .pi-ayu-tarjeta-dato > div {
@@ -571,41 +580,41 @@
 }
 
 .pi-ayu-tarjeta-dato .label {
-  font-size: 11px;
+  font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
 }
 
 .pi-ayu-tarjeta-dato .valor {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-principal);
 }
 
 /* --- RESUMEN DE VENTA DENTRO DE LA TARJETA --- */
 .pi-ayu-resumen-venta {
-  margin-top: 18px;
+  margin-top: 16px;
   text-align: left;
   border: 1px solid var(--borde-suave);
   border-radius: 12px;
-  padding: 14px 16px;
+  padding: 16px 16px;
 }
 
 .pi-ayu-resumen-titulo {
   display: block;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--gris-medio);
-  margin-bottom: 10px;
+  color: var(--texto-secundario);
+  margin-bottom: 8px;
 }
 
 .pi-ayu-resumen-item {
   display: flex;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-principal);
   padding: 4px 0;
 }
@@ -614,15 +623,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: 8px;
+  padding-top: 8px;
   border-top: 1px solid var(--borde-suave);
-  font-size: 14px;
+  font-size: 0.875rem;
   color: var(--texto-principal);
 }
 
 .pi-ayu-resumen-total strong {
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--coral-compra);
 }
 
@@ -632,25 +641,25 @@
   gap: 8px;
   background-color: var(--rojo-error-suave);
   color: var(--rojo-error-texto);
-  padding: 10px 12px;
+  padding: 8px 12px;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
-  margin-top: 14px;
+  margin-top: 16px;
   text-align: left;
 }
 
 .pi-ayu-tarjeta-acciones {
   display: flex;
-  gap: 10px;
-  margin-top: 22px;
+  gap: 8px;
+  margin-top: 24px;
 }
 
 .pi-ayu-tarjeta-acciones button {
   flex: 1;
   padding: 12px;
   border-radius: 10px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   border: none;
@@ -688,18 +697,18 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
+  gap: 8px;
+  padding: 8px 0;
 }
 
 .pi-ayu-exito h3 {
   color: var(--texto-principal);
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .pi-ayu-exito p {
-  color: var(--gris-medio);
-  font-size: 14px;
+  color: var(--texto-secundario);
+  font-size: 0.875rem;
 }
 
 .pi-ayu-exito-saldo {
@@ -708,10 +717,10 @@
   gap: 8px;
   background-color: var(--indigo-profundo-suave);
   color: var(--indigo-profundo);
-  padding: 10px 18px;
+  padding: 8px 16px;
   border-radius: 10px;
-  font-size: 14px;
-  margin: 8px 0 18px;
+  font-size: 0.875rem;
+  margin: 8px 0 16px;
 }
 
 .pi-ayu-exito .pi-ayu-btn-confirmar {

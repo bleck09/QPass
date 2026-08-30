@@ -1,4 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga } from '../../components/EstadosAsync.jsx';
 import { useLocation } from 'react-router-dom';
 import {
   FaPlus, FaTrash, FaSave, FaEye, FaImage, FaUpload,
@@ -46,13 +51,40 @@ const normalizarConfig = (config) => {
 };
 
 export default function AdminConfigurarPagina() {
+  useTituloPagina('Configurar página del evento');
   const location = useLocation();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
-  const [config, setConfig] = useState(defaultLandingConfig);
+
+  // Config de la landing con estado de carga (Manual 8.9). Si la petición falla
+  // se cae a los valores por defecto (comportamiento previo), por eso no hay
+  // estado de "error" visible: la página siempre es usable.
+  const cargarConfig = useCallback(
+    () => api.landingConfig.obtener(eventoId).then(normalizarConfig).catch(() => defaultLandingConfig),
+    [eventoId],
+  );
+  const {
+    data: config,
+    setData: setConfig,
+    cargando: cargandoConfig,
+  } = useApi(cargarConfig, { inicial: defaultLandingConfig, activo: !!eventoId });
 
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [showPreview, setShowPreview] = useState(false);
+  const [confirmar, DialogoConfirmar] = useConfirmar();
+
+  // Foco del modal de vista previa (A1 / Manual 8.6)
+  const modalPreviewRef = useRef(null);
+  useFocoModal(modalPreviewRef, showPreview);
+
+  // Modal de vista previa: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  useEffect(() => {
+    if (!showPreview) return;
+    const alTecla = (e) => { if (e.key === "Escape") setShowPreview(false); };
+    window.addEventListener("keydown", alTecla);
+    document.body.style.overflow = "hidden";
+    return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
+  }, [showPreview]);
 
   useEffect(() => {
     api.eventos.listar().then(lista => {
@@ -60,13 +92,6 @@ export default function AdminConfigurarPagina() {
       setEventoId(prev => prev || lista[0]?.id);
     });
   }, []);
-
-  useEffect(() => {
-    if (!eventoId) return;
-    api.landingConfig.obtener(eventoId)
-      .then(cfg => setConfig(normalizarConfig(cfg)))
-      .catch(() => setConfig(defaultLandingConfig));
-  }, [eventoId]);
 
   const cambiarEvento = (nuevoId) => setEventoId(nuevoId);
 
@@ -107,12 +132,17 @@ export default function AdminConfigurarPagina() {
   };
 
   const restablecerValores = async () => {
-    if (window.confirm("¿Estás seguro de que deseas volver a los valores originales del diseño moderno?")) {
-      const guardada = await api.landingConfig.guardar(eventoId, defaultLandingConfig);
-      setConfig(normalizarConfig(guardada));
-      setMensaje({ texto: 'Se han restaurado los valores por defecto.', tipo: 'aviso' });
-      setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
-    }
+    const ok = await confirmar({
+      titulo: '¿Restablecer el diseño?',
+      mensaje: 'Se descartarán tus cambios y la página volverá a los valores originales del diseño por defecto.',
+      textoConfirmar: 'Restablecer',
+      peligroso: true,
+    });
+    if (!ok) return;
+    const guardada = await api.landingConfig.guardar(eventoId, defaultLandingConfig);
+    setConfig(normalizarConfig(guardada));
+    setMensaje({ texto: 'Se han restaurado los valores por defecto.', tipo: 'aviso' });
+    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
   };
 
   const renderIconoPrevio = (valor) => {
@@ -129,7 +159,7 @@ export default function AdminConfigurarPagina() {
     <div className="pi-admin-container">
       
       <div className="pi-admin-header">
-        <h2>Gestión de la Landing Page</h2>
+        <h1>Gestión de la landing page</h1>
         <div className="pi-admin-selector-evento">
           <FaCalendarAlt />
           <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
@@ -139,14 +169,14 @@ export default function AdminConfigurarPagina() {
           </select>
         </div>
         <div className="pi-admin-header-actions">
-          <button className="pi-admin-btn-reset" onClick={restablecerValores}>
+          <button type="button" className="pi-admin-btn-reset" onClick={restablecerValores}>
             <FaUndo /> Restablecer
           </button>
           
-          <button className="pi-admin-btn-preview" onClick={() => setShowPreview(true)}>
+          <button type="button" className="pi-admin-btn-preview" onClick={() => setShowPreview(true)}>
             <FaEye /> Vista Previa Completa
           </button>
-          <button className="pi-admin-btn-save" onClick={guardarConfiguracion}>
+          <button type="button" className="pi-admin-btn-save" onClick={guardarConfiguracion}>
             <FaSave /> Guardar Cambios
           </button>
         </div>
@@ -158,45 +188,48 @@ export default function AdminConfigurarPagina() {
         </div>
       )}
 
+      {cargandoConfig ? (
+        <EstadoCarga filas={6} etiqueta="Cargando configuración…" />
+      ) : (
       <div className="pi-admin-grid">
-        
+
         {/* SECCIÓN 1: COLORES */}
         <div className="pi-admin-card">
           <h3><FaPalette color="var(--cian-digital-texto)" /> Apariencia y Colores</h3>
           <p className="texto-ayuda">Edita la paleta de colores de tu página principal.</p>
           <div className="pi-admin-colors-grid">
             <div className="pi-admin-form-group">
-              <label>Color de Acento (Detalles)</label>
+              <label htmlFor="cfg-colorPrimario">Color de acento (detalles)</label>
               <div className="pi-admin-color-picker">
-                <input type="color" name="colorPrimario" value={config.colorPrimario} onChange={handleChange} />
+                <input id="cfg-colorPrimario" type="color" name="colorPrimario" value={config.colorPrimario} onChange={handleChange} />
                 <span className="hex-label">{config.colorPrimario.toUpperCase()}</span>
               </div>
             </div>
             <div className="pi-admin-form-group">
-              <label>Botón Principal</label>
+              <label htmlFor="cfg-colorBoton">Botón principal</label>
               <div className="pi-admin-color-picker">
-                <input type="color" name="colorBoton" value={config.colorBoton} onChange={handleChange} />
+                <input id="cfg-colorBoton" type="color" name="colorBoton" value={config.colorBoton} onChange={handleChange} />
                 <span className="hex-label">{config.colorBoton.toUpperCase()}</span>
               </div>
             </div>
             <div className="pi-admin-form-group">
-              <label>Fondo de la Página</label>
+              <label htmlFor="cfg-colorFondo">Fondo de la página</label>
               <div className="pi-admin-color-picker">
-                <input type="color" name="colorFondo" value={config.colorFondo} onChange={handleChange} />
+                <input id="cfg-colorFondo" type="color" name="colorFondo" value={config.colorFondo} onChange={handleChange} />
                 <span className="hex-label">{config.colorFondo.toUpperCase()}</span>
               </div>
             </div>
             <div className="pi-admin-form-group">
-              <label>Textos de Títulos</label>
+              <label htmlFor="cfg-colorTextoTitulo">Textos de títulos</label>
               <div className="pi-admin-color-picker">
-                <input type="color" name="colorTextoTitulo" value={config.colorTextoTitulo} onChange={handleChange} />
+                <input id="cfg-colorTextoTitulo" type="color" name="colorTextoTitulo" value={config.colorTextoTitulo} onChange={handleChange} />
                 <span className="hex-label">{config.colorTextoTitulo.toUpperCase()}</span>
               </div>
             </div>
             <div className="pi-admin-form-group">
-              <label>Textos Generales</label>
+              <label htmlFor="cfg-colorTextoP">Textos generales</label>
               <div className="pi-admin-color-picker">
-                <input type="color" name="colorTextoP" value={config.colorTextoP} onChange={handleChange} />
+                <input id="cfg-colorTextoP" type="color" name="colorTextoP" value={config.colorTextoP} onChange={handleChange} />
                 <span className="hex-label">{config.colorTextoP.toUpperCase()}</span>
               </div>
             </div>
@@ -208,17 +241,17 @@ export default function AdminConfigurarPagina() {
           <h3><FaTextHeight color="var(--cian-digital-texto)" /> Textos Principales e Imagen</h3>
           
           <div className="pi-admin-form-group">
-            <label>Título Principal</label>
-            <input type="text" name="titulo" value={config.titulo} onChange={handleChange} />
+            <label htmlFor="cfg-titulo">Título principal</label>
+            <input id="cfg-titulo" type="text" name="titulo" value={config.titulo} onChange={handleChange} />
           </div>
 
           <div className="pi-admin-form-group">
-            <label>Información / Descripción</label>
-            <textarea name="informacion" rows="3" value={config.informacion} onChange={handleChange} />
+            <label htmlFor="cfg-informacion">Información / descripción</label>
+            <textarea id="cfg-informacion" name="informacion" rows="3" value={config.informacion} onChange={handleChange} />
           </div>
 
           <div className="pi-admin-form-group">
-            <label><FaImage /> Imagen de Portada</label>
+            <label htmlFor="cfg-imagen"><FaImage aria-hidden="true" /> Imagen de portada</label>
             <div className="pi-admin-image-upload-wrapper">
               <label htmlFor="file-upload" className="pi-admin-btn-upload">
                 <FaUpload /> Subir imagen
@@ -226,8 +259,8 @@ export default function AdminConfigurarPagina() {
               <input id="file-upload" type="file" accept="image/*" onChange={handleImageUpload} hidden />
               <span className="texto-ayuda" style={{ marginLeft: '10px' }}>o pega una URL abajo:</span>
             </div>
-            <input type="text" name="imagen" value={config.imagen} onChange={handleChange} placeholder="https://..." style={{ marginTop: '8px' }} />
-            {config.imagen && <img src={config.imagen} alt="Vista previa" className="pi-admin-preview-img" />}
+            <input id="cfg-imagen" type="text" name="imagen" value={config.imagen} onChange={handleChange} placeholder="https://..." style={{ marginTop: '8px' }} />
+            {config.imagen && <img width="480" height="200" src={config.imagen} alt="Vista previa" className="pi-admin-preview-img" />}
           </div>
         </div>
 
@@ -235,7 +268,7 @@ export default function AdminConfigurarPagina() {
         <div className="pi-admin-card">
           <div className="pi-admin-card-header">
             <h3><FaListUl color="var(--cian-digital-texto)" /> Actividades Destacadas</h3>
-            <button className="pi-admin-btn-add" onClick={() => addToArray('actividades', { icono: 'ticket', titulo: '', descripcion: '' })}>
+            <button type="button" className="pi-admin-btn-add" onClick={() => addToArray('actividades', { icono: 'ticket', titulo: '', descripcion: '' })}>
               <FaPlus /> Añadir Fila
             </button>
           </div>
@@ -251,7 +284,7 @@ export default function AdminConfigurarPagina() {
                 <input type="text" placeholder="Título" value={act.titulo} onChange={(e) => updateArray('actividades', index, 'titulo', e.target.value)} />
                 <input type="text" placeholder="Descripción" value={act.descripcion} onChange={(e) => updateArray('actividades', index, 'descripcion', e.target.value)} />
               </div>
-              <button className="pi-admin-btn-delete" onClick={() => removeFromArray('actividades', index)}><FaTrash /></button>
+              <button type="button" className="pi-admin-btn-delete" onClick={() => removeFromArray('actividades', index)}><FaTrash /></button>
             </div>
           ))}
         </div>
@@ -260,7 +293,7 @@ export default function AdminConfigurarPagina() {
         <div className="pi-admin-card">
           <div className="pi-admin-card-header">
             <h3><FaRegCalendarAlt color="var(--cian-digital-texto)" /> Cronograma</h3>
-            <button className="pi-admin-btn-add" onClick={() => addToArray('cronograma', { hora: '', actividad: '' })}>
+            <button type="button" className="pi-admin-btn-add" onClick={() => addToArray('cronograma', { hora: '', actividad: '' })}>
               <FaPlus /> Añadir Fila
             </button>
           </div>
@@ -268,21 +301,22 @@ export default function AdminConfigurarPagina() {
             <div key={index} className="pi-admin-dynamic-row">
               <input type="time" value={item.hora} onChange={(e) => updateArray('cronograma', index, 'hora', e.target.value)} className="pi-admin-time-input" />
               <input type="text" placeholder="¿Qué sucederá a esta hora?" value={item.actividad} style={{ flex: 1 }} onChange={(e) => updateArray('cronograma', index, 'actividad', e.target.value)} />
-              <button className="pi-admin-btn-delete" onClick={() => removeFromArray('cronograma', index)}><FaTrash /></button>
+              <button type="button" className="pi-admin-btn-delete" onClick={() => removeFromArray('cronograma', index)}><FaTrash /></button>
             </div>
           ))}
         </div>
 
       </div>
+      )}
 
       {/* --- MODAL DE VISTA PREVIA COMPLETA --- */}
       {showPreview && (
-        <div className="pi-admin-modal-overlay">
-          <div className="pi-admin-modal dark-glass-preview">
+        <div className="pi-admin-modal-overlay" onClick={() => setShowPreview(false)}>
+          <div ref={modalPreviewRef} tabIndex={-1} className="pi-admin-modal dark-glass-preview" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cfg-preview-titulo">
             
             <div className="pi-admin-modal-header dark-header">
-              <h3 style={{color: 'white', margin: 0}}>👀 Vista Previa (Modo Real)</h3>
-              <button className="pi-admin-btn-close-dark" onClick={() => setShowPreview(false)}><FaTimes /></button>
+              <h3 id="cfg-preview-titulo" style={{color: "white", margin: 0}}>Vista Previa (Modo Real)</h3>
+              <button type="button" className="pi-admin-btn-close-dark" onClick={() => setShowPreview(false)} aria-label="Cerrar"><FaTimes aria-hidden="true" /></button>
             </div>
             
             <div className="pi-admin-modal-body modal-scrollable" style={{ backgroundColor: config.colorFondo }}>
@@ -290,13 +324,15 @@ export default function AdminConfigurarPagina() {
               {/* 1. SECCIÓN HERO PREVIEW */}
               <div className="pi-admin-modal-content-flex">
                 <div className="pi-admin-modal-text">
-                  <h1 style={{ color: config.colorTextoTitulo, fontSize: '32px', fontWeight: '800', marginBottom: '20px', lineHeight: '1.2' }}>
+                  {/* Vista previa de la landing: no es un encabezado real de esta pantalla,
+                      por eso es <div> y no <h1> (la pantalla ya tiene su único h1 arriba) */}
+                  <div style={{ color: config.colorTextoTitulo, fontSize: '32px', fontWeight: '800', marginBottom: '20px', lineHeight: '1.2' }}>
                     {config.titulo}
-                  </h1>
+                  </div>
                   <p style={{ color: config.colorTextoP, fontSize: '15px', marginBottom: '30px', lineHeight: '1.6' }}>
                     {config.informacion}
                   </p>
-                  <button style={{ 
+                  <button type="button" style={{ 
                     backgroundColor: config.colorBoton, 
                     color: config.colorFondo, 
                     padding: '12px 28px', border: 'none', borderRadius: '30px', fontWeight: 'bold', fontSize: '15px'
@@ -306,7 +342,7 @@ export default function AdminConfigurarPagina() {
                 </div>
                 <div className="pi-admin-modal-image">
                   {config.imagen ? (
-                    <img src={config.imagen} alt="Preview" style={{ borderRadius: '16px', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }} />
+                    <img width="400" height="225" src={config.imagen} alt="Preview" style={{ borderRadius: '16px', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }} />
                   ) : (
                     <div className="no-img">Sin imagen</div>
                   )}
@@ -348,6 +384,8 @@ export default function AdminConfigurarPagina() {
           </div>
         </div>
       )}
+
+      {DialogoConfirmar}
     </div>
   );
 }

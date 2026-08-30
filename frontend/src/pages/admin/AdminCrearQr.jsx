@@ -1,4 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation } from 'react-router-dom';
 import {
   FaCalendarAlt, FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
@@ -33,15 +38,28 @@ function QrImg({ qr, ancho = 180, alto = 180 }) {
     return <div className="pi-adqr-qr-cargando" style={{ width: ancho, height: alto }} />;
   }
   return (
-    <img src={dataUrl} alt={qr.codigo} style={{ width: `${ancho}px`, height: `${alto}px` }} />
+    <img src={dataUrl} alt={qr.codigo} width={ancho} height={alto} style={{ width: `${ancho}px`, height: `${alto}px` }} />
   );
 }
 
 export default function AdminCrearQr() {
+  useTituloPagina('Generar códigos QR');
   const location = useLocation();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
-  const [codigos, setCodigos] = useState([]);
+
+  // Códigos del evento con estados cargando/error/reintentar (Manual 8.9).
+  const cargarCodigos = useCallback(
+    () => api.codigosQr.listar({ eventoId }),
+    [eventoId],
+  );
+  const {
+    data: codigos,
+    cargando: cargandoCodigos,
+    error: errorCodigos,
+    recargar: recargarCodigos,
+  } = useApi(cargarCodigos, { inicial: [], activo: !!eventoId });
+
   const [cantidad, setCantidad] = useState('50');
   const [prefijo, setPrefijo] = useState('QP');
   const [anchoCm, setAnchoCm] = useState('5');
@@ -49,7 +67,24 @@ export default function AdminCrearQr() {
   const [pagina, setPagina] = useState(0);
   const [mostrarImagenes, setMostrarImagenes] = useState(false);
   const [codigoAVer, setCodigoAVer] = useState(null);
+  const [confirmar, DialogoConfirmar] = useConfirmar();
+
+  // Foco del modal de QR ampliado (A1 / Manual 8.6)
+  const modalQrRef = useRef(null);
+  useFocoModal(modalQrRef, !!codigoAVer);
   const [generandoPdf, setGenerandoPdf] = useState(null); // { actual, total } | null
+
+  // Modal del QR ampliado: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  useEffect(() => {
+    if (!codigoAVer) return;
+    const alTecla = (e) => { if (e.key === 'Escape') setCodigoAVer(null); };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [codigoAVer]);
 
   useEffect(() => {
     api.eventos.listar().then(lista => {
@@ -58,10 +93,6 @@ export default function AdminCrearQr() {
     });
   }, []);
 
-  useEffect(() => {
-    if (!eventoId) return;
-    api.codigosQr.listar({ eventoId }).then(setCodigos);
-  }, [eventoId]);
 
   const anchoPx = cmAPx(anchoCm) || 180;
   const altoPx = cmAPx(altoCm) || 180;
@@ -82,15 +113,21 @@ export default function AdminCrearQr() {
     if (!n || n < 1) return;
     if (!prefijo.trim()) return;
     await api.codigosQr.generar({ eventoId, cantidad: n, prefijo });
-    setCodigos(await api.codigosQr.listar({ eventoId }));
+    await recargarCodigos();
     setPagina(0);
     setMostrarImagenes(false);
   };
 
   const handleVaciar = async () => {
-    if (!window.confirm('¿Borrar todos los códigos QR sin vincular de este evento?')) return;
+    const ok = await confirmar({
+      titulo: '¿Borrar los códigos sin vincular?',
+      mensaje: 'Se eliminarán todos los códigos QR de este evento que aún no estén vinculados a una manilla. Los ya vinculados no se tocan.',
+      textoConfirmar: 'Borrar códigos',
+      peligroso: true,
+    });
+    if (!ok) return;
     await api.codigosQr.eliminarNoVinculados(eventoId);
-    setCodigos(await api.codigosQr.listar({ eventoId }));
+    await recargarCodigos();
     setPagina(0);
     setMostrarImagenes(false);
   };
@@ -118,7 +155,7 @@ export default function AdminCrearQr() {
 
       <div className="pi-adqr-header">
         <div>
-          <h2><FaQrcode color="var(--indigo-profundo)" /> Generar Códigos QR</h2>
+          <h1><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Generar códigos QR</h1>
           <p>Genera una cantidad de códigos QR únicos para el evento y descárgalos en PDF.</p>
         </div>
         <div className="pi-adqr-selector-evento">
@@ -143,11 +180,13 @@ export default function AdminCrearQr() {
         <h3 className="pi-adqr-subtitulo">Generar nuevos códigos</h3>
         <form onSubmit={handleGenerar} className="pi-adqr-form">
           <div className="pi-adqr-input-group">
-            <label>Cantidad a generar</label>
+            <label htmlFor="qr-cantidad">Cantidad a generar</label>
             <div className="pi-adqr-input-wrapper">
-              <FaBoxes className="pi-adqr-input-icon" />
+              <FaBoxes className="pi-adqr-input-icon" aria-hidden="true" />
               <input
+                id="qr-cantidad"
                 type="number"
+                inputMode="numeric"
                 min="1"
                 max="2000"
                 value={cantidad}
@@ -158,10 +197,11 @@ export default function AdminCrearQr() {
             </div>
           </div>
           <div className="pi-adqr-input-group">
-            <label>Prefijo (1 a 3 letras)</label>
+            <label htmlFor="qr-prefijo">Prefijo (1 a 3 letras)</label>
             <div className="pi-adqr-input-wrapper">
-              <FaFont className="pi-adqr-input-icon" />
+              <FaFont className="pi-adqr-input-icon" aria-hidden="true" />
               <input
+                id="qr-prefijo"
                 type="text"
                 value={prefijo}
                 onChange={(e) => setPrefijo(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
@@ -172,10 +212,11 @@ export default function AdminCrearQr() {
             </div>
           </div>
           <div className="pi-adqr-input-group">
-            <label>Ancho del QR (cm)</label>
+            <label htmlFor="qr-ancho">Ancho del QR (cm)</label>
             <div className="pi-adqr-input-wrapper">
-              <FaArrowsAltH className="pi-adqr-input-icon" />
+              <FaArrowsAltH className="pi-adqr-input-icon" aria-hidden="true" />
               <input
+                id="qr-ancho"
                 type="number"
                 min="1"
                 max="26"
@@ -188,10 +229,11 @@ export default function AdminCrearQr() {
             </div>
           </div>
           <div className="pi-adqr-input-group">
-            <label>Alto del QR (cm)</label>
+            <label htmlFor="qr-alto">Alto del QR (cm)</label>
             <div className="pi-adqr-input-wrapper">
-              <FaArrowsAltV className="pi-adqr-input-icon" />
+              <FaArrowsAltV className="pi-adqr-input-icon" aria-hidden="true" />
               <input
+                id="qr-alto"
                 type="number"
                 min="1"
                 max="26"
@@ -217,6 +259,7 @@ export default function AdminCrearQr() {
           {codigos.length > 0 && (
             <div className="pi-adqr-acciones-lista">
               <button
+                type="button"
                 className="pi-adqr-btn-vaciar"
                 style={{ background: 'transparent', color: 'var(--indigo-profundo)' }}
                 onClick={() => setMostrarImagenes(v => !v)}
@@ -224,6 +267,7 @@ export default function AdminCrearQr() {
                 <FaEye /> {mostrarImagenes ? 'Ocultar QR de esta página' : 'Ver QR de esta página'}
               </button>
               <button
+                type="button"
                 className="pi-adqr-btn-imprimir"
                 onClick={() => descargarPdf(codigosPagina)}
                 disabled={!!generandoPdf}
@@ -231,13 +275,14 @@ export default function AdminCrearQr() {
                 <FaFileDownload /> Descargar PDF (esta página)
               </button>
               <button
+                type="button"
                 className="pi-adqr-btn-imprimir"
                 onClick={() => descargarPdf(codigos)}
                 disabled={!!generandoPdf}
               >
                 <FaFileDownload /> Descargar PDF (todo el evento)
               </button>
-              <button className="pi-adqr-btn-vaciar" onClick={handleVaciar}>
+              <button type="button" className="pi-adqr-btn-vaciar" onClick={handleVaciar}>
                 <FaTrash /> Vaciar
               </button>
             </div>
@@ -256,7 +301,11 @@ export default function AdminCrearQr() {
           </div>
         )}
 
-        {codigos.length === 0 ? (
+        {errorCodigos ? (
+          <EstadoError onReintentar={recargarCodigos} />
+        ) : cargandoCodigos ? (
+          <EstadoCarga filas={5} />
+        ) : codigos.length === 0 ? (
           <p className="pi-adqr-empty">Aún no se generaron códigos QR para este evento.</p>
         ) : (
           <>
@@ -280,7 +329,7 @@ export default function AdminCrearQr() {
                     <span className="pi-adqr-codigo">{qr.codigo}</span>
                   </div>
                 ) : (
-                  <button
+                  <button type="button"
                     key={qr.id}
                     type="button"
                     className="pi-adqr-chip"
@@ -298,9 +347,9 @@ export default function AdminCrearQr() {
 
       {codigoAVer && (
         <div className="pi-adqr-modal-fondo" onClick={() => setCodigoAVer(null)}>
-          <div className="pi-adqr-modal" onClick={(e) => e.stopPropagation()}>
-            <button type="button" className="pi-adqr-modal-cerrar" onClick={() => setCodigoAVer(null)}>
-              <FaTimes />
+          <div ref={modalQrRef} tabIndex={-1} className="pi-adqr-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Código QR ampliado">
+            <button type="button" className="pi-adqr-modal-cerrar" onClick={() => setCodigoAVer(null)} aria-label="Cerrar">
+              <FaTimes aria-hidden="true" />
             </button>
             <QrImg key={codigoAVer.id} qr={codigoAVer} ancho={anchoPx} alto={altoPx} />
             <span className="pi-adqr-codigo">{codigoAVer.codigo}</span>
@@ -308,6 +357,7 @@ export default function AdminCrearQr() {
         </div>
       )}
 
+      {DialogoConfirmar}
     </div>
   );
 }

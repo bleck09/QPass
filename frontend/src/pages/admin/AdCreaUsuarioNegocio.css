@@ -14,16 +14,17 @@
 }
 
 /* 2. Encabezados: Título de página (h2) 22px bold */
+.pi-adnegocio-header h1,
 .pi-adnegocio-header h2 {
   color: var(--texto-principal);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
-  margin: 0 0 5px 0;
+  margin: 0 0 4px 0;
 }
 
 .pi-adnegocio-header p {
   color: var(--texto-secundario);
-  font-size: 14px;
+  font-size: 1rem;
   font-weight: 400;
   margin: 0;
 }
@@ -41,28 +42,28 @@
 
 /* 6. Micro-etiqueta */
 .micro-etiqueta {
-  font-size: 11px;
+  font-size: 0.75rem;
   font-weight: 400;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
   margin-bottom: 4px;
 }
 
 .kpi-valor {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--texto-principal);
 }
 
 .kpi-icon {
-  font-size: 18px;
+  font-size: 1.125rem;
   color: var(--verde-recarga);
 }
 
 .numero-grande {
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
 }
 
@@ -78,7 +79,7 @@
 
 .pi-adnegocio-tabs {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto; 
 }
 
@@ -86,7 +87,7 @@
   background: none;
   border: none;
   color: var(--texto-secundario);
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 600;
   padding: 8px 16px;
   border-radius: 20px;
@@ -117,17 +118,17 @@
   left: 15px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
 }
 
 /* 4. Inputs normales y placeholders */
 .pi-adnegocio-search input {
   width: 100%;
-  padding: 12px 15px 12px 40px;
+  padding: 12px 16px 12px 40px;
   border: 1px solid var(--borde-medio);
   border-radius: 8px;
   outline: none;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 400;
   background-color: var(--blanco);
   color: var(--texto-principal);
@@ -136,9 +137,9 @@
 
 .pi-adnegocio-search input::placeholder,
 .input-wrapper input::placeholder {
-  font-size: 13px;
+  font-size: 0.8125rem;
   font-weight: 400;
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
 }
 
 .pi-adnegocio-search input:focus {
@@ -151,9 +152,9 @@
   background-color: var(--indigo-profundo);
   color: var(--blanco);
   border: none;
-  padding: 10px 20px;
+  padding: 8px 20px;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -189,18 +190,18 @@
   padding: 12px;
   border-bottom: 1px solid var(--borde-suave);
   text-align: left;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
 }
 
 .pi-adnegocio-table td {
   padding: 12px;
   border-bottom: 1px solid var(--borde-suave);
   text-align: left;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 400;
   color: var(--texto-principal);
 }
@@ -232,24 +233,24 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 16px;
+  font-size: 1rem;
 }
 
 /* Nombre de fila (persona/participante) */
 .fila-nombre {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-principal);
 }
 
 .celda-normal {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 400;
   color: var(--texto-principal);
 }
 
 .celda-secundaria {
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 400;
   color: var(--texto-secundario);
 }
@@ -258,7 +259,7 @@
 .pi-adnegocio-badge {
   padding: 4px 12px;
   border-radius: 20px;
-  font-size: 12px;
+  font-size: 0.75rem;
   font-weight: 700;
   display: inline-block;
 }
@@ -292,7 +293,7 @@
 
 .pi-adnegocio-empty {
   text-align: center;
-  padding: 30px !important;
+  padding: 32px !important;
   color: var(--texto-secundario);
 }
 
@@ -304,7 +305,7 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 9999;
+  z-index: var(--z-modal);
   padding: 20px;
   backdrop-filter: blur(4px);
 }
@@ -325,7 +326,7 @@
 }
 
 .pi-adnegocio-modal-header {
-  padding: 18px 24px;
+  padding: 16px 24px;
   background-color: var(--gris-niebla);
   border-bottom: 1px solid var(--borde-suave);
   display: flex;
@@ -337,18 +338,18 @@
 .pi-adnegocio-modal-header h2 {
   margin: 0;
   color: var(--texto-principal);
-  font-size: 22px;
+  font-size: 1.375rem;
   font-weight: 700;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .btn-close-modal {
   background: none;
   border: none;
-  color: var(--gris-medio);
-  font-size: 20px;
+  color: var(--texto-secundario);
+  font-size: 1.25rem;
   cursor: pointer;
 }
 
@@ -359,7 +360,7 @@
 }
 
 .pi-adnegocio-hint {
-  font-size: 13px;
+  font-size: 0.8125rem;
   color: var(--texto-secundario);
   margin-bottom: 20px;
   line-height: 1.5;
@@ -375,10 +376,10 @@
 /* Label: 14px, semibold, normal case */
 .pi-adnegocio-input-group label {
   display: block;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 600;
   color: var(--texto-principal);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   text-transform: none;
 }
 
@@ -391,17 +392,17 @@
 .input-icon {
   position: absolute;
   left: 12px;
-  color: var(--gris-medio);
+  color: var(--texto-secundario);
 }
 
 .input-wrapper input, .pi-select-rol {
   width: 100%;
-  padding: 10px 10px 10px 38px;
+  padding: 8px 8px 8px 40px;
   border: 1px solid var(--borde-medio);
   border-radius: 8px;
   outline: none;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 400;
   color: var(--texto-principal);
   background-color: var(--blanco);
@@ -416,7 +417,7 @@
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 /* Botones secundario y primario (14px, 700) */
@@ -424,9 +425,9 @@
   background: var(--blanco);
   border: 1px solid var(--borde-medio);
   color: var(--texto-principal);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
-  padding: 10px 18px;
+  padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s;
@@ -440,9 +441,9 @@
   background: var(--indigo-profundo);
   border: none;
   color: var(--blanco);
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 700;
-  padding: 10px 18px;
+  padding: 8px 16px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.2s;

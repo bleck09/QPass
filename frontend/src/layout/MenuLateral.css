@@ -25,7 +25,7 @@
   transition: width 0.4s cubic-bezier(0.2, 0, 0, 1);
   position: relative;
   z-index: 100;
-  padding-top: 10px;
+  padding-top: 8px;
 }
 
 .pi-layout-sidebar.collapsed { width: 90px; }
@@ -33,10 +33,10 @@
 /* Sección del Logo */
 .pi-layout-logo-section {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 20px 30px 20px; position: relative;
+  padding: 20px 20px 32px 20px; position: relative;
 }
 
-.pi-layout-logo { display: flex; align-items: center; gap: 15px; overflow: hidden; }
+.pi-layout-logo { display: flex; align-items: center; gap: 16px; overflow: hidden; }
 
 .logo-icon-wrapper {
   min-width: 40px; height: 40px; border-radius: 12px;
@@ -45,8 +45,8 @@
 }
 
 .logo-text { white-space: nowrap; }
-.logo-text h2 { margin: 0; font-size: 20px; font-weight: 800; color: var(--blanco); letter-spacing: 0.5px; }
-.logo-text p { margin: 0; font-size: 12px; color: var(--cian-digital); font-weight: 600; }
+.logo-text h2 { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--blanco); letter-spacing: 0.5px; }
+.logo-text p { margin: 0; font-size: 0.75rem; color: var(--cian-digital); font-weight: 600; }
 
 .pi-btn-collapse {
   position: absolute; right: -15px; top: 30px; width: 30px; height: 30px;
@@ -77,14 +77,21 @@
   border-radius: 30px 0 0 30px;
   cursor: pointer;
   background-color: transparent;
+  /* Reset de <button>: ahora estos ítems son botones reales (accesibilidad). */
+  border: 0;
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
   /* CRÍTICO: Sin transición de background para que el cambio sea instantáneo */
 }
 
 /* El contenedor del texto y el icono */
 .pi-layout-nav-content {
-  display: flex; align-items: center; gap: 15px;
-  padding: 14px 20px;
-  color: var(--gris-medio);
+  display: flex; align-items: center; gap: 16px;
+  padding: 16px 20px;
+  color: var(--texto-secundario);
   position: relative;
   z-index: 2;
   white-space: nowrap;
@@ -94,11 +101,11 @@
 }
 
 .pi-layout-nav-icon {
-  font-size: 20px; min-width: 24px; display: flex; justify-content: center;
+  font-size: 1.25rem; min-width: 24px; display: flex; justify-content: center;
   transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), color 0.2s ease-in-out;
 }
 
-.pi-layout-nav-text { font-size: 14px; font-weight: 600; }
+.pi-layout-nav-text { font-size: 0.875rem; font-weight: 600; }
 
 /* --- MAGIA MATEMÁTICA: LAS CURVAS --- */
 .curve-top, .curve-bottom {
@@ -176,7 +183,7 @@
 .pi-layout-main-wrapper {
   flex: 1; display: flex; flex-direction: column; 
   background-color: var(--azul-noche); 
-  padding: 15px 15px 15px 0; min-width: 0; 
+  padding: 16px 16px 16px 0; min-width: 0; 
 }
 
 .pi-layout-main {
@@ -193,31 +200,32 @@
 /* HEADER DEL ÁREA PRINCIPAL */
 .pi-layout-header {
   height: 75px; background-color: transparent; display: flex;
-  justify-content: space-between; align-items: center; padding: 0 30px; position: relative; z-index: 10;
+  justify-content: space-between; align-items: center; padding: 0 32px; position: relative; z-index: 10;
 }
 
-.pi-layout-header-left { display: flex; align-items: center; gap: 15px; }
+.pi-layout-header-left { display: flex; align-items: center; gap: 16px; }
 .pi-btn-mobile-menu { display: none; background: none; border: none; color: var(--texto-principal); cursor: pointer; }
-.pi-layout-header-left h3 { margin: 0; color: var(--texto-principal); font-size: 20px; font-weight: 700; }
+.pi-layout-header-left h3 { margin: 0; color: var(--texto-principal); font-size: 1.25rem; font-weight: 700; }
 .pi-layout-header-right { position: relative; }
 
 /* BOTÓN DEL PERFIL SUPERIOR */
 .pi-layout-perfil-btn {
-  display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 6px 12px;
+  display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 8px 12px;
   border-radius: 30px; background-color: var(--blanco); border: 1px solid var(--borde-suave);
   box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s;
+  font: inherit; color: inherit; appearance: none; -webkit-appearance: none;
 }
 .pi-layout-perfil-btn:hover { border-color: var(--cian-digital); box-shadow: 0 2px 8px rgba(0, 180, 216, 0.1); }
 
 .pi-layout-avatar {
   width: 36px; height: 36px; border-radius: 50%; background-color: var(--indigo-profundo);
-  color: var(--blanco); display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 14px; overflow: hidden;
+  color: var(--blanco); display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 0.875rem; overflow: hidden;
 }
 .pi-layout-avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
 .pi-layout-info-perfil { display: flex; flex-direction: column; text-align: left; }
-.pi-layout-nombre { font-size: 13px; font-weight: 700; color: var(--texto-principal); line-height: 1.2; }
-.pi-layout-rol-header { font-size: 11px; color: var(--texto-secundario); text-transform: uppercase; letter-spacing: 0.5px;}
+.pi-layout-nombre { font-size: 0.8125rem; font-weight: 700; color: var(--texto-principal); line-height: 1.2; }
+.pi-layout-rol-header { font-size: 0.75rem; color: var(--texto-secundario); text-transform: uppercase; letter-spacing: 0.5px;}
 
 /* MENÚ DESPLEGABLE (DROPDOWN PERFIL) */
 .pi-layout-dropdown {
@@ -229,26 +237,26 @@
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 .pi-layout-dropdown-header {
-  padding: 15px; background-color: var(--gris-niebla); border-bottom: 1px solid var(--borde-suave); display: flex; flex-direction: column;
+  padding: 16px; background-color: var(--gris-niebla); border-bottom: 1px solid var(--borde-suave); display: flex; flex-direction: column;
 }
-.pi-layout-dropdown-header strong { font-size: 14px; color: var(--texto-principal); }
-.pi-layout-dropdown-header span { font-size: 12px; color: var(--texto-secundario); margin-top: 2px; }
+.pi-layout-dropdown-header strong { font-size: 0.875rem; color: var(--texto-principal); }
+.pi-layout-dropdown-header span { font-size: 0.75rem; color: var(--texto-secundario); margin-top: 2px; }
 
-.pi-layout-dropdown-body { padding: 10px 0; }
+.pi-layout-dropdown-body { padding: 8px 0; }
 .pi-layout-dropdown-body button {
   width: 100%; padding: 12px 20px; background: none; border: none; text-align: left;
-  display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer;
   color: var(--texto-principal); transition: background 0.2s;
 }
 .pi-layout-dropdown-body button:hover { background-color: var(--gris-niebla); color: var(--indigo-profundo); }
 
 .pi-layout-dropdown-body button.btn-logout {
-  color: var(--rojo-error-texto); border-top: 1px solid var(--borde-suave); margin-top: 5px; padding-top: 15px;
+  color: var(--rojo-error-texto); border-top: 1px solid var(--borde-suave); margin-top: 4px; padding-top: 16px;
 }
 .pi-layout-dropdown-body button.btn-logout:hover { background-color: var(--rojo-error-suave); color: var(--rojo-error); }
 
 /* CONTENIDO PRINCIPAL */
-.pi-layout-content { padding: 0 30px 30px 30px; flex: 1; overflow-y: auto; }
+.pi-layout-content { padding: 0 32px 32px 32px; flex: 1; overflow-y: auto; }
 
 /* =======================================================
    RESPONSIVE DESIGN (MÓVILES)
@@ -260,23 +268,23 @@
   .pi-btn-mobile-menu { display: block; }
   
   .pi-layout-sidebar {
-    position: fixed; top: 0; left: 0; bottom: 0; z-index: 9999;
+    position: fixed; top: 0; left: 0; bottom: 0; z-index: var(--z-modal);
     transform: translateX(-100%); width: 280px; padding-top: 0;
   }
 
   .pi-layout-sidebar.mobile-open { transform: translateX(0); box-shadow: 5px 0 25px rgba(0,0,0,0.5); }
   .pi-mobile-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background-color: rgba(10, 14, 39, 0.7); z-index: 9998; backdrop-filter: blur(3px);
+    background-color: rgba(10, 14, 39, 0.7); z-index: var(--z-overlay); backdrop-filter: blur(3px);
   }
 
-  .pi-layout-nav { padding-left: 10px; }
+  .pi-layout-nav { padding-left: 8px; }
   .pi-layout-nav-item.activo .curve-top, 
   .pi-layout-nav-item.activo .curve-bottom { display: none; }
-  .pi-layout-nav-item.activo { border-radius: 12px; margin: 0 10px; }
+  .pi-layout-nav-item.activo { border-radius: 12px; margin: 0 8px; }
   
-  .pi-layout-content { padding: 15px; }
-  .pi-layout-header { padding: 0 15px; height: 60px; }
+  .pi-layout-content { padding: 16px; }
+  .pi-layout-header { padding: 0 16px; height: 60px; }
 }
 
 /* =======================================================

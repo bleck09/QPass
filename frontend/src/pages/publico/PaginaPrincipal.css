@@ -58,23 +58,23 @@
   height: 70px;
   border-radius: 40px;
   display: flex; justify-content: space-between; align-items: center;
-  padding: 0 20px 0 10px;
-  z-index: 1000;
+  padding: 0 20px 0 8px;
+  z-index: var(--z-dropdown);
 }
 
 .qpass-home-logo {
   display: flex; align-items: center; gap: 12px;
-  font-size: 22px; font-weight: 800; color: var(--blanco);
-  margin-left: 10px;
+  font-size: 1.375rem; font-weight: 800; color: var(--blanco);
+  margin-left: 8px;
 }
 .logo-icon-bg {
   background: var(--cian-digital); width: 40px; height: 40px; border-radius: 50%;
   display: flex; justify-content: center; align-items: center; color: var(--azul-noche);
-  font-size: 18px;
+  font-size: 1.125rem;
 }
 
-.qpass-home-nav-links { display: flex; gap: 30px; list-style: none; margin: 0; padding: 0; }
-.qpass-home-nav-links a { color: var(--blanco); text-decoration: none; font-weight: 600; font-size: 14px; transition: color 0.2s; }
+.qpass-home-nav-links { display: flex; gap: 32px; list-style: none; margin: 0; padding: 0; }
+.qpass-home-nav-links a { color: var(--blanco); text-decoration: none; font-weight: 600; font-size: 0.875rem; transition: color 0.2s; }
 .qpass-home-nav-links a:hover { color: var(--cian-digital); }
 
 .qpass-home-nav-actions .btn-solid {
@@ -89,27 +89,27 @@
 .qpass-home-hero {
   position: relative; z-index: 10;
   display: flex; justify-content: center; align-items: center;
-  min-height: 85vh; padding: 120px 5% 50px 5%; text-align: center;
+  min-height: 85vh; padding: 120px 5% 48px 5%; text-align: center;
 }
 
 .hero-content { max-width: 800px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
 
-.badge-tech { padding: 10px 20px; border-radius: 30px; font-weight: 700; font-size: 13px; color: var(--cian-digital); }
+.badge-tech { padding: 8px 20px; border-radius: 30px; font-weight: 700; font-size: 0.8125rem; color: var(--cian-digital); }
 
 .hero-content h1 { font-size: 4rem; font-weight: 800; line-height: 1.1; margin: 0; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-.hero-content p { font-size: 1.2rem; line-height: 1.6; margin: 0; max-width: 650px; color: var(--gris-medio); }
+.hero-content p { font-size: 1.2rem; line-height: 1.6; margin: 0; max-width: 650px; color: var(--texto-secundario); }
 
-.hero-buttons { margin-top: 10px; }
-.btn-large { padding: 16px 36px; font-size: 16px; border-radius: 30px; background: var(--cian-digital); color: var(--azul-noche); text-decoration: none; display: inline-flex; align-items: center; gap: 10px; font-weight: 800; transition: all 0.3s; }
+.hero-buttons { margin-top: 8px; }
+.btn-large { padding: 16px 36px; font-size: 1rem; border-radius: 30px; background: var(--cian-digital); color: var(--azul-noche); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 800; transition: all 0.3s; }
 .btn-large:hover { background: var(--blanco); transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0, 180, 216, 0.4); }
 
 /* =======================================================
    SECCIONES GLOBALES
 ======================================================= */
 .qpass-home-section { position: relative; z-index: 10; padding: 80px 5%; max-width: 1200px; margin: 0 auto; }
-.section-header.center { text-align: center; margin-bottom: 50px; }
-.section-header h2 { font-size: 2.5rem; margin: 0 0 10px 0; font-weight: 800; }
-.section-header p { font-size: 1.1rem; color: var(--gris-medio); margin: 0; }
+.section-header.center { text-align: center; margin-bottom: 48px; }
+.section-header h2 { font-size: 2.5rem; margin: 0 0 8px 0; font-weight: 800; }
+.section-header p { font-size: 1.1rem; color: var(--texto-secundario); margin: 0; }
 
 /* =======================================================
    CARRUSEL 3D COVERFLOW (Estilo ROME APP / TRAVEL2)
@@ -174,21 +174,21 @@
 .btn-expand-icon { position: absolute; top: 15px; right: 15px; width: 36px; height: 36px; border-radius: 50%; border: none; color: var(--blanco); z-index: 10; display: flex; justify-content: center; align-items: center; }
 
 /* Contenido de texto en la tarjeta */
-.card-3d-content { position: absolute; bottom: 0; left: 0; width: 100%; padding: 25px; z-index: 2; display: flex; flex-direction: column; }
-.card-3d-content h3 { margin: 0 0 10px 0; font-size: 24px; font-weight: 800; line-height: 1.1; }
-.card-desc { font-size: 12px; color: var(--gris-medio); margin: 0 0 20px 0; line-height: 1.4; display: none; }
+.card-3d-content { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px; z-index: 2; display: flex; flex-direction: column; }
+.card-3d-content h3 { margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 800; line-height: 1.1; }
+.card-desc { font-size: 0.75rem; color: var(--texto-secundario); margin: 0 0 20px 0; line-height: 1.4; display: none; }
 .carousel-3d-card.active .card-desc { display: block; }
 
-.card-3d-footer { display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
-.footer-info { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--gris-medio); }
-.footer-info span { display: flex; align-items: center; gap: 6px; }
+.card-3d-footer { display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; }
+.footer-info { display: flex; flex-direction: column; gap: 8px; font-size: 0.75rem; color: var(--texto-secundario); }
+.footer-info span { display: flex; align-items: center; gap: 8px; }
 .footer-price { display: flex; flex-direction: column; align-items: flex-end; }
-.footer-price span { font-size: 11px; color: var(--gris-medio); }
-.footer-price strong { font-size: 18px; color: var(--cian-digital); font-weight: 800; }
+.footer-price span { font-size: 0.75rem; color: var(--texto-secundario); }
+.footer-price strong { font-size: 1.125rem; color: var(--cian-digital); font-weight: 800; }
 
-.btn-full { width: 100%; border: none; padding: 14px; border-radius: 12px; background: var(--cian-digital); color: var(--azul-noche); font-weight: 800; cursor: pointer; transition: background 0.2s; }
+.btn-full { width: 100%; border: none; padding: 16px; border-radius: 12px; background: var(--cian-digital); color: var(--azul-noche); font-weight: 800; cursor: pointer; transition: background 0.2s; }
 .btn-full:hover { background: var(--blanco); }
-.mt-15 { margin-top: 15px; }
+.mt-15 { margin-top: 16px; }
 
 /* Pill Controlador del Carrusel */
 .carousel-control-pill {
@@ -200,8 +200,8 @@
 .pill-info { display: flex; align-items: center; gap: 12px; }
 .pill-info img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
 .pill-text { display: flex; flex-direction: column; }
-.pill-text strong { font-size: 14px; }
-.pill-text span { font-size: 11px; color: var(--gris-medio); }
+.pill-text strong { font-size: 0.875rem; }
+.pill-text span { font-size: 0.75rem; color: var(--texto-secundario); }
 
 /* =======================================================
    CARACTERÍSTICAS (Estilo Grid "Descargar.jfif")
@@ -211,44 +211,44 @@
 
 .feature-main-card { padding: 40px; border-radius: 30px; display: flex; flex-direction: column; justify-content: center; }
 .feature-main-card h2 { font-size: 3rem; margin: 0 0 20px 0; line-height: 1.1; font-weight: 800; }
-.feature-main-card p { font-size: 1.1rem; color: var(--gris-medio); line-height: 1.6; margin-bottom: 40px; }
+.feature-main-card p { font-size: 1.1rem; color: var(--texto-secundario); line-height: 1.6; margin-bottom: 40px; }
 
-.feature-stats { display: flex; align-items: center; gap: 30px; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 20px; width: max-content; }
+.feature-stats { display: flex; align-items: center; gap: 32px; background: rgba(255,255,255,0.05); padding: 20px; border-radius: 20px; width: max-content; }
 .stat-item { display: flex; flex-direction: column; }
 .stat-item strong { font-size: 2rem; font-weight: 800; color: var(--cian-digital); }
-.stat-item span { font-size: 12px; color: var(--gris-medio); text-transform: uppercase; letter-spacing: 1px;}
+.stat-item span { font-size: 0.75rem; color: var(--texto-secundario); text-transform: uppercase; letter-spacing: 1px;}
 
 .stat-users { display: flex; align-items: center; }
-.stat-users img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--azul-noche); margin-left: -15px; }
+.stat-users img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--azul-noche); margin-left: -16px; }
 .stat-users img:first-child { margin-left: 0; }
-.more-users { width: 40px; height: 40px; border-radius: 50%; background: var(--blanco); color: var(--azul-noche); display: flex; justify-content: center; align-items: center; margin-left: -15px; z-index: 4; font-size: 12px; }
+.more-users { width: 40px; height: 40px; border-radius: 50%; background: var(--blanco); color: var(--azul-noche); display: flex; justify-content: center; align-items: center; margin-left: -16px; z-index: 4; font-size: 0.75rem; }
 
 .feature-side-cards { display: flex; flex-direction: column; gap: 24px; }
-.side-card { padding: 25px; border-radius: 24px; display: flex; flex-direction: column; gap: 10px; transition: transform 0.2s; }
+.side-card { padding: 24px; border-radius: 24px; display: flex; flex-direction: column; gap: 8px; transition: transform 0.2s; }
 .side-card:hover { transform: translateX(-10px); border-color: var(--cian-digital); }
-.icon-circle { width: 45px; height: 45px; background: rgba(0, 180, 216, 0.2); color: var(--cian-digital); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 20px; margin-bottom: 5px; }
-.side-card h4 { margin: 0; font-size: 18px; }
-.side-card p { margin: 0; font-size: 13px; color: var(--gris-medio); }
+.icon-circle { width: 45px; height: 45px; background: rgba(0, 180, 216, 0.2); color: var(--cian-digital); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.25rem; margin-bottom: 4px; }
+.side-card h4 { margin: 0; font-size: 1.125rem; }
+.side-card p { margin: 0; font-size: 0.8125rem; color: var(--texto-secundario); }
 
 /* =======================================================
    EVENTOS PASADOS
 ======================================================= */
 .past-events-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
-.past-card { border-radius: 24px; display: flex; align-items: center; gap: 20px; padding: 15px; transition: transform 0.2s; cursor: pointer; }
+.past-card { border-radius: 24px; display: flex; align-items: center; gap: 20px; padding: 16px; transition: transform 0.2s; cursor: pointer; }
 .past-card:hover { transform: translateY(-5px); border-color: var(--cian-digital); }
 .past-card img { width: 100px; height: 100px; border-radius: 16px; object-fit: cover; filter: grayscale(80%); transition: filter 0.3s; }
 .past-card:hover img { filter: grayscale(0%); }
 .past-card-info { display: flex; flex-direction: column; gap: 8px; }
-.past-card-info h4 { margin: 0; font-size: 18px; }
-.past-card-info span { font-size: 13px; color: var(--gris-medio); display: flex; align-items: center; gap: 6px; }
+.past-card-info h4 { margin: 0; font-size: 1.125rem; }
+.past-card-info span { font-size: 0.8125rem; color: var(--texto-secundario); display: flex; align-items: center; gap: 8px; }
 
 /* =======================================================
    FOOTER
 ======================================================= */
-.qpass-home-footer { margin-top: 50px; border-radius: 40px 40px 0 0; border-bottom: none; border-left: none; border-right: none; }
+.qpass-home-footer { margin-top: 48px; border-radius: 40px 40px 0 0; border-bottom: none; border-left: none; border-right: none; }
 .footer-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 40px 5%; max-width: 1200px; margin: 0 auto; gap: 20px; }
-.footer-brand p { margin: 10px 0 0 10px; font-size: 14px; color: var(--gris-medio); }
-.copyright { font-size: 13px; color: var(--gris-medio); }
+.footer-brand p { margin: 8px 0 0 8px; font-size: 0.875rem; color: var(--texto-secundario); }
+.copyright { font-size: 0.8125rem; color: var(--texto-secundario); }
 
 /* =======================================================
    RESPONSIVE
@@ -256,7 +256,7 @@
 @media (max-width: 900px) {
   .hero-content h1 { font-size: 3rem; }
   .qpass-home-nav-links { display: none; }
-  .qpass-floating-navbar { width: 95%; padding: 0 15px; }
+  .qpass-floating-navbar { width: 95%; padding: 0 16px; }
   .feature-grid { grid-template-columns: 1fr; }
   .carousel-3d-card { 
     /* En móviles acercamos las tarjetas un poco más ajustando las matemáticas */

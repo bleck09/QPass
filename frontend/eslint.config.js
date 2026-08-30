@@ -17,5 +17,12 @@ export default defineConfig([
       globals: globals.browser,
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
+    rules: {
+      // Patrón "quitar campos gestionados por el servidor antes de enviar":
+      //   const { id, createdAt, ...datos } = registro;
+      // Las variables intermedias no se usan a propósito; ignoreRestSiblings
+      // es justamente para eso.
+      'no-unused-vars': ['error', { ignoreRestSiblings: true }],
+    },
   },
 ])

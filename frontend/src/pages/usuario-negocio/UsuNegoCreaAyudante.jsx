@@ -1,4 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaPlus, FaTrash, FaTimes, FaImage, FaUsers, FaUpload, FaCheckSquare,
   FaUserTie, FaEnvelope, FaLock, FaSearch, FaSave, FaSquare, FaStore,
@@ -12,13 +16,14 @@ const initialStateForm = { nombre: '', email: '', password: '', foto: '', puesto
 
 export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
   const [showModal, setShowModal] = useState(false);
+  const [confirmar, DialogoConfirmar] = useConfirmar();
   const [formAyudante, setFormAyudante] = useState(initialStateForm);
   const [busqueda, setBusqueda] = useState('');
   const [ayudanteAsignandoId, setAyudanteAsignandoId] = useState(null);
-  const [asignacionesPorAyudante, setAsignacionesPorAyudante] = useState(new Map());
 
-  // No hay un endpoint "mis ayudantes"; se arma juntando las asignaciones de cada uno de mis puestos.
-  const recargarAyudantes = async () => {
+  // No hay un endpoint "mis ayudantes"; se arma juntando las asignaciones de cada
+  // uno de mis puestos. Con estados cargando/error/reintentar (Manual 8.9).
+  const cargarAyudantes = useCallback(async () => {
     const listas = await Promise.all(puestos.map(p => api.puestoAyudantes.listar({ puestoId: p.id })));
     const porAyudante = new Map();
     listas.flat().forEach(asig => {
@@ -26,10 +31,14 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
       actual.asignaciones.push({ id: asig.id, puestoId: asig.puestoId, turno: asig.turno, puestoNombre: puestos.find(p => p.id === asig.puestoId)?.nombre });
       porAyudante.set(asig.ayudante.id, actual);
     });
-    setAsignacionesPorAyudante(porAyudante);
-  };
-
-  useEffect(() => { if (puestos.length > 0) recargarAyudantes(); }, [puestos]);
+    return porAyudante;
+  }, [puestos]);
+  const {
+    data: asignacionesPorAyudante,
+    cargando: cargandoAyudantes,
+    error: errorAyudantes,
+    recargar: recargarAyudantes,
+  } = useApi(cargarAyudantes, { inicial: new Map(), activo: puestos.length > 0 });
 
   const ayudantes = useMemo(() => [...asignacionesPorAyudante.values()], [asignacionesPorAyudante]);
 
@@ -86,6 +95,29 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
     setFormAyudante(initialStateForm);
   };
 
+  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  const hayModalAbierto = showModal || ayudanteAsignandoId != null;
+
+  // Foco de cada modal (A1 / Manual 8.6): entra al abrir, atrapado con Tab, vuelve al disparador al cerrar.
+  const modalCrearRef = useRef(null);
+  const modalAsignarRef = useRef(null);
+  useFocoModal(modalCrearRef, showModal);
+  useFocoModal(modalAsignarRef, ayudanteAsignandoId != null);
+  useEffect(() => {
+    if (!hayModalAbierto) return;
+    const alTecla = (e) => {
+      if (e.key !== 'Escape') return;
+      cerrarModal();
+      cerrarAsignarPuestos();
+    };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [hayModalAbierto]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const nuevo = await api.auth.registro({
@@ -101,7 +133,13 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
   };
 
   const eliminarAyudante = async (ayudante) => {
-    if (!window.confirm('¿Quitar a este ayudante de todos tus puestos? Su cuenta no se elimina.')) return;
+    const ok = await confirmar({
+      titulo: '¿Quitar al ayudante?',
+      mensaje: 'Dejará de estar asignado a todos tus puestos. Su cuenta de usuario no se elimina.',
+      textoConfirmar: 'Quitar de mis puestos',
+      peligroso: true,
+    });
+    if (!ok) return;
     await Promise.all(ayudante.asignaciones.map(a => api.puestoAyudantes.quitar(a.id)));
     await recargarAyudantes();
     onCambio?.();
@@ -118,7 +156,7 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
     <div className="pi-ayudante-container">
       <div className="pi-ayudante-header-wrapper">
         <div className="pi-ayudante-header">
-          <h2>Gestión de Ayudantes</h2>
+          <h1>Gestión de ayudantes</h1>
           <p>Crea, edita y administra el personal que operará en tus puestos de negocio.</p>
         </div>
         <div className="pi-ayudante-kpi">
@@ -140,7 +178,7 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
             onChange={(e) => setBusqueda(e.target.value)}
           />
         </div>
-        <button className="btn-primario" onClick={abrirModalParaCrear} disabled={puestos.length === 0}>
+        <button type="button" className="btn-primario" onClick={abrirModalParaCrear} disabled={puestos.length === 0}>
           <FaPlus /> Crear Nuevo Ayudante
         </button>
       </div>
@@ -148,14 +186,19 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
         <p className="pi-ayudante-nota">Crea al menos un puesto para este evento antes de agregar ayudantes.</p>
       )}
 
+      {errorAyudantes ? (
+        <EstadoError onReintentar={recargarAyudantes} />
+      ) : cargandoAyudantes ? (
+        <EstadoCarga filas={4} />
+      ) : (
       <div className="pi-ayudante-card">
         <div className="pi-ayudante-table-wrapper">
           <table className="clean-table">
             <thead>
               <tr>
-                <th>Ayudante</th>
-                <th>Puestos Asignados</th>
-                <th style={{ textAlign: 'center' }}>Acciones</th>
+                <th scope="col">Ayudante</th>
+                <th scope="col">Puestos Asignados</th>
+                <th scope="col" style={{ textAlign: 'center' }}>Acciones</th>
               </tr>
             </thead>
             <tbody>
@@ -164,7 +207,7 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
                   <td>
                     <div className="item-info">
                       {ayudante.foto ? (
-                        <img src={ayudante.foto} alt={ayudante.nombre} className="item-img" />
+                        <img width="48" height="48" src={ayudante.foto} alt={ayudante.nombre} className="item-img" />
                       ) : (
                         <div className="item-no-img"><FaUserTie /></div>
                       )}
@@ -187,10 +230,10 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
                   </td>
                   <td>
                     <div className="action-buttons">
-                      <button className="btn-asignar" onClick={() => abrirAsignarPuestos(ayudante)} title="Asignar Puestos">
+                      <button type="button" className="btn-asignar" onClick={() => abrirAsignarPuestos(ayudante)} aria-label={`Asignar puestos a ${ayudante.nombre}`}>
                         <FaMapMarkerAlt />
                       </button>
-                      <button className="btn-eliminar" onClick={() => eliminarAyudante(ayudante)} title="Quitar de mis puestos">
+                      <button type="button" className="btn-eliminar" onClick={() => eliminarAyudante(ayudante)} aria-label={`Quitar a ${ayudante.nombre} de mis puestos`}>
                         <FaTrash />
                       </button>
                     </div>
@@ -208,37 +251,46 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
           </table>
         </div>
       </div>
+      )}
 
       {/* MODAL PARA CREAR AYUDANTE */}
       {showModal && (
         <div className="pi-usr-modal-overlay" onClick={cerrarModal}>
-          <div className="pi-usr-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            ref={modalCrearRef}
+            tabIndex={-1}
+            className="pi-usr-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="crea-ayu-titulo"
+          >
             <div className="pi-usr-modal-header">
-              <h3>
-                <FaUserTie color="var(--indigo-profundo)" />
+              <h3 id="crea-ayu-titulo">
+                <FaUserTie color="var(--indigo-profundo)" aria-hidden="true" />
                 Registrar Nuevo Ayudante
               </h3>
-              <button className="pi-usr-btn-cerrar-modal" onClick={cerrarModal}>
-                <FaTimes />
+              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={cerrarModal} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
             <div className="pi-usr-modal-body">
               <form onSubmit={handleSubmit} className="formulario">
                 <div className="input-group">
-                  <label><FaUserTie /> Nombre Completo</label>
-                  <input type="text" name="nombre" value={formAyudante.nombre} onChange={handleFormChange} placeholder="Ej: Juan Pérez" required />
+                  <label htmlFor="ayu-nombre"><FaUserTie aria-hidden="true" /> Nombre completo</label>
+                  <input id="ayu-nombre" type="text" name="nombre" autoComplete="name" value={formAyudante.nombre} onChange={handleFormChange} placeholder="Ej: Juan Pérez" required />
                 </div>
                 <div className="input-group">
-                  <label><FaEnvelope /> Correo Electrónico</label>
-                  <input type="email" name="email" value={formAyudante.email} onChange={handleFormChange} placeholder="Ej: juan.perez@email.com" required />
+                  <label htmlFor="ayu-email"><FaEnvelope aria-hidden="true" /> Correo electrónico</label>
+                  <input id="ayu-email" type="email" name="email" autoComplete="email" value={formAyudante.email} onChange={handleFormChange} placeholder="Ej: juan.perez@email.com" required />
                 </div>
                 <div className="input-group">
-                  <label><FaLock /> Contraseña Temporal</label>
-                  <input type="text" name="password" value={formAyudante.password} onChange={handleFormChange} placeholder="Ej: 123456" required />
+                  <label htmlFor="ayu-password"><FaLock aria-hidden="true" /> Contraseña temporal</label>
+                  <input id="ayu-password" type="text" name="password" autoComplete="new-password" value={formAyudante.password} onChange={handleFormChange} placeholder="Ej: 123456" required />
                 </div>
 
-                <div className="input-group">
-                  <label><FaStore /> Puestos Asignados (Opcional)</label>
+                <fieldset className="input-group" style={{ border: 0, padding: 0, margin: 0 }}>
+                  <legend><FaStore aria-hidden="true" /> Puestos asignados (opcional)</legend>
                   <div className="checkbox-grid">
                     {puestos.map(puesto => (
                       <label key={puesto.id} className="checkbox-item">
@@ -247,25 +299,25 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
                           checked={formAyudante.puestosAsignados.includes(puesto.id)}
                           onChange={() => handlePuestoToggle(puesto.id)}
                         />
-                        {formAyudante.puestosAsignados.includes(puesto.id) ? <FaCheckSquare /> : <FaSquare />}
+                        {formAyudante.puestosAsignados.includes(puesto.id) ? <FaCheckSquare aria-hidden="true" /> : <FaSquare aria-hidden="true" />}
                         {puesto.nombre}
                       </label>
                     ))}
                   </div>
-                </div>
+                </fieldset>
 
                 <div className="input-group">
-                  <label><FaImage /> Foto de Perfil (Opcional)</label>
+                  <label htmlFor="ayu-foto"><FaImage aria-hidden="true" /> Foto de perfil (opcional)</label>
                   {!formAyudante.foto ? (
                     <div className="upload-zone">
-                      <FaUpload className="upload-icon" />
+                      <FaUpload className="upload-icon" aria-hidden="true" />
                       <span className="upload-text">Haz clic para subir una foto</span>
-                      <input type="file" accept="image/*" onChange={handleImageUpload} className="upload-input-hidden" />
+                      <input id="ayu-foto" type="file" accept="image/*" onChange={handleImageUpload} className="upload-input-hidden" />
                     </div>
                   ) : (
                     <div className="preview-zone">
-                      <img src={formAyudante.foto} alt="Vista previa" className="img-preview-avatar" />
-                      <button type="button" className="btn-quitar-imagen" onClick={quitarImagen}><FaTimes /> Quitar foto</button>
+                      <img width="80" height="80" src={formAyudante.foto} alt="Vista previa de la foto de perfil" className="img-preview-avatar" />
+                      <button type="button" className="btn-quitar-imagen" onClick={quitarImagen}><FaTimes aria-hidden="true" /> Quitar foto</button>
                     </div>
                   )}
                 </div>
@@ -284,14 +336,22 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
       {/* MODAL RÁPIDO: ASIGNAR PUESTOS */}
       {ayudanteAsignando && (
         <div className="pi-usr-modal-overlay" onClick={cerrarAsignarPuestos}>
-          <div className="pi-usr-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            ref={modalAsignarRef}
+            tabIndex={-1}
+            className="pi-usr-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="asignar-puestos-titulo"
+          >
             <div className="pi-usr-modal-header">
-              <h3>
-                <FaMapMarkerAlt color="var(--indigo-profundo)" />
+              <h3 id="asignar-puestos-titulo">
+                <FaMapMarkerAlt color="var(--indigo-profundo)" aria-hidden="true" />
                 Asignar Puestos: {ayudanteAsignando.nombre}
               </h3>
-              <button className="pi-usr-btn-cerrar-modal" onClick={cerrarAsignarPuestos}>
-                <FaTimes />
+              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={cerrarAsignarPuestos} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
             <div className="pi-usr-modal-body">
@@ -320,6 +380,8 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
           </div>
         </div>
       )}
+
+      {DialogoConfirmar}
     </div>
   );
 }

@@ -1,4 +1,9 @@
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useApi } from '../../utils/useApi.js';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
@@ -7,7 +12,6 @@ import {
   FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt, FaMapMarkerAlt,
   FaKey, FaTimes
 } from 'react-icons/fa';
-import { leerSesion } from '../../api/client.js';
 import api from '../../api/index.js';
 import { formatearFecha } from '../../utils/eventos.js';
 import './Admin.css';
@@ -90,6 +94,7 @@ function Podio({ lista, valorKey, unidad }) {
 }
 
 export default function Admin({ soloLectura = false, eventosPermitidos = null } = {}) {
+  useTituloPagina('Panel de administración');
   const location = useLocation();
   const navigate = useNavigate();
   // /admin/reportes y /admin/solicitudes abren directo su apartado (accesibles también desde
@@ -122,15 +127,13 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     });
   }, [eventosPermitidos, soloLectura]);
 
-  const [datos, setDatos] = useState(EVENTO_ACTIVIDAD_VACIA);
-  const [incidencias, setIncidencias] = useState([]);
   const [incidenciaEnResolucion, setIncidenciaEnResolucion] = useState(null);
   const [montoAjuste, setMontoAjuste] = useState('');
-  const [solicitudes, setSolicitudes] = useState([]);
-  const [reportesEntradas, setReportesEntradas] = useState([]);
 
-  const cargarDatosEvento = async () => {
-    if (!eventoId) return;
+  // Carga del dashboard del evento (11 llamadas en paralelo) con estados
+  // cargando/error/reintentar (Manual 8.9). useApi (useReducer) evita el
+  // react-hooks/set-state-in-effect que daría un cargarDatosEvento() suelto.
+  const cargarDatosEvento = useCallback(async () => {
     const [entradas, incidenciasR, reportesR, comprasR, recargasR, devolucionesR, ventasR, puestosR, asignacionesR, usuariosR] = await Promise.all([
       api.entradas.listar({ eventoId }),
       api.incidencias.listar({ eventoId }),
@@ -145,20 +148,34 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     ]);
     const usuariosPorId = new Map(usuariosR.map(u => [u.id, u]));
     const staffDe = (rol) => asignacionesR.filter(a => a.rol === rol).map(a => a.usuario);
-
-    setIncidencias(incidenciasR);
-    setReportesEntradas(reportesR);
-    setSolicitudes(comprasR);
-    setDatos({
-      entradas,
-      recargadores: agruparPorOperador(recargasR, staffDe('Recargador'), 'recargas'),
-      devoluciones: agruparPorOperador(devolucionesR, staffDe('Devolucion'), 'retiros'),
-      negocios: agruparVentasPorNegocio(ventasR, puestosR, usuariosPorId),
-      supervisores: staffDe('Supervisor'),
-    });
-  };
-
-  useEffect(() => { cargarDatosEvento(); }, [eventoId]);
+    return {
+      incidencias: incidenciasR,
+      reportesEntradas: reportesR,
+      solicitudes: comprasR,
+      datos: {
+        entradas,
+        recargadores: agruparPorOperador(recargasR, staffDe('Recargador'), 'recargas'),
+        devoluciones: agruparPorOperador(devolucionesR, staffDe('Devolucion'), 'retiros'),
+        negocios: agruparVentasPorNegocio(ventasR, puestosR, usuariosPorId),
+        supervisores: staffDe('Supervisor'),
+      },
+    };
+  }, [eventoId]);
+  const {
+    data: dash,
+    setData: setDash,
+    cargando: cargandoDash,
+    error: errorDash,
+    recargar: recargarDash,
+  } = useApi(cargarDatosEvento, {
+    inicial: { incidencias: [], reportesEntradas: [], solicitudes: [], datos: EVENTO_ACTIVIDAD_VACIA },
+    activo: !!eventoId,
+  });
+  const { incidencias, reportesEntradas, solicitudes, datos } = dash;
+  // Helpers para conservar las actualizaciones optimistas y los refetch parciales.
+  const setIncidencias = (v) => setDash(d => ({ ...d, incidencias: typeof v === 'function' ? v(d.incidencias) : v }));
+  const setReportesEntradas = (v) => setDash(d => ({ ...d, reportesEntradas: typeof v === 'function' ? v(d.reportesEntradas) : v }));
+  const setSolicitudes = (v) => setDash(d => ({ ...d, solicitudes: typeof v === 'function' ? v(d.solicitudes) : v }));
 
   const incidenciasPendientes = useMemo(
     () => incidencias.filter(i => i.estado === 'pendiente'),
@@ -205,6 +222,23 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   // No hay envío de correo real: las contraseñas de las cuentas nuevas (invitados sin cuenta
   // previa) solo se ven una vez, en la respuesta de esta llamada — hay que compartirlas a mano.
   const [passwordsAMostrar, setPasswordsAMostrar] = useState(null);
+  const [confirmar, DialogoConfirmar] = useConfirmar();
+
+  // Foco del modal de contraseñas generadas (A1 / Manual 8.6)
+  const modalPassRef = useRef(null);
+  useFocoModal(modalPassRef, !!passwordsAMostrar);
+
+  // Modal de contraseñas: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  useEffect(() => {
+    if (!passwordsAMostrar) return;
+    const alTecla = (e) => { if (e.key === 'Escape') setPasswordsAMostrar(null); };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [passwordsAMostrar]);
 
   const aprobarSolicitud = async (compra) => {
     const { passwordsGeneradas, ...actualizada } = await api.compras.aprobar(compra.id);
@@ -218,7 +252,13 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   };
 
   const rechazarSolicitudCompra = async (compra) => {
-    const motivo = window.prompt(`¿Por qué se rechaza la solicitud de ${compra.comprador.nombre}? (lo verá el comprador)`);
+    const motivo = await confirmar({
+      titulo: '¿Rechazar la solicitud?',
+      mensaje: `Se rechazará la solicitud de ${compra.comprador.nombre}. El comprador verá el motivo.`,
+      campoNota: { etiqueta: 'Motivo del rechazo', placeholder: 'Ej. el comprobante de pago no es legible', requerido: true },
+      textoConfirmar: 'Rechazar solicitud',
+      peligroso: true,
+    });
     if (motivo === null) return;
     const actualizada = await api.compras.rechazar(compra.id, motivo);
     setSolicitudes(prev => prev.map(c => c.id === actualizada.id ? actualizada : c));
@@ -240,8 +280,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   const guardarCorreccion = async (reporte) => {
     if (!valorCorreccion.trim()) return;
     await api.reportesEntrada.corregir(reporte.id, valorCorreccion.trim());
-    setReportesEntradas(await api.reportesEntrada.listar({ eventoId }));
-    await cargarDatosEvento();
+    await recargarDash();
     cancelarCorreccion();
   };
 
@@ -396,13 +435,13 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
 
       <div className="pi-dash-header">
         {mostrarSelectorEventos ? (
-          <h2>Selecciona un Evento</h2>
+          <h1>Selecciona un evento</h1>
         ) : (
           <div className="pi-dash-header-titulo">
-            <button className="pi-dash-btn-volver-evento" onClick={volverASeleccionEvento}>
+            <button type="button" className="pi-dash-btn-volver-evento" onClick={volverASeleccionEvento}>
               <FaArrowLeft /> Cambiar de evento
             </button>
-            <h2>{eventoActual?.nombre}</h2>
+            <h1>{eventoActual?.nombre}</h1>
           </div>
         )}
       </div>
@@ -411,8 +450,8 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
         <section className="pi-dash-seccion">
           <div className="pi-dash-eventos-grid">
             {eventosDisponibles.map(ev => (
-              <button key={ev.id} className="pi-dash-evento-card" onClick={() => seleccionarEvento(ev.id)}>
-                <img src={ev.imagen} alt={ev.nombre} className="pi-dash-evento-imagen" />
+              <button type="button" key={ev.id} className="pi-dash-evento-card" onClick={() => seleccionarEvento(ev.id)}>
+                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-dash-evento-imagen" />
                 <div className="pi-dash-evento-info">
                   <strong>{ev.nombre}</strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -426,6 +465,12 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             )}
           </div>
         </section>
+      ) : errorDash ? (
+        <section className="pi-dash-seccion">
+          <EstadoError onReintentar={recargarDash} />
+        </section>
+      ) : cargandoDash ? (
+        <section className="pi-dash-seccion"><EstadoCarga filas={6} /></section>
       ) : (
         <>
 
@@ -463,14 +508,14 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
           <section className="pi-dash-seccion">
             <h3 className="pi-dash-seccion-titulo">Entradas al Evento</h3>
             <div className="pi-dash-stats-grid">
-              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas')}>
+              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas')}>
                 <div className="pi-dash-stat-icon pi-dash-icon-total"><FaTicketAlt /></div>
                 <div className="pi-dash-stat-info">
                   <span className="numero">{statsEntradas.total}</span>
                   <span className="label">Total de Entradas</span>
                 </div>
               </button>
-              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'ingresado')}>
+              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'ingresado')}>
                 <div className="pi-dash-stat-icon pi-dash-icon-ok"><FaCheckCircle /></div>
                 <div className="pi-dash-stat-info">
                   <span className="numero">{statsEntradas.ingresaron}</span>
@@ -478,14 +523,14 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                 </div>
                 <span className="pi-dash-porcentaje pi-dash-badge-ok">{statsEntradas.pctIngresaron}%</span>
               </button>
-              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'dentro')}>
+              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'dentro')}>
                 <div className="pi-dash-stat-icon pi-dash-icon-dentro"><FaUsers /></div>
                 <div className="pi-dash-stat-info">
                   <span className="numero">{statsEntradas.dentro}</span>
                   <span className="label">Están Dentro</span>
                 </div>
               </button>
-              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'pendiente')}>
+              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'pendiente')}>
                 <div className="pi-dash-stat-icon pi-dash-icon-pend"><FaHourglassHalf /></div>
                 <div className="pi-dash-stat-info">
                   <span className="numero">{statsEntradas.faltan}</span>
@@ -493,7 +538,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                 </div>
                 <span className="pi-dash-porcentaje pi-dash-badge-pend">{statsEntradas.pctFaltan}%</span>
               </button>
-              <button className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'salio')}>
+              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'salio')}>
                 <div className="pi-dash-stat-icon pi-dash-icon-salio"><FaSignOutAlt /></div>
                 <div className="pi-dash-stat-info">
                   <span className="numero">{statsEntradas.salieron}</span>
@@ -506,7 +551,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
               <div className="pi-dash-progreso-relleno" style={{ width: `${statsEntradas.pctIngresaron}%` }} />
             </div>
 
-            <button className="pi-dash-btn-detalle" onClick={() => abrirDetalle('entradas')}>
+            <button type="button" className="pi-dash-btn-detalle" onClick={() => abrirDetalle('entradas')}>
               <FaUserCheck /> Ver detalle de participantes
             </button>
           </section>
@@ -515,37 +560,37 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
           <section className="pi-dash-seccion">
             <h3 className="pi-dash-seccion-titulo">Personal del Evento</h3>
             <div className="pi-dash-roles-grid">
-              <button className="pi-dash-rol-card" onClick={() => abrirDetalle('negocios')}>
+              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('negocios')}>
                 <FaStore className="pi-dash-rol-icon" />
                 <span className="numero">{datos.negocios.length}</span>
                 <span className="label">Usuarios Negocio</span>
               </button>
-              <button className="pi-dash-rol-card" onClick={() => abrirDetalle('recargadores')}>
+              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('recargadores')}>
                 <FaCashRegister className="pi-dash-rol-icon" />
                 <span className="numero">{datos.recargadores.length}</span>
                 <span className="label">Recargadores</span>
               </button>
-              <button className="pi-dash-rol-card" onClick={() => abrirDetalle('supervisores')}>
+              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('supervisores')}>
                 <FaChartPie className="pi-dash-rol-icon" />
                 <span className="numero">{datos.supervisores.length}</span>
                 <span className="label">Supervisores</span>
               </button>
-              <button className="pi-dash-rol-card" onClick={() => abrirDetalle('devoluciones')}>
+              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('devoluciones')}>
                 <FaBoxOpen className="pi-dash-rol-icon" />
                 <span className="numero">{datos.devoluciones.length}</span>
                 <span className="label">Devolución</span>
               </button>
-              <button className="pi-dash-rol-card" onClick={() => abrirDetalle('negocios')}>
+              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('negocios')}>
                 <FaUserFriends className="pi-dash-rol-icon" />
                 <span className="numero">{totalAyudantes}</span>
                 <span className="label">Ayudantes (total)</span>
               </button>
-              <button className="pi-dash-rol-card pi-dash-rol-card-alerta" onClick={() => abrirDetalle('incidencias')}>
+              <button type="button" className="pi-dash-rol-card pi-dash-rol-card-alerta" onClick={() => abrirDetalle('incidencias')}>
                 <FaExclamationTriangle className="pi-dash-rol-icon" />
                 <span className="numero">{incidenciasPendientes.length + reportesEntradasPendientes.length}</span>
                 <span className="label">Reportes</span>
               </button>
-              <button className="pi-dash-rol-card pi-dash-rol-card-alerta" onClick={() => abrirDetalle('solicitudesEntradas')}>
+              <button type="button" className="pi-dash-rol-card pi-dash-rol-card-alerta" onClick={() => abrirDetalle('solicitudesEntradas')}>
                 <FaTicketAlt className="pi-dash-rol-icon" />
                 <span className="numero">{solicitudes.length}</span>
                 <span className="label">Solicitudes de Entradas</span>
@@ -557,6 +602,9 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
           <section className="pi-dash-seccion">
             <h3 className="pi-dash-seccion-titulo"><FaClock color="var(--indigo-profundo)" /> Actividad Reciente</h3>
             <div className="pi-dash-actividad-lista">
+              {actividadReciente.length === 0 && (
+                <p className="pi-dash-sin-resultados">Todavía no hay actividad en este evento.</p>
+              )}
               {actividadReciente.map((a, i) => (
                 <div className="pi-dash-actividad-item" key={i}>
                   <span className="pi-dash-actividad-icono">{iconoActividad[a.tipo]}</span>
@@ -573,13 +621,14 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
       {/* ================= DETALLE: ENTRADAS ================= */}
       {vistaActual === 'entradas' && (
         <section className="pi-dash-seccion">
-          <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+          <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
           <h3 className="pi-dash-seccion-titulo">{tituloEntradasFiltro}</h3>
 
           <div className="pi-dash-buscador">
-            <FaSearch />
+            <FaSearch aria-hidden="true" />
             <input
-              type="text"
+              type="search"
+              aria-label="Buscar por nombre o documento"
               placeholder="Buscar por nombre o documento..."
               value={busqueda}
               onChange={(e) => setBusqueda(e.target.value)}
@@ -590,10 +639,10 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             <table className="pi-dash-tabla">
               <thead>
                 <tr>
-                  <th>Participante</th>
-                  <th>Documento</th>
-                  <th>Entrada</th>
-                  <th>Estado</th>
+                  <th scope="col">Participante</th>
+                  <th scope="col">Documento</th>
+                  <th scope="col">Entrada</th>
+                  <th scope="col">Estado</th>
                 </tr>
               </thead>
               <tbody>
@@ -601,7 +650,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                   <tr key={p.id}>
                     <td>
                       <div className="pi-dash-fila-persona">
-                        {p.foto && <img src={p.foto} alt={p.nombre} className="pi-dash-mini-avatar" />}
+                        {p.foto && <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-dash-mini-avatar" />}
                         <span>{p.nombre}</span>
                       </div>
                     </td>
@@ -630,14 +679,14 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
         <section className="pi-dash-seccion">
           {recargadorAbierto ? (
             <>
-              <button className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft /> Volver a Recargadores</button>
+              <button type="button" className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft aria-hidden="true" /> Volver a Recargadores</button>
               <div className="pi-dash-detalle-header">
                 <h3 className="pi-dash-seccion-titulo">{recargadorAbierto.nombre}</h3>
                 <span className="pi-dash-detalle-total">Total recargado: <strong>{recargadorAbierto.totalRecargado} pts</strong></span>
               </div>
               <div className="pi-dash-tabla-wrapper">
                 <table className="pi-dash-tabla">
-                  <thead><tr><th>Hora</th><th>Participante</th><th>Monto</th></tr></thead>
+                  <thead><tr><th scope="col">Hora</th><th scope="col">Participante</th><th scope="col">Monto</th></tr></thead>
                   <tbody>
                     {recargadorAbierto.recargas.map((t, i) => (
                       <tr key={i}>
@@ -652,7 +701,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             </>
           ) : (
             <>
-              <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+              <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
               <h3 className="pi-dash-seccion-titulo">Recargadores</h3>
 
               <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Recargadores</h4>
@@ -661,15 +710,18 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
               <div className="pi-dash-tabla-wrapper">
                 <table className="pi-dash-tabla">
                   <thead>
-                    <tr><th>Recargador</th><th>Total Recargado</th><th></th></tr>
+                    <tr><th scope="col">Recargador</th><th scope="col">Total Recargado</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
                   </thead>
                   <tbody>
+                    {recargadoresOrdenados.length === 0 && (
+                      <tr><td colSpan={3} className="pi-dash-sin-resultados">Aún no hay recargas en este evento.</td></tr>
+                    )}
                     {recargadoresOrdenados.map(r => (
                       <tr key={r.id}>
                         <td>{r.nombre}</td>
                         <td className="pi-dash-monto-celda"><FaCoins color="var(--verde-recarga-texto)" /> {r.totalRecargado} pts</td>
                         <td>
-                          <button className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(r.id)}>
+                          <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(r.id)}>
                             <FaExchangeAlt /> Ver recargas
                           </button>
                         </td>
@@ -688,14 +740,14 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
         <section className="pi-dash-seccion">
           {devolucionAbierta ? (
             <>
-              <button className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft /> Volver a Devoluciones</button>
+              <button type="button" className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft aria-hidden="true" /> Volver a Devoluciones</button>
               <div className="pi-dash-detalle-header">
                 <h3 className="pi-dash-seccion-titulo">{devolucionAbierta.nombre}</h3>
                 <span className="pi-dash-detalle-total">Total devuelto: <strong>{devolucionAbierta.totalDevuelto} pts</strong></span>
               </div>
               <div className="pi-dash-tabla-wrapper">
                 <table className="pi-dash-tabla">
-                  <thead><tr><th>Hora</th><th>Participante</th><th>Monto</th></tr></thead>
+                  <thead><tr><th scope="col">Hora</th><th scope="col">Participante</th><th scope="col">Monto</th></tr></thead>
                   <tbody>
                     {devolucionAbierta.retiros.map((t, i) => (
                       <tr key={i}>
@@ -710,7 +762,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             </>
           ) : (
             <>
-              <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+              <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
               <h3 className="pi-dash-seccion-titulo">Encargados de Devolución</h3>
 
               <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Devoluciones</h4>
@@ -719,15 +771,18 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
               <div className="pi-dash-tabla-wrapper">
                 <table className="pi-dash-tabla">
                   <thead>
-                    <tr><th>Encargado</th><th>Total Devuelto</th><th></th></tr>
+                    <tr><th scope="col">Encargado</th><th scope="col">Total Devuelto</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
                   </thead>
                   <tbody>
+                    {devolucionesOrdenadas.length === 0 && (
+                      <tr><td colSpan={3} className="pi-dash-sin-resultados">Aún no hay devoluciones en este evento.</td></tr>
+                    )}
                     {devolucionesOrdenadas.map(d => (
                       <tr key={d.id}>
                         <td>{d.nombre}</td>
                         <td className="pi-dash-monto-celda"><FaBoxOpen color="var(--ambar-aviso-texto)" /> {d.totalDevuelto} pts</td>
                         <td>
-                          <button className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(d.id)}>
+                          <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(d.id)}>
                             <FaExchangeAlt /> Ver devoluciones
                           </button>
                         </td>
@@ -746,14 +801,14 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
         <section className="pi-dash-seccion">
           {negocioAbierto ? (
             <>
-              <button className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft /> Volver a Usuarios Negocio</button>
+              <button type="button" className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft aria-hidden="true" /> Volver a Usuarios Negocio</button>
               <div className="pi-dash-detalle-header">
                 <h3 className="pi-dash-seccion-titulo">{negocioAbierto.nombre}</h3>
                 <span className="pi-dash-detalle-total">Ventas totales: <strong>{negocioAbierto.ventasTotal} pts</strong> · {negocioAbierto.ayudantes} ayudante(s)</span>
               </div>
               <div className="pi-dash-tabla-wrapper">
                 <table className="pi-dash-tabla">
-                  <thead><tr><th>Hora</th><th>Cliente</th><th>Monto</th></tr></thead>
+                  <thead><tr><th scope="col">Hora</th><th scope="col">Cliente</th><th scope="col">Monto</th></tr></thead>
                   <tbody>
                     {negocioAbierto.ventas.map((t, i) => (
                       <tr key={i}>
@@ -768,7 +823,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             </>
           ) : (
             <>
-              <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+              <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
               <h3 className="pi-dash-seccion-titulo">Usuarios Negocio</h3>
 
               <div className="pi-dash-total-destacado">
@@ -782,16 +837,19 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
               <div className="pi-dash-tabla-wrapper">
                 <table className="pi-dash-tabla">
                   <thead>
-                    <tr><th>Negocio</th><th>Ventas Totales</th><th>Ayudantes Asignados</th><th></th></tr>
+                    <tr><th scope="col">Negocio</th><th scope="col">Ventas Totales</th><th scope="col">Ayudantes Asignados</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
                   </thead>
                   <tbody>
+                    {negociosOrdenados.length === 0 && (
+                      <tr><td colSpan={4} className="pi-dash-sin-resultados">Aún no hay ventas de negocios en este evento.</td></tr>
+                    )}
                     {negociosOrdenados.map(n => (
                       <tr key={n.id}>
                         <td>{n.nombre}</td>
                         <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {n.ventasTotal} pts</td>
                         <td>{n.ayudantes}</td>
                         <td>
-                          <button className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(n.id)}>
+                          <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(n.id)}>
                             <FaExchangeAlt /> Ver ventas
                           </button>
                         </td>
@@ -805,7 +863,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
               <div className="pi-dash-tabla-wrapper">
                 <table className="pi-dash-tabla">
                   <thead>
-                    <tr><th>Cliente</th><th>Consumo Total</th></tr>
+                    <tr><th scope="col">Cliente</th><th scope="col">Consumo Total</th></tr>
                   </thead>
                   <tbody>
                     {topClientesOrdenados.map((c, i) => (
@@ -825,7 +883,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
       {/* ================= DETALLE: SUPERVISORES ================= */}
       {vistaActual === 'supervisores' && (
         <section className="pi-dash-seccion">
-          <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+          <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
           <h3 className="pi-dash-seccion-titulo">Supervisores</h3>
           <p className="pi-dash-incidencias-nota">
             El sistema no registra qué supervisor gestionó cada ingreso individual; en total,
@@ -835,7 +893,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
           <div className="pi-dash-tabla-wrapper">
             <table className="pi-dash-tabla">
               <thead>
-                <tr><th>Nombre</th><th>Correo</th></tr>
+                <tr><th scope="col">Nombre</th><th scope="col">Correo</th></tr>
               </thead>
               <tbody>
                 {datos.supervisores.map(s => (
@@ -856,7 +914,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
       {/* ================= DETALLE: REPORTES (INCIDENCIAS DE RECARGA + DATOS DE ENTRADAS) ================= */}
       {vistaActual === 'incidencias' && (
         <section className="pi-dash-seccion">
-          <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+          <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
           <h3 className="pi-dash-seccion-titulo">Reportes</h3>
 
           <h4 className="pi-dash-subtitulo"><FaCoins color="var(--verde-recarga-texto)" /> Incidencias de Recarga</h4>
@@ -869,14 +927,14 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             <table className="pi-dash-tabla">
               <thead>
                 <tr>
-                  <th>Participante</th>
-                  <th>Documento</th>
-                  <th>Se le dio</th>
-                  <th>Dijo que quería</th>
-                  <th>Qué pasó</th>
-                  <th>Recargador</th>
-                  <th>Estado</th>
-                  <th></th>
+                  <th scope="col">Participante</th>
+                  <th scope="col">Documento</th>
+                  <th scope="col">Se le dio</th>
+                  <th scope="col">Dijo que quería</th>
+                  <th scope="col">Qué pasó</th>
+                  <th scope="col">Recargador</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -884,7 +942,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                   <tr key={inc.id}>
                     <td>
                       <div className="pi-dash-fila-persona">
-                        {inc.entrada.foto && <img src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-dash-mini-avatar" />}
+                        {inc.entrada.foto && <img width="32" height="32" src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-dash-mini-avatar" />}
                         <span>{inc.entrada.nombre}</span>
                       </div>
                     </td>
@@ -905,17 +963,19 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                             <input
                               type="number"
                               min="0"
+                              inputMode="numeric"
+                              aria-label="Monto a acreditar de más"
                               value={montoAjuste}
                               onChange={(e) => setMontoAjuste(e.target.value)}
                               autoFocus
                             />
-                            <button className="pi-dash-btn-ver" onClick={() => confirmarAjuste(inc)}>
+                            <button type="button" className="pi-dash-btn-ver" onClick={() => confirmarAjuste(inc)}>
                               <FaCheckCircle /> Aplicar
                             </button>
-                            <button className="pi-dash-btn-ver" onClick={cancelarResolucion}>Cancelar</button>
+                            <button type="button" className="pi-dash-btn-ver" onClick={cancelarResolucion}>Cancelar</button>
                           </div>
                         ) : (
-                          <button className="pi-dash-btn-ver" onClick={() => abrirResolucion(inc)}>
+                          <button type="button" className="pi-dash-btn-ver" onClick={() => abrirResolucion(inc)}>
                             <FaCoins /> Resolver
                           </button>
                         )
@@ -943,13 +1003,13 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             <table className="pi-dash-tabla">
               <thead>
                 <tr>
-                  <th>Comprador</th>
-                  <th>Persona</th>
-                  <th>Dato reportado</th>
-                  <th>Valor actual</th>
-                  <th>Descripción</th>
-                  <th>Estado</th>
-                  <th></th>
+                  <th scope="col">Comprador</th>
+                  <th scope="col">Persona</th>
+                  <th scope="col">Dato reportado</th>
+                  <th scope="col">Valor actual</th>
+                  <th scope="col">Descripción</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -971,17 +1031,18 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                           <div className="pi-dash-resolver-form ancho">
                             <input
                               type="text"
+                              aria-label="Valor corregido"
                               value={valorCorreccion}
                               onChange={(e) => setValorCorreccion(e.target.value)}
                               autoFocus
                             />
-                            <button className="pi-dash-btn-ver" onClick={() => guardarCorreccion(rep)}>
+                            <button type="button" className="pi-dash-btn-ver" onClick={() => guardarCorreccion(rep)}>
                               <FaCheckCircle /> Guardar
                             </button>
-                            <button className="pi-dash-btn-ver" onClick={cancelarCorreccion}>Cancelar</button>
+                            <button type="button" className="pi-dash-btn-ver" onClick={cancelarCorreccion}>Cancelar</button>
                           </div>
                         ) : (
-                          <button className="pi-dash-btn-ver" onClick={() => abrirCorreccion(rep)}>Corregir</button>
+                          <button type="button" className="pi-dash-btn-ver" onClick={() => abrirCorreccion(rep)}>Corregir</button>
                         )
                       )}
                     </td>
@@ -1001,7 +1062,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
       {/* ================= DETALLE: SOLICITUDES DE COMPRA DE ENTRADAS ================= */}
       {vistaActual === 'solicitudesEntradas' && (
         <section className="pi-dash-seccion">
-          <button className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft /> Volver al dashboard</button>
+          <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
           <h3 className="pi-dash-seccion-titulo">Solicitudes de Compra de Entradas</h3>
           <p className="pi-dash-incidencias-nota">
             Detalle de cada lote de entradas compradas: para quién, con qué correo y celular, y si ya fue aprobado.
@@ -1029,12 +1090,12 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             <table className="pi-dash-tabla">
               <thead>
                 <tr>
-                  <th>Comprador</th>
-                  <th>Entradas</th>
-                  <th>Total</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
-                  <th></th>
+                  <th scope="col">Comprador</th>
+                  <th scope="col">Entradas</th>
+                  <th scope="col">Total</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -1061,15 +1122,15 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                         <div style={{ display: 'flex', gap: '8px' }}>
                           {!soloLectura && compra.estado === 'pendiente' && (
                             <>
-                              <button className="pi-dash-btn-ver" onClick={() => aprobarSolicitud(compra)}>
+                              <button type="button" className="pi-dash-btn-ver" onClick={() => aprobarSolicitud(compra)}>
                                 <FaCheckCircle /> Aprobar
                               </button>
-                              <button className="pi-dash-btn-ver" onClick={() => rechazarSolicitudCompra(compra)}>
+                              <button type="button" className="pi-dash-btn-ver" onClick={() => rechazarSolicitudCompra(compra)}>
                                 <FaExclamationTriangle /> Rechazar
                               </button>
                             </>
                           )}
-                          <button className="pi-dash-btn-ver" onClick={() => toggleSolicitud(compra.id)}>
+                          <button type="button" className="pi-dash-btn-ver" onClick={() => toggleSolicitud(compra.id)}>
                             {solicitudAbierta === compra.id ? 'Ocultar' : 'Ver detalle'}
                           </button>
                         </div>
@@ -1095,7 +1156,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                             </div>
                             <table className="pi-dash-tabla" style={{ flex: '1 1 320px' }}>
                               <thead>
-                                <tr><th>Persona</th><th>Nombre</th><th>Correo</th><th>Celular</th><th>Categoría</th></tr>
+                                <tr><th scope="col">Persona</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Celular</th><th scope="col">Categoría</th></tr>
                               </thead>
                               <tbody>
                                 {compra.entradas.map((ent, i) => (
@@ -1133,25 +1194,32 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
       {passwordsAMostrar && (
         <div
           onClick={() => setPasswordsAMostrar(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' }}
         >
           <div
+            ref={modalPassRef}
+            tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dash-modal-pass-titulo"
             style={{ background: 'var(--blanco, #fff)', borderRadius: '12px', padding: '24px', maxWidth: '520px', width: '90%', position: 'relative' }}
           >
             <button
+              type="button"
               onClick={() => setPasswordsAMostrar(null)}
+              aria-label="Cerrar"
               style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
             >
-              <FaTimes />
+              <FaTimes aria-hidden="true" />
             </button>
-            <h3><FaKey /> Cuentas nuevas creadas</h3>
+            <h3 id="dash-modal-pass-titulo"><FaKey aria-hidden="true" /> Cuentas nuevas creadas</h3>
             <p className="pi-dash-incidencias-nota">
               No hay envío de correo automático — comparte esta contraseña temporal a mano con cada invitado. Solo se muestra esta vez.
             </p>
             <div className="pi-dash-tabla-wrapper">
               <table className="pi-dash-tabla">
-                <thead><tr><th>Nombre</th><th>Correo</th><th>Contraseña</th></tr></thead>
+                <thead><tr><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Contraseña</th></tr></thead>
                 <tbody>
                   {passwordsAMostrar.map((p, i) => (
                     <tr key={i}><td>{p.nombre}</td><td>{p.correo}</td><td><strong>{p.password}</strong></td></tr>
@@ -1162,6 +1230,8 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
           </div>
         </div>
       )}
+
+      {DialogoConfirmar}
     </div>
   );
 }

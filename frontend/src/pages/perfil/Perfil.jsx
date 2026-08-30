@@ -1,4 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useCallback, useState, useMemo, useEffect } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaCamera, FaSave, FaCheckCircle, FaExclamationTriangle, FaUserShield,
   FaCalendarAlt, FaIdBadge, FaPhone, FaMapMarkerAlt, FaUserEdit,
@@ -16,7 +18,9 @@ const getIniciales = (nombre = 'Usuario') => nombre.substring(0, 2).toUpperCase(
 const soloFecha = (iso) => (iso ? iso.slice(0, 10) : '');
 
 export default function Perfil() {
+  useTituloPagina('Mi perfil');
   const sesion = leerSesion();
+  const idSesion = sesion?.id;
   const [usuario, setUsuarioState] = useState(sesion);
 
   // Estados de datos
@@ -42,19 +46,36 @@ export default function Perfil() {
   const [isEditing, setIsEditing] = useState(false);
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
 
+  // Estados de la carga del perfil (Manual 8.9). El cuerpo de cargarPerfil()
+  // arranca con la petición (no hay setState síncrono), así que el efecto que
+  // la llama no dispara react-hooks/set-state-in-effect.
+  const [cargandoPerfil, setCargandoPerfil] = useState(true);
+  const [errorPerfil, setErrorPerfil] = useState(false);
+
   // La sesión solo trae id/nombre/email/rol/foto; el resto del perfil se carga aparte.
-  useEffect(() => {
-    if (!sesion) return;
-    api.usuarios.obtener(sesion.id).then(completo => {
+  const cargarPerfil = useCallback(() => api.usuarios.obtener(idSesion)
+    .then(completo => {
       setUsuarioState(completo);
       setFoto(completo.foto || '');
       setCelular(completo.celular || '');
       setCiudad(completo.ciudad || '');
       setBiografia(completo.biografia || '');
       setFechaNacimiento(soloFecha(completo.fechaNacimiento));
-    });
-    api.usuarios.historialPassword(sesion.id).then(setHistorialPassword);
-  }, [sesion?.id]);
+      return api.usuarios.historialPassword(idSesion);
+    })
+    .then(setHistorialPassword)
+    .catch(() => setErrorPerfil(true))
+    .finally(() => setCargandoPerfil(false)), [idSesion]);
+
+  const reintentarPerfil = () => {
+    setErrorPerfil(false);
+    setCargandoPerfil(true);
+    cargarPerfil();
+  };
+
+  useEffect(() => {
+    if (idSesion) cargarPerfil();
+  }, [idSesion, cargarPerfil]);
 
   // Fecha máxima para el calendario (HOY)
   const fechaHoyStr = new Date().toISOString().split('T')[0];
@@ -190,7 +211,7 @@ export default function Perfil() {
         <aside className="pi-perfil-sidebar">
           <div className="pi-perfil-avatar-wrapper">
             <div className="pi-perfil-avatar">
-              {foto ? <img src={foto} alt={nombre} /> : <span>{getIniciales(nombre || email)}</span>}
+              {foto ? <img src={foto} alt={nombre} width="130" height="130" /> : <span>{getIniciales(nombre || email)}</span>}
             </div>
             {isEditing && (
               <>
@@ -202,7 +223,8 @@ export default function Perfil() {
             )}
           </div>
 
-          <h2 className="pi-perfil-sidebar-name">{nombre}</h2>
+          {/* Único h1 de la pantalla: la página trata sobre esta persona (A3 / Manual 5.6) */}
+          <h1 className="pi-perfil-sidebar-name">{nombre}</h1>
           
           <div className="pi-perfil-role-badge">
             <FaIdBadge /> {ROLE_LABELS[usuario.rol] || usuario.rol}
@@ -244,7 +266,8 @@ export default function Perfil() {
           </div>
         </aside>
 
-        <main className="pi-perfil-main-card">
+        {/* <section> y no <main>: el layout ya aporta el <main> de la página (Manual 11, un solo landmark main) */}
+        <section className="pi-perfil-main-card" aria-label="Datos del perfil">
           <div className="pi-perfil-tabs">
             <button className={activeTab === 'cuenta' ? 'active' : ''} onClick={() => setActiveTab('cuenta')}>
               <FaUserEdit style={{marginRight: '8px'}}/> Información Personal
@@ -261,8 +284,11 @@ export default function Perfil() {
               </div>
             )}
 
+            {errorPerfil && <EstadoError onReintentar={reintentarPerfil} />}
+            {!errorPerfil && cargandoPerfil && <EstadoCarga filas={5} />}
+
             {/* PESTAÑA: INFORMACIÓN PERSONAL */}
-            {activeTab === 'cuenta' && (
+            {!errorPerfil && !cargandoPerfil && activeTab === 'cuenta' && (
               <div className="animate-fade pi-perfil-info-section">
                 
                 <div className="pi-perfil-header-action">
@@ -354,7 +380,7 @@ export default function Perfil() {
             )}
 
             {/* PESTAÑA: SEGURIDAD */}
-            {activeTab === 'seguridad' && (
+            {!errorPerfil && !cargandoPerfil && activeTab === 'seguridad' && (
               <div className="pi-perfil-form-grid animate-fade">
                 <div className="pi-perfil-info-box full-width">
                   <FaUserShield className="info-icon"/>
@@ -400,7 +426,7 @@ export default function Perfil() {
             )}
 
           </div>
-        </main>
+        </section>
       </div>
     </div>
   );

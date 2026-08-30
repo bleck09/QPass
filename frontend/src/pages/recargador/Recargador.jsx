@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaHistory, FaTimes, FaIdCard, FaCoins, FaCheckCircle, FaWallet,
@@ -14,6 +18,7 @@ import '../supervisor/GestionEntrega.css';
 const montosRapidos = [20, 50, 100, 200];
 
 export default function Recargador() {
+  useTituloPagina('Recargar saldo');
   const sesion = leerSesion();
 
   const location = useLocation();
@@ -22,7 +27,18 @@ export default function Recargador() {
     ? 'incidencias'
     : location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
 
-  const [eventos, setEventos] = useState([]);
+  // Carga primaria (lista de eventos asignados) con estados cargando/error/reintentar (Manual 8.9).
+  const cargarEventos = useCallback(
+    () => api.eventos.misAsignados(sesion.id, sesion.rol),
+    [sesion.id, sesion.rol],
+  );
+  const {
+    data: eventos,
+    cargando: cargandoEventos,
+    error: errorEventos,
+    recargar: recargarEventos,
+  } = useApi(cargarEventos, { inicial: [] });
+
   const [eventoDetalle, setEventoDetalle] = useState(null);
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
@@ -47,7 +63,14 @@ export default function Recargador() {
   const [notaIncidenciaHist, setNotaIncidenciaHist] = useState('');
   const [historialReportados, setHistorialReportados] = useState([]);
 
-  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
+  // Refs + gestión de foco de cada modal (A1 / Manual 8.6): al abrir el foco entra
+  // al modal y queda atrapado; al cerrar vuelve al botón que lo disparó.
+  const modalEscanerRef = useRef(null);
+  const modalTarjetaRef = useRef(null);
+  const modalReporteRef = useRef(null);
+  useFocoModal(modalEscanerRef, escaneando);
+  useFocoModal(modalTarjetaRef, !!tarjetaQR);
+  useFocoModal(modalReporteRef, !!historialAReportar);
 
   const abrirEvento = (ev) => {
     setEventoDetalle(ev);
@@ -158,19 +181,41 @@ export default function Recargador() {
     cerrarReporteHistorial();
   };
 
+  // Cualquier modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  const hayModalAbierto = escaneando || !!tarjetaQR || !!historialAReportar;
+  useEffect(() => {
+    if (!hayModalAbierto) return;
+    const alTecla = (e) => {
+      if (e.key !== 'Escape') return;
+      setEscaneando(false);
+      cerrarTarjeta();
+      cerrarReporteHistorial();
+    };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [hayModalAbierto]);
+
   if (!eventoDetalle) {
     return (
       <div className="pi-rec-container">
         <div className="pi-rec-header">
-          <h2>Recarga de Puntos</h2>
+          <h1>Recarga de puntos</h1>
         </div>
-        {eventos.length === 0 ? (
+        {errorEventos ? (
+          <EstadoError onReintentar={recargarEventos} />
+        ) : cargandoEventos ? (
+          <EstadoCarga filas={3} />
+        ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (
               <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
-                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
                   <strong>{ev.nombre}</strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -191,7 +236,7 @@ export default function Recargador() {
           <button className="pi-entrega-btn-volver" onClick={volverALista}>
             <FaArrowLeft /> Cambiar de evento
           </button>
-          <h2>{eventoDetalle.nombre}</h2>
+          <h1>{eventoDetalle.nombre}</h1>
         </div>
         <div className="pi-rec-tabs">
           <button
@@ -221,7 +266,7 @@ export default function Recargador() {
           <FaQrcode size={70} color="var(--cian-digital)" />
           <h3>Escanea el código QR del participante</h3>
           <p>Apunta la cámara al código QR para cargar sus datos y registrar la recarga.</p>
-          <button className="pi-rec-btn-escanear" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
+          <button type="button" className="pi-rec-btn-escanear" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
             <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
           </button>
           {errorEscaneo && (
@@ -235,8 +280,18 @@ export default function Recargador() {
       {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
       {escaneando && (
         <div className="pi-rec-modal-overlay" onClick={() => setEscaneando(false)}>
-          <div className="pi-rec-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ textAlign: 'center', marginBottom: '14px' }}><FaQrcode /> Escanear manilla</h3>
+          <div
+            ref={modalEscanerRef}
+            tabIndex={-1}
+            className="pi-rec-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="rec-modal-escaner-titulo"
+          >
+            <h3 id="rec-modal-escaner-titulo" style={{ textAlign: 'center', marginBottom: '14px' }}>
+              <FaQrcode aria-hidden="true" /> Escanear manilla
+            </h3>
             <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
           </div>
         </div>
@@ -264,13 +319,13 @@ export default function Recargador() {
             <table className="pi-rec-tabla">
               <thead>
                 <tr>
-                  <th>Participante</th>
-                  <th>Documento</th>
-                  <th>Monto</th>
-                  <th>Saldo Resultante</th>
-                  <th>Fecha</th>
-                  <th>Hora</th>
-                  <th></th>
+                  <th scope="col">Participante</th>
+                  <th scope="col">Documento</th>
+                  <th scope="col">Monto</th>
+                  <th scope="col">Saldo Resultante</th>
+                  <th scope="col">Fecha</th>
+                  <th scope="col">Hora</th>
+                  <th scope="col"><span className="sr-only">Acciones</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -278,7 +333,7 @@ export default function Recargador() {
                   <tr key={item.id}>
                     <td>
                       <div className="pi-rec-fila-persona">
-                        {item.entrada?.foto && <img src={item.entrada.foto} alt={item.entrada.nombre} className="pi-rec-mini-avatar" />}
+                        {item.entrada?.foto && <img width="34" height="34" src={item.entrada.foto} alt={item.entrada.nombre} className="pi-rec-mini-avatar" />}
                         <span>{item.entrada?.nombre || '—'}</span>
                       </div>
                     </td>
@@ -293,7 +348,7 @@ export default function Recargador() {
                           <FaExclamationTriangle /> Reportado
                         </span>
                       ) : (
-                        <button className="pi-rec-btn-reportar-fila" onClick={() => abrirReporteHistorial(item)}>
+                        <button type="button" className="pi-rec-btn-reportar-fila" onClick={() => abrirReporteHistorial(item)}>
                           <FaExclamationTriangle /> Reportar
                         </button>
                       )}
@@ -324,13 +379,13 @@ export default function Recargador() {
             <table className="pi-rec-tabla">
               <thead>
                 <tr>
-                  <th>Participante</th>
-                  <th>Documento</th>
-                  <th>Se le dio</th>
-                  <th>Dijo que quería</th>
-                  <th>Qué pasó</th>
-                  <th>Estado</th>
-                  <th>Fecha</th>
+                  <th scope="col">Participante</th>
+                  <th scope="col">Documento</th>
+                  <th scope="col">Se le dio</th>
+                  <th scope="col">Dijo que quería</th>
+                  <th scope="col">Qué pasó</th>
+                  <th scope="col">Estado</th>
+                  <th scope="col">Fecha</th>
                 </tr>
               </thead>
               <tbody>
@@ -338,7 +393,7 @@ export default function Recargador() {
                   <tr key={inc.id}>
                     <td>
                       <div className="pi-rec-fila-persona">
-                        {inc.entrada.foto && <img src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-rec-mini-avatar" />}
+                        {inc.entrada.foto && <img width="34" height="34" src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-rec-mini-avatar" />}
                         <span>{inc.entrada.nombre}</span>
                       </div>
                     </td>
@@ -370,8 +425,18 @@ export default function Recargador() {
       {/* --- TARJETA GRANDE AL ESCANEAR QR --- */}
       {tarjetaQR && (
         <div className="pi-rec-modal-overlay" onClick={cerrarTarjeta}>
-          <div className="pi-rec-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
-            <button className="pi-rec-btn-cerrar" onClick={cerrarTarjeta}><FaTimes /></button>
+          <div
+            ref={modalTarjetaRef}
+            tabIndex={-1}
+            className="pi-rec-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Manilla de ${tarjetaQR.nombre}`}
+          >
+            <button type="button" className="pi-rec-btn-cerrar" onClick={cerrarTarjeta} aria-label="Cerrar">
+              <FaTimes aria-hidden="true" />
+            </button>
 
             {recargaExitosa ? (
               <div className="pi-rec-exito">
@@ -388,10 +453,11 @@ export default function Recargador() {
                   </div>
                 ) : mostrarFormIncidencia ? (
                   <div className="pi-rec-form-incidencia pi-rec-form-incidencia-post">
-                    <label>
-                      <FaExclamationTriangle /> ¿Qué pasó con {tarjetaQR.nombre}?
+                    <label htmlFor="rec-nota-incidencia">
+                      <FaExclamationTriangle aria-hidden="true" /> ¿Qué pasó con {tarjetaQR.nombre}?
                     </label>
                     <textarea
+                      id="rec-nota-incidencia"
                       className="pi-rec-nota-incidencia"
                       placeholder="Cuéntale a Admin qué pasó (ej: pidió 200 pero solo tenía 50 y no le alcanzó)"
                       value={notaIncidencia}
@@ -399,10 +465,12 @@ export default function Recargador() {
                       rows={3}
                       autoFocus
                     />
-                    <label className="pi-rec-label-opcional">Monto que dijo que quería (opcional)</label>
+                    <label className="pi-rec-label-opcional" htmlFor="rec-monto-solicitado">Monto que dijo que quería (opcional)</label>
                     <input
+                      id="rec-monto-solicitado"
                       type="number"
                       min="0"
+                      inputMode="numeric"
                       placeholder="Ej: 200"
                       value={montoSolicitado}
                       onChange={(e) => setMontoSolicitado(e.target.value)}
@@ -424,12 +492,12 @@ export default function Recargador() {
                     </div>
                   </div>
                 ) : (
-                  <button className="pi-rec-btn-reportar" onClick={() => setMostrarFormIncidencia(true)}>
+                  <button type="button" className="pi-rec-btn-reportar" onClick={() => setMostrarFormIncidencia(true)}>
                     <FaExclamationTriangle /> ¿Pasó algo con esta recarga? Reportar
                   </button>
                 )}
 
-                <button className="pi-rec-btn-confirmar" onClick={cerrarTarjeta}>Listo</button>
+                <button type="button" className="pi-rec-btn-confirmar" onClick={cerrarTarjeta}>Listo</button>
               </div>
             ) : (
               <>
@@ -438,7 +506,7 @@ export default function Recargador() {
                 </div>
 
                 {(tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
-                  <img src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-rec-tarjeta-foto" />
+                  <img width="140" height="140" src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-rec-tarjeta-foto" />
                 )}
                 <h2 className="pi-rec-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
@@ -460,10 +528,12 @@ export default function Recargador() {
                 </div>
 
                 <div className="pi-rec-form-monto">
-                  <label><FaCoins /> Monto a recargar (puntos)</label>
+                  <label htmlFor="rec-monto"><FaCoins aria-hidden="true" /> Monto a recargar (puntos)</label>
                   <input
+                    id="rec-monto"
                     type="number"
                     min="1"
+                    inputMode="numeric"
                     placeholder="Ej: 100"
                     value={monto}
                     onChange={(e) => setMonto(e.target.value)}
@@ -479,13 +549,14 @@ export default function Recargador() {
                 </div>
 
                 <div className="pi-rec-tarjeta-acciones">
-                  <button className="pi-rec-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
+                  <button type="button" className="pi-rec-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
                   <button
+                    type="button"
                     className="pi-rec-btn-confirmar"
                     onClick={confirmarRecarga}
                     disabled={!monto || Number(monto) <= 0}
                   >
-                    <FaCheckCircle /> Confirmar Recarga
+                    <FaCheckCircle aria-hidden="true" /> Confirmar Recarga
                   </button>
                 </div>
               </>
@@ -497,14 +568,24 @@ export default function Recargador() {
       {/* --- REPORTAR INCIDENCIA DESDE UNA RECARGA YA PASADA (Historial) --- */}
       {historialAReportar && (
         <div className="pi-rec-modal-overlay" onClick={cerrarReporteHistorial}>
-          <div className="pi-rec-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
-            <button className="pi-rec-btn-cerrar" onClick={cerrarReporteHistorial}><FaTimes /></button>
+          <div
+            ref={modalReporteRef}
+            tabIndex={-1}
+            className="pi-rec-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Reportar incidencia de una recarga"
+          >
+            <button type="button" className="pi-rec-btn-cerrar" onClick={cerrarReporteHistorial} aria-label="Cerrar">
+              <FaTimes aria-hidden="true" />
+            </button>
 
             <div className="pi-rec-tarjeta-estado aviso">
               <FaExclamationTriangle /> Reportar incidencia
             </div>
 
-            {historialAReportar.entrada?.foto && <img src={historialAReportar.entrada.foto} alt={historialAReportar.entrada.nombre} className="pi-rec-tarjeta-foto" />}
+            {historialAReportar.entrada?.foto && <img width="140" height="140" src={historialAReportar.entrada.foto} alt={historialAReportar.entrada.nombre} className="pi-rec-tarjeta-foto" />}
             <h2 className="pi-rec-tarjeta-nombre">{historialAReportar.entrada?.nombre}</h2>
 
             <div className="pi-rec-tarjeta-datos">
@@ -525,10 +606,11 @@ export default function Recargador() {
             </div>
 
             <div className="pi-rec-form-incidencia pi-rec-form-incidencia-post">
-              <label>
-                <FaExclamationTriangle /> ¿Qué pasó con {historialAReportar.entrada?.nombre}?
+              <label htmlFor="rec-nota-hist">
+                <FaExclamationTriangle aria-hidden="true" /> ¿Qué pasó con {historialAReportar.entrada?.nombre}?
               </label>
               <textarea
+                id="rec-nota-hist"
                 className="pi-rec-nota-incidencia"
                 placeholder="Cuéntale a Admin qué pasó (ej: pidió 200 pero solo tenía 50 y no le alcanzó)"
                 value={notaIncidenciaHist}
@@ -536,10 +618,12 @@ export default function Recargador() {
                 rows={3}
                 autoFocus
               />
-              <label className="pi-rec-label-opcional">Monto que dijo que quería (opcional)</label>
+              <label className="pi-rec-label-opcional" htmlFor="rec-monto-solicitado-hist">Monto que dijo que quería (opcional)</label>
               <input
+                id="rec-monto-solicitado-hist"
                 type="number"
                 min="0"
+                inputMode="numeric"
                 placeholder="Ej: 200"
                 value={montoSolicitadoHist}
                 onChange={(e) => setMontoSolicitadoHist(e.target.value)}
@@ -547,13 +631,14 @@ export default function Recargador() {
             </div>
 
             <div className="pi-rec-tarjeta-acciones">
-              <button className="pi-rec-btn-cancelar" onClick={cerrarReporteHistorial}>Cancelar</button>
+              <button type="button" className="pi-rec-btn-cancelar" onClick={cerrarReporteHistorial}>Cancelar</button>
               <button
+                type="button"
                 className="pi-rec-btn-confirmar"
                 onClick={reportarIncidenciaHistorial}
                 disabled={!notaIncidenciaHist.trim()}
               >
-                <FaExclamationTriangle /> Enviar Reporte
+                <FaExclamationTriangle aria-hidden="true" /> Enviar Reporte
               </button>
             </div>
           </div>

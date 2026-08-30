@@ -1,4 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaUsers, FaCheckCircle, FaQrcode, FaTimes,
   FaSearch, FaIdCard, FaTicketAlt,  FaUserCheck, FaExclamationTriangle,
@@ -14,8 +18,21 @@ import './Supervisor.css';
 import './GestionEntrega.css';
 
 export default function Supervisor() {
+  useTituloPagina('Control de acceso');
   const sesion = leerSesion();
-  const [eventos, setEventos] = useState([]);
+
+  // Carga primaria (eventos asignados) con estados cargando/error/reintentar (Manual 8.9).
+  const cargarEventos = useCallback(
+    () => api.eventos.misAsignados(sesion.id, sesion.rol),
+    [sesion.id, sesion.rol],
+  );
+  const {
+    data: eventos,
+    cargando: cargandoEventos,
+    error: errorEventos,
+    recargar: recargarEventos,
+  } = useApi(cargarEventos, { inicial: [] });
+
   const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
   const [participantes, setParticipantes] = useState([]);
 
@@ -24,6 +41,13 @@ export default function Supervisor() {
   const [fotoCapturadaTemporal, setFotoCapturadaTemporal] = useState(null);
   const [capturandoFoto, setCapturandoFoto] = useState(false);
   const [escaneando, setEscaneando] = useState(false);
+
+  // Gestión de foco de los modales (A1 / Manual 8.6): el foco entra al modal,
+  // queda atrapado con Tab y vuelve al disparador al cerrar.
+  const modalEscanerRef = useRef(null);
+  const modalTarjetaRef = useRef(null);
+  useFocoModal(modalEscanerRef, escaneando);
+  useFocoModal(modalTarjetaRef, !!tarjetaQR);
   const [buscando, setBuscando] = useState(false);
   const [errorEscaneo, setErrorEscaneo] = useState('');
 
@@ -31,7 +55,6 @@ export default function Supervisor() {
   const [busqueda, setBusqueda] = useState('');
   const [alertaToggle, setAlertaToggle] = useState(''); // Mensaje de error interno del modal
 
-  useEffect(() => { api.eventos.misAsignados(sesion.id, sesion.rol).then(setEventos); }, []);
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
@@ -101,6 +124,23 @@ export default function Supervisor() {
     setAlertaToggle('');
   };
 
+  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  const hayModalAbierto = escaneando || !!tarjetaQR;
+  useEffect(() => {
+    if (!hayModalAbierto) return;
+    const alTecla = (e) => {
+      if (e.key !== 'Escape') return;
+      setEscaneando(false);
+      cerrarTarjeta();
+    };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [hayModalAbierto]);
+
   const actualizarParticipante = (entradaActualizada) => {
     setTarjetaQR(entradaActualizada);
     setParticipantes(prev => prev.map(p => p.id === entradaActualizada.id ? entradaActualizada : p));
@@ -150,15 +190,19 @@ export default function Supervisor() {
     return (
       <div className="pi-sup-container">
         <div className="pi-sup-header">
-          <h2>Punto de Control de Accesos</h2>
+          <h1>Punto de control de accesos</h1>
         </div>
-        {eventos.length === 0 ? (
+        {errorEventos ? (
+          <EstadoError onReintentar={recargarEventos} />
+        ) : cargandoEventos ? (
+          <EstadoCarga filas={3} />
+        ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (
               <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
-                <img src={ev.imagen} alt={ev.nombre} className="pi-entrega-evento-imagen" />
+                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
                   <strong>{ev.nombre}</strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
@@ -176,14 +220,14 @@ export default function Supervisor() {
 
       <div className="pi-sup-header">
         <div>
-          <button className="pi-entrega-btn-volver" onClick={volverALista}>
+          <button type="button" className="pi-entrega-btn-volver" onClick={volverALista}>
             <FaArrowLeft /> Cambiar de evento
           </button>
-          <h2>{eventoDetalle.nombre}</h2>
+          <h1>{eventoDetalle.nombre}</h1>
         </div>
 
         <div className="pi-sup-simuladores">
-          <button className="pi-sup-btn-escanear-general" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
+          <button type="button" className="pi-sup-btn-escanear-general" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
             <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
           </button>
         </div>
@@ -227,14 +271,20 @@ export default function Supervisor() {
           <h3>Auditoría de Asistentes</h3>
           <div className="pi-sup-lista-controles">
             <div className="pi-sup-buscador">
-              <FaSearch />
-              <input type="text" placeholder="Buscar por nombre o CI..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} />
+              <FaSearch aria-hidden="true" />
+              <input
+                type="search"
+                aria-label="Buscar asistente por nombre o CI"
+                placeholder="Buscar por nombre o CI..."
+                value={busqueda}
+                onChange={(e) => setBusqueda(e.target.value)}
+              />
             </div>
-            <div className="pi-sup-filtros">
-              <button className={filtro === 'todos' ? 'activo' : ''} onClick={() => setFiltro('todos')}>Todos</button>
-              <button className={filtro === 'ingresado' ? 'activo' : ''} onClick={() => setFiltro('ingresado')}>Adentro</button>
-              <button className={filtro === 'salio' ? 'activo' : ''} onClick={() => setFiltro('salio')}>Afuera</button>
-              <button className={filtro === 'pendiente' ? 'activo' : ''} onClick={() => setFiltro('pendiente')}>Pendientes</button>
+            <div className="pi-sup-filtros" role="group" aria-label="Filtrar asistentes">
+              <button type="button" className={filtro === 'todos' ? 'activo' : ''} aria-pressed={filtro === 'todos'} onClick={() => setFiltro('todos')}>Todos</button>
+              <button type="button" className={filtro === 'ingresado' ? 'activo' : ''} aria-pressed={filtro === 'ingresado'} onClick={() => setFiltro('ingresado')}>Adentro</button>
+              <button type="button" className={filtro === 'salio' ? 'activo' : ''} aria-pressed={filtro === 'salio'} onClick={() => setFiltro('salio')}>Afuera</button>
+              <button type="button" className={filtro === 'pendiente' ? 'activo' : ''} aria-pressed={filtro === 'pendiente'} onClick={() => setFiltro('pendiente')}>Pendientes</button>
             </div>
           </div>
         </div>
@@ -243,12 +293,12 @@ export default function Supervisor() {
           <table className="pi-sup-tabla">
             <thead>
               <tr>
-                <th>Participante</th>
-                <th>Documento</th>
-                <th>Entrada</th>
-                <th>Ingresos</th>
-                <th>Salidas</th>
-                <th>Estado Actual</th>
+                <th scope="col">Participante</th>
+                <th scope="col">Documento</th>
+                <th scope="col">Entrada</th>
+                <th scope="col">Ingresos</th>
+                <th scope="col">Salidas</th>
+                <th scope="col">Estado Actual</th>
               </tr>
             </thead>
             <tbody>
@@ -257,7 +307,7 @@ export default function Supervisor() {
                   <tr key={p.id}>
                     <td>
                       <div className="pi-sup-fila-persona">
-                        {p.foto && <img src={p.foto} alt={p.nombre} className="pi-sup-mini-avatar" />}
+                        {p.foto && <img width="40" height="40" src={p.foto} alt={p.nombre} className="pi-sup-mini-avatar" />}
                         <span>{p.nombre}</span>
                       </div>
                     </td>
@@ -281,8 +331,18 @@ export default function Supervisor() {
       {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
       {escaneando && (
         <div className="pi-sup-modal-overlay" onClick={() => setEscaneando(false)}>
-          <div className="pi-sup-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
-            <h3 style={{ textAlign: 'center', marginBottom: '14px' }}><FaQrcode /> Escanear manilla</h3>
+          <div
+            ref={modalEscanerRef}
+            tabIndex={-1}
+            className="pi-sup-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sup-modal-escaner-titulo"
+          >
+            <h3 id="sup-modal-escaner-titulo" style={{ textAlign: 'center', marginBottom: '14px' }}>
+              <FaQrcode aria-hidden="true" /> Escanear manilla
+            </h3>
             <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
           </div>
         </div>
@@ -293,9 +353,19 @@ export default function Supervisor() {
       ========================================================= */}
       {tarjetaQR && (
         <div className="pi-sup-modal-overlay" onClick={cerrarTarjeta}>
-          <div className="pi-sup-modal-tarjeta" onClick={(e) => e.stopPropagation()}>
-            
-            <button className="pi-sup-btn-cerrar" onClick={cerrarTarjeta}><FaTimes /></button>
+          <div
+            ref={modalTarjetaRef}
+            tabIndex={-1}
+            className="pi-sup-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Control de acceso de ${tarjetaQR.nombre}`}
+          >
+
+            <button type="button" className="pi-sup-btn-cerrar" onClick={cerrarTarjeta} aria-label="Cerrar">
+              <FaTimes aria-hidden="true" />
+            </button>
 
             {/* HEADER DE ESTADO */}
             <div className="pi-sup-tarjeta-estado">
@@ -310,22 +380,22 @@ export default function Supervisor() {
                 <div className="foto-box">
                   {fotoCapturadaTemporal ? (
                     <div className="foto-capturada-container foto-recien-capturada">
-                      <img src={fotoCapturadaTemporal} alt="Captura" className="foto-img border-cyan" />
+                      <img width="110" height="110" src={fotoCapturadaTemporal} alt="Captura" className="foto-img border-cyan" />
                       <span className="foto-badge-ok"><FaCheckCircle /> Foto capturada</span>
-                      <button className="btn-retake" onClick={descartarFoto} title="Volver a tomar"><FaSyncAlt /></button>
+                      <button type="button" className="btn-retake" onClick={descartarFoto} aria-label="Volver a tomar la foto"><FaSyncAlt aria-hidden="true" /></button>
                       <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
                     </div>
                   ) : fotoReferencia ? (
                     <div className="foto-capturada-container">
-                      <img src={fotoReferencia} alt="Referencia" className="foto-img" />
-                      <button className="btn-retake" onClick={() => setCapturandoFoto(true)} title="Tomar una nueva"><FaCamera /></button>
+                      <img width="110" height="110" src={fotoReferencia} alt="Foto de referencia registrada" className="foto-img" />
+                      <button type="button" className="btn-retake" onClick={() => setCapturandoFoto(true)} aria-label="Tomar una foto nueva"><FaCamera aria-hidden="true" /></button>
                       <span className="foto-label text-gray">{fotoReferenciaLabel}</span>
                     </div>
                   ) : (
-                    <div className="foto-placeholder" onClick={() => setCapturandoFoto(true)}>
-                      <FaCamera size={26}/>
+                    <button type="button" className="foto-placeholder" onClick={() => setCapturandoFoto(true)}>
+                      <FaCamera size={26} aria-hidden="true" />
                       <span>Tomar Foto<br/>Obligatoria</span>
-                    </div>
+                    </button>
                   )}
                 </div>
               )}
@@ -372,7 +442,7 @@ export default function Supervisor() {
                   {historialTarjeta.map((mov) => (
                     <div key={mov.id} className={`historial-item ${mov.tipo === 'ingreso' ? 'item-in' : 'item-out'}`}>
                       {mov.foto
-                        ? <img src={mov.foto} alt="Foto del registro" className="historial-foto-thumb" />
+                        ? <img width="32" height="32" src={mov.foto} alt="Foto del registro" className="historial-foto-thumb" />
                         : (mov.tipo === 'ingreso' ? <FaSignInAlt/> : <FaSignOutAlt/>)}
                       <span>
                         {mov.tipo === 'ingreso' ? 'Entrada' : 'Salida'} registrada el {formatearFecha(mov.createdAt)}

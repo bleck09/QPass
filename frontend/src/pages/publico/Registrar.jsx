@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useNavigate } from 'react-router-dom';
 import { 
   MdEmail, MdLock, MdArrowBack, MdVisibility, MdVisibilityOff 
@@ -11,6 +12,7 @@ import api from '../../api/index.js';
 import './Registrar.css';
 
 export default function Registrar() {
+  useTituloPagina('Crear cuenta');
   const navigate = useNavigate();
 
   // --- PASOS DEL FORMULARIO ---
@@ -163,7 +165,8 @@ export default function Registrar() {
         )}
       </div>
 
-      <div className="pi-register-content">
+      {/* Landmark principal de la pantalla (Manual 11) */}
+      <main className="pi-register-content" id="contenido">
         <div className="pi-register-card glass-panel">
           
           {/* ==============================================================
@@ -171,75 +174,87 @@ export default function Registrar() {
               ============================================================== */}
           {step === 1 && (
             <div className="animate-fade">
-              <h2 className="pi-register-title">Crear Cuenta</h2>
+              {/* Único h1 del paso 1 (Manual 5.6 / 11) */}
+              <h1 className="pi-register-title">Crear cuenta</h1>
               <p className="pi-register-subtitle">Únete a QPass. Rellena los datos a continuación.</p>
 
               <form onSubmit={handlePedirCodigo} className="pi-register-form">
                 
                 <div className="pi-register-grid">
+                  {/* Todos los campos: <label htmlFor> + <input id> + autocomplete (Manual 8.3) */}
                   <div className="pi-register-input-group full-width">
-                    <label>NOMBRE(S) *</label>
+                    <label htmlFor="reg-nombre">Nombre(s) *</label>
                     <div className="pi-register-input-wrapper">
-                      <span className="pi-register-icon"><FaUser size={16} /></span>
-                      <input type="text" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Juan Carlos" required />
+                      <span className="pi-register-icon" aria-hidden="true"><FaUser size={16} /></span>
+                      <input id="reg-nombre" type="text" autoComplete="given-name" value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej. Juan Carlos" required />
                     </div>
                   </div>
 
                   <div className="pi-register-input-group">
-                    <label>APELLIDO PATERNO *</label>
+                    <label htmlFor="reg-paterno">Apellido paterno *</label>
                     <div className="pi-register-input-wrapper">
-                      <span className="pi-register-icon"><FaUser size={16} /></span>
-                      <input type="text" value={paterno} onChange={(e) => setPaterno(e.target.value)} placeholder="Pérez" required />
+                      <span className="pi-register-icon" aria-hidden="true"><FaUser size={16} /></span>
+                      <input id="reg-paterno" type="text" autoComplete="family-name" value={paterno} onChange={(e) => setPaterno(e.target.value)} placeholder="Pérez" required />
                     </div>
                   </div>
 
                   <div className="pi-register-input-group">
-                    <label>APELLIDO MATERNO *</label>
+                    <label htmlFor="reg-materno">Apellido materno *</label>
                     <div className="pi-register-input-wrapper">
-                      <span className="pi-register-icon"><FaUser size={16} /></span>
-                      <input type="text" value={materno} onChange={(e) => setMaterno(e.target.value)} placeholder="Gómez" required />
+                      <span className="pi-register-icon" aria-hidden="true"><FaUser size={16} /></span>
+                      <input id="reg-materno" type="text" autoComplete="additional-name" value={materno} onChange={(e) => setMaterno(e.target.value)} placeholder="Gómez" required />
                     </div>
                   </div>
 
                   <div className="pi-register-input-group">
-                    <label>DOCUMENTO DE IDENTIDAD (C.I.) *</label>
+                    <label htmlFor="reg-ci">Documento de identidad (C.I.) *</label>
                     <div className="pi-register-input-wrapper">
-                      <span className="pi-register-icon"><FaIdCard size={16} /></span>
-                      <input type="text" value={ci} onChange={(e) => setCi(e.target.value)} placeholder="Ej. 1234567" required />
+                      <span className="pi-register-icon" aria-hidden="true"><FaIdCard size={16} /></span>
+                      <input id="reg-ci" type="text" inputMode="numeric" value={ci} onChange={(e) => setCi(e.target.value)} placeholder="Ej. 1234567" required />
                     </div>
                   </div>
 
                   <div className="pi-register-input-group">
-                    <label>CORREO ELECTRÓNICO *</label>
+                    <label htmlFor="reg-email">Correo electrónico *</label>
                     <div className="pi-register-input-wrapper">
-                      <span className="pi-register-icon"><MdEmail size={18} /></span>
-                      <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" required />
+                      <span className="pi-register-icon" aria-hidden="true"><MdEmail size={18} /></span>
+                      <input id="reg-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="correo@ejemplo.com" required />
                     </div>
                   </div>
 
                   <div className="pi-register-input-group">
-                    <label>CONTRASEÑA *</label>
+                    <label htmlFor="reg-password">Contraseña *</label>
                     <div className="pi-register-input-wrapper">
-                      <span className="pi-register-icon"><MdLock size={18} /></span>
-                      <input 
-                        type={showPassword ? "text" : "password"} 
-                        value={password} onChange={(e) => setPassword(e.target.value)} 
-                        placeholder="Mínimo 6 caracteres" required 
+                      <span className="pi-register-icon" aria-hidden="true"><MdLock size={18} /></span>
+                      <input
+                        id="reg-password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={password} onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Mínimo 6 caracteres" required
                       />
-                      <button type="button" className="pi-register-eye-btn" onClick={() => setShowPassword(!showPassword)}>
-                        {showPassword ? <MdVisibilityOff size={18} /> : <MdVisibility size={18} />}
+                      <button
+                        type="button"
+                        className="pi-register-eye-btn"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                        aria-pressed={showPassword}
+                      >
+                        {showPassword ? <MdVisibilityOff size={18} aria-hidden="true" /> : <MdVisibility size={18} aria-hidden="true" />}
                       </button>
                     </div>
                   </div>
 
                   <div className="pi-register-input-group">
-                    <label>CONFIRMAR CONTRASEÑA *</label>
+                    <label htmlFor="reg-password-2">Confirmar contraseña *</label>
                     <div className="pi-register-input-wrapper">
-                      <span className="pi-register-icon"><MdLock size={18} /></span>
-                      <input 
-                        type={showPassword ? "text" : "password"} 
-                        value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} 
-                        placeholder="Repita su contraseña" required 
+                      <span className="pi-register-icon" aria-hidden="true"><MdLock size={18} /></span>
+                      <input
+                        id="reg-password-2"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="new-password"
+                        value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Repita su contraseña" required
                       />
                     </div>
                   </div>
@@ -248,38 +263,43 @@ export default function Registrar() {
 
                   {/* NUEVO DISEÑO CELULAR (Estilo Referencia) */}
                   <div className="pi-register-input-group">
-                    <label>TELÉFONO CELULAR</label>
+                    <label htmlFor="reg-celular">Teléfono celular</label>
                     <div className="pi-register-phone-wrapper">
-                      <div className="phone-country-dropdown">
+                      <div className="phone-country-dropdown" aria-hidden="true">
                         <span className="flag">🇧🇴</span>
                         <FaChevronDown size={10} className="chevron" />
                         <span className="code">+591</span>
                       </div>
-                      <input 
-                        type="text" 
-                        value={celular} 
-                        onChange={handleCelularChange} 
-                        placeholder="12345678" 
+                      <input
+                        id="reg-celular"
+                        type="tel"
+                        inputMode="numeric"
+                        autoComplete="tel-national"
+                        value={celular}
+                        onChange={handleCelularChange}
+                        placeholder="12345678"
                       />
                     </div>
                   </div>
 
                   <div className="pi-register-input-group">
-                    <label>FECHA DE NACIMIENTO</label>
+                    <label htmlFor="reg-nacimiento">Fecha de nacimiento</label>
                     <div className="pi-register-input-wrapper">
-                      <span className="pi-register-icon"><FaBirthdayCake size={16} /></span>
-                      <input 
-                        type="date" 
-                        value={fechaNacimiento} 
-                        onChange={(e) => setFechaNacimiento(e.target.value)} 
+                      <span className="pi-register-icon" aria-hidden="true"><FaBirthdayCake size={16} /></span>
+                      <input
+                        id="reg-nacimiento"
+                        type="date"
+                        autoComplete="bday"
+                        value={fechaNacimiento}
+                        onChange={(e) => setFechaNacimiento(e.target.value)}
                         max={fechaHoyStr}
                       />
                     </div>
                   </div>
                 </div>
 
-                {error && <p className="pi-register-error">{error}</p>}
-                <button type="submit" className="pi-register-btn-submit">VERIFICAR CORREO →</button>
+                {error && <p className="pi-register-error" role="alert">{error}</p>}
+                <button type="submit" className="pi-register-btn-submit">Verificar correo →</button>
               </form>
             </div>
           )}
@@ -292,34 +312,39 @@ export default function Registrar() {
               <div className="otp-icon-wrapper">
                 <FaEnvelopeOpenText size={45} />
               </div>
-              <h2 className="pi-register-title">Verifica tu correo</h2>
+              {/* h1 del paso 2 (solo se renderiza un paso a la vez) */}
+              <h1 className="pi-register-title">Verifica tu correo</h1>
               <p className="pi-register-subtitle">
                 Hemos enviado un código de 6 dígitos a <strong>{email}</strong>. 
                 <br/>Por favor ingrésalo abajo para crear tu cuenta.
               </p>
 
               <form onSubmit={handleVerifyAndRegister} className="otp-form">
-                <div className="otp-inputs-container">
+                <fieldset className="otp-inputs-container" style={{ border: 0, padding: 0, margin: 0 }}>
+                  <legend className="sr-only">Código de verificación de 6 dígitos</legend>
                   {otp.map((digit, index) => (
                     <input
                       key={index}
                       ref={(el) => (inputRefs.current[index] = el)}
                       type="text"
+                      inputMode="numeric"
+                      autoComplete={index === 0 ? 'one-time-code' : 'off'}
                       maxLength="1"
                       className="otp-digit-input"
+                      aria-label={`Dígito ${index + 1} de 6`}
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleOtpKeyDown(index, e)}
                       autoFocus={index === 0}
                     />
                   ))}
-                </div>
+                </fieldset>
 
-                {error && <p className="pi-register-error">{error}</p>}
-                {success && <p className="pi-register-success">{success}</p>}
+                {error && <p className="pi-register-error" role="alert">{error}</p>}
+                {success && <p className="pi-register-success" role="status">{success}</p>}
 
                 <button type="submit" className="pi-register-btn-submit" style={{marginTop: '30px'}}>
-                  CONFIRMAR Y REGISTRAR
+                  Confirmar y registrar
                 </button>
               </form>
               
@@ -328,7 +353,7 @@ export default function Registrar() {
           )}
 
         </div>
-      </div>
+      </main>
     </div>
   );
 }

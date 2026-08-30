@@ -1,4 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
+import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaCalendarAlt, FaPalette, FaImage, FaMapMarkedAlt, FaMapMarkerAlt,
@@ -23,6 +27,7 @@ const SOLICITUD_VACIA = {
 const paraInputFecha = (iso) => (iso ? iso.slice(0, 16) : '');
 
 export default function Cliente() {
+  useTituloPagina('Mis eventos');
   const location = useLocation();
   const navigate = useNavigate();
   const sesion = leerSesion();
@@ -33,22 +38,47 @@ export default function Cliente() {
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [showPreview, setShowPreview] = useState(false);
 
-  // Eventos ya aprobados a los que este Cliente quedó asignado (para el Dashboard General).
-  const [eventosPermitidos, setEventosPermitidos] = useState([]);
+  // Foco del modal de vista previa (A1 / Manual 8.6)
+  const modalPreviewRef = useRef(null);
+  useFocoModal(modalPreviewRef, showPreview);
 
-  const [misSolicitudes, setMisSolicitudes] = useState([]);
   const [solicitudId, setSolicitudId] = useState(null); // null = formulario en blanco (nueva)
   const [solicitud, setSolicitud] = useState(SOLICITUD_VACIA);
 
-  const recargarSolicitudes = () => api.solicitudesEvento.listar().then(setMisSolicitudes);
+  // Carga primaria (mis solicitudes + eventos donde quedé asignado) con
+  // estados cargando/error/reintentar (Manual 8.9).
+  const cargarDatos = useCallback(async () => {
+    const [solicitudes, asignaciones] = await Promise.all([
+      api.solicitudesEvento.listar(),
+      api.asignaciones.listar(),
+    ]);
+    const idSesion = sesion?.id;
+    const eventosPermitidos = idSesion
+      ? [...new Set(asignaciones.filter(a => a.usuarioId === idSesion).map(a => a.eventoId))]
+      : [];
+    return { solicitudes, eventosPermitidos };
+  }, [sesion?.id]);
+  const {
+    data: datos,
+    cargando: cargandoDatos,
+    error: errorDatos,
+    recargar: recargarSolicitudes,
+  } = useApi(cargarDatos, { inicial: { solicitudes: [], eventosPermitidos: [] } });
+  const misSolicitudes = datos.solicitudes;
+  const eventosPermitidos = datos.eventosPermitidos;
 
+  // Modal de vista previa: ESC lo cierra y el fondo no scrollea (Manual 8.6).
   useEffect(() => {
-    if (!sesion) return;
-    api.asignaciones.listar().then(todas => {
-      setEventosPermitidos([...new Set(todas.filter(a => a.usuarioId === sesion.id).map(a => a.eventoId))]);
-    });
-    recargarSolicitudes();
-  }, []);
+    if (!showPreview) return;
+    const alTecla = (e) => { if (e.key === 'Escape') setShowPreview(false); };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [showPreview]);
+
 
   const abrirSolicitud = (s) => {
     setSolicitudId(s.id);
@@ -119,16 +149,20 @@ export default function Cliente() {
       {/* Pestañas: Propuesta del evento / Dashboard General (solo lectura) */}
       <div className="pi-cliente-tabs">
         <button
+          type="button"
           className={`tab-btn ${pestana === 'propuesta' ? 'active' : ''}`}
+          aria-current={pestana === 'propuesta' ? 'page' : undefined}
           onClick={() => navigate('/Cliente')}
         >
-          <FaFileAlt /> Mis Propuestas
+          <FaFileAlt aria-hidden="true" /> Mis Propuestas
         </button>
         <button
+          type="button"
           className={`tab-btn ${pestana === 'dashboard' ? 'active' : ''}`}
+          aria-current={pestana === 'dashboard' ? 'page' : undefined}
           onClick={() => navigate('/Cliente/dashboard')}
         >
-          <FaChartPie /> Dashboard General
+          <FaChartPie aria-hidden="true" /> Dashboard General
         </button>
       </div>
 
@@ -138,19 +172,26 @@ export default function Cliente() {
 
       {pestana === 'propuesta' && (
       <>
-      {misSolicitudes.length > 0 && (
+      {errorDatos && <EstadoError onReintentar={recargarSolicitudes} />}
+      {!errorDatos && cargandoDatos && <EstadoCarga filas={3} />}
+      {!errorDatos && !cargandoDatos && misSolicitudes.length > 0 && (
         <div className="pi-cliente-card" style={{ marginBottom: '20px' }}>
           <h3><FaFileAlt className="icon-card" /> Tus solicitudes</h3>
           <div className="listas-dinamicas">
             {misSolicitudes.map(s => (
-              <div key={s.id} className="fila-dinamica" style={{ cursor: 'pointer' }} onClick={() => abrirSolicitud(s)}>
+              <button
+                type="button"
+                key={s.id}
+                className="fila-dinamica"
+                onClick={() => abrirSolicitud(s)}
+              >
                 <div className="fila-inputs">
                   <strong>{s.nombreEvento}</strong>
-                  {s.estado === 'pendiente' && <span className="pi-usr-badge pi-usr-badge-pend"><FaHourglassHalf /> Pendiente</span>}
-                  {s.estado === 'aprobado' && <span className="pi-usr-badge pi-usr-badge-ok"><FaCheckCircle /> Aprobada</span>}
-                  {s.estado === 'rechazado' && <span className="pi-usr-badge pi-usr-badge-pend"><FaExclamationTriangle /> Rechazada{s.motivoRechazo ? `: ${s.motivoRechazo}` : ''}</span>}
+                  {s.estado === 'pendiente' && <span className="pi-usr-badge pi-usr-badge-pend"><FaHourglassHalf aria-hidden="true" /> Pendiente</span>}
+                  {s.estado === 'aprobado' && <span className="pi-usr-badge pi-usr-badge-ok"><FaCheckCircle aria-hidden="true" /> Aprobada</span>}
+                  {s.estado === 'rechazado' && <span className="pi-usr-badge pi-usr-badge-pend"><FaExclamationTriangle aria-hidden="true" /> Rechazada{s.motivoRechazo ? `: ${s.motivoRechazo}` : ''}</span>}
                 </div>
-              </div>
+              </button>
             ))}
           </div>
         </div>
@@ -159,20 +200,20 @@ export default function Cliente() {
       {/* Cabecera con Botones */}
       <div className="pi-cliente-header">
         <div>
-          <h2>{solicitudId ? 'Editar Solicitud de Evento' : 'Nueva Solicitud de Evento'}</h2>
+          <h1>{solicitudId ? 'Editar solicitud de evento' : 'Nueva solicitud de evento'}</h1>
           <p>Propón tu evento. El Administrador la revisará y, al aprobarla, crea la página web real.</p>
         </div>
         <div className="pi-cliente-header-actions">
           {solicitudId && (
-            <button className="btn-secundario" onClick={nuevaSolicitud}>
+            <button type="button" className="btn-secundario" onClick={nuevaSolicitud}>
               <FaPlus /> Nueva Solicitud
             </button>
           )}
-          <button className="btn-secundario" onClick={() => setShowPreview(true)}>
+          <button type="button" className="btn-secundario" onClick={() => setShowPreview(true)}>
             <FaEye /> Vista Previa
           </button>
           {!soloLectura && (
-            <button className="btn-primario" onClick={handleSubmit}>
+            <button type="button" className="btn-primario" onClick={handleSubmit}>
               <FaPaperPlane /> {solicitudId ? 'Guardar Cambios' : 'Enviar Solicitud'}
             </button>
           )}
@@ -194,40 +235,45 @@ export default function Cliente() {
             <h3><FaCalendarAlt className="icon-card" /> Información Principal</h3>
 
             <div className="input-group">
-              <label>Nombre del Evento</label>
+              <label htmlFor="sol-nombreEvento">Nombre del evento</label>
               <input
+                id="sol-nombreEvento"
                 type="text" name="nombreEvento" value={solicitud.nombreEvento} onChange={handleChange}
                 placeholder="Ej: Gran Feria Gastronómica 2026" disabled={soloLectura} required
               />
             </div>
 
             <div className="input-group">
-              <label><FaMapMarkerAlt style={{marginRight: '6px'}}/> Lugar</label>
+              <label htmlFor="sol-lugar"><FaMapMarkerAlt style={{marginRight: '6px'}} aria-hidden="true"/> Lugar</label>
               <input
+                id="sol-lugar"
                 type="text" name="lugar" value={solicitud.lugar} onChange={handleChange}
                 placeholder="Ej: Campo Ferial, Cochabamba" disabled={soloLectura} required
               />
             </div>
 
             <div className="input-group">
-              <label>Fecha y hora de inicio</label>
+              <label htmlFor="sol-fecha">Fecha y hora de inicio</label>
               <input
+                id="sol-fecha"
                 type="datetime-local" name="fecha" value={solicitud.fecha} onChange={handleChange}
                 disabled={soloLectura} required
               />
             </div>
 
             <div className="input-group">
-              <label>Fecha y hora de cierre</label>
+              <label htmlFor="sol-fechaFin">Fecha y hora de cierre</label>
               <input
+                id="sol-fechaFin"
                 type="datetime-local" name="fechaFin" value={solicitud.fechaFin} onChange={handleChange}
                 min={solicitud.fecha || undefined} disabled={soloLectura} required
               />
             </div>
 
             <div className="input-group">
-              <label>Descripción / Objetivo</label>
+              <label htmlFor="sol-descripcion">Descripción / objetivo</label>
               <textarea
+                id="sol-descripcion"
                 name="descripcion" value={solicitud.descripcion} onChange={handleChange} rows="3"
                 placeholder="Describe de qué trata el evento, qué encontrarán los invitados..." disabled={soloLectura} required
               />
@@ -240,37 +286,37 @@ export default function Cliente() {
 
             <div className="colores-grid">
               <div className="input-group">
-                <label>Principal (Botones)</label>
+                <label htmlFor="sol-colorPrimario">Principal (Botones)</label>
                 <div className="color-picker-wrapper">
-                  <input type="color" name="colorPrimario" value={solicitud.colorPrimario} onChange={handleChange} disabled={soloLectura} />
+                  <input id="sol-colorPrimario" type="color" name="colorPrimario" value={solicitud.colorPrimario} onChange={handleChange} disabled={soloLectura} />
                   <span className="hex-text">{solicitud.colorPrimario.toUpperCase()}</span>
                 </div>
               </div>
               <div className="input-group">
-                <label>Texto del Botón</label>
+                <label htmlFor="sol-colorBoton">Texto del Botón</label>
                 <div className="color-picker-wrapper">
-                  <input type="color" name="colorBoton" value={solicitud.colorBoton} onChange={handleChange} disabled={soloLectura} />
+                  <input id="sol-colorBoton" type="color" name="colorBoton" value={solicitud.colorBoton} onChange={handleChange} disabled={soloLectura} />
                   <span className="hex-text">{solicitud.colorBoton.toUpperCase()}</span>
                 </div>
               </div>
               <div className="input-group">
-                <label>Fondo Superior</label>
+                <label htmlFor="sol-colorFondo">Fondo Superior</label>
                 <div className="color-picker-wrapper">
-                  <input type="color" name="colorFondo" value={solicitud.colorFondo} onChange={handleChange} disabled={soloLectura} />
+                  <input id="sol-colorFondo" type="color" name="colorFondo" value={solicitud.colorFondo} onChange={handleChange} disabled={soloLectura} />
                   <span className="hex-text">{solicitud.colorFondo.toUpperCase()}</span>
                 </div>
               </div>
               <div className="input-group">
-                <label>Color del Título</label>
+                <label htmlFor="sol-colorTextoTitulo">Color del Título</label>
                 <div className="color-picker-wrapper">
-                  <input type="color" name="colorTextoTitulo" value={solicitud.colorTextoTitulo} onChange={handleChange} disabled={soloLectura} />
+                  <input id="sol-colorTextoTitulo" type="color" name="colorTextoTitulo" value={solicitud.colorTextoTitulo} onChange={handleChange} disabled={soloLectura} />
                   <span className="hex-text">{solicitud.colorTextoTitulo.toUpperCase()}</span>
                 </div>
               </div>
               <div className="input-group">
-                <label>Color de Párrafos</label>
+                <label htmlFor="sol-colorTextoP">Color de Párrafos</label>
                 <div className="color-picker-wrapper">
-                  <input type="color" name="colorTextoP" value={solicitud.colorTextoP} onChange={handleChange} disabled={soloLectura} />
+                  <input id="sol-colorTextoP" type="color" name="colorTextoP" value={solicitud.colorTextoP} onChange={handleChange} disabled={soloLectura} />
                   <span className="hex-text">{solicitud.colorTextoP.toUpperCase()}</span>
                 </div>
               </div>
@@ -290,7 +336,7 @@ export default function Cliente() {
                 </div>
               ) : (
                 <div className="preview-zone">
-                  <img src={solicitud.imagenPortada} alt="Portada" className="img-preview-rect" />
+                  <img width="640" height="360" src={solicitud.imagenPortada} alt="Portada" className="img-preview-rect" />
                   {!soloLectura && (
                     <button type="button" className="btn-quitar-imagen" onClick={() => quitarImagen('imagenPortada')}><FaTimes /> Quitar foto</button>
                   )}
@@ -309,7 +355,7 @@ export default function Cliente() {
                 </div>
               ) : (
                 <div className="preview-zone">
-                  <img src={solicitud.mapaLugar} alt="Mapa del Lugar" className="img-preview-rect" />
+                  <img width="640" height="360" src={solicitud.mapaLugar} alt="Mapa del Lugar" className="img-preview-rect" />
                   {!soloLectura && (
                     <button type="button" className="btn-quitar-imagen" onClick={() => quitarImagen('mapaLugar')}><FaTimes /> Quitar mapa</button>
                   )}
@@ -401,20 +447,29 @@ export default function Cliente() {
 
       {/* --- MODAL DE VISTA PREVIA --- */}
       {showPreview && (
-        <div className="modal-overlay">
-          <div className="modal modal-preview">
+        <div className="modal-overlay" onClick={() => setShowPreview(false)}>
+          <div
+            ref={modalPreviewRef}
+            tabIndex={-1}
+            className="modal modal-preview"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="cliente-preview-titulo"
+          >
             <div className="modal-header">
-              <h2><FaEye color="var(--indigo-profundo)" /> Así lucirá la Landing Page</h2>
-              <button className="btn-close-modal" onClick={() => setShowPreview(false)}>
-                <FaTimes />
+              <h2 id="cliente-preview-titulo"><FaEye color="var(--indigo-profundo)" aria-hidden="true" /> Así lucirá la Landing Page</h2>
+              <button type="button" className="btn-close-modal" onClick={() => setShowPreview(false)} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
               </button>
             </div>
 
             <div className="modal-body preview-container" style={{ backgroundColor: solicitud.colorFondo }}>
               <div className="preview-text">
-                <h1 style={{ color: solicitud.colorTextoTitulo, fontSize: '32px', marginBottom: '16px', lineHeight: '1.2' }}>
+                {/* Vista previa de la landing, no es encabezado real de la pantalla → <div> */}
+                <div style={{ color: solicitud.colorTextoTitulo, fontSize: '32px', fontWeight: 'bold', marginBottom: '16px', lineHeight: '1.2' }}>
                   {solicitud.nombreEvento || 'Título del Evento'}
-                </h1>
+                </div>
                 <p style={{ color: solicitud.colorTextoP, fontSize: '15px', marginBottom: '24px', lineHeight: '1.6' }}>
                   {solicitud.descripcion || 'Descripción del evento...'}
                 </p>
@@ -424,7 +479,7 @@ export default function Cliente() {
               </div>
               <div className="preview-image">
                 {solicitud.imagenPortada ? (
-                  <img src={solicitud.imagenPortada} alt="Preview" />
+                  <img width="400" height="225" src={solicitud.imagenPortada} alt="Preview" />
                 ) : (
                   <div className="no-img-preview">Sin imagen de portada</div>
                 )}

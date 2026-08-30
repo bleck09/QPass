@@ -17,7 +17,8 @@
   /* --- Acento y neutros --- */
   --coral-compra: #FF6B4A;     /* botones de acción: comprar, confirmar pago */
   --gris-niebla: #F5F7FB;      /* fondo claro general */
-  --gris-medio: #8A94A6;       /* texto secundario, íconos inactivos */
+  --gris-medio: #8A94A6;       /* SOLO decoración: íconos inactivos, bordes, separadores.
+                                  Como TEXTO no llega a 4.5:1 (Anexo A 6.3) -> usar --texto-secundario. */
   --blanco: #FFFFFF;           /* tarjetas, texto sobre fondos oscuros */
 
   /* --- Hover / interacción (mismo tono, ~15% más oscuro) --- */
@@ -64,7 +65,76 @@
 
   /* --- Texto general --- */
   --texto-principal: var(--azul-noche);
-  --texto-secundario: var(--gris-medio);
+  /* Gris legible: >=4.5:1 sobre blanco (5.7) y sobre gris-niebla (5.3), AA (Anexo A 6.3).
+     El gris de marca #8A94A6 se quedaba en ~2.9:1 como texto. */
+  --texto-secundario: #5E6773;
+
+  /* ============================================================
+     TIPOGRAFÍA — Manual Parte 5.
+     Escala fluida con clamp(): el texto escala suave entre un
+     mínimo (legible a 320px) y un máximo (sin romper en 2560px).
+     Se usa rem para respetar el zoom/tamaño de fuente del navegador.
+     ============================================================ */
+  --font-body: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Roboto Mono', monospace;
+
+  --text-xs:   clamp(0.75rem, 0.73rem + 0.10vw, 0.8125rem);  /* 12 -> 13 */
+  --text-sm:   clamp(0.875rem, 0.85rem + 0.15vw, 0.9375rem); /* 14 -> 15 */
+  --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);      /* 16 -> 18 */
+  --text-lg:   clamp(1.125rem, 1.05rem + 0.40vw, 1.375rem);  /* 18 -> 22 */
+  --text-xl:   clamp(1.375rem, 1.20rem + 0.80vw, 1.75rem);   /* 22 -> 28 */
+  --text-2xl:  clamp(1.75rem, 1.45rem + 1.40vw, 2.5rem);     /* 28 -> 40 */
+  --text-3xl:  clamp(2.25rem, 1.70rem + 2.50vw, 3.5rem);     /* 36 -> 56 */
+  --text-4xl:  clamp(2.75rem, 1.90rem + 4.00vw, 4.5rem);     /* 44 -> 72 */
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.55;   /* mínimo 1.5 en cuerpo por WCAG */
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
+  /* ============================================================
+     ESPACIADO — base 4/8 (Manual Parte 4). Todo margin/padding/gap
+     nuevo usa estos tokens; NO inventar 13/15/27px.
+     ============================================================ */
+  --space-1: 0.25rem;   /*  4px */
+  --space-2: 0.5rem;    /*  8px */
+  --space-3: 0.75rem;   /* 12px */
+  --space-4: 1rem;      /* 16px */
+  --space-5: 1.25rem;   /* 20px */
+  --space-6: 1.5rem;    /* 24px */
+  --space-8: 2rem;      /* 32px */
+  --space-10: 2.5rem;   /* 40px */
+  --space-12: 3rem;     /* 48px */
+  --space-16: 4rem;     /* 64px */
+  --space-20: 5rem;     /* 80px */
+
+  /* Forma (Manual 7.3) — el original ya usa 8/12/20; se nombran */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Sombras — una sola fuente de luz, tinte azul noche (Manual 7.3) */
+  --shadow-sm: 0 1px 3px rgba(10, 14, 39, 0.08), 0 1px 2px rgba(10, 14, 39, 0.06);
+  --shadow-md: 0 4px 12px rgba(10, 14, 39, 0.1);
+  --shadow-lg: 0 14px 32px rgba(10, 14, 39, 0.12);
+
+  /* Elevación — escala fija, prohibido z-index: 9999 suelto (Manual 7.3) */
+  --z-dropdown: 1000;
+  --z-sticky: 1100;
+  --z-overlay: 1200;
+  --z-modal: 1300;
+  --z-toast: 1500;
+
+  /* Movimiento (Manual 7.3 / 13.1) */
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 /* Reseteo global para eliminar márgenes y paddings por defecto */
@@ -74,13 +144,27 @@
   box-sizing: border-box;
 }
 
+/* 100% = respeta el tamaño de fuente configurado por la persona en su navegador */
+html {
+  font-size: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  font-family: var(--font-body);
+  font-size: var(--text-base);          /* base 16 -> 18 fluido (Manual 5.1) */
+  line-height: var(--leading-normal);   /* >= 1.5 (WCAG) */
   background-color: var(--gris-niebla);
   color: var(--texto-principal);
 
   /* Evitamos estrictamente el scroll horizontal */
   overflow-x: hidden;
+}
+
+/* Utilidad opcional para bloques de texto corrido (Manual 5.1: 45-75 caracteres).
+   Se aplica donde haga falta, no globalmente, para no encajonar textos de UI. */
+.texto-lectura {
+  max-width: 68ch;
 }
 
 a {
@@ -90,6 +174,69 @@ a {
 ::selection {
   background-color: var(--cian-digital);
   color: var(--texto-sobre-vivo);
+}
+
+/* ============================================================
+   FOCO VISIBLE POR TECLADO — Manual Parte 9 (OBLIGATORIO).
+   Solo aparece al navegar con Tab, no al hacer clic con mouse.
+   ============================================================ */
+:focus-visible {
+  outline: 2px solid var(--cian-digital);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* El header/sidebar fijos no deben tapar el elemento enfocado (WCAG 2.4.11) */
+a, button, input, select, textarea, [tabindex] {
+  scroll-margin-top: 88px;
+}
+
+/* ============================================================
+   UTILIDAD: solo para lectores de pantalla (texto invisible
+   visualmente pero anunciado). Para legends, labels de contexto, etc.
+   ============================================================ */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================
+   ENLACE "SALTAR AL CONTENIDO" — Manual 11.2 (OBLIGATORIO).
+   Oculto hasta que recibe foco por teclado.
+   ============================================================ */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 10000;
+  padding: 12px 16px;
+  background: var(--indigo-profundo);
+  color: var(--blanco);
+  border-radius: 0 0 8px 0;
+  font-weight: 600;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* ============================================================
+   MOVIMIENTO REDUCIDO — Manual 11.6 (OBLIGATORIO).
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* El contenedor principal de React debe ocupar el 100% de la pantalla */

@@ -1,0 +1,87 @@
+/* Estados de carga / error — ver EstadosAsync.jsx. Tokens de index.css. */
+
+.estado-carga {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+}
+
+.estado-carga-barra {
+  height: 1.25rem;
+  border-radius: var(--radius-sm);
+  background: linear-gradient(
+    90deg,
+    var(--borde-suave) 25%,
+    var(--gris-niebla) 37%,
+    var(--borde-suave) 63%
+  );
+  background-size: 400% 100%;
+  animation: estado-carga-brillo 1.4s ease infinite;
+}
+
+.estado-carga-barra:nth-child(2) { width: 92%; }
+.estado-carga-barra:nth-child(3) { width: 80%; }
+.estado-carga-barra:nth-child(4) { width: 88%; }
+.estado-carga-barra:nth-child(5) { width: 70%; }
+
+@keyframes estado-carga-brillo {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* Respeta "movimiento reducido" (Manual 11.6): sin animación, barra estática. */
+@media (prefers-reduced-motion: reduce) {
+  .estado-carga-barra {
+    animation: none;
+    background: var(--borde-suave);
+  }
+}
+
+.estado-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-2);
+  padding: var(--space-10) var(--space-4);
+  color: var(--texto-secundario);
+}
+
+.estado-error-icono {
+  font-size: 1.75rem;
+  color: var(--ambar-aviso-texto);
+  margin-bottom: var(--space-1);
+}
+
+.estado-error-titulo {
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--texto-principal);
+}
+
+.estado-error-mensaje {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.estado-error-btn {
+  margin-top: var(--space-3);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-5);
+  border: 1px solid var(--borde-medio);
+  border-radius: var(--radius-md);
+  background: var(--blanco);
+  font: inherit;
+  font-weight: var(--weight-semibold);
+  color: var(--texto-principal);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.estado-error-btn:hover {
+  background: var(--gris-niebla);
+}

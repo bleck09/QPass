@@ -12,7 +12,12 @@ const ANCHO_MAXIMO = 640;
 export default function CapturarFoto({ onCapturada, onCancelar }) {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const [error, setError] = useState('');
+  // El soporte de cámara se sabe al montar: estado inicial, no setState en efecto.
+  const [error, setError] = useState(() =>
+    typeof navigator !== 'undefined' && navigator.mediaDevices?.getUserMedia
+      ? ''
+      : 'Este navegador no permite acceder a la cámara en esta conexión. Si estás entrando por una IP de red (no https:// ni localhost), el navegador bloquea la cámara por seguridad — hace falta HTTPS.',
+  );
   const [avisoNoListo, setAvisoNoListo] = useState(false);
   const [camaras, setCamaras] = useState([]);
   const [camaraId, setCamaraId] = useState('');
@@ -21,10 +26,7 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
     let activo = true;
     let stream;
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      setError('Este navegador no permite acceder a la cámara en esta conexión. Si estás entrando por una IP de red (no https:// ni localhost), el navegador bloquea la cámara por seguridad — hace falta HTTPS.');
-      return () => {};
-    }
+    if (!navigator.mediaDevices?.getUserMedia) return () => {};
 
     const constraints = camaraId
       ? { video: { deviceId: { exact: camaraId } } }
@@ -79,12 +81,13 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
   return (
     <div className="pi-captura-foto">
       {error ? (
-        <p className="pi-captura-foto-error">{error}</p>
+        <p className="pi-captura-foto-error" role="alert">{error}</p>
       ) : (
         <>
           {camaras.length > 1 && (
             <select
               className="pi-captura-foto-select-camara"
+              aria-label="Elegir cámara"
               value={camaraId}
               onChange={(e) => setCamaraId(e.target.value)}
             >
@@ -96,21 +99,27 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
             </select>
           )}
           <div className="pi-captura-foto-video-wrapper">
-            <video ref={videoRef} playsInline muted className="pi-captura-foto-video" />
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              className="pi-captura-foto-video"
+              aria-label="Vista de la cámara para tomar la foto"
+            />
           </div>
         </>
       )}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
       {avisoNoListo && !error && (
-        <p className="pi-captura-foto-error">La cámara todavía no está lista. Espera un segundo y volvé a intentar.</p>
+        <p className="pi-captura-foto-error" role="alert">La cámara todavía no está lista. Espera un segundo y volvé a intentar.</p>
       )}
       <div className="pi-captura-foto-acciones">
         <button type="button" className="pi-captura-foto-btn-cancelar" onClick={onCancelar}>
-          <FaTimes /> Cancelar
+          <FaTimes aria-hidden="true" /> Cancelar
         </button>
         {!error && (
           <button type="button" className="pi-captura-foto-btn-tomar" onClick={capturar}>
-            <FaCamera /> Capturar
+            <FaCamera aria-hidden="true" /> Capturar
           </button>
         )}
       </div>

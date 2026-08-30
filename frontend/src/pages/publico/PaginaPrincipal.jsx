@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaSignInAlt,
@@ -9,19 +9,19 @@ import './PaginaPrincipal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
 import api from '../../api/index.js';
 import { esVigente, formatearFecha } from '../../utils/eventos.js';
+import { useApi } from '../../utils/useApi.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 
 export default function PaginaPrincipal() {
   const navigate = useNavigate();
-  const [proximosEventos, setProximosEventos] = useState([]);
-  const [eventosPasados, setEventosPasados] = useState([]);
 
-  useEffect(() => {
-    window.scrollTo(0, 0);
-    api.eventos.listar().then((todos) => {
-      setProximosEventos(todos.filter(esVigente));
-      setEventosPasados(todos.filter(ev => !esVigente(ev)));
-    });
-  }, []);
+  useEffect(() => { window.scrollTo(0, 0); }, []);
+
+  // Cartelera con estados cargando/error/reintentar (Manual 8.9).
+  const cargarEventos = useCallback(() => api.eventos.listar(), []);
+  const { data: eventos, cargando, error, recargar } = useApi(cargarEventos, { inicial: [] });
+  const proximosEventos = eventos.filter(esVigente);
+  const eventosPasados = eventos.filter(ev => !esVigente(ev));
 
   const verEvento = (evento) => navigate(`/evento/${evento.id}`);
 
@@ -49,6 +49,8 @@ export default function PaginaPrincipal() {
         </div>
       </nav>
 
+      {/* Landmark principal (Manual 11): permite el salto de teclado y orienta al lector de pantalla */}
+      <main id="contenido">
       <header className="qpass-home-hero">
         <div className="hero-content">
           <div className="badge-tech glass-morphism">La nueva era de los eventos en Bolivia</div>
@@ -66,7 +68,13 @@ export default function PaginaPrincipal() {
           <p>Explora y asegura tu acceso a las mejores experiencias. (Pasa el mouse o desliza)</p>
         </div>
 
-        <CarruselEventos eventos={proximosEventos} onAdquirir={verEvento} />
+        {error ? (
+          <EstadoError onReintentar={recargar} titulo="No se pudo cargar la cartelera" />
+        ) : cargando ? (
+          <EstadoCarga filas={3} etiqueta="Cargando cartelera…" />
+        ) : (
+          <CarruselEventos eventos={proximosEventos} onAdquirir={verEvento} />
+        )}
       </section>
 
       {/* --- Resto del código se mantiene igual... --- */}
@@ -82,9 +90,9 @@ export default function PaginaPrincipal() {
                 <span>Entradas vendidas</span>
               </div>
               <div className="stat-users">
-                <img src="https://i.pravatar.cc/100?img=1" alt="u1" />
-                <img src="https://i.pravatar.cc/100?img=2" alt="u2" />
-                <img src="https://i.pravatar.cc/100?img=3" alt="u3" />
+                <img src="https://i.pravatar.cc/100?img=1" alt="" width="100" height="100" />
+                <img src="https://i.pravatar.cc/100?img=2" alt="" width="100" height="100" />
+                <img src="https://i.pravatar.cc/100?img=3" alt="" width="100" height="100" />
                 <div className="more-users"><FaArrowRight/></div>
               </div>
             </div>
@@ -119,7 +127,7 @@ export default function PaginaPrincipal() {
         <div className="past-events-grid">
           {eventosPasados.map((evento) => (
             <div key={evento.id} className="past-card glass-morphism">
-              <img src={evento.imagen} alt={evento.nombre} />
+              <img src={evento.imagen} alt={evento.nombre} width="100" height="100" loading="lazy" />
               <div className="past-card-info">
                 <h4>{evento.nombre}</h4>
                 <span><FaMapMarkerAlt/> {evento.lugar} · {formatearFecha(evento.fecha)}</span>
@@ -128,6 +136,7 @@ export default function PaginaPrincipal() {
           ))}
         </div>
       </section>
+      </main>
 
       <footer className="qpass-home-footer glass-morphism">
         <div className="footer-content">
