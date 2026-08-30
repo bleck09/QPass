@@ -19,3 +19,6 @@ lerna-debug.log*
 *.njsproj
 *.sln
 *.sw?
+
+# Documentacion interna / reglas
+reglas/
