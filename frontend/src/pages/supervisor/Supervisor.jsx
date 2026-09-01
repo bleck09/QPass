@@ -7,8 +7,12 @@ import {
   FaUsers, FaCheckCircle, FaQrcode, FaTimes,
   FaSearch, FaIdCard, FaTicketAlt,  FaUserCheck, FaExclamationTriangle,
   FaSignOutAlt, FaCamera, FaHistory, FaSignInAlt, FaUserSecret, FaSyncAlt,
-  FaMapMarkerAlt, FaArrowLeft
+  FaMapMarkerAlt, FaArrowLeft, FaCalendarAlt
 } from 'react-icons/fa';
+
+// Debe coincidir con MARGEN_INGRESO_ANTICIPADO_HORAS del backend
+// (backend/src/modules/entradas/entradas.service.ts). Ver README → "Reglas de negocio".
+const MARGEN_INGRESO_ANTICIPADO_HORAS = 3;
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { formatearFecha } from '../../utils/eventos.js';
@@ -161,6 +165,26 @@ export default function Supervisor() {
   const fotoReferencia = tarjetaQR?.usuario?.foto || tarjetaQR?.foto || null;
   const fotoReferenciaLabel = tarjetaQR?.usuario?.foto ? 'FOTO DE PERFIL' : 'FOTO REGISTRADA';
 
+  // Ventana de ingreso: desde N horas antes del inicio hasta la hora de fin, y no
+  // si el evento está finalizado. La salida no tiene ventana (siempre se permite).
+  // Se reevalúa cada minuto para que la puerta se habilite/cierre sola.
+  const [ingresoDentroDeVentana, setIngresoDentroDeVentana] = useState(false);
+  useEffect(() => {
+    const evaluar = () => {
+      if (!eventoDetalle) return setIngresoDentroDeVentana(false);
+      const ahora = Date.now();
+      const inicio = new Date(eventoDetalle.fecha).getTime();
+      const fin = new Date(eventoDetalle.fechaFin).getTime();
+      const apertura = inicio - MARGEN_INGRESO_ANTICIPADO_HORAS * 60 * 60 * 1000;
+      return setIngresoDentroDeVentana(
+        eventoDetalle.estado !== 'finalizado' && ahora >= apertura && ahora <= fin
+      );
+    };
+    evaluar();
+    const t = setInterval(evaluar, 60000);
+    return () => clearInterval(t);
+  }, [eventoDetalle]);
+
   const registrarMovimiento = async (tipo) => {
     if (tipo === 'salida' && tarjetaQR.estadoIngreso !== 'ingresado') {
       setAlertaToggle('Esta entrada no está adentro — no se puede registrar una salida.');
@@ -168,6 +192,12 @@ export default function Supervisor() {
     }
     if (tipo === 'ingreso' && tarjetaQR.estadoIngreso === 'ingresado') {
       setAlertaToggle('Esta entrada ya está registrada como ingresada.');
+      return;
+    }
+    if (tipo === 'ingreso' && !ingresoDentroDeVentana) {
+      setAlertaToggle(
+        `Fuera del horario de ingreso de "${eventoDetalle.nombre}": se habilita ${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio y hasta el cierre.`
+      );
       return;
     }
     if (requiereFoto && !fotoCapturadaTemporal) {
@@ -412,6 +442,13 @@ export default function Supervisor() {
 
             <div className="pi-sup-info-card">
               <div className="info-row">
+                <FaCalendarAlt className="info-icon" />
+                <div>
+                  <span className="info-label">EVENTO</span>
+                  <span className="info-valor">{eventoDetalle.nombre}</span>
+                </div>
+              </div>
+              <div className="info-row">
                 <FaIdCard className="info-icon" />
                 <div>
                   <span className="info-label">DOCUMENTO</span>
@@ -469,12 +506,17 @@ export default function Supervisor() {
                 </button>
 
                 <button
-                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''} ${tarjetaQR.estadoIngreso === 'ingresado' ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
+                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''} ${tarjetaQR.estadoIngreso === 'ingresado' || !ingresoDentroDeVentana ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
                   onClick={() => registrarMovimiento('ingreso')}
                 >
                   <FaSignInAlt /> REGISTRAR INGRESO
                 </button>
               </div>
+              {!ingresoDentroDeVentana && (
+                <p className="pi-sup-hint-foto">
+                  Fuera del horario de ingreso ({MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio hasta el cierre). La salida sí está habilitada.
+                </p>
+              )}
               {requiereFoto && !fotoCapturadaTemporal && (
                 <p className="pi-sup-hint-foto">Toma la foto de la puerta (arriba) para poder registrar el ingreso o salida.</p>
               )}

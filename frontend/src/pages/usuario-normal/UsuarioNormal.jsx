@@ -72,8 +72,14 @@ export default function UsuarioNormal() {
 
   // --- ESTADOS DE COMPRAS (traídas del backend; Admin las aprueba desde su panel) ---
   const [compras, setCompras] = useState([]);
+  // Entradas a MI nombre (titular o invitado). Incluye las que compró otra persona:
+  // esas no aparecen en compras.mias() porque mi cuenta nunca fue "comprador".
+  const [entradasANombreMio, setEntradasANombreMio] = useState([]);
 
-  const recargarCompras = () => api.compras.mias().then(setCompras);
+  const recargarCompras = () => Promise.all([
+    api.compras.mias().then(setCompras),
+    api.entradas.mias().then(setEntradasANombreMio).catch(() => setEntradasANombreMio([])),
+  ]);
   useEffect(() => { recargarCompras(); }, []);
 
   // --- MIS ENTRADAS: mostrar u ocultar las entradas de eventos ya pasados ---
@@ -190,15 +196,32 @@ export default function UsuarioNormal() {
     [comprasConEvento]
   );
 
+  // Entradas de eventos próximos que compró OTRA persona a mi nombre (yo no fui el
+  // comprador). Ya vienen solo de compras confirmadas desde el backend.
+  const entradasDeInvitado = useMemo(
+    () => entradasANombreMio
+      .filter(e => e.evento && esVigente(e.evento))
+      .filter(e => e.compra?.compradorId !== usuario?.id),
+    [entradasANombreMio, usuario?.id]
+  );
+
   // --- LÓGICA DEL CARRITO ---
   // Contador local para ids de entradas del carrito (evita depender de Date.now() en el handler).
   const siguienteIdCartRef = useRef(1);
 
   // Cada clic en un card grande de categoría agrega una entrada: si todavía no tienes la tuya
   // (y no la tenías de antes), la primera que agregues es la tuya; las siguientes son de invitados.
+  // Cupo libre de una categoría = cantidad total - ya vendidas - las que ya tengo en el carrito.
+  const cupoLibreDe = (cat) => {
+    if (!cat) return 0;
+    const enCarrito = entradasCart.filter(ent => ent.categoriaTicketId === cat.id).length;
+    return Math.max(0, Number(cat.cantidad) - Number(cat.cantidadVendida) - enCarrito);
+  };
+
   const agregarEntrada = (categoriaId) => {
     if (entradasCart.length >= MAX_ENTRADAS) return;
     const cat = categoriasEntradas.find(c => c.id === categoriaId) || categoriasEntradas[0];
+    if (!cat || cupoLibreDe(cat) <= 0) return;
     const nuevoId = `cart-${siguienteIdCartRef.current++}`;
     const esMiEntrada = !yaTieneEntrada && !entradasCart.some(ent => ent.isTitular);
     const nuevaEntrada = esMiEntrada
@@ -428,12 +451,44 @@ export default function UsuarioNormal() {
           <strong>{compra.evento.nombre}</strong>
           <span><FaCalendarAlt /> {formatearFecha(compra.evento.fecha)}</span>
           <span><FaTicketAlt /> Lote de {compra.entradas.length} entrada(s) · Bs. {compra.montoTotal}</span>
+          {compra.entradas.some(e => e.numero != null) && (
+            <span><FaIdCard /> N.º {compra.entradas.map(e => e.numero).filter(n => n != null).sort((a, b) => a - b).join(', ')}</span>
+          )}
         </div>
 
         <div className="pi-usr-compra-card-acciones">
           <button type="button" className="pi-usr-btn-revisar" onClick={() => abrirRevision(compra)}>
             <FaSearch /> Ver detalles
           </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Card de una entrada que compró otra persona a nombre del usuario logueado.
+  // Aquí sí se muestra el QR (o el aviso de manilla pendiente), porque es el
+  // único lugar donde el invitado ve su entrada.
+  const renderEntradaInvitadoCard = (entrada) => (
+    <div key={entrada.id} className="pi-usr-compra-card" style={{ backgroundImage: `url(${imagenEvento(entrada.evento)})` }}>
+      <div className="pi-usr-compra-card-overlay">
+        <div className="pi-usr-compra-card-badges">
+          <span className="pi-usr-badge pi-usr-badge-ok"><FaCheckCircle /> Aprobada</span>
+          {entrada.numero != null && <span className="pi-usr-badge"><FaIdCard /> Entrada N.º {entrada.numero}</span>}
+        </div>
+
+        <div className="pi-usr-compra-card-info">
+          <strong>{entrada.evento.nombre}</strong>
+          <span><FaCalendarAlt /> {formatearFecha(entrada.evento.fecha)}</span>
+          <span><FaMapMarkerAlt /> {entrada.evento.lugar}</span>
+          {entrada.categoriaTicket && <span><FaTicketAlt /> {entrada.categoriaTicket.nombre}</span>}
+        </div>
+
+        <div className="pi-usr-compra-card-acciones" style={{ alignItems: 'center' }}>
+          {entrada.codigoQrVinculado ? (
+            <img width="120" height="120" src={qrDe(entrada.codigoQrVinculado.codigo)} alt="Tu código QR" style={{ borderRadius: 12, background: '#fff', padding: 6 }} />
+          ) : (
+            <span className="pi-usr-badge pi-usr-badge-pend"><FaHourglassHalf /> Manilla aún sin vincular</span>
+          )}
         </div>
       </div>
     </div>
@@ -586,12 +641,15 @@ export default function UsuarioNormal() {
                   {categoriasEntradas.map(cat => {
                     const cantidad = entradasCart.filter(ent => ent.categoriaTicketId === cat.id).length;
                     const alMaximo = entradasCart.length >= MAX_ENTRADAS;
+                    const cupoLibre = cupoLibreDe(cat);
+                    const agotada = Number(cat.cantidad) - Number(cat.cantidadVendida) <= 0;
+                    const sinCupoParaMas = cupoLibre <= 0;
                     return (
                       <button
                         key={cat.id}
                         className="pi-usr-categoria-card"
-                        style={{ background: cat.color }}
-                        disabled={alMaximo}
+                        style={{ background: cat.color, opacity: agotada ? 0.55 : 1 }}
+                        disabled={alMaximo || sinCupoParaMas}
                         onClick={() => agregarEntrada(cat.id)}
                       >
                         {cantidad > 0 && (
@@ -599,7 +657,16 @@ export default function UsuarioNormal() {
                         )}
                         <span className="cat-card-nombre">{cat.nombre}</span>
                         <span className="cat-card-precio">Bs. {cat.precio}</span>
-                        <span className="cat-card-cta"><FaPlus /> {cantidad > 0 ? 'Agregar otra' : 'Agregar'}</span>
+                        {agotada ? (
+                          <span className="cat-card-cta">Agotada</span>
+                        ) : sinCupoParaMas ? (
+                          <span className="cat-card-cta">Sin más cupo</span>
+                        ) : (
+                          <span className="cat-card-cta"><FaPlus /> {cantidad > 0 ? 'Agregar otra' : 'Agregar'}</span>
+                        )}
+                        {!agotada && cupoLibre > 0 && cupoLibre <= 10 && (
+                          <span className="cat-card-stock">Quedan {cupoLibre}</span>
+                        )}
                       </button>
                     );
                   })}
@@ -808,6 +875,11 @@ export default function UsuarioNormal() {
                         {entradaDestacada.categoriaTicket.nombre}
                       </span>
                     )}
+                    {entradaDestacada.numero != null && (
+                      <span className="pi-usr-badge" style={{ background: 'var(--indigo-profundo)', color: 'var(--blanco)' }}>
+                        <FaIdCard /> Entrada N.º {entradaDestacada.numero}
+                      </span>
+                    )}
                   </div>
                 </div>
 
@@ -848,6 +920,15 @@ export default function UsuarioNormal() {
                 )}
               </div>
             </div>
+          )}
+
+          {entradasDeInvitado.length > 0 && (
+            <>
+              <h3 className="pi-usr-mis-entradas-subtitulo">Entradas que compraron para ti</h3>
+              <div className="pi-usr-entradas-grid">
+                {entradasDeInvitado.map(renderEntradaInvitadoCard)}
+              </div>
+            </>
           )}
 
           <h3 className="pi-usr-mis-entradas-subtitulo">Otras entradas</h3>

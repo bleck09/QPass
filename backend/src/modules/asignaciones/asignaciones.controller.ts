@@ -9,6 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { Rol } from '@prisma/client';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { AsignacionesService } from './asignaciones.service';
 import { CrearAsignacionDto } from './dto/crear-asignacion.dto';
@@ -18,8 +19,17 @@ export class AsignacionesController {
   constructor(private readonly asignacionesService: AsignacionesService) {}
 
   @Get()
-  listar(@Query('eventoId') eventoId?: string) {
-    return this.asignacionesService.listar(eventoId);
+  listar(
+    @Query('eventoId') eventoId?: string,
+    @Query('usuarioId') usuarioId?: string,
+    @Query('rol') rol?: string,
+  ) {
+    const usuarioIdNum = usuarioId ? Number(usuarioId) : undefined;
+    return this.asignacionesService.listar(
+      eventoId || undefined,
+      Number.isNaN(usuarioIdNum) ? undefined : usuarioIdNum,
+      (rol as Rol) || undefined,
+    );
   }
 
   @Post()

@@ -17,7 +17,6 @@ import './AdminGestionEventos.css';
 
 const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
 const FORM_EVENTO_VACIO = { nombre: '', lugar: '', fecha: '', fechaFin: '', imagen: '' };
-const FORM_ASIGNAR_VACIO = { usuarioId: '', rol: ROLES_ASIGNABLES[0] };
 
 export default function AdminGestionEventos() {
   useTituloPagina('Gestión de eventos');
@@ -64,7 +63,9 @@ export default function AdminGestionEventos() {
     return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
   }, [mostrarFormCrear]);
   const [formEvento, setFormEvento] = useState(FORM_EVENTO_VACIO);
-  const [formAsignar, setFormAsignar] = useState(FORM_ASIGNAR_VACIO);
+  // Panel de asignar: filtro por rol + búsqueda por nombre/correo (ya no se elige rol).
+  const [filtroRolAsignar, setFiltroRolAsignar] = useState('');
+  const [busquedaUsuario, setBusquedaUsuario] = useState('');
   const [comprasPendientes, setComprasPendientes] = useState(0);
 
   useEffect(() => {
@@ -117,6 +118,22 @@ export default function AdminGestionEventos() {
 
   const contarAsignados = (eventoId) => asignaciones.filter(a => a.eventoId === eventoId).length;
 
+  // Candidatos para asignar: solo roles operativos, que no estén ya en el evento,
+  // filtrados por el rol elegido y por el texto de búsqueda.
+  const usuariosAsignables = useMemo(() => {
+    const idsYaEnEvento = new Set(asignacionesDelEvento.map(a => a.usuarioId));
+    const termino = busquedaUsuario.trim().toLowerCase();
+    return usuarios
+      .filter(u => ROLES_ASIGNABLES.includes(u.rol))
+      .filter(u => !idsYaEnEvento.has(u.id))
+      .filter(u => !filtroRolAsignar || u.rol === filtroRolAsignar)
+      .filter(u =>
+        !termino ||
+        u.nombre.toLowerCase().includes(termino) ||
+        (u.email || '').toLowerCase().includes(termino)
+      );
+  }, [usuarios, asignacionesDelEvento, filtroRolAsignar, busquedaUsuario]);
+
   const handleChangeFormEvento = (e) => {
     setFormEvento({ ...formEvento, [e.target.name]: e.target.value });
   };
@@ -132,13 +149,11 @@ export default function AdminGestionEventos() {
     setEventoIdDetalle(nuevo.id);
   };
 
-  const handleAsignar = async (e) => {
-    e.preventDefault();
-    if (!formAsignar.usuarioId || !eventoIdDetalle) return;
-
-    await api.asignaciones.asignar({ eventoId: eventoIdDetalle, usuarioId: Number(formAsignar.usuarioId), rol: formAsignar.rol });
+  const handleAsignar = async (usuario) => {
+    if (!eventoIdDetalle) return;
+    // El backend deriva el rol del evento del rol de la cuenta; se manda igual por compat.
+    await api.asignaciones.asignar({ eventoId: eventoIdDetalle, usuarioId: usuario.id, rol: usuario.rol });
     setAsignaciones(await api.asignaciones.listar());
-    setFormAsignar(FORM_ASIGNAR_VACIO);
   };
 
   const handleQuitarAsignacion = async (id) => {
@@ -237,26 +252,67 @@ export default function AdminGestionEventos() {
               </table>
             </div>
 
-            <form className="pi-ges-form-asignar" onSubmit={handleAsignar}>
-              <select
-                value={formAsignar.usuarioId}
-                onChange={(e) => setFormAsignar({ ...formAsignar, usuarioId: e.target.value })}
-              >
-                <option value="">Selecciona un usuario...</option>
-                {usuarios.map(u => (
-                  <option key={u.id} value={u.id}>{u.nombre} ({u.email})</option>
+            <div className="pi-ges-asignar-panel">
+              <h4 className="pi-ges-asignar-titulo"><FaUserPlus /> Asignar usuario al evento</h4>
+              <p className="pi-ges-asignar-ayuda">
+                El rol en el evento es el mismo rol de la cuenta. Elegí a la persona.
+              </p>
+
+              <div className="pi-ges-asignar-filtros">
+                <div className="pi-ges-buscador">
+                  <FaSearch />
+                  <input
+                    type="text"
+                    placeholder="Buscar por nombre o correo..."
+                    value={busquedaUsuario}
+                    onChange={(e) => setBusquedaUsuario(e.target.value)}
+                  />
+                </div>
+                <div className="pi-ges-asignar-chips">
+                  <button
+                    type="button"
+                    className={`pi-ges-chip${!filtroRolAsignar ? ' activo' : ''}`}
+                    onClick={() => setFiltroRolAsignar('')}
+                  >
+                    Todos
+                  </button>
+                  {ROLES_ASIGNABLES.map(rol => (
+                    <button
+                      key={rol}
+                      type="button"
+                      className={`pi-ges-chip${filtroRolAsignar === rol ? ' activo' : ''}`}
+                      onClick={() => setFiltroRolAsignar(f => (f === rol ? '' : rol))}
+                    >
+                      {ROLE_LABELS[rol] || rol}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <ul className="pi-ges-asignar-lista">
+                {usuariosAsignables.map(u => (
+                  <li key={u.id} className="pi-ges-asignar-item">
+                    <div className="pi-ges-asignar-item-info">
+                      <strong>{u.nombre}</strong>
+                      <span>{u.email}</span>
+                    </div>
+                    <span className="pi-ges-badge">{ROLE_LABELS[u.rol] || u.rol}</span>
+                    <button
+                      type="button"
+                      className="pi-ges-btn-asignar"
+                      onClick={() => handleAsignar(u)}
+                    >
+                      <FaUserPlus /> Asignar
+                    </button>
+                  </li>
                 ))}
-              </select>
-              <select
-                value={formAsignar.rol}
-                onChange={(e) => setFormAsignar({ ...formAsignar, rol: e.target.value })}
-              >
-                {ROLES_ASIGNABLES.map(rol => (
-                  <option key={rol} value={rol}>{ROLE_LABELS[rol] || rol}</option>
-                ))}
-              </select>
-              <button type="submit" className="pi-ges-btn-asignar"><FaUserPlus /> Asignar</button>
-            </form>
+                {usuariosAsignables.length === 0 && (
+                  <li className="pi-ges-sin-resultados">
+                    No hay usuarios que coincidan (o ya están todos asignados).
+                  </li>
+                )}
+              </ul>
+            </div>
           </section>
         </>
       ) : (

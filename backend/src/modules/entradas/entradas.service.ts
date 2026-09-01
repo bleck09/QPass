@@ -30,6 +30,12 @@ const SOLO_CONFIRMADAS = {
   compra: { estado: 'confirmado' },
 } satisfies Prisma.EntradaWhereInput;
 
+// Ventana de control de acceso en puerta (ver README → "Reglas de negocio"):
+// se puede registrar INGRESO desde estas horas antes de evento.fecha y hasta
+// evento.fechaFin. La SALIDA no tiene ventana: siempre se puede sacar a quien
+// esté adentro, incluso con el evento ya finalizado.
+const MARGEN_INGRESO_ANTICIPADO_HORAS = 3;
+
 @Injectable()
 export class EntradasService {
   constructor(private readonly prisma: PrismaService) {}
@@ -54,6 +60,29 @@ export class EntradasService {
       codigoQrVinculado: codigosQr[0] || null,
       vecesIngreso: registrosIngreso.filter((r) => r.tipo === 'ingreso').length,
       vecesSalida: registrosIngreso.filter((r) => r.tipo === 'salida').length,
+    }));
+  }
+
+  /**
+   * Entradas a nombre del usuario logueado (titular O invitado): se buscan por
+   * Entrada.usuarioId, no por comprador. Esto es lo que ve un invitado al que
+   * otra persona le compró la entrada — su cuenta nunca fue "comprador".
+   * Solo entradas de compras ya confirmadas.
+   */
+  async mias(usuarioId: number) {
+    const entradas = await this.prisma.entrada.findMany({
+      where: { usuarioId, compra: { estado: 'confirmado' } },
+      include: {
+        evento: true,
+        categoriaTicket: true,
+        compra: { select: { id: true, compradorId: true } },
+        ...CODIGO_ACTIVO,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+    return entradas.map(({ codigosQr, ...e }) => ({
+      ...e,
+      codigoQrVinculado: codigosQr[0] || null,
     }));
   }
 
@@ -185,8 +214,35 @@ export class EntradasService {
     foto: string | undefined,
     actorId: number,
   ) {
-    const entradaActual = await this.prisma.entrada.findUnique({ where: { id } });
+    const entradaActual = await this.prisma.entrada.findUnique({
+      where: { id },
+      include: {
+        evento: {
+          select: { nombre: true, fecha: true, fechaFin: true, estado: true },
+        },
+      },
+    });
     if (!entradaActual) throw new NotFoundException('Entrada no encontrada');
+
+    if (tipo === 'ingreso') {
+      const { evento } = entradaActual;
+      const ahora = new Date();
+      const aperturaPuerta = new Date(
+        evento.fecha.getTime() -
+          MARGEN_INGRESO_ANTICIPADO_HORAS * 60 * 60 * 1000,
+      );
+      if (evento.estado === 'finalizado' || ahora > evento.fechaFin) {
+        throw new ConflictException(
+          `"${evento.nombre}" ya finalizó — no se registran más ingresos`,
+        );
+      }
+      if (ahora < aperturaPuerta) {
+        throw new ConflictException(
+          `Todavía no es horario de ingreso para "${evento.nombre}": se habilita ` +
+            `${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio del evento`,
+        );
+      }
+    }
 
     if (tipo === 'salida' && entradaActual.estadoIngreso !== 'ingresado') {
       throw new ConflictException(

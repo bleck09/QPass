@@ -344,6 +344,113 @@
   background-color: var(--indigo-profundo-hover);
 }
 
+/* --- PANEL ASIGNAR USUARIO (lista + filtros) --- */
+.pi-ges-asignar-panel {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--borde-suave);
+}
+
+.pi-ges-asignar-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9375rem;
+  color: var(--texto-principal);
+  margin: 0 0 4px 0;
+}
+
+.pi-ges-asignar-ayuda {
+  font-size: 0.8125rem;
+  color: var(--texto-secundario);
+  margin: 0 0 12px 0;
+}
+
+.pi-ges-asignar-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.pi-ges-asignar-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.pi-ges-chip {
+  border: 1px solid var(--borde-medio);
+  background: var(--blanco);
+  color: var(--texto-secundario);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.pi-ges-chip:hover {
+  border-color: var(--indigo-profundo);
+  color: var(--indigo-profundo);
+}
+
+.pi-ges-chip.activo {
+  background: var(--indigo-profundo);
+  border-color: var(--indigo-profundo);
+  color: var(--blanco);
+}
+
+.pi-ges-asignar-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid var(--borde-suave);
+  border-radius: 10px;
+}
+
+.pi-ges-asignar-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--borde-suave);
+}
+
+.pi-ges-asignar-item:last-child {
+  border-bottom: none;
+}
+
+.pi-ges-asignar-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.pi-ges-asignar-item-info strong {
+  font-size: 0.875rem;
+  color: var(--texto-principal);
+}
+
+.pi-ges-asignar-item-info span {
+  font-size: 0.75rem;
+  color: var(--texto-secundario);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pi-ges-asignar-lista .pi-ges-sin-resultados {
+  padding: 16px 14px;
+  text-align: center;
+}
+
 /* --- MODAL CREAR EVENTO --- */
 .pi-ges-modal-overlay {
   position: fixed;

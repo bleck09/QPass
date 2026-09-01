@@ -246,7 +246,10 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     if (Object.keys(passwordsGeneradas || {}).length > 0) {
       const entradasPorId = new Map(actualizada.entradas.map(e => [e.id, e]));
       setPasswordsAMostrar(Object.entries(passwordsGeneradas).map(([entradaId, password]) => ({
-        nombre: entradasPorId.get(entradaId)?.nombre, correo: entradasPorId.get(entradaId)?.correo, password,
+        nombre: entradasPorId.get(entradaId)?.nombre,
+        correo: entradasPorId.get(entradaId)?.correo,
+        numero: entradasPorId.get(entradaId)?.numero,
+        password,
       })));
     }
   };
@@ -1219,10 +1222,10 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             </p>
             <div className="pi-dash-tabla-wrapper">
               <table className="pi-dash-tabla">
-                <thead><tr><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Contraseña</th></tr></thead>
+                <thead><tr><th scope="col">N.º entrada</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Contraseña</th></tr></thead>
                 <tbody>
                   {passwordsAMostrar.map((p, i) => (
-                    <tr key={i}><td>{p.nombre}</td><td>{p.correo}</td><td><strong>{p.password}</strong></td></tr>
+                    <tr key={i}><td>{p.numero ?? '—'}</td><td>{p.nombre}</td><td>{p.correo}</td><td><strong>{p.password}</strong></td></tr>
                   ))}
                 </tbody>
               </table>

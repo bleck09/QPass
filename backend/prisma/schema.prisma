@@ -328,6 +328,9 @@ model Entrada {
                                    // que se les crea su cuenta al aprobarse la Compra
 
   isTitular Boolean @default(false)
+  numero    Int?          // correlativo por evento, legible para el asistente ("entrada N.º 42").
+                           // Se asigna de forma atómica al APROBARSE la Compra (antes de eso la
+                           // Entrada solo reserva cupo y todavía no "cuenta" como asistente real).
   nombre    String
   correo    String
   celular   String?
@@ -350,7 +353,9 @@ model Entrada {
   reportesDatos     ReporteEntrada[]
   registrosIngreso  RegistroIngreso[] // historial completo de reingresos, cada uno con su foto
 
+  @@unique([eventoId, numero])
   @@index([eventoId, estadoIngreso])
+  @@index([usuarioId]) // "mis entradas" del invitado: se buscan por Entrada.usuarioId
   @@map("entradas")
 }
 

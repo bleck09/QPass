@@ -24,6 +24,12 @@ export class EntradasController {
     return this.entradasService.listar(eventoId, estadoIngreso);
   }
 
+  // Debe declararse ANTES de @Get(':id') para que "mias" no matchee como id.
+  @Get('mias')
+  mias(@UsuarioActual('id') usuarioId: number) {
+    return this.entradasService.mias(usuarioId);
+  }
+
   // Debe declararse ANTES de @Get(':id') para que "buscar" no matchee como id.
   @Get('buscar/:codigo')
   buscarPorCodigo(@Param('codigo') codigo: string) {

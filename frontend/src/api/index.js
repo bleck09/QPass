@@ -57,6 +57,9 @@ export const compras = {
 
 export const entradas = {
   listar: (params) => apiGet(`/entradas${qs(params)}`),
+  // Entradas a nombre del usuario logueado (titular o invitado), aunque la compra
+  // la haya hecho otra persona.
+  mias: () => apiGet('/entradas/mias'),
   obtener: (id) => apiGet(`/entradas/${id}`),
   buscarPorCodigo: (codigo) => apiGet(`/entradas/buscar/${encodeURIComponent(codigo)}`),
   registros: (id) => apiGet(`/entradas/${id}/registros`),
