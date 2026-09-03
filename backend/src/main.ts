@@ -36,7 +36,8 @@ async function bootstrap() {
 
   // Sin prefijo global: el frontend llama /auth, /eventos, ... sin /api.
   const puerto = config.get('PORT', { infer: true });
-  await app.listen(puerto);
+  // 0.0.0.0: necesario dentro de un contenedor para aceptar tráfico externo.
+  await app.listen(puerto, '0.0.0.0');
   Logger.log(`QPass API (NestJS) escuchando en http://localhost:${puerto}`, 'Bootstrap');
 }
 

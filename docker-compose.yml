@@ -1,0 +1,87 @@
+# =============================================================================
+# QPass — stack de producción para Dokploy (Docker Compose).
+#
+# Servicios: db (PostgreSQL) + backend (NestJS/Prisma) + frontend (build Vite
+# servido por nginx). Las migraciones de Prisma se aplican solas al arrancar
+# el backend (npm run start:migrate-prod).
+#
+# En Dokploy:
+#   1. Tipo de app: Compose. Ruta del compose: docker-compose.yml
+#   2. Cargar las variables de .env.example en la pestaña "Environment".
+#   3. Domains:
+#        - frontend  -> puerto 80    (ej. qpass.tudominio.com)
+#        - backend   -> puerto 4000  (ej. api.qpass.tudominio.com)
+#   4. VITE_API_URL debe ser la URL pública del backend (la del dominio de arriba),
+#      porque Vite la "hornea" en el bundle al compilar el frontend.
+#   5. CORS_ORIGEN debe ser la URL pública del frontend.
+# =============================================================================
+
+networks:
+  # La crea Dokploy; conecta los servicios web con su Traefik.
+  dokploy-network:
+    external: true
+  internal:
+
+volumes:
+  qpass_db_data:
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-qpass}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-qpass}
+      POSTGRES_DB: ${POSTGRES_DB:-qpass}
+    volumes:
+      - qpass_db_data:/var/lib/postgresql/data
+    networks:
+      - internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-qpass} -d ${POSTGRES_DB:-qpass}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-qpass}:${POSTGRES_PASSWORD:-qpass}@db:5432/${POSTGRES_DB:-qpass}?schema=public
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRA_EN: ${JWT_EXPIRA_EN:-8h}
+      PORT: "4000"
+      CORS_ORIGEN: ${CORS_ORIGEN}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+    expose:
+      - "4000"
+    networks:
+      - internal
+      - dokploy-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    restart: unless-stopped
+    depends_on:
+      - backend
+    expose:
+      - "80"
+    networks:
+      - dokploy-network
