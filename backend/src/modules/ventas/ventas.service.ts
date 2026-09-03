@@ -9,6 +9,7 @@
 
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { TransaccionesService } from '../transacciones/transacciones.service';
 import { CrearVentaDto } from './dto/crear-venta.dto';
 
@@ -16,6 +17,7 @@ import { CrearVentaDto } from './dto/crear-venta.dto';
 export class VentasService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
     private readonly transacciones: TransaccionesService,
   ) {}
 
@@ -37,6 +39,7 @@ export class VentasService {
   }
 
   async crear(dto: CrearVentaDto, ayudanteId: number) {
+    await this.eventoPolicy.porEntrada(dto.entradaId);
     return this.prisma.$transaction(async (tx) => {
       const entrada = await tx.entrada.findUnique({
         where: { id: dto.entradaId },

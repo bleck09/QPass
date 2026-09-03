@@ -301,6 +301,67 @@
   color: var(--blanco);
 }
 
+/* --- ARCHIVAR / DESARCHIVAR EVENTO --- */
+.pi-ges-detalle-header {
+  flex-wrap: wrap;
+}
+
+.pi-ges-btn-archivar,
+.pi-ges-btn-desarchivar {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--borde-medio);
+  background: var(--blanco);
+  color: var(--texto-principal);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-ges-btn-archivar:hover:not(:disabled) {
+  background: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+  border-color: var(--ambar-aviso-texto);
+}
+
+.pi-ges-btn-archivar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pi-ges-btn-desarchivar:hover {
+  background: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
+  border-color: var(--verde-recarga-texto);
+}
+
+.pi-ges-aviso-archivado {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin: 0;
+}
+
+/* El badge de estado va dentro de <h1>/<strong>; anulamos la regla genérica
+   ".pi-ges-detalle-info span" / ".pi-ges-evento-info ... span" que lo aplastaría. */
+.pi-ges-detalle-info h1 .pi-badge-estado-evento,
+.pi-ges-evento-info strong .pi-badge-estado-evento {
+  display: inline-flex;
+  font-size: 0.625rem;
+  vertical-align: middle;
+}
+
 /* --- FORMULARIO ASIGNAR USUARIO --- */
 .pi-ges-form-asignar {
   display: flex;

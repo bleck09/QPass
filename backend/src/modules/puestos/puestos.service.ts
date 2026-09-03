@@ -5,13 +5,17 @@
 
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 import { CrearPuestoDto } from './dto/crear-puesto.dto';
 import { ActualizarPuestoDto } from './dto/actualizar-puesto.dto';
 
 @Injectable()
 export class PuestosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
+  ) {}
 
   async listar(eventoId?: string, negocioId?: number) {
     if (!eventoId) throw new BadRequestException('eventoId es requerido');
@@ -22,6 +26,7 @@ export class PuestosService {
   }
 
   async crear(dto: CrearPuestoDto, actor: UsuarioJwt) {
+    await this.eventoPolicy.porEvento(dto.eventoId);
     const negocioId =
       actor.rol === 'UsuarioNegocio' ? actor.id : (dto.negocioId as number);
     return this.prisma.puesto.create({
@@ -36,6 +41,7 @@ export class PuestosService {
   }
 
   async actualizar(id: string, dto: ActualizarPuestoDto) {
+    await this.eventoPolicy.porPuesto(id);
     return this.prisma.puesto.update({
       where: { id },
       data: {

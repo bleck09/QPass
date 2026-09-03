@@ -127,6 +127,7 @@ model Usuario {
   solicitudesEnviadas   SolicitudEvento[]      @relation("ClienteQueSolicita")
   solicitudesResueltas  SolicitudEvento[]      @relation("AdminQueResuelveSolicitud")
   eventosCreados        Evento[]               @relation("AdminQueCreaEvento")
+  eventosArchivados     Evento[]               @relation("AdminQueArchivaEvento")
   codigosRecuperacion   CodigoRecuperacion[]
   cambiosPassword       CambioPassword[]
 
@@ -190,6 +191,12 @@ model Evento {
   fechaFin    DateTime
   imagen      String?
   estado      EstadoEvento @default(activo)
+  // Cierre DEFINITIVO: distinto de estado=finalizado (que aún permite devoluciones,
+  // incidencias, reportes...). Un evento archivado queda de SOLO LECTURA — ninguna
+  // escritura ligada a él pasa (ver EventoPolicy). Solo Admin archiva/desarchiva, y
+  // solo un evento ya finalizado. archivadoPorId audita quién lo hizo.
+  archivadoEn    DateTime?
+  archivadoPorId Int?
   qrPrefijo   String?      // 3 letras que van al inicio de cada CodigoQr.codigo generado
   qrAncho     Float?       // ancho de impresión de la manilla/QR (config del lote generado)
   qrAlto      Float?       // alto de impresión de la manilla/QR
@@ -197,6 +204,7 @@ model Evento {
   createdAt   DateTime     @default(now())
 
   creadoPor         Usuario      @relation("AdminQueCreaEvento", fields: [creadoPorId], references: [id])
+  archivadoPor      Usuario?     @relation("AdminQueArchivaEvento", fields: [archivadoPorId], references: [id])
   asignaciones      Asignacion[]
   categoriasTicket  CategoriaTicket[]
   compras           Compra[]

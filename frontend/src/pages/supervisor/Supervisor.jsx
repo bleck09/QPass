@@ -15,7 +15,8 @@ import {
 const MARGEN_INGRESO_ANTICIPADO_HORAS = 3;
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { formatearFecha } from '../../utils/eventos.js';
+import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
+import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
 import './Supervisor.css';
@@ -58,6 +59,11 @@ export default function Supervisor() {
   const [filtro, setFiltro] = useState('todos');
   const [busqueda, setBusqueda] = useState('');
   const [alertaToggle, setAlertaToggle] = useState(''); // Mensaje de error interno del modal
+  // Al registrar un movimiento: un "flash" de confirmación de ~1 s ({ tipo, nombre }) y
+  // después se vuelve a mostrar la tarjeta del asistente ya actualizada (como un reescaneo),
+  // que se cierra a mano o sola a los 5 s (tarjetaAutoCierre).
+  const [confirmacion, setConfirmacion] = useState(null);
+  const [tarjetaAutoCierre, setTarjetaAutoCierre] = useState(false);
 
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
@@ -106,6 +112,8 @@ export default function Supervisor() {
       const entrada = await api.entradas.buscarPorCodigo(codigo);
       setFotoCapturadaTemporal(null);
       setAlertaToggle('');
+      setConfirmacion(null);
+      setTarjetaAutoCierre(false);
       setTarjetaQR(entrada);
       api.entradas.registros(entrada.id).then(setHistorialTarjeta);
     } catch (err) {
@@ -126,10 +134,12 @@ export default function Supervisor() {
     setFotoCapturadaTemporal(null);
     setCapturandoFoto(false);
     setAlertaToggle('');
+    setConfirmacion(null);
+    setTarjetaAutoCierre(false);
   };
 
   // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  const hayModalAbierto = escaneando || !!tarjetaQR;
+  const hayModalAbierto = escaneando || !!tarjetaQR || !!confirmacion;
   useEffect(() => {
     if (!hayModalAbierto) return;
     const alTecla = (e) => {
@@ -145,11 +155,24 @@ export default function Supervisor() {
     };
   }, [hayModalAbierto]);
 
-  const actualizarParticipante = (entradaActualizada) => {
-    setTarjetaQR(entradaActualizada);
-    setParticipantes(prev => prev.map(p => p.id === entradaActualizada.id ? entradaActualizada : p));
-    api.entradas.registros(entradaActualizada.id).then(setHistorialTarjeta);
-  };
+  // Paso 1: el flash de confirmación dura ~1 s; al terminar se vuelve a la tarjeta del
+  // asistente (ya actualizada) y arranca su cuenta regresiva de cierre.
+  useEffect(() => {
+    if (!confirmacion) return;
+    const t = setTimeout(() => {
+      setConfirmacion(null);
+      setTarjetaAutoCierre(true);
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [confirmacion]);
+
+  // Paso 2: esa tarjeta reabierta tras registrar se cierra sola a los 5 s, salvo que el
+  // operador la cierre antes o se ponga a tomar otra foto.
+  useEffect(() => {
+    if (!tarjetaAutoCierre || !tarjetaQR || capturandoFoto) return;
+    const t = setTimeout(() => cerrarTarjeta(), 5000);
+    return () => clearTimeout(t);
+  }, [tarjetaAutoCierre, tarjetaQR, capturandoFoto]);
 
   // ========================================================
   // REGISTRAR INGRESO / SALIDA — la foto es UNA sola por Entrada (persona-evento), guardada en
@@ -210,7 +233,13 @@ export default function Supervisor() {
         ? await api.entradas.salida(tarjetaQR.id, fotoCapturadaTemporal)
         : await api.entradas.ingreso(tarjetaQR.id, fotoCapturadaTemporal);
       setFotoCapturadaTemporal(null);
-      actualizarParticipante(actualizado);
+      // Refresca la fila en la tabla/estadísticas y deja la tarjeta abierta pero
+      // actualizada (nuevo estado + historial); encima va el flash de confirmación.
+      setParticipantes(prev => prev.map(p => (p.id === actualizado.id ? actualizado : p)));
+      setTarjetaQR(actualizado);
+      api.entradas.registros(actualizado.id).then(setHistorialTarjeta);
+      setTarjetaAutoCierre(false);
+      setConfirmacion({ tipo, nombre: actualizado.nombre });
     } catch (err) {
       setAlertaToggle(err.message);
     }
@@ -231,10 +260,15 @@ export default function Supervisor() {
         ) : (
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (
-              <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
+              <button
+                key={ev.id}
+                className="pi-entrega-evento-card"
+                onClick={() => abrirEvento(ev)}
+                disabled={estadoEvento(ev) === 'archivado'}
+              >
                 <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
-                  <strong>{ev.nombre}</strong>
+                  <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
                 </div>
               </button>
@@ -522,6 +556,23 @@ export default function Supervisor() {
               )}
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* --- FLASH DE CONFIRMACIÓN (~1 s) TRAS REGISTRAR INGRESO / SALIDA --- */}
+      {confirmacion && (
+        <div className="pi-sup-modal-overlay pi-sup-confirm-overlay">
+          <div
+            className={`pi-sup-confirm ${confirmacion.tipo === 'ingreso' ? 'confirm-in' : 'confirm-out'}`}
+            role="status"
+            aria-live="polite"
+          >
+            <div className="pi-sup-confirm-icono">
+              {confirmacion.tipo === 'ingreso' ? <FaSignInAlt aria-hidden="true" /> : <FaSignOutAlt aria-hidden="true" />}
+            </div>
+            <h3>{confirmacion.tipo === 'ingreso' ? 'Ingreso registrado' : 'Salida registrada'}</h3>
+            <p>{confirmacion.nombre}</p>
           </div>
         </div>
       )}

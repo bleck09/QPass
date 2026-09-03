@@ -10,6 +10,7 @@ import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { HealthController } from './health.controller';
 import { ConfigModule } from './config/config.module';
 import { PrismaModule } from './prisma/prisma.module';
+import { PoliticasModule } from './common/politicas/politicas.module';
 import { MailModule } from './mail/mail.module';
 import { JobsModule } from './jobs/jobs.module';
 
@@ -40,6 +41,7 @@ import { LandingConfigModule } from './modules/landing-config/landing-config.mod
   imports: [
     ConfigModule,
     PrismaModule,
+    PoliticasModule,
     MailModule,
     JobsModule,
 

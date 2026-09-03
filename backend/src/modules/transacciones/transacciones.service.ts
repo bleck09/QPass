@@ -13,6 +13,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { SaldoInsuficienteException } from '../../common/excepciones/dominio.excepciones';
 
 type PrismaTx = Prisma.TransactionClient;
@@ -26,7 +27,10 @@ interface FiltrosTransaccion {
 
 @Injectable()
 export class TransaccionesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
+  ) {}
 
   async listar(filtros: FiltrosTransaccion) {
     if (!filtros.usuarioId && !filtros.entradaId && !filtros.eventoId) {
@@ -54,6 +58,7 @@ export class TransaccionesService {
    * escaneada. Es un crédito, nunca deja negativo -> UPDATE con increment.
    */
   async recargar(params: { entradaId: string; monto: number; operadorId: number }) {
+    await this.eventoPolicy.porEntrada(params.entradaId);
     return this.prisma.$transaction(async (tx) => {
       const entrada = await tx.entrada.findUnique({
         where: { id: params.entradaId },
@@ -99,6 +104,7 @@ export class TransaccionesService {
     eventoId: string;
     operadorId: number;
   }) {
+    await this.eventoPolicy.porEvento(params.eventoId);
     return this.prisma.$transaction(async (tx) => {
       const usuario = await tx.usuario.findUnique({
         where: { id: params.usuarioId },

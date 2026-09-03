@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { GenerarCodigosQrDto } from './dto/generar-codigos-qr.dto';
 
 // Sin 0/O/1/I para no confundir al leer un código a mano.
@@ -29,7 +30,10 @@ const generarParteAleatoria = () => {
 
 @Injectable()
 export class CodigosQrService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
+  ) {}
 
   async listar(eventoId?: string, disponibles?: string) {
     if (!eventoId) throw new BadRequestException('eventoId es requerido');
@@ -53,6 +57,7 @@ export class CodigosQrService {
    * repite (codigo es @unique en la BD).
    */
   async generar(dto: GenerarCodigosQrDto) {
+    await this.eventoPolicy.porEvento(dto.eventoId);
     const prefijoNormalizado =
       String(dto.prefijo || 'QP')
         .toUpperCase()
@@ -96,6 +101,7 @@ export class CodigosQrService {
   /** Borra solo los códigos aún sin vincular (no reinicia la numeración). */
   async eliminarNoVinculados(eventoId?: string) {
     if (!eventoId) throw new BadRequestException('eventoId es requerido');
+    await this.eventoPolicy.porEvento(eventoId);
     await this.prisma.codigoQr.deleteMany({
       where: { eventoId, entradaId: null },
     });

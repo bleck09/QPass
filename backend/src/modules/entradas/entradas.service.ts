@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, TipoRegistroIngreso } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 
 const CODIGO_ACTIVO = {
   codigosQr: { where: { anulado: false }, take: 1 },
@@ -38,7 +39,10 @@ const MARGEN_INGRESO_ANTICIPADO_HORAS = 3;
 
 @Injectable()
 export class EntradasService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
+  ) {}
 
   async listar(eventoId?: string, estadoIngreso?: string) {
     if (!eventoId) throw new BadRequestException('eventoId es requerido');
@@ -95,6 +99,7 @@ export class EntradasService {
           include: {
             categoriaTicket: true,
             compra: { select: { estado: true } },
+            evento: { select: { id: true, nombre: true } },
             ...CON_SALDO,
           },
         },
@@ -141,6 +146,7 @@ export class EntradasService {
    * está el índice único parcial de C4).
    */
   async vincularQr(id: string, codigoQrId: string, actorId: number) {
+    await this.eventoPolicy.porEntrada(id);
     const entradaActual = await this.prisma.entrada.findUnique({
       where: { id },
       include: { compra: true },
@@ -187,6 +193,7 @@ export class EntradasService {
 
   /** Manilla perdida/dañada: anula el código activo (el saldo no se mueve). */
   async anularQr(id: string, motivo: string | undefined, actorId: number) {
+    await this.eventoPolicy.porEntrada(id);
     const activo = await this.prisma.codigoQr.findFirst({
       where: { entradaId: id, anulado: false },
     });
@@ -214,6 +221,7 @@ export class EntradasService {
     foto: string | undefined,
     actorId: number,
   ) {
+    await this.eventoPolicy.porEntrada(id);
     const entradaActual = await this.prisma.entrada.findUnique({
       where: { id },
       include: {

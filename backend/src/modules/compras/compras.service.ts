@@ -18,6 +18,7 @@ import { Prisma } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { MailService } from '../../mail/mail.service';
 import { SinCupoDisponibleException } from '../../common/excepciones/dominio.excepciones';
 import {
@@ -34,6 +35,7 @@ const MAX_ENTRADAS_POR_COMPRA = 6;
 export class ComprasService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
     private readonly mail: MailService,
   ) {}
 
@@ -48,6 +50,11 @@ export class ComprasService {
       where: { id: dto.eventoId },
     });
     if (!evento) throw new NotFoundException('Evento no encontrado');
+    if (evento.archivadoEn) {
+      throw new ConflictException(
+        'Este evento está archivado; no admite más operaciones',
+      );
+    }
     if (evento.estado === 'finalizado') {
       throw new ConflictException(
         'Este evento ya finalizó; no se pueden comprar entradas',
@@ -188,6 +195,7 @@ export class ComprasService {
   async corregirEntradas(id: string, dto: CorregirEntradasDto, actorId: number) {
     const compra = await this.prisma.compra.findUnique({ where: { id } });
     if (!compra) throw new NotFoundException('Compra no encontrada');
+    await this.eventoPolicy.porEvento(compra.eventoId);
     if (compra.compradorId !== actorId) {
       throw new ForbiddenException('No autorizado');
     }
@@ -224,6 +232,7 @@ export class ComprasService {
       include: { entradas: true },
     });
     if (!compra) throw new NotFoundException('Compra no encontrada');
+    await this.eventoPolicy.porEvento(compra.eventoId);
     if (compra.estado !== 'pendiente') {
       throw new ConflictException('Esta compra ya fue resuelta');
     }
@@ -336,6 +345,7 @@ export class ComprasService {
       include: { entradas: true },
     });
     if (!compra) throw new NotFoundException('Compra no encontrada');
+    await this.eventoPolicy.porEvento(compra.eventoId);
     if (compra.estado !== 'pendiente') {
       throw new ConflictException('Esta compra ya fue resuelta');
     }

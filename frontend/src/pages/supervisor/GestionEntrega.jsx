@@ -2,15 +2,18 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import {
   FaMapMarkerAlt, FaSearch, FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
-  FaUsers, FaHourglassHalf, FaExclamationTriangle
+  FaUsers, FaHourglassHalf, FaExclamationTriangle,
+  FaIdCard, FaTicketAlt, FaCalendarAlt, FaHashtag, FaUserCircle
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { formatearFecha } from '../../utils/eventos.js';
+import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
+import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import './GestionEntrega.css';
+import './Supervisor.css';
 
 export default function GestionEntrega() {
   useTituloPagina('Entrega de manillas');
@@ -37,6 +40,14 @@ export default function GestionEntrega() {
   const [codigoValidado, setCodigoValidado] = useState(null);
   const [errorCodigo, setErrorCodigo] = useState('');
   const [validando, setValidando] = useState(false);
+
+  // Verificación de manilla ya vinculada: escaneo de SOLO LECTURA. No cambia nada,
+  // solo resuelve la entrada dueña de la manilla y la muestra para confirmar a
+  // simple vista que el vínculo quedó bien (persona, evento, tipo, N.º, documento).
+  const [verificando, setVerificando] = useState(false);
+  const [entradaVerificada, setEntradaVerificada] = useState(null);
+  const [errorVerificacion, setErrorVerificacion] = useState('');
+  const [buscandoVerificacion, setBuscandoVerificacion] = useState(false);
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
@@ -114,6 +125,26 @@ export default function GestionEntrega() {
     cerrarVincular();
   };
 
+  const handleManillaVerificada = async (codigo) => {
+    setVerificando(false);
+    setBuscandoVerificacion(true);
+    setErrorVerificacion('');
+    try {
+      const entrada = await api.entradas.buscarPorCodigo(codigo);
+      setEntradaVerificada(entrada);
+    } catch (err) {
+      setErrorVerificacion(err.message);
+    } finally {
+      setBuscandoVerificacion(false);
+    }
+  };
+
+  const cerrarVerificacion = () => {
+    setEntradaVerificada(null);
+    setErrorVerificacion('');
+    setVerificando(false);
+  };
+
   return (
     <div className="pi-entrega-container">
 
@@ -123,10 +154,26 @@ export default function GestionEntrega() {
             <FaArrowLeft /> Volver a Gestión de Entrega
           </button>
 
-          <div className="pi-entrega-header">
-            <h1>{eventoDetalle.nombre}</h1>
-            <p>Busca a un participante y vincula su código QR de entrega.</p>
+          <div className="pi-entrega-header-fila">
+            <div className="pi-entrega-header">
+              <h1>{eventoDetalle.nombre}</h1>
+              <p>Busca a un participante y vincula su código QR de entrega.</p>
+            </div>
+            <button
+              type="button"
+              className="pi-entrega-btn-verificar"
+              onClick={() => { setErrorVerificacion(''); setVerificando(true); }}
+              disabled={buscandoVerificacion}
+            >
+              <FaQrcode /> {buscandoVerificacion ? 'Buscando...' : 'Verificar manilla'}
+            </button>
           </div>
+
+          {errorVerificacion && (
+            <p className="pi-entrega-aviso pi-entrega-aviso-error">
+              <FaExclamationTriangle /> {errorVerificacion}
+            </p>
+          )}
 
           <div className="pi-entrega-stats-grid">
             <div className="pi-entrega-stat-card">
@@ -221,10 +268,15 @@ export default function GestionEntrega() {
           ) : (
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (
-              <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
+              <button
+                key={ev.id}
+                className="pi-entrega-evento-card"
+                onClick={() => abrirEvento(ev)}
+                disabled={estadoEvento(ev) === 'archivado'}
+              >
                 <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
-                  <strong>{ev.nombre}</strong>
+                  <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
                 </div>
               </button>
@@ -254,9 +306,54 @@ export default function GestionEntrega() {
                   <span>Verificando código...</span>
                 </div>
               ) : codigoValidado ? (
-                <div className="pi-entrega-codigo-detectado">
-                  <FaCheckCircle color="var(--verde-recarga-texto)" />
-                  <span>Código <strong>{codigoValidado.codigo}</strong> listo para vincular a <strong>{participanteVinculando.nombre}</strong></span>
+                <div className="pi-entrega-preview">
+                  <div className="pi-entrega-preview-persona">
+                    {(participanteVinculando.foto || participanteVinculando.usuario?.foto) ? (
+                      <img
+                        width="48" height="48"
+                        src={participanteVinculando.foto || participanteVinculando.usuario.foto}
+                        alt={participanteVinculando.nombre}
+                        className="pi-entrega-preview-avatar"
+                      />
+                    ) : (
+                      <div className="pi-entrega-preview-avatar pi-entrega-preview-avatar-ph">
+                        <FaUserCircle size={30} />
+                      </div>
+                    )}
+                    <div>
+                      <span className="pi-entrega-preview-nombre">{participanteVinculando.nombre}</span>
+                      <span className="pi-entrega-preview-sub">
+                        {participanteVinculando.categoriaTicket?.nombre || 'Sin categoría'}
+                        {participanteVinculando.numero ? ` · N.º ${participanteVinculando.numero}` : ''}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="pi-entrega-preview-datos">
+                    <div className="pi-entrega-preview-fila">
+                      <span><FaIdCard /> Documento</span>
+                      <strong>{participanteVinculando.documento || '—'}</strong>
+                    </div>
+                    <div className="pi-entrega-preview-fila">
+                      <span><FaCalendarAlt /> Evento</span>
+                      <strong>{eventoDetalle.nombre}</strong>
+                    </div>
+                    <div className="pi-entrega-preview-fila">
+                      <span><FaQrcode /> Manilla a vincular</span>
+                      <strong>{codigoValidado.codigo}</strong>
+                    </div>
+                    {participanteVinculando.codigoQrVinculado && (
+                      <div className="pi-entrega-preview-fila pi-entrega-preview-reemplazo">
+                        <span><FaExclamationTriangle /> Reemplaza a</span>
+                        <strong>{participanteVinculando.codigoQrVinculado.codigo}</strong>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pi-entrega-codigo-detectado">
+                    <FaCheckCircle color="var(--verde-recarga-texto)" />
+                    <span>Listo para vincular</span>
+                  </div>
                 </div>
               ) : (
                 <div className="pi-entrega-camara-simulada">
@@ -291,6 +388,128 @@ export default function GestionEntrega() {
           </div>
         </div>
       )}
+
+      {/* MODAL: ESCÁNER DE VERIFICACIÓN (cámara real) */}
+      {verificando && (
+        <div className="pi-sup-modal-overlay" onClick={() => setVerificando(false)}>
+          <div
+            className="pi-sup-modal-tarjeta"
+            onClick={(e) => e.stopPropagation()}
+            style={{ padding: '24px' }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Escanear manilla para verificar"
+          >
+            <h3 style={{ textAlign: 'center', marginBottom: '14px' }}>
+              <FaQrcode aria-hidden="true" /> Escanear manilla
+            </h3>
+            <EscanerQr onDetectado={handleManillaVerificada} onCancelar={() => setVerificando(false)} />
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: RESULTADO DE LA VERIFICACIÓN (solo lectura) */}
+      {entradaVerificada && (() => {
+        const esDeEsteEvento = entradaVerificada.eventoId === eventoIdDetalle;
+        return (
+          <div className="pi-sup-modal-overlay" onClick={cerrarVerificacion}>
+            <div
+              className="pi-sup-modal-tarjeta"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Verificación de ${entradaVerificada.nombre}`}
+            >
+              <button type="button" className="pi-sup-btn-cerrar" onClick={cerrarVerificacion} aria-label="Cerrar">
+                <FaTimes aria-hidden="true" />
+              </button>
+
+              <div
+                className="pi-sup-tarjeta-estado"
+                style={esDeEsteEvento ? undefined : { backgroundColor: 'var(--ambar-aviso-suave)' }}
+              >
+                <div
+                  className="estado-badge"
+                  style={esDeEsteEvento ? undefined : { color: 'var(--ambar-aviso-texto)' }}
+                >
+                  {esDeEsteEvento
+                    ? <><FaCheckCircle /> Vínculo verificado</>
+                    : <><FaExclamationTriangle /> Manilla de otro evento</>}
+                </div>
+              </div>
+
+              <div className="pi-sup-fotos-comparacion">
+                <div className="foto-box">
+                  {entradaVerificada.usuario?.foto ? (
+                    <img width="110" height="110" src={entradaVerificada.usuario.foto} alt="Foto de perfil" className="foto-img" />
+                  ) : (
+                    <div className="foto-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <FaUserCircle size={48} color="var(--texto-secundario)" />
+                    </div>
+                  )}
+                  <span className="foto-label text-gray">Foto de perfil</span>
+                </div>
+                <div className="foto-box">
+                  {entradaVerificada.foto ? (
+                    <img width="110" height="110" src={entradaVerificada.foto} alt="Foto registrada en puerta" className="foto-img border-cyan" />
+                  ) : (
+                    <div className="foto-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <FaUserCircle size={48} color="var(--texto-secundario)" />
+                    </div>
+                  )}
+                  <span className="foto-label text-cyan">Foto en puerta</span>
+                </div>
+              </div>
+
+              <h2 className="pi-sup-tarjeta-nombre">{entradaVerificada.nombre}</h2>
+
+              <div className="pi-sup-info-card">
+                <div className="info-row">
+                  <FaCalendarAlt className="info-icon" />
+                  <div>
+                    <span className="info-label">Evento</span>
+                    <span className="info-valor">{entradaVerificada.evento?.nombre || eventoDetalle.nombre}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <FaHashtag className="info-icon" />
+                  <div>
+                    <span className="info-label">N.º de entrada</span>
+                    <span className="info-valor">{entradaVerificada.numero ? `#${entradaVerificada.numero}` : '—'}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <FaIdCard className="info-icon" />
+                  <div>
+                    <span className="info-label">Documento</span>
+                    <span className="info-valor">{entradaVerificada.documento || '—'}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <FaTicketAlt className="info-icon" />
+                  <div>
+                    <span className="info-label">Tipo de entrada</span>
+                    <span className="info-valor">{entradaVerificada.categoriaTicket?.nombre || '—'}</span>
+                  </div>
+                </div>
+                <div className="info-row">
+                  <FaQrcode className="info-icon" />
+                  <div>
+                    <span className="info-label">Manilla vinculada</span>
+                    <span className="info-valor">{entradaVerificada.codigoQrVinculado?.codigo || '—'}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pi-sup-modal-footer" style={{ alignItems: 'center' }}>
+                <button type="button" className="pi-entrega-btn-cancelar" onClick={cerrarVerificacion}>
+                  Cerrar
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );

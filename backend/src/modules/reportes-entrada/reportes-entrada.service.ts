@@ -13,6 +13,7 @@ import {
 } from '@nestjs/common';
 import { EstadoCaso, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 import {
   CorregirReporteEntradaDto,
@@ -21,7 +22,10 @@ import {
 
 @Injectable()
 export class ReportesEntradaService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
+  ) {}
 
   async listar(
     actor: UsuarioJwt,
@@ -55,6 +59,7 @@ export class ReportesEntradaService {
   }
 
   async crear(dto: CrearReporteEntradaDto) {
+    await this.eventoPolicy.porEntrada(dto.entradaId);
     const entrada = await this.prisma.entrada.findUnique({
       where: { id: dto.entradaId },
     });
@@ -86,6 +91,7 @@ export class ReportesEntradaService {
       where: { id },
     });
     if (!reporte) throw new NotFoundException('Reporte no encontrado');
+    await this.eventoPolicy.porEvento(reporte.eventoId);
 
     const campoEntrada = reporte.campo; // 'nombre' | 'correo' | 'celular'
     const entrada = await this.prisma.entrada.findUniqueOrThrow({

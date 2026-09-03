@@ -11,11 +11,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { CrearCategoriaTicketDto } from './dto/crear-categoria-ticket.dto';
 
 @Injectable()
 export class CategoriasTicketService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
+  ) {}
 
   async listar(eventoId?: string) {
     if (!eventoId) throw new BadRequestException('eventoId es requerido');
@@ -23,6 +27,7 @@ export class CategoriasTicketService {
   }
 
   async crear(dto: CrearCategoriaTicketDto) {
+    await this.eventoPolicy.porEvento(dto.eventoId);
     return this.prisma.categoriaTicket.create({
       data: {
         eventoId: dto.eventoId,
@@ -39,6 +44,7 @@ export class CategoriasTicketService {
       where: { id },
     });
     if (!categoria) throw new NotFoundException('Categoría no encontrada');
+    await this.eventoPolicy.porEvento(categoria.eventoId);
     if (categoria.cantidadVendida > 0) {
       throw new ConflictException(
         'No se puede eliminar: ya tiene entradas vendidas',

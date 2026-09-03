@@ -5,11 +5,15 @@
 
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { GuardarLandingConfigDto } from './dto/guardar-landing-config.dto';
 
 @Injectable()
 export class LandingConfigService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
+  ) {}
 
   async obtener(eventoId: string) {
     const config = await this.prisma.landingConfig.findUnique({
@@ -22,6 +26,7 @@ export class LandingConfigService {
   }
 
   async guardar(eventoId: string, dto: GuardarLandingConfigDto) {
+    await this.eventoPolicy.porEvento(eventoId);
     const data = {
       titulo: dto.titulo,
       informacion: dto.informacion,

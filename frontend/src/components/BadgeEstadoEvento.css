@@ -1,0 +1,42 @@
+.pi-badge-estado-evento {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+  line-height: 1.4;
+}
+
+.pi-badge-estado-evento::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.pi-badge-estado-evento.ev-proximo {
+  background: var(--gris-niebla, #eef1f6);
+  color: var(--texto-secundario, #5b6472);
+}
+
+.pi-badge-estado-evento.ev-en-curso {
+  background: var(--verde-recarga-suave, #d8f5e6);
+  color: var(--verde-recarga-texto, #1b7a4b);
+}
+
+.pi-badge-estado-evento.ev-finalizado {
+  background: var(--ambar-aviso-suave, #fdeecf);
+  color: var(--ambar-aviso-texto, #9a6a15);
+}
+
+.pi-badge-estado-evento.ev-archivado {
+  background: var(--borde-suave, #e2e6ec);
+  color: var(--texto-secundario, #5b6472);
+  opacity: 0.85;
+}

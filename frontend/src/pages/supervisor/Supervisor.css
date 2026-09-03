@@ -261,3 +261,56 @@
   font-size: 0.75rem;
   color: var(--ambar-aviso-texto, #b7791f);
 }
+
+/* =======================================================
+   FLASH DE CONFIRMACIÓN DE INGRESO / SALIDA (~1 s, luego vuelve la tarjeta)
+======================================================= */
+.pi-sup-confirm {
+  background-color: var(--blanco);
+  width: 100%;
+  max-width: 340px;
+  border-radius: 24px;
+  padding: 32px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+  animation: modalIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pi-sup-confirm-icono {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  margin-bottom: 8px;
+}
+
+.confirm-in .pi-sup-confirm-icono {
+  background-color: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
+}
+
+.confirm-out .pi-sup-confirm-icono {
+  background-color: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+}
+
+.pi-sup-confirm h3 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--azul-noche);
+}
+
+.pi-sup-confirm p {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--texto-principal);
+}

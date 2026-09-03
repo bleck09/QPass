@@ -5,7 +5,11 @@
  * correos. Espeja api/index.js -> eventos.
  * ========================================================================= */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { aFecha, aFechaCon } from '../../common/utils/fechas.utils';
 import { CrearEventoDto } from './dto/crear-evento.dto';
@@ -59,7 +63,12 @@ export class EventosService {
 
   /** Actualiza campos parciales de un evento existente. */
   async actualizar(id: string, dto: ActualizarEventoDto) {
-    await this.obtenerPorId(id);
+    const evento = await this.obtenerPorId(id);
+    if (evento.archivadoEn) {
+      throw new ConflictException(
+        'El evento está archivado: quedó de solo lectura. Desarchívalo para editarlo.',
+      );
+    }
     return this.prisma.evento.update({
       where: { id },
       data: {
@@ -78,10 +87,45 @@ export class EventosService {
 
   /** Cierra el evento manualmente, antes de su fechaFin si hace falta (C22). */
   async cerrar(id: string) {
-    await this.obtenerPorId(id);
+    const evento = await this.obtenerPorId(id);
+    if (evento.archivadoEn) {
+      throw new ConflictException('El evento ya está archivado.');
+    }
     return this.prisma.evento.update({
       where: { id },
       data: { estado: 'finalizado' },
+    });
+  }
+
+  /**
+   * Archiva el evento: cierre DEFINITIVO, queda de solo lectura (ver EventoPolicy).
+   * Solo se puede archivar un evento ya finalizado — si sigue activo, primero se cierra.
+   */
+  async archivar(id: string, adminId: number) {
+    const evento = await this.obtenerPorId(id);
+    if (evento.archivadoEn) {
+      throw new ConflictException('El evento ya está archivado.');
+    }
+    if (evento.estado !== 'finalizado') {
+      throw new ConflictException(
+        'Solo se puede archivar un evento finalizado. Ciérralo primero.',
+      );
+    }
+    return this.prisma.evento.update({
+      where: { id },
+      data: { archivadoEn: new Date(), archivadoPorId: adminId },
+    });
+  }
+
+  /** Deshace el archivado (Admin): el evento vuelve a admitir cambios. */
+  async desarchivar(id: string) {
+    const evento = await this.obtenerPorId(id);
+    if (!evento.archivadoEn) {
+      throw new ConflictException('El evento no está archivado.');
+    }
+    return this.prisma.evento.update({
+      where: { id },
+      data: { archivadoEn: null, archivadoPorId: null },
     });
   }
 }

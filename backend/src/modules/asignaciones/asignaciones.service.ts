@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import { Prisma, Rol } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { CrearAsignacionDto } from './dto/crear-asignacion.dto';
 
 // Roles que SÍ trabajan un evento concreto (los demás no se asignan).
@@ -23,7 +24,10 @@ const ROLES_ASIGNABLES: Rol[] = [
 
 @Injectable()
 export class AsignacionesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
+  ) {}
 
   async listar(eventoId?: string, usuarioId?: number, rol?: Rol) {
     const where: Prisma.AsignacionWhereInput = {};
@@ -46,6 +50,7 @@ export class AsignacionesService {
    * a esa persona sin ver el evento en su panel).
    */
   async asignar(dto: CrearAsignacionDto) {
+    await this.eventoPolicy.porEvento(dto.eventoId);
     const [evento, usuario] = await Promise.all([
       this.prisma.evento.findUnique({ where: { id: dto.eventoId } }),
       this.prisma.usuario.findUnique({ where: { id: dto.usuarioId } }),
@@ -72,6 +77,7 @@ export class AsignacionesService {
   }
 
   async quitar(id: string) {
+    await this.eventoPolicy.porAsignacion(id);
     await this.prisma.asignacion.delete({ where: { id } });
   }
 }

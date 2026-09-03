@@ -20,7 +20,7 @@ cd backend
 npm install
 cp .env.example .env   # completar DATABASE_URL y JWT_SECRET
 npm run prisma:migrate
-npm run dev
+npm run start:dev
 ```
 
 ## Reglas de negocio (decisiones, NO cambiar sin querer)

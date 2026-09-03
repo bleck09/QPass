@@ -10,7 +10,8 @@ import {
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { formatearFecha } from '../../utils/eventos.js';
+import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
+import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import './Recargador.css';
 import '../supervisor/GestionEntrega.css';
@@ -214,10 +215,15 @@ export default function Recargador() {
         ) : (
           <div className="pi-entrega-eventos-grid">
             {eventos.map(ev => (
-              <button key={ev.id} className="pi-entrega-evento-card" onClick={() => abrirEvento(ev)}>
+              <button
+                key={ev.id}
+                className="pi-entrega-evento-card"
+                onClick={() => abrirEvento(ev)}
+                disabled={estadoEvento(ev) === 'archivado'}
+              >
                 <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
                 <div className="pi-entrega-evento-info">
-                  <strong>{ev.nombre}</strong>
+                  <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
                 </div>
               </button>

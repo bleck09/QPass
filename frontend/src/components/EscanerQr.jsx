@@ -8,6 +8,28 @@ import './EscanerQr.css';
 // (a veces 1920x1080+) lo vuelve lento. Un QR se detecta igual de bien en una imagen chica.
 const ANCHO_ANALISIS = 400;
 
+// La cámara elegida se recuerda en localStorage por origen: al reabrir el escáner
+// se vuelve a usar esa misma cámara si sigue disponible (deviceId estable mientras
+// el permiso siga concedido). Si ya no existe, se limpia y se cae a la de por defecto.
+const CLAVE_CAMARA = 'qpass:escanerQr:camaraId';
+
+function leerCamaraGuardada() {
+  try {
+    return localStorage.getItem(CLAVE_CAMARA) || '';
+  } catch {
+    return '';
+  }
+}
+
+function guardarCamara(id) {
+  try {
+    if (id) localStorage.setItem(CLAVE_CAMARA, id);
+    else localStorage.removeItem(CLAVE_CAMARA);
+  } catch {
+    // localStorage no disponible (modo privado, etc.): la elección solo dura esta sesión.
+  }
+}
+
 // Escáner de QR con la cámara real del dispositivo. Cuando el navegador trae BarcodeDetector
 // (Chrome/Edge en Android y escritorio, Safari 17+) lo usa — es el decodificador nativo del
 // sistema, por hardware, mucho más rápido y confiable que decodificar en JS puro. Si no está
@@ -24,7 +46,8 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
   );
   const [listo, setListo] = useState(false);
   const [camaras, setCamaras] = useState([]);
-  const [camaraId, setCamaraId] = useState('');
+  // Arranca con la cámara que el usuario dejó elegida en una visita anterior (si hay).
+  const [camaraId, setCamaraId] = useState(leerCamaraGuardada);
 
   useEffect(() => {
     let activo = true;
@@ -52,8 +75,11 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
             const videos = dispositivos.filter(d => d.kind === 'videoinput');
             if (activo && videos.length > 1) {
               setCamaras(videos);
+              // Solo autoseleccionamos la cámara activa si el usuario todavía no eligió
+              // ninguna (ni en esta sesión ni en una anterior). Si ya hay elección
+              // guardada y sigue disponible, el stream ya la está usando: no se pisa.
               const idActual = s.getVideoTracks()[0]?.getSettings().deviceId;
-              if (idActual) setCamaraId(idActual);
+              if (!camaraId && idActual) setCamaraId(idActual);
             }
           } catch {
             // no se pudo listar cámaras, seguimos con la que ya está activa
@@ -116,7 +142,16 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
         };
         animationId = requestAnimationFrame(leerConJsQr);
       })
-      .catch(() => setError('No se pudo acceder a la cámara. Revisa los permisos del navegador.'));
+      .catch((err) => {
+        // La cámara guardada ya no está (otro equipo, se desconectó, cambió el id):
+        // se olvida la preferencia y el efecto se reintenta con la cámara por defecto.
+        if (camaraId && (err?.name === 'OverconstrainedError' || err?.name === 'NotFoundError')) {
+          guardarCamara('');
+          setCamaraId('');
+          return;
+        }
+        setError('No se pudo acceder a la cámara. Revisa los permisos del navegador.');
+      });
 
     return () => {
       activo = false;
@@ -137,7 +172,7 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
               className="pi-escaner-qr-select-camara"
               aria-label="Elegir cámara"
               value={camaraId}
-              onChange={(e) => { setListo(false); setCamaraId(e.target.value); }}
+              onChange={(e) => { setListo(false); guardarCamara(e.target.value); setCamaraId(e.target.value); }}
             >
               {camaras.map((c, i) => (
                 <option key={c.deviceId} value={c.deviceId}>

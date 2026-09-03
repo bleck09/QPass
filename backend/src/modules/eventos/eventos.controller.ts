@@ -50,4 +50,18 @@ export class EventosController {
   cerrar(@Param('id') id: string) {
     return this.eventosService.cerrar(id);
   }
+
+  @Post(':id/archivar')
+  @Roles('Admin')
+  @HttpCode(HttpStatus.OK)
+  archivar(@Param('id') id: string, @UsuarioActual('id') adminId: number) {
+    return this.eventosService.archivar(id, adminId);
+  }
+
+  @Post(':id/desarchivar')
+  @Roles('Admin')
+  @HttpCode(HttpStatus.OK)
+  desarchivar(@Param('id') id: string) {
+    return this.eventosService.desarchivar(id);
+  }
 }

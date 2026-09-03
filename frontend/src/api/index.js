@@ -22,6 +22,9 @@ export const eventos = {
   obtener: (id) => apiGet(`/eventos/${id}`),
   crear: (datos) => apiPost('/eventos', datos),
   actualizar: (id, datos) => apiPatch(`/eventos/${id}`, datos),
+  cerrar: (id) => apiPost(`/eventos/${id}/cerrar`),
+  archivar: (id) => apiPost(`/eventos/${id}/archivar`),
+  desarchivar: (id) => apiPost(`/eventos/${id}/desarchivar`),
   // Solo los eventos donde Admin asignó a este usuario con este rol (Supervisor, Recargador,
   // Devolucion, UsuarioNegocio): evita que un operador vea/opere eventos que no le tocan.
   misAsignados: async (usuarioId, rol) => {

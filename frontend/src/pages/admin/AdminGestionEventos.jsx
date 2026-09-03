@@ -8,11 +8,12 @@ import { useNavigate } from 'react-router-dom';
 import {
   FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode,
-  FaCheckCircle, FaBan, FaFileAlt, FaClipboardList
+  FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
-import { formatearFecha } from '../../utils/eventos.js';
+import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
+import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import './AdminGestionEventos.css';
 
 const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
@@ -168,6 +169,31 @@ export default function AdminGestionEventos() {
     setAsignaciones(prev => prev.filter(a => a.id !== id));
   };
 
+  const handleArchivar = async () => {
+    if (!eventoDetalle) return;
+    const ok = await confirmar({
+      titulo: '¿Archivar este evento?',
+      mensaje: `"${eventoDetalle.nombre}" quedará de SOLO LECTURA: nadie podrá registrar recargas, devoluciones, ingresos, incidencias ni editar nada. Se puede desarchivar después.`,
+      textoConfirmar: 'Archivar evento',
+      peligroso: true,
+    });
+    if (!ok) return;
+    const actualizado = await api.eventos.archivar(eventoDetalle.id);
+    setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+  };
+
+  const handleDesarchivar = async () => {
+    if (!eventoDetalle) return;
+    const ok = await confirmar({
+      titulo: '¿Desarchivar este evento?',
+      mensaje: `"${eventoDetalle.nombre}" volverá a admitir cambios.`,
+      textoConfirmar: 'Desarchivar',
+    });
+    if (!ok) return;
+    const actualizado = await api.eventos.desarchivar(eventoDetalle.id);
+    setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+  };
+
   if (errorDatos) {
     return (
       <div className="pi-ges-container">
@@ -196,10 +222,31 @@ export default function AdminGestionEventos() {
           <div className="pi-ges-detalle-header">
             <img width="96" height="96" src={eventoDetalle.imagen} alt={eventoDetalle.nombre} className="pi-ges-detalle-imagen" />
             <div className="pi-ges-detalle-info">
-              <h1>{eventoDetalle.nombre}</h1>
+              <h1>{eventoDetalle.nombre} <BadgeEstadoEvento evento={eventoDetalle} /></h1>
               <span><FaMapMarkerAlt /> {eventoDetalle.lugar} · {formatearFecha(eventoDetalle.fecha)}</span>
             </div>
+            {eventoDetalle.archivadoEn ? (
+              <button type="button" className="pi-ges-btn-desarchivar" onClick={handleDesarchivar}>
+                <FaUndo /> Desarchivar
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="pi-ges-btn-archivar"
+                onClick={handleArchivar}
+                disabled={estadoEvento(eventoDetalle) !== 'finalizado'}
+                title={estadoEvento(eventoDetalle) !== 'finalizado' ? 'Solo se archiva un evento finalizado' : undefined}
+              >
+                <FaArchive /> Archivar
+              </button>
+            )}
           </div>
+
+          {eventoDetalle.archivadoEn && (
+            <p className="pi-ges-aviso-archivado">
+              <FaArchive /> Evento archivado — solo lectura. Desarchívalo para volver a hacer cambios.
+            </p>
+          )}
 
           <div className="pi-ges-accesos-rapidos">
             <button type="button" onClick={() => navigate('/AdminCrearTickets', { state: { eventoId: eventoDetalle.id } })}>
@@ -373,7 +420,7 @@ export default function AdminGestionEventos() {
               <button type="button" key={ev.id} className="pi-ges-evento-card" onClick={() => setEventoIdDetalle(ev.id)}>
                 <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-ges-evento-imagen" />
                 <div className="pi-ges-evento-info">
-                  <strong>{ev.nombre}</strong>
+                  <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
                   <span className="pi-ges-evento-usuarios"><FaUsers /> {contarAsignados(ev.id)} usuarios asignados</span>
                 </div>

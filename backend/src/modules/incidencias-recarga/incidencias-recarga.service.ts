@@ -9,6 +9,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { EstadoCaso, Rol } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { TransaccionesService } from '../transacciones/transacciones.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 import {
@@ -20,6 +21,7 @@ import {
 export class IncidenciasRecargaService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly eventoPolicy: EventoPolicy,
     private readonly transacciones: TransaccionesService,
   ) {}
 
@@ -45,6 +47,7 @@ export class IncidenciasRecargaService {
   }
 
   async crear(dto: CrearIncidenciaRecargaDto, recargadorId: number) {
+    await this.eventoPolicy.porEntrada(dto.entradaId);
     const entrada = await this.prisma.entrada.findUnique({
       where: { id: dto.entradaId },
     });
@@ -71,6 +74,7 @@ export class IncidenciasRecargaService {
       where: { id },
     });
     if (!incidencia) throw new NotFoundException('Incidencia no encontrada');
+    await this.eventoPolicy.porEvento(incidencia.eventoId);
 
     const valor = dto.ajusteAplicado;
 
