@@ -3,7 +3,8 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useFocoModal } from '../../utils/useFocoModal.js';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import BotonVolver from '../../components/BotonVolver.jsx';
 import {
   FaStore, FaMap, FaListUl, FaPlus, FaTimes,
   FaSave, FaEdit, FaEyeSlash, FaCheck, FaLock, FaUnlock,
@@ -17,6 +18,7 @@ import './Mapa.css';
 export default function Mapa() {
   useTituloPagina('Diseñador del recinto');
   const location = useLocation();
+  const navigate = useNavigate();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
   const [negociosDisponibles, setNegociosDisponibles] = useState([]);
@@ -71,6 +73,8 @@ export default function Mapa() {
     setEventoId(nuevoId);
     setModoDiseno(false);
   };
+  // Si se llegó desde Gestión de Eventos, el evento queda fijo (sin selector).
+  const eventoBloqueado = !!location.state?.eventoId;
 
   // =========================================================
   // MOTOR NATIVO: ARRASTRE (DRAG) Y REDIMENSIONAMIENTO (RESIZE)
@@ -227,7 +231,11 @@ export default function Mapa() {
 
   return (
     <div className="pi-mapa-container">
-      
+
+      <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
+        Volver al evento
+      </BotonVolver>
+
       {/* CABECERA */}
       <div className="pi-mapa-header-flex">
         <div>
@@ -237,11 +245,15 @@ export default function Mapa() {
 
         <div className="pi-mapa-selector-evento">
           <FaCalendarAlt />
-          <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
-            {eventosDisponibles.map(ev => (
-              <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-            ))}
-          </select>
+          {eventoBloqueado ? (
+            <strong>{eventosDisponibles.find(ev => ev.id === eventoId)?.nombre || 'Evento'}</strong>
+          ) : (
+            <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
+              {eventosDisponibles.map(ev => (
+                <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div className="pi-mapa-tabs-container">

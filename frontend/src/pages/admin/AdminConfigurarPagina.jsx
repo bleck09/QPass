@@ -4,7 +4,8 @@ import { useFocoModal } from '../../utils/useFocoModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga } from '../../components/EstadosAsync.jsx';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
+import BotonVolver from '../../components/BotonVolver.jsx';
 import {
   FaPlus, FaTrash, FaSave, FaEye, FaImage, FaUpload,
   FaPalette, FaTextHeight, FaListUl, FaRegCalendarAlt, FaUndo,
@@ -53,6 +54,7 @@ const normalizarConfig = (config) => {
 export default function AdminConfigurarPagina() {
   useTituloPagina('Configurar página del evento');
   const location = useLocation();
+  const navigate = useNavigate();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
 
@@ -94,6 +96,8 @@ export default function AdminConfigurarPagina() {
   }, []);
 
   const cambiarEvento = (nuevoId) => setEventoId(nuevoId);
+  // Si se llegó desde Gestión de Eventos, el evento queda fijo (sin selector).
+  const eventoBloqueado = !!location.state?.eventoId;
 
   const handleChange = (e) => {
     setConfig({ ...config, [e.target.name]: e.target.value });
@@ -157,16 +161,24 @@ export default function AdminConfigurarPagina() {
 
   return (
     <div className="pi-admin-container">
-      
+
+      <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
+        Volver al evento
+      </BotonVolver>
+
       <div className="pi-admin-header">
         <h1>Gestión de la landing page</h1>
         <div className="pi-admin-selector-evento">
           <FaCalendarAlt />
-          <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
-            {eventosDisponibles.map(ev => (
-              <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-            ))}
-          </select>
+          {eventoBloqueado ? (
+            <strong>{eventosDisponibles.find(ev => ev.id === eventoId)?.nombre || 'Evento'}</strong>
+          ) : (
+            <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
+              {eventosDisponibles.map(ev => (
+                <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+              ))}
+            </select>
+          )}
         </div>
         <div className="pi-admin-header-actions">
           <button type="button" className="pi-admin-btn-reset" onClick={restablecerValores}>

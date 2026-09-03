@@ -4,7 +4,7 @@ import { useFocoModal } from '../../utils/useFocoModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import {
   FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode,
@@ -22,6 +22,7 @@ const FORM_EVENTO_VACIO = { nombre: '', lugar: '', fecha: '', fechaFin: '', imag
 export default function AdminGestionEventos() {
   useTituloPagina('Gestión de eventos');
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Carga primaria (4 listas en paralelo) con cargando/error/reintentar (Manual 8.9).
   const cargarTodo = useCallback(async () => {
@@ -47,13 +48,18 @@ export default function AdminGestionEventos() {
   const setSolicitudes = (fn) => setDatos(d => ({ ...d, solicitudes: typeof fn === 'function' ? fn(d.solicitudes) : fn }));
 
   const [busqueda, setBusqueda] = useState('');
-  const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
+  // Al volver desde Tickets / QR / Configurar Página / Mapa se llega con
+  // location.state.eventoId -> abrimos ese evento directo, no la lista.
+  const [eventoIdDetalle, setEventoIdDetalle] = useState(location.state?.eventoId ?? null);
   const [mostrarFormCrear, setMostrarFormCrear] = useState(false);
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
   // Foco del modal de crear evento (A1 / Manual 8.6)
   const modalCrearRef = useRef(null);
   useFocoModal(modalCrearRef, mostrarFormCrear);
+
+  // Sección de usuarios asignados: destino del botón "Usuarios asignados" de accesos rápidos.
+  const seccionAsignadosRef = useRef(null);
 
   // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
   useEffect(() => {
@@ -265,9 +271,15 @@ export default function AdminGestionEventos() {
             <button type="button" onClick={() => navigate('/Mapa', { state: { eventoId: eventoDetalle.id } })}>
               <FaMapMarkedAlt /> Mapa
             </button>
+            <button
+              type="button"
+              onClick={() => seccionAsignadosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+            >
+              <FaUserPlus /> Usuarios asignados
+            </button>
           </div>
 
-          <section className="pi-ges-seccion">
+          <section className="pi-ges-seccion" ref={seccionAsignadosRef}>
             <h3 className="pi-ges-seccion-titulo"><FaUsers /> Usuarios asignados</h3>
 
             <div className="pi-ges-tabla-wrapper">

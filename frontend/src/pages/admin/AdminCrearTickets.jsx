@@ -3,19 +3,23 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaCalendarAlt, FaTicketAlt, FaPlus, FaTrash, FaTags, FaAlignLeft,
   FaBoxes, FaDollarSign, FaCoins
 } from 'react-icons/fa';
+import BotonVolver from '../../components/BotonVolver.jsx';
 import api from '../../api/index.js';
 import './AdminCrearTickets.css';
 
 export default function AdminCrearTickets() {
   useTituloPagina('Categorías de ticket');
   const location = useLocation();
+  const navigate = useNavigate();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
+  // Si se llegó desde Gestión de Eventos, el evento queda fijo (sin selector).
+  const eventoBloqueado = !!location.state?.eventoId;
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
   // Categorías del evento con estados cargando/error/reintentar (Manual 8.9).
@@ -82,6 +86,10 @@ export default function AdminCrearTickets() {
   return (
     <div className="pi-adtick-container">
 
+      <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
+        Volver al evento
+      </BotonVolver>
+
       <div className="pi-adtick-header">
         <div>
           <h1>Tickets del evento</h1>
@@ -89,11 +97,15 @@ export default function AdminCrearTickets() {
         </div>
         <div className="pi-adtick-selector-evento">
           <FaCalendarAlt />
-          <select value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
-            {eventosDisponibles.map(ev => (
-              <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-            ))}
-          </select>
+          {eventoBloqueado ? (
+            <strong>{eventosDisponibles.find(ev => ev.id === eventoId)?.nombre || 'Evento'}</strong>
+          ) : (
+            <select value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
+              {eventosDisponibles.map(ev => (
+                <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 

@@ -4,11 +4,12 @@ import { useFocoModal } from '../../utils/useFocoModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaCalendarAlt, FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
   FaEye, FaTimes, FaChevronLeft, FaChevronRight
 } from 'react-icons/fa';
+import BotonVolver from '../../components/BotonVolver.jsx';
 import api from '../../api/index.js';
 import { generarDataUrlQr, construirPdfQr } from '../../utils/qrPdf';
 import './AdminCrearQr.css';
@@ -45,6 +46,7 @@ function QrImg({ qr, ancho = 180, alto = 180 }) {
 export default function AdminCrearQr() {
   useTituloPagina('Generar códigos QR');
   const location = useLocation();
+  const navigate = useNavigate();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
 
@@ -98,6 +100,8 @@ export default function AdminCrearQr() {
   const altoPx = cmAPx(altoCm) || 180;
 
   const eventoActual = eventosDisponibles.find(ev => ev.id === eventoId);
+  // Si se llegó desde Gestión de Eventos, el evento queda fijo (sin selector).
+  const eventoBloqueado = !!location.state?.eventoId;
   const totalPaginas = Math.max(1, Math.ceil(codigos.length / TAMANO_PAGINA));
   const codigosPagina = codigos.slice(pagina * TAMANO_PAGINA, pagina * TAMANO_PAGINA + TAMANO_PAGINA);
 
@@ -153,6 +157,10 @@ export default function AdminCrearQr() {
   return (
     <div className="pi-adqr-container">
 
+      <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
+        Volver al evento
+      </BotonVolver>
+
       <div className="pi-adqr-header">
         <div>
           <h1><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Generar códigos QR</h1>
@@ -160,11 +168,15 @@ export default function AdminCrearQr() {
         </div>
         <div className="pi-adqr-selector-evento">
           <FaCalendarAlt />
-          <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
-            {eventosDisponibles.map(ev => (
-              <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-            ))}
-          </select>
+          {eventoBloqueado ? (
+            <strong>{eventoActual?.nombre || 'Evento'}</strong>
+          ) : (
+            <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
+              {eventosDisponibles.map(ev => (
+                <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 

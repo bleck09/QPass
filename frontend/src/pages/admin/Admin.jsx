@@ -104,6 +104,9 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   const enReportes = location.pathname.endsWith('/reportes');
   const enSolicitudes = location.pathname.endsWith('/solicitudes');
   const eventoIdDesdeState = location.state?.eventoId || '';
+  // Se llegó desde Gestión de Eventos (accesos rápidos de un evento): la salida
+  // es "volver al evento", no el dashboard ni el selector de eventos.
+  const vieneDeEvento = !!eventoIdDesdeState && (enReportes || enSolicitudes);
 
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(eventoIdDesdeState);
@@ -424,6 +427,8 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     setEventoSeleccionado(false);
   };
 
+  const volverAlEvento = () => navigate('/admin/eventos', { state: { eventoId: eventoIdDesdeState } });
+
   const volverALaLista = () => setItemSeleccionado(null);
 
   const recargadorAbierto = vistaActual === 'recargadores' && itemSeleccionado
@@ -441,8 +446,12 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
           <h1>Selecciona un evento</h1>
         ) : (
           <div className="pi-dash-header-titulo">
-            <button type="button" className="pi-dash-btn-volver-evento" onClick={volverASeleccionEvento}>
-              <FaArrowLeft /> Cambiar de evento
+            <button
+              type="button"
+              className="pi-dash-btn-volver-evento"
+              onClick={vieneDeEvento ? volverAlEvento : volverASeleccionEvento}
+            >
+              <FaArrowLeft /> {vieneDeEvento ? 'Volver al evento' : 'Cambiar de evento'}
             </button>
             <h1>{eventoActual?.nombre}</h1>
           </div>
@@ -917,7 +926,9 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
       {/* ================= DETALLE: REPORTES (INCIDENCIAS DE RECARGA + DATOS DE ENTRADAS) ================= */}
       {vistaActual === 'incidencias' && (
         <section className="pi-dash-seccion">
-          <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
+          {!vieneDeEvento && (
+            <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
+          )}
           <h3 className="pi-dash-seccion-titulo">Reportes</h3>
 
           <h4 className="pi-dash-subtitulo"><FaCoins color="var(--verde-recarga-texto)" /> Incidencias de Recarga</h4>
@@ -1065,7 +1076,9 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
       {/* ================= DETALLE: SOLICITUDES DE COMPRA DE ENTRADAS ================= */}
       {vistaActual === 'solicitudesEntradas' && (
         <section className="pi-dash-seccion">
-          <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
+          {!vieneDeEvento && (
+            <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
+          )}
           <h3 className="pi-dash-seccion-titulo">Solicitudes de Compra de Entradas</h3>
           <p className="pi-dash-incidencias-nota">
             Detalle de cada lote de entradas compradas: para quién, con qué correo y celular, y si ya fue aprobado.

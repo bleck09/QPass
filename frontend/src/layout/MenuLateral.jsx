@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
-  FaChartPie, FaUsers, FaCog, FaSignOutAlt, FaUserCircle,
+  FaChartPie, FaUsers, FaSignOutAlt, FaUserCircle,
   FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet,
-  FaExclamationTriangle, FaBars, FaMapMarkedAlt, FaCalendarAlt, FaQrcode, FaLink
+  FaExclamationTriangle, FaBars, FaCalendarAlt, FaLink
 } from 'react-icons/fa';
 import { MdAccountBalance, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'react-icons/md';
 import { ROLES, ROLE_LABELS } from '../constants/roles.js';
@@ -16,11 +16,9 @@ const menuConfig = {
     { titulo: 'Dashboard General', ruta: '/admin', icono: <FaChartPie /> },
     { titulo: 'Gestión de Eventos', ruta: '/admin/eventos', icono: <FaCalendarAlt /> },
     { titulo: 'Usuario de Negocio', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
-    { titulo: 'Tickets del Evento', ruta: '/AdminCrearTickets', icono: <FaFileInvoiceDollar /> },
-    { titulo: 'Generar QR', ruta: '/admin/qr', icono: <FaQrcode /> },
-    { titulo: 'Reportes', ruta: '/admin/reportes', icono: <FaExclamationTriangle /> },
-    { titulo: 'Configurar Página', ruta: '/admin/config', icono: <FaCog /> },
-    { titulo: 'Mapa', ruta: '/Mapa', icono: <FaMapMarkedAlt /> }
+    // Tickets del Evento, Generar QR, Configurar Página y Mapa se acceden desde
+    // Gestión de Eventos (accesos rápidos del detalle), no desde la barra lateral.
+    { titulo: 'Reportes', ruta: '/admin/reportes', icono: <FaExclamationTriangle /> }
   ],
   [ROLES.CLIENTE]: [
     { titulo: 'Mi Propuesta', ruta: '/Cliente', icono: <FaCashRegister /> },

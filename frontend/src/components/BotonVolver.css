@@ -1,0 +1,18 @@
+.pi-boton-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  color: var(--indigo-profundo, #1a2b6b);
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 14px;
+}
+
+.pi-boton-volver:hover {
+  text-decoration: underline;
+}

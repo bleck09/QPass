@@ -14,34 +14,40 @@ Archivos relevantes:
 
 ---
 
-## 1. Dominios
+## 1. Dominio
 
-Necesitás **dos** subdominios apuntando al servidor de Dokploy:
+**Un solo** subdominio apuntando al servidor de Dokploy:
 
 - `qpass.tudominio.com` → servicio **frontend**, puerto **80**
-- `api.qpass.tudominio.com` → servicio **backend**, puerto **4000**
 
-> El frontend es estático y el navegador llama directo al API, así que el API necesita su propia URL pública (`VITE_API_URL`). Vite la compila dentro del bundle: si la cambiás, hay que reconstruir el frontend.
+El backend NO necesita dominio: el nginx del frontend recibe `https://qpass.tudominio.com/api/...`
+y lo proxya al backend por la red interna de Docker. Mismo origen → sin CORS.
+
+> `VITE_API_URL` se deja en `/api` (relativo). Si algún día tenés un subdominio
+> aparte para el API, ponés ahí la URL absoluta y sacás el `location /api/` del nginx.
 
 ## 2. Crear la app en Dokploy
 
 1. **Create Application → Compose**.
 2. Fuente: este repositorio, rama a desplegar. Compose Path: `docker-compose.yml`.
 3. Pestaña **Environment**: pegá el contenido de `.env.example` y completá:
-   - `POSTGRES_PASSWORD` — clave fuerte.
+   - `POSTGRES_PASSWORD` — clave fuerte, solo `[A-Za-z0-9_-]`.
    - `JWT_SECRET` — mínimo 16 caracteres (`openssl rand -base64 32`).
-   - `CORS_ORIGEN=https://qpass.tudominio.com`
-   - `VITE_API_URL=https://api.qpass.tudominio.com`
-4. Pestaña **Domains**, agregá dos:
+   - `VITE_API_URL=/api` y `CORS_ORIGEN=*` quedan así.
+4. Pestaña **Domains**, agregá **una**:
    - Service `frontend`, Container Port `80`, Host `qpass.tudominio.com`, HTTPS on.
-   - Service `backend`, Container Port `4000`, Host `api.qpass.tudominio.com`, HTTPS on.
 5. **Deploy**.
 
 ## 3. Qué pasa en el arranque
 
 - `db` levanta y espera a estar *healthy* (`pg_isready`).
 - `backend` corre `prisma migrate deploy` (aplica migraciones pendientes) y luego `node dist/main`.
-- `frontend` sirve el build; nginx manda cualquier ruta desconocida a `index.html`.
+- `frontend` sirve el build; `/api/*` va al backend, el resto cae en `index.html`.
+
+> **Si el backend queda en bucle con `P1000: Authentication failed`**: el volumen
+> `qpass_db_data` se creó antes con otra contraseña (Postgres solo la aplica al
+> inicializar el volumen vacío). Borrá el volumen y redeploy, o alineá la clave:
+> `docker compose exec db psql -U qpass -d qpass -c "ALTER USER qpass WITH PASSWORD 'LA_DEL_ENV';"`
 
 Healthchecks: `backend` expone `GET /health` → `{ "ok": true }`.
 
@@ -62,7 +68,7 @@ propio servidor.
 ## 5. Actualizaciones
 
 Cada push a la rama configurada → **Redeploy** en Dokploy. Las migraciones nuevas se
-aplican solas. Si tocaste `VITE_API_URL`, el frontend se reconstruye igual (build arg).
+aplican solas. El frontend se reconstruye en cada deploy (build arg horneado por Vite).
 
 ## 6. Redis / colas de correo
 

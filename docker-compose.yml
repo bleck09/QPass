@@ -2,22 +2,22 @@
 # QPass — stack de producción para Dokploy (Docker Compose).
 #
 # Servicios: db (PostgreSQL) + backend (NestJS/Prisma) + frontend (build Vite
-# servido por nginx). Las migraciones de Prisma se aplican solas al arrancar
-# el backend (npm run start:migrate-prod).
+# servido por nginx, que además hace de proxy del API en /api).
+# Las migraciones de Prisma se aplican solas al arrancar el backend.
+#
+# UN SOLO DOMINIO: el navegador llama a https://<dominio>/api/... y el nginx del
+# frontend lo redirige al backend por la red interna. No hace falta subdominio
+# para el API ni configurar CORS.
 #
 # En Dokploy:
 #   1. Tipo de app: Compose. Ruta del compose: docker-compose.yml
 #   2. Cargar las variables de .env.example en la pestaña "Environment".
-#   3. Domains:
-#        - frontend  -> puerto 80    (ej. qpass.tudominio.com)
-#        - backend   -> puerto 4000  (ej. api.qpass.tudominio.com)
-#   4. VITE_API_URL debe ser la URL pública del backend (la del dominio de arriba),
-#      porque Vite la "hornea" en el bundle al compilar el frontend.
-#   5. CORS_ORIGEN debe ser la URL pública del frontend.
+#   3. Domains: solo uno -> service "frontend", puerto 80 (ej. qpass.tudominio.com)
+#   4. VITE_API_URL se deja en "/api" (mismo origen).
 # =============================================================================
 
 networks:
-  # La crea Dokploy; conecta los servicios web con su Traefik.
+  # La crea Dokploy; conecta el frontend con su Traefik (dominio público).
   dokploy-network:
     external: true
   internal:
@@ -56,7 +56,8 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       JWT_EXPIRA_EN: ${JWT_EXPIRA_EN:-8h}
       PORT: "4000"
-      CORS_ORIGEN: ${CORS_ORIGEN}
+      # Mismo origen (el front pega a /api del propio dominio), pero se deja fijado.
+      CORS_ORIGEN: ${CORS_ORIGEN:-*}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
@@ -65,7 +66,6 @@ services:
       - "4000"
     networks:
       - internal
-      - dokploy-network
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
       interval: 15s
@@ -77,11 +77,13 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: ${VITE_API_URL}
+        # Relativo: el front llama al mismo dominio y nginx proxya /api -> backend.
+        VITE_API_URL: ${VITE_API_URL:-/api}
     restart: unless-stopped
     depends_on:
       - backend
     expose:
       - "80"
     networks:
-      - dokploy-network
+      - internal        # para alcanzar a "backend" en el proxy /api
+      - dokploy-network  # para el dominio público vía Traefik

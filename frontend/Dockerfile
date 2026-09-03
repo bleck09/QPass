@@ -5,8 +5,9 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 # Vite "hornea" las VITE_* en el bundle EN TIEMPO DE BUILD, no en runtime.
-# Hay que pasar la URL pública del backend como build arg.
-ARG VITE_API_URL
+# Por defecto "/api": el nginx de este contenedor proxya /api -> backend (mismo
+# dominio). Solo se pasa una URL absoluta si el API tiene su propio subdominio.
+ARG VITE_API_URL=/api
 ENV VITE_API_URL=$VITE_API_URL
 
 COPY package*.json ./
