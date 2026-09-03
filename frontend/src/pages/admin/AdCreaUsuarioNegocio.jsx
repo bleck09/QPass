@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useFocoModal } from '../../utils/useFocoModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
@@ -8,13 +8,14 @@ import {
   FaStore, FaUserTie, FaEnvelope, FaLock, FaPlus,
   FaTrash, FaSearch, FaTimes, FaUserShield, FaUsersCog
 } from 'react-icons/fa';
+import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
 import './AdCreaUsuarioNegocio.css';
 
 const ROLES = ['Cliente', 'Recargador', 'Supervisor', 'Devolucion', 'UsuarioNormal', 'UsuarioNegocio'];
 
 export default function AdCreaUsuarioNegocio() {
-  useTituloPagina('Usuarios');
+  useTituloPagina('Gestión de Usuarios');
 
   // Lista de usuarios con estados cargando/error/reintentar (Manual 8.9).
   const cargarUsuarios = useCallback(() => api.usuarios.listar(), []);
@@ -76,15 +77,26 @@ export default function AdCreaUsuarioNegocio() {
     setUsuarios(prev => prev.filter(u => u.id !== id));
   };
 
-  // Filtrado
-  let usuariosFiltrados = filtroRol === 'Todos' 
-    ? usuarios 
-    : usuarios.filter(u => u.rol === filtroRol);
+  // Conteo por rol para las pestañas de filtro.
+  const conteoPorRol = useMemo(() => {
+    const m = {};
+    usuarios.forEach(u => { m[u.rol] = (m[u.rol] || 0) + 1; });
+    return m;
+  }, [usuarios]);
 
-  usuariosFiltrados = usuariosFiltrados.filter(u => 
-    u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    u.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filtrado: rol + texto (nombre / correo).
+  const usuariosFiltrados = useMemo(() => {
+    const termino = searchTerm.trim().toLowerCase();
+    return usuarios
+      .filter(u => filtroRol === 'Todos' || u.rol === filtroRol)
+      .filter(u =>
+        !termino ||
+        u.nombre.toLowerCase().includes(termino) ||
+        u.email.toLowerCase().includes(termino)
+      );
+  }, [usuarios, filtroRol, searchTerm]);
+
+  const hayFiltro = searchTerm.trim() !== '' || filtroRol !== 'Todos';
 
   const getBadgeColor = (rol) => {
     switch(rol) {
@@ -112,22 +124,41 @@ export default function AdCreaUsuarioNegocio() {
 
       </div>
 
+      {/* Buscador destacado */}
+      <div className="pi-adnegocio-buscador-destacado">
+        <FaSearch className="bd-icon" aria-hidden="true" />
+        <input
+          type="search"
+          aria-label="Buscar usuario por nombre o correo"
+          placeholder="Buscar usuario por nombre o correo…"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        {searchTerm && (
+          <button type="button" className="bd-clear" onClick={() => setSearchTerm('')} aria-label="Limpiar búsqueda">
+            <FaTimes aria-hidden="true" />
+          </button>
+        )}
+      </div>
+
       <div className="pi-adnegocio-action-bar">
-        {/* Pestañas de Filtro por Rol */}
-        <div className="pi-adnegocio-tabs">
-          <button type="button" 
+        {/* Pestañas de Filtro por Rol (con conteo) */}
+        <div className="pi-adnegocio-tabs" role="group" aria-label="Filtrar por rol">
+          <button type="button"
             className={`tab-btn ${filtroRol === 'Todos' ? 'active' : ''}`}
+            aria-pressed={filtroRol === 'Todos'}
             onClick={() => setFiltroRol('Todos')}
           >
-            Todos ({usuarios.length})
+            Todos <span className="tab-count">{usuarios.length}</span>
           </button>
           {ROLES.map(rol => (
-            <button type="button" 
+            <button type="button"
               key={rol}
               className={`tab-btn ${filtroRol === rol ? 'active' : ''}`}
+              aria-pressed={filtroRol === rol}
               onClick={() => setFiltroRol(rol)}
             >
-              {rol}
+              {ROLE_LABELS[rol] || rol} <span className="tab-count">{conteoPorRol[rol] || 0}</span>
             </button>
           ))}
         </div>
@@ -137,16 +168,12 @@ export default function AdCreaUsuarioNegocio() {
         </button>
       </div>
 
-      {/* Barra de Búsqueda */}
-      <div className="pi-adnegocio-search">
-        <FaSearch className="search-icon" />
-        <input 
-          type="text" 
-          placeholder="Buscar por nombre o correo electrónico..." 
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-      </div>
+      {hayFiltro && (
+        <p className="pi-adnegocio-resultados">
+          {usuariosFiltrados.length} usuario{usuariosFiltrados.length === 1 ? '' : 's'} encontrado{usuariosFiltrados.length === 1 ? '' : 's'}
+          {filtroRol !== 'Todos' && ` · rol: ${ROLE_LABELS[filtroRol] || filtroRol}`}
+        </p>
+      )}
 
       {/* Tabla Principal */}
       {errorUsuarios ? (

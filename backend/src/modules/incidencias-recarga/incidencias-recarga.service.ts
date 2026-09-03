@@ -39,6 +39,7 @@ export class IncidenciasRecargaService {
       },
       include: {
         entrada: { select: { nombre: true, documento: true, foto: true } },
+        evento: { select: { nombre: true } },
         recargador: { select: { nombre: true } },
         resueltoPor: { select: { nombre: true } },
       },

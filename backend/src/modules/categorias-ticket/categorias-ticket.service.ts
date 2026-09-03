@@ -21,9 +21,35 @@ export class CategoriasTicketService {
     private readonly eventoPolicy: EventoPolicy,
   ) {}
 
+  /**
+   * Lista las categorías con el desglose de cupo:
+   *   - vendidas    : entradas de compras YA aprobadas
+   *   - reservadas  : cupo tomado por compras pendientes de aprobación
+   *   - disponibles : cantidad - cantidadVendida (lo que queda libre)
+   * cantidadVendida ya cuenta pendientes + aprobadas (reserva atómica al comprar).
+   */
   async listar(eventoId?: string) {
     if (!eventoId) throw new BadRequestException('eventoId es requerido');
-    return this.prisma.categoriaTicket.findMany({ where: { eventoId } });
+    const [categorias, confirmadas] = await Promise.all([
+      this.prisma.categoriaTicket.findMany({ where: { eventoId } }),
+      this.prisma.entrada.groupBy({
+        by: ['categoriaTicketId'],
+        where: { eventoId, compra: { estado: 'confirmado' } },
+        _count: { _all: true },
+      }),
+    ]);
+    const vendidasPorCat = new Map(
+      confirmadas.map((g) => [g.categoriaTicketId, g._count._all]),
+    );
+    return categorias.map((c) => {
+      const vendidas = vendidasPorCat.get(c.id) ?? 0;
+      return {
+        ...c,
+        vendidas,
+        reservadas: Math.max(0, c.cantidadVendida - vendidas),
+        disponibles: Math.max(0, c.cantidad - c.cantidadVendida),
+      };
+    });
   }
 
   async crear(dto: CrearCategoriaTicketDto) {

@@ -15,7 +15,7 @@ const menuConfig = {
   [ROLES.ADMIN]: [
     { titulo: 'Dashboard General', ruta: '/admin', icono: <FaChartPie /> },
     { titulo: 'Gestión de Eventos', ruta: '/admin/eventos', icono: <FaCalendarAlt /> },
-    { titulo: 'Usuario de Negocio', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
+    { titulo: 'Gestión de Usuarios', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
     // Tickets del Evento, Generar QR, Configurar Página y Mapa se acceden desde
     // Gestión de Eventos (accesos rápidos del detalle), no desde la barra lateral.
     { titulo: 'Reportes', ruta: '/admin/reportes', icono: <FaExclamationTriangle /> }

@@ -93,20 +93,31 @@ function Podio({ lista, valorKey, unidad }) {
   );
 }
 
-export default function Admin({ soloLectura = false, eventosPermitidos = null } = {}) {
-  useTituloPagina('Panel de administración');
+export default function Admin({
+  soloLectura = false,
+  eventosPermitidos = null,
+  // Embebido como pestaña dentro del detalle de un evento: se fija el evento y
+  // la vista, se ocultan cabecera/selector, y se cargan solo los datos de esa vista.
+  eventoIdFijo = null,
+  vistaFija = null, // 'solicitudesEntradas' | 'incidencias'
+} = {}) {
+  const embebido = !!eventoIdFijo;
+  useTituloPagina('Panel de administración', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
   // /admin/reportes y /admin/solicitudes abren directo su apartado (accesibles también desde
   // el menú lateral o desde los accesos rápidos de Gestión de Eventos), sin pasar por la
   // tarjeta del dashboard. Si llegan con state.eventoId (ej. desde Gestión de Eventos), se
   // abren ya sobre ese evento específico.
-  const enReportes = location.pathname.endsWith('/reportes');
-  const enSolicitudes = location.pathname.endsWith('/solicitudes');
-  const eventoIdDesdeState = location.state?.eventoId || '';
+  const enReportes = location.pathname.endsWith('/reportes') || vistaFija === 'incidencias';
+  const enSolicitudes = location.pathname.endsWith('/solicitudes') || vistaFija === 'solicitudesEntradas';
+  const eventoIdDesdeState = eventoIdFijo || location.state?.eventoId || '';
   // Se llegó desde Gestión de Eventos (accesos rápidos de un evento): la salida
   // es "volver al evento", no el dashboard ni el selector de eventos.
   const vieneDeEvento = !!eventoIdDesdeState && (enReportes || enSolicitudes);
+  // Reportes desde el menú lateral (sin evento fijo): vista GLOBAL — lista todos
+  // los reportes de todos los eventos, sin selector ni botones de navegación.
+  const reportesGlobal = enReportes && !eventoIdFijo && !location.state?.eventoId;
 
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(eventoIdDesdeState);
@@ -122,13 +133,14 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   const mostrarSelectorEventos = !eventoSeleccionado && !enReportes && !enSolicitudes;
 
   useEffect(() => {
+    if (embebido || reportesGlobal) return; // evento fijo/no aplica: no hace falta la lista
     api.eventos.listar().then(todos => {
       const disponibles = eventosPermitidos ? todos.filter(ev => eventosPermitidos.includes(ev.id)) : todos;
       setEventosDisponibles(disponibles);
       setEventoId(prev => prev || disponibles[0]?.id || '');
       if (soloLectura && disponibles.length > 0) setEventoSeleccionado(true);
     });
-  }, [eventosPermitidos, soloLectura]);
+  }, [eventosPermitidos, soloLectura, embebido, reportesGlobal]);
 
   const [incidenciaEnResolucion, setIncidenciaEnResolucion] = useState(null);
   const [montoAjuste, setMontoAjuste] = useState('');
@@ -137,6 +149,44 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   // cargando/error/reintentar (Manual 8.9). useApi (useReducer) evita el
   // react-hooks/set-state-in-effect que daría un cargarDatosEvento() suelto.
   const cargarDatosEvento = useCallback(async () => {
+    // Reportes GLOBAL (menú lateral): todos los reportes de todos los eventos.
+    if (reportesGlobal) {
+      const [incidenciasR, reportesR] = await Promise.all([
+        api.incidencias.listar({}),
+        api.reportesEntrada.listar({}),
+      ]);
+      return {
+        incidencias: incidenciasR,
+        reportesEntradas: reportesR,
+        solicitudes: [],
+        datos: EVENTO_ACTIVIDAD_VACIA,
+      };
+    }
+    // Pestaña embebida: solo se cargan los datos de esa vista, no el dashboard entero.
+    if (vistaFija === 'solicitudesEntradas') {
+      const [comprasR, reportesR] = await Promise.all([
+        api.compras.listar({ eventoId }),
+        api.reportesEntrada.listar({ eventoId }),
+      ]);
+      return {
+        incidencias: [],
+        reportesEntradas: reportesR,
+        solicitudes: comprasR,
+        datos: EVENTO_ACTIVIDAD_VACIA,
+      };
+    }
+    if (vistaFija === 'incidencias') {
+      const [incidenciasR, reportesR] = await Promise.all([
+        api.incidencias.listar({ eventoId }),
+        api.reportesEntrada.listar({ eventoId }),
+      ]);
+      return {
+        incidencias: incidenciasR,
+        reportesEntradas: reportesR,
+        solicitudes: [],
+        datos: EVENTO_ACTIVIDAD_VACIA,
+      };
+    }
     const [entradas, incidenciasR, reportesR, comprasR, recargasR, devolucionesR, ventasR, puestosR, asignacionesR, usuariosR] = await Promise.all([
       api.entradas.listar({ eventoId }),
       api.incidencias.listar({ eventoId }),
@@ -163,7 +213,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
         supervisores: staffDe('Supervisor'),
       },
     };
-  }, [eventoId]);
+  }, [eventoId, vistaFija, reportesGlobal]);
   const {
     data: dash,
     setData: setDash,
@@ -172,7 +222,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     recargar: recargarDash,
   } = useApi(cargarDatosEvento, {
     inicial: { incidencias: [], reportesEntradas: [], solicitudes: [], datos: EVENTO_ACTIVIDAD_VACIA },
-    activo: !!eventoId,
+    activo: !!eventoId || reportesGlobal,
   });
   const { incidencias, reportesEntradas, solicitudes, datos } = dash;
   // Helpers para conservar las actualizaciones optimistas y los refetch parciales.
@@ -202,7 +252,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
     if (montoAjuste === '' || Number.isNaN(valor) || valor < 0) return;
 
     await api.incidencias.resolver(incidencia.id, valor);
-    setIncidencias(await api.incidencias.listar({ eventoId }));
+    setIncidencias(await api.incidencias.listar(reportesGlobal ? {} : { eventoId }));
     cancelarResolucion();
   };
 
@@ -441,22 +491,26 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
   return (
     <div className="pi-dash-container">
 
-      <div className="pi-dash-header">
-        {mostrarSelectorEventos ? (
-          <h1>Selecciona un evento</h1>
-        ) : (
-          <div className="pi-dash-header-titulo">
-            <button
-              type="button"
-              className="pi-dash-btn-volver-evento"
-              onClick={vieneDeEvento ? volverAlEvento : volverASeleccionEvento}
-            >
-              <FaArrowLeft /> {vieneDeEvento ? 'Volver al evento' : 'Cambiar de evento'}
-            </button>
-            <h1>{eventoActual?.nombre}</h1>
-          </div>
-        )}
-      </div>
+      {!embebido && (
+        <div className="pi-dash-header">
+          {reportesGlobal ? (
+            <h1>Reportes de todos los eventos</h1>
+          ) : mostrarSelectorEventos ? (
+            <h1>Selecciona un evento</h1>
+          ) : (
+            <div className="pi-dash-header-titulo">
+              <button
+                type="button"
+                className="pi-dash-btn-volver-evento"
+                onClick={vieneDeEvento ? volverAlEvento : volverASeleccionEvento}
+              >
+                <FaArrowLeft /> {vieneDeEvento ? 'Volver al evento' : 'Cambiar de evento'}
+              </button>
+              <h1>{eventoActual?.nombre}</h1>
+            </div>
+          )}
+        </div>
+      )}
 
       {mostrarSelectorEventos ? (
         <section className="pi-dash-seccion">
@@ -926,7 +980,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
       {/* ================= DETALLE: REPORTES (INCIDENCIAS DE RECARGA + DATOS DE ENTRADAS) ================= */}
       {vistaActual === 'incidencias' && (
         <section className="pi-dash-seccion">
-          {!vieneDeEvento && (
+          {!vieneDeEvento && !reportesGlobal && (
             <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
           )}
           <h3 className="pi-dash-seccion-titulo">Reportes</h3>
@@ -941,6 +995,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             <table className="pi-dash-tabla">
               <thead>
                 <tr>
+                  {reportesGlobal && <th scope="col">Evento</th>}
                   <th scope="col">Participante</th>
                   <th scope="col">Documento</th>
                   <th scope="col">Se le dio</th>
@@ -954,6 +1009,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
               <tbody>
                 {incidencias.map(inc => (
                   <tr key={inc.id}>
+                    {reportesGlobal && <td>{inc.evento?.nombre || '—'}</td>}
                     <td>
                       <div className="pi-dash-fila-persona">
                         {inc.entrada.foto && <img width="32" height="32" src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-dash-mini-avatar" />}
@@ -999,7 +1055,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                 ))}
                 {incidencias.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="pi-dash-sin-resultados">No hay incidencias de recarga reportadas.</td>
+                    <td colSpan={reportesGlobal ? 9 : 8} className="pi-dash-sin-resultados">No hay incidencias de recarga reportadas.</td>
                   </tr>
                 )}
               </tbody>
@@ -1017,6 +1073,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
             <table className="pi-dash-tabla">
               <thead>
                 <tr>
+                  {reportesGlobal && <th scope="col">Evento</th>}
                   <th scope="col">Comprador</th>
                   <th scope="col">Persona</th>
                   <th scope="col">Dato reportado</th>
@@ -1029,6 +1086,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
               <tbody>
                 {reportesEntradas.map(rep => (
                   <tr key={rep.id}>
+                    {reportesGlobal && <td>{rep.evento?.nombre || '—'}</td>}
                     <td>{rep.entrada.compra?.comprador.nombre || '—'}</td>
                     <td>{rep.entrada.nombre}</td>
                     <td>{ETIQUETA_CAMPO_ENTRADA[rep.campo]}</td>
@@ -1064,7 +1122,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                 ))}
                 {reportesEntradas.length === 0 && (
                   <tr>
-                    <td colSpan={7} className="pi-dash-sin-resultados">No hay reportes de datos incorrectos.</td>
+                    <td colSpan={reportesGlobal ? 8 : 7} className="pi-dash-sin-resultados">No hay reportes de datos incorrectos.</td>
                   </tr>
                 )}
               </tbody>
@@ -1172,7 +1230,7 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                             </div>
                             <table className="pi-dash-tabla" style={{ flex: '1 1 320px' }}>
                               <thead>
-                                <tr><th scope="col">Persona</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Celular</th><th scope="col">Categoría</th></tr>
+                                <tr><th scope="col">Persona</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Celular</th><th scope="col">Categoría</th><th scope="col">Precio</th></tr>
                               </thead>
                               <tbody>
                                 {compra.entradas.map((ent, i) => (
@@ -1182,8 +1240,15 @@ export default function Admin({ soloLectura = false, eventosPermitidos = null } 
                                     <td>{ent.correo}</td>
                                     <td>{ent.celular || '—'}</td>
                                     <td>{ent.categoriaTicket?.nombre || '—'}</td>
+                                    <td className="pi-dash-monto-celda">
+                                      {ent.categoriaTicket ? `Bs. ${ent.categoriaTicket.precio}` : '—'}
+                                    </td>
                                   </tr>
                                 ))}
+                                <tr>
+                                  <td colSpan={5} style={{ textAlign: 'right', fontWeight: 700 }}>Total</td>
+                                  <td className="pi-dash-monto-celda">Bs. {compra.montoTotal}</td>
+                                </tr>
                               </tbody>
                             </table>
                           </div>

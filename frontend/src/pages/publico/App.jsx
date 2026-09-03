@@ -9,6 +9,7 @@ import {
   FaArrowLeft, FaCheck
 } from 'react-icons/fa';
 import api from '../../api/index.js';
+import { estadoStock, ESTADO_STOCK } from '../../utils/eventos.js';
 import './App.css';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
@@ -74,6 +75,7 @@ export default function App() {
         ? categorias.map(c => ({
             id: c.id, tipo: c.nombre, precio: `${c.precio} Bs`, destacado: false,
             beneficios: [c.descripcion || 'Acceso al evento'],
+            cantidad: c.cantidad, disponibles: c.disponibles,
           }))
         : defaultLandingData.precios,
       mapaPuestos: puestos,
@@ -244,25 +246,34 @@ export default function App() {
       <section id="entradas" className="pi-landing-section pricing-section">
         <h2 className="pricing-title">Nuestros precios</h2>
         <div className="pricing-grid">
-          {precios.map((plan) => (
-            <div key={plan.id} className={`pricing-card ${plan.destacado ? 'destacado' : ''}`}>
-              <div className="pricing-card-header">
-                <h3>{plan.tipo}</h3>
-                <p>La mejor opción para disfrutar el evento.</p>
+          {precios.map((plan) => {
+            const stk = estadoStock(plan);
+            const agotado = stk === 'agotado';
+            return (
+              <div key={plan.id} className={`pricing-card ${plan.destacado ? 'destacado' : ''} ${agotado ? 'agotado' : ''}`}>
+                <div className="pricing-card-header">
+                  <h3>{plan.tipo}</h3>
+                  {stk && (
+                    <span className={`stock-badge ${ESTADO_STOCK[stk].clase}`}>
+                      {ESTADO_STOCK[stk].label}
+                    </span>
+                  )}
+                  <p>La mejor opción para disfrutar el evento.</p>
+                </div>
+                <ul className="pricing-features">
+                  {plan.beneficios.map((ben, idx) => (
+                    <li key={idx}><FaCheck className="check-icon" aria-hidden="true"/> {ben}</li>
+                  ))}
+                </ul>
+                <div className="pricing-price">
+                  <span className="price-amount">{plan.precio}</span>
+                </div>
+                <button className="btn-pricing" onClick={handleLoginClick} disabled={agotado}>
+                  {agotado ? 'Agotado' : 'Adquirir ahora'}
+                </button>
               </div>
-              <ul className="pricing-features">
-                {plan.beneficios.map((ben, idx) => (
-                  <li key={idx}><FaCheck className="check-icon" aria-hidden="true"/> {ben}</li>
-                ))}
-              </ul>
-              <div className="pricing-price">
-                <span className="price-amount">{plan.precio}</span>
-              </div>
-              <button className="btn-pricing" onClick={handleLoginClick}>
-                Adquirir ahora
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </section>
       {/* NUEVA SECCIÓN: FECHA GIGANTE Y CONTADOR */}

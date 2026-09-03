@@ -692,10 +692,57 @@ html {
   letter-spacing: 1px;
 }
 
-.btn-pricing:hover {
+.btn-pricing:hover:not(:disabled) {
   background-color: var(--color-boton);
   color: var(--color-primario);
   box-shadow: 0 0 20px var(--color-primario);
+}
+
+.btn-pricing:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  filter: grayscale(0.6);
+}
+
+/* --- BADGE DE STOCK EN LAS TARJETAS DE ENTRADA --- */
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.stock-badge::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.stock-badge.stk-disponible {
+  background: rgba(0, 196, 140, 0.15);
+  color: #34d399;
+}
+
+.stock-badge.stk-bajo {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+.stock-badge.stk-agotado {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+}
+
+.pricing-card.agotado {
+  opacity: 0.7;
 }
 
 /* =======================================================

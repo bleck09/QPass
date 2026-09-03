@@ -4,11 +4,14 @@ import { useEffect } from 'react';
 // pestaña por pantalla. Manual 11.2 / 17: "Títulos de página únicos y descriptivos".
 const BASE = 'QPass';
 
-export function useTituloPagina(titulo) {
+// `activo` permite que un componente que se usa embebido dentro de otra pantalla
+// (ej. las pestañas del detalle de evento) no pise el <title> del contenedor.
+export function useTituloPagina(titulo, activo = true) {
   useEffect(() => {
+    if (!activo) return undefined;
     document.title = titulo ? `${titulo} · ${BASE}` : BASE;
     return () => {
       document.title = BASE;
     };
-  }, [titulo]);
+  }, [titulo, activo]);
 }

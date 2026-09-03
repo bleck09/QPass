@@ -1,0 +1,109 @@
+.pi-mapasel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pi-mapasel-controles {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pi-mapasel-buscar {
+  flex: 1;
+  min-width: 200px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gris-niebla);
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--texto-secundario);
+}
+
+.pi-mapasel-buscar input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  outline: none;
+  font-size: 0.875rem;
+  font-family: inherit;
+  color: var(--texto-principal);
+}
+
+.pi-mapasel-buscar button {
+  border: none;
+  background: var(--indigo-profundo);
+  color: var(--blanco);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pi-mapasel-gps {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--borde-medio);
+  background: var(--blanco);
+  color: var(--texto-principal);
+  font-weight: 700;
+  font-size: 0.8125rem;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.pi-mapasel-gps:hover {
+  background: var(--gris-niebla);
+}
+
+.pi-mapasel-mapa {
+  position: relative;
+  height: 260px;
+  width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--borde-medio);
+  z-index: 0;
+}
+
+.pi-mapasel-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pi-mapasel-coords {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--texto-principal);
+  font-variant-numeric: tabular-nums;
+}
+
+.pi-mapasel-limpiar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  background: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.pi-mapasel-error {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--rojo-error-texto);
+}

@@ -51,12 +51,12 @@ const normalizarConfig = (config) => {
   return config;
 };
 
-export default function AdminConfigurarPagina() {
-  useTituloPagina('Configurar página del evento');
+export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, embebido = false } = {}) {
+  useTituloPagina('Configurar página del evento', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
-  const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
+  const [eventoId, setEventoId] = useState(eventoIdProp || location.state?.eventoId || '');
 
   // Config de la landing con estado de carga (Manual 8.9). Si la petición falla
   // se cae a los valores por defecto (comportamiento previo), por eso no hay
@@ -89,15 +89,16 @@ export default function AdminConfigurarPagina() {
   }, [showPreview]);
 
   useEffect(() => {
+    if (embebido) return;
     api.eventos.listar().then(lista => {
       setEventosDisponibles(lista);
       setEventoId(prev => prev || lista[0]?.id);
     });
-  }, []);
+  }, [embebido]);
 
   const cambiarEvento = (nuevoId) => setEventoId(nuevoId);
-  // Si se llegó desde Gestión de Eventos, el evento queda fijo (sin selector).
-  const eventoBloqueado = !!location.state?.eventoId;
+  // Embebido o llegado desde Gestión de Eventos: evento fijo (sin selector/volver).
+  const eventoBloqueado = embebido || !!location.state?.eventoId;
 
   const handleChange = (e) => {
     setConfig({ ...config, [e.target.name]: e.target.value });
@@ -162,24 +163,28 @@ export default function AdminConfigurarPagina() {
   return (
     <div className="pi-admin-container">
 
-      <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
-        Volver al evento
-      </BotonVolver>
+      {!embebido && (
+        <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
+          Volver al evento
+        </BotonVolver>
+      )}
 
       <div className="pi-admin-header">
-        <h1>Gestión de la landing page</h1>
-        <div className="pi-admin-selector-evento">
-          <FaCalendarAlt />
-          {eventoBloqueado ? (
-            <strong>{eventosDisponibles.find(ev => ev.id === eventoId)?.nombre || 'Evento'}</strong>
-          ) : (
-            <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
-              {eventosDisponibles.map(ev => (
-                <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-              ))}
-            </select>
-          )}
-        </div>
+        {!embebido && <h1>Gestión de la landing page</h1>}
+        {!embebido && (
+          <div className="pi-admin-selector-evento">
+            <FaCalendarAlt />
+            {eventoBloqueado ? (
+              <strong>{eventosDisponibles.find(ev => ev.id === eventoId)?.nombre || 'Evento'}</strong>
+            ) : (
+              <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
+                {eventosDisponibles.map(ev => (
+                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
         <div className="pi-admin-header-actions">
           <button type="button" className="pi-admin-btn-reset" onClick={restablecerValores}>
             <FaUndo /> Restablecer

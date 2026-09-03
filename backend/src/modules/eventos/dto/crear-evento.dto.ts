@@ -20,6 +20,10 @@ export class CrearEventoDto {
   @MinLength(1)
   lugar: string;
 
+  @IsOptional()
+  @IsString()
+  coordenadas?: string;
+
   @IsDateString()
   fecha: string;
 

@@ -187,6 +187,7 @@ model Evento {
   id          String       @id @default(cuid())
   nombre      String
   lugar       String
+  coordenadas String?      // "lat, lng" en texto libre por ahora (sin selector de mapa)
   fecha       DateTime
   fechaFin    DateTime
   imagen      String?

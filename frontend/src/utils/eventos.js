@@ -13,6 +13,26 @@ export const ESTADO_EVENTO = {
   archivado:  { label: 'Archivado',  clase: 'ev-archivado' },
 };
 
+// Estado de stock de una categoría de ticket, para el badge de la landing:
+//   disponible  -> queda buena parte del cupo
+//   stock_bajo  -> quedan muy pocas (<= 15% del cupo)
+//   agotado     -> sin disponibles
+// Devuelve null si la categoría no trae datos de cupo (ej. datos de demo).
+const STOCK_BAJO_RATIO = 0.15;
+export const ESTADO_STOCK = {
+  disponible: { label: 'Disponible', clase: 'stk-disponible' },
+  stock_bajo: { label: 'Stock bajo', clase: 'stk-bajo' },
+  agotado:    { label: 'Agotado',    clase: 'stk-agotado' },
+};
+
+export function estadoStock(cat) {
+  if (!cat || cat.cantidad == null) return null;
+  const disponibles = cat.disponibles ?? (cat.cantidad - (cat.cantidadVendida ?? 0));
+  if (disponibles <= 0) return 'agotado';
+  if (cat.cantidad > 0 && disponibles / cat.cantidad <= STOCK_BAJO_RATIO) return 'stock_bajo';
+  return 'disponible';
+}
+
 export function estadoEvento(evento) {
   if (!evento) return 'proximo';
   if (evento.archivadoEn) return 'archivado';

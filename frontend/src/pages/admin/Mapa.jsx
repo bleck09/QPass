@@ -15,12 +15,12 @@ import api from '../../api/index.js';
 import { ROLES } from '../../constants/roles.js';
 import './Mapa.css';
 
-export default function Mapa() {
-  useTituloPagina('Diseñador del recinto');
+export default function Mapa({ eventoId: eventoIdProp = null, embebido = false } = {}) {
+  useTituloPagina('Diseñador del recinto', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
-  const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
+  const [eventoId, setEventoId] = useState(eventoIdProp || location.state?.eventoId || '');
   const [negociosDisponibles, setNegociosDisponibles] = useState([]);
 
   // Puestos del plano con estados cargando/error/reintentar (Manual 8.9).
@@ -61,20 +61,22 @@ export default function Mapa() {
   const [form, setForm] = useState({ id: '', negocioId: '', nombre: '', categoria: 'Comida', logo: '', ancho: 100, alto: 100 });
 
   useEffect(() => {
-    api.eventos.listar().then(lista => {
-      setEventosDisponibles(lista);
-      setEventoId(prev => prev || lista[0]?.id);
-    });
+    if (!embebido) {
+      api.eventos.listar().then(lista => {
+        setEventosDisponibles(lista);
+        setEventoId(prev => prev || lista[0]?.id);
+      });
+    }
     api.usuarios.listar({ rol: ROLES.USUARIO_NEGOCIO }).then(setNegociosDisponibles);
-  }, []);
+  }, [embebido]);
 
 
   const cambiarEvento = (nuevoId) => {
     setEventoId(nuevoId);
     setModoDiseno(false);
   };
-  // Si se llegó desde Gestión de Eventos, el evento queda fijo (sin selector).
-  const eventoBloqueado = !!location.state?.eventoId;
+  // Embebido o llegado desde Gestión de Eventos: evento fijo (sin selector/volver).
+  const eventoBloqueado = embebido || !!location.state?.eventoId;
 
   // =========================================================
   // MOTOR NATIVO: ARRASTRE (DRAG) Y REDIMENSIONAMIENTO (RESIZE)
@@ -232,29 +234,35 @@ export default function Mapa() {
   return (
     <div className="pi-mapa-container">
 
-      <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
-        Volver al evento
-      </BotonVolver>
+      {!embebido && (
+        <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
+          Volver al evento
+        </BotonVolver>
+      )}
 
       {/* CABECERA */}
       <div className="pi-mapa-header-flex">
-        <div>
-          <h1><FaMap color="var(--cian-digital)" aria-hidden="true" /> Diseñador del recinto</h1>
-          <p>Añade y escala visualmente los negocios, escenarios y zonas del evento.</p>
-        </div>
+        {!embebido && (
+          <div>
+            <h1><FaMap color="var(--cian-digital)" aria-hidden="true" /> Diseñador del recinto</h1>
+            <p>Añade y escala visualmente los negocios, escenarios y zonas del evento.</p>
+          </div>
+        )}
 
-        <div className="pi-mapa-selector-evento">
-          <FaCalendarAlt />
-          {eventoBloqueado ? (
-            <strong>{eventosDisponibles.find(ev => ev.id === eventoId)?.nombre || 'Evento'}</strong>
-          ) : (
-            <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
-              {eventosDisponibles.map(ev => (
-                <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-              ))}
-            </select>
-          )}
-        </div>
+        {!embebido && (
+          <div className="pi-mapa-selector-evento">
+            <FaCalendarAlt />
+            {eventoBloqueado ? (
+              <strong>{eventosDisponibles.find(ev => ev.id === eventoId)?.nombre || 'Evento'}</strong>
+            ) : (
+              <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
+                {eventosDisponibles.map(ev => (
+                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
 
         <div className="pi-mapa-tabs-container">
           <div className="pi-mapa-tabs">

@@ -372,11 +372,15 @@
   object-fit: cover;
 }
 
+/* Va sobre un <td>: NO usar display:flex acá (rompe la alineación de columnas). */
 .pi-dash-monto-celda {
-  display: flex;
-  align-items: center;
-  gap: 8px;
   font-weight: 700;
+  white-space: nowrap;
+}
+
+.pi-dash-monto-celda svg {
+  vertical-align: -2px;
+  margin-right: 6px;
 }
 
 .pi-dash-sin-resultados {

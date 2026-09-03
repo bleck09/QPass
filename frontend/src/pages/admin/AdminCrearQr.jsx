@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useFocoModal } from '../../utils/useFocoModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
@@ -7,7 +7,7 @@ import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaCalendarAlt, FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
-  FaEye, FaTimes, FaChevronLeft, FaChevronRight
+  FaEye, FaTimes, FaChevronLeft, FaChevronRight, FaLink, FaBan
 } from 'react-icons/fa';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import api from '../../api/index.js';
@@ -43,12 +43,12 @@ function QrImg({ qr, ancho = 180, alto = 180 }) {
   );
 }
 
-export default function AdminCrearQr() {
-  useTituloPagina('Generar códigos QR');
+export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido = false } = {}) {
+  useTituloPagina('Generar códigos QR', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
-  const [eventoId, setEventoId] = useState(location.state?.eventoId || '');
+  const [eventoId, setEventoId] = useState(eventoIdProp || location.state?.eventoId || '');
 
   // Códigos del evento con estados cargando/error/reintentar (Manual 8.9).
   const cargarCodigos = useCallback(
@@ -89,19 +89,29 @@ export default function AdminCrearQr() {
   }, [codigoAVer]);
 
   useEffect(() => {
+    if (embebido) return;
     api.eventos.listar().then(lista => {
       setEventosDisponibles(lista);
       setEventoId(prev => prev || lista[0]?.id);
     });
-  }, []);
+  }, [embebido]);
 
 
   const anchoPx = cmAPx(anchoCm) || 180;
   const altoPx = cmAPx(altoCm) || 180;
 
   const eventoActual = eventosDisponibles.find(ev => ev.id === eventoId);
-  // Si se llegó desde Gestión de Eventos, el evento queda fijo (sin selector).
-  const eventoBloqueado = !!location.state?.eventoId;
+  // Embebido o llegado desde Gestión de Eventos: evento fijo (sin selector/volver).
+  const eventoBloqueado = embebido || !!location.state?.eventoId;
+
+  // Un código anulado siempre estuvo vinculado antes (se anula al perder/cambiar la
+  // manilla o al reemplazarla por una nueva). Los que nunca se usaron quedan libres.
+  const stats = useMemo(() => {
+    const total = codigos.length;
+    const vinculados = codigos.filter(c => c.entradaId && !c.anulado).length;
+    const anulados = codigos.filter(c => c.anulado).length;
+    return { total, vinculados, anulados, libres: total - vinculados - anulados };
+  }, [codigos]);
   const totalPaginas = Math.max(1, Math.ceil(codigos.length / TAMANO_PAGINA));
   const codigosPagina = codigos.slice(pagina * TAMANO_PAGINA, pagina * TAMANO_PAGINA + TAMANO_PAGINA);
 
@@ -157,34 +167,53 @@ export default function AdminCrearQr() {
   return (
     <div className="pi-adqr-container">
 
-      <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
-        Volver al evento
-      </BotonVolver>
+      {!embebido && (
+        <BotonVolver onClick={() => navigate('/admin/eventos', { state: { eventoId } })}>
+          Volver al evento
+        </BotonVolver>
+      )}
 
-      <div className="pi-adqr-header">
-        <div>
-          <h1><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Generar códigos QR</h1>
-          <p>Genera una cantidad de códigos QR únicos para el evento y descárgalos en PDF.</p>
+      {!embebido && (
+        <div className="pi-adqr-header">
+          <div>
+            <h1><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Generar códigos QR</h1>
+            <p>Genera una cantidad de códigos QR únicos para el evento y descárgalos en PDF.</p>
+          </div>
+          <div className="pi-adqr-selector-evento">
+            <FaCalendarAlt />
+            {eventoBloqueado ? (
+              <strong>{eventoActual?.nombre || 'Evento'}</strong>
+            ) : (
+              <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
+                {eventosDisponibles.map(ev => (
+                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
+                ))}
+              </select>
+            )}
+          </div>
         </div>
-        <div className="pi-adqr-selector-evento">
-          <FaCalendarAlt />
-          {eventoBloqueado ? (
-            <strong>{eventoActual?.nombre || 'Evento'}</strong>
-          ) : (
-            <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
-              {eventosDisponibles.map(ev => (
-                <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-              ))}
-            </select>
-          )}
-        </div>
-      </div>
+      )}
 
       <div className="pi-adqr-kpi-grid">
         <div className="pi-adqr-kpi-card">
           <FaQrcode color="var(--indigo-profundo)" size={20} />
-          <span className="numero">{codigos.length}</span>
+          <span className="numero">{stats.total}</span>
           <span className="label">Códigos generados</span>
+        </div>
+        <div className="pi-adqr-kpi-card">
+          <FaLink color="var(--verde-recarga-texto)" size={20} />
+          <span className="numero">{stats.vinculados}</span>
+          <span className="label">Vinculados (activos)</span>
+        </div>
+        <div className="pi-adqr-kpi-card">
+          <FaBan color="var(--rojo-error-texto)" size={20} />
+          <span className="numero">{stats.anulados}</span>
+          <span className="label">Anulados (cambio de manilla)</span>
+        </div>
+        <div className="pi-adqr-kpi-card">
+          <FaBoxes color="var(--indigo-profundo)" size={20} />
+          <span className="numero">{stats.libres}</span>
+          <span className="label">Libres (sin vincular)</span>
         </div>
       </div>
 

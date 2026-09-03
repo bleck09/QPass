@@ -106,7 +106,84 @@
   color: var(--blanco);
 }
 
-/* Barra de Búsqueda */
+/* Buscador destacado */
+.pi-adnegocio-buscador-destacado {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--blanco);
+  border: 2px solid var(--indigo-profundo);
+  border-radius: 14px;
+  padding: 14px 18px;
+  box-shadow: 0 4px 18px rgba(26, 43, 107, 0.14);
+  margin-bottom: 16px;
+}
+
+.pi-adnegocio-buscador-destacado .bd-icon {
+  color: var(--indigo-profundo);
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.pi-adnegocio-buscador-destacado input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 1.0625rem;
+  font-family: inherit;
+  color: var(--texto-principal);
+}
+
+.pi-adnegocio-buscador-destacado input::placeholder {
+  color: var(--texto-secundario);
+  font-size: 1rem;
+}
+
+.pi-adnegocio-buscador-destacado .bd-clear {
+  border: none;
+  background: var(--gris-niebla);
+  color: var(--texto-secundario);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.pi-adnegocio-buscador-destacado .bd-clear:hover {
+  color: var(--rojo-error);
+}
+
+.pi-adnegocio-resultados {
+  margin: 0 0 16px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--texto-secundario);
+}
+
+.tab-count {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--gris-niebla);
+  color: var(--texto-secundario);
+  font-size: 0.6875rem;
+  font-weight: 800;
+}
+
+.tab-btn.active .tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: var(--blanco);
+}
+
+/* Barra de Búsqueda (legacy) */
 .pi-adnegocio-search {
   position: relative;
   width: 100%;

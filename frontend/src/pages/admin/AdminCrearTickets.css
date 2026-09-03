@@ -215,6 +215,11 @@
   color: var(--verde-recarga-texto);
 }
 
+.pi-adtick-agotado {
+  font-weight: 700;
+  color: var(--rojo-error-texto);
+}
+
 .pi-adtick-btn-delete {
   background-color: var(--rojo-error-suave);
   color: var(--rojo-error-texto);

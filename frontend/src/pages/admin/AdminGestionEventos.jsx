@@ -4,24 +4,48 @@ import { useFocoModal } from '../../utils/useFocoModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import {
   FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode,
-  FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo
+  FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
 import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
+import MapaSelector from '../../components/MapaSelector.jsx';
+import AdminCrearTickets from './AdminCrearTickets.jsx';
+import AdminCrearQr from './AdminCrearQr.jsx';
+import AdminConfigurarPagina from './AdminConfigurarPagina.jsx';
+import Mapa from './Mapa.jsx';
+import Admin from './Admin.jsx';
 import './AdminGestionEventos.css';
 
+// Pestañas del detalle de evento (todo se ve acá mismo, sin cambiar de página).
+const PESTANAS = [
+  { id: 'asignados', label: 'Usuarios asignados', icono: <FaUsers /> },
+  { id: 'tickets', label: 'Tickets del Evento', icono: <FaTicketAlt /> },
+  { id: 'solicitudes', label: 'Solicitudes de Entradas', icono: <FaClipboardList /> },
+  { id: 'reportes', label: 'Reportes', icono: <FaExclamationTriangle /> },
+  { id: 'qr', label: 'Generar QR', icono: <FaQrcode /> },
+  { id: 'config', label: 'Configurar Página', icono: <FaCog /> },
+  { id: 'mapa', label: 'Mapa', icono: <FaMapMarkedAlt /> },
+];
+
 const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
-const FORM_EVENTO_VACIO = { nombre: '', lugar: '', fecha: '', fechaFin: '', imagen: '' };
+const FORM_EVENTO_VACIO = { nombre: '', lugar: '', coordenadas: '', fecha: '', fechaFin: '', imagen: '' };
+
+// ISO -> valor para <input type="datetime-local"> (YYYY-MM-DDTHH:mm, hora local).
+const isoADatetimeLocal = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 export default function AdminGestionEventos() {
   useTituloPagina('Gestión de eventos');
-  const navigate = useNavigate();
   const location = useLocation();
 
   // Carga primaria (4 listas en paralelo) con cargando/error/reintentar (Manual 8.9).
@@ -48,28 +72,51 @@ export default function AdminGestionEventos() {
   const setSolicitudes = (fn) => setDatos(d => ({ ...d, solicitudes: typeof fn === 'function' ? fn(d.solicitudes) : fn }));
 
   const [busqueda, setBusqueda] = useState('');
-  // Al volver desde Tickets / QR / Configurar Página / Mapa se llega con
-  // location.state.eventoId -> abrimos ese evento directo, no la lista.
+  // Al volver desde una subpágina se llega con location.state.eventoId -> abrimos
+  // ese evento directo, no la lista.
   const [eventoIdDetalle, setEventoIdDetalle] = useState(location.state?.eventoId ?? null);
-  const [mostrarFormCrear, setMostrarFormCrear] = useState(false);
+  const [pestana, setPestana] = useState('asignados');
+
+  const abrirDetalle = (id) => {
+    setEventoIdDetalle(id);
+    setPestana('asignados');
+  };
+  const [modalEventoAbierto, setModalEventoAbierto] = useState(false);
+  const [editandoId, setEditandoId] = useState(null); // null = crear; id = editar
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
-  // Foco del modal de crear evento (A1 / Manual 8.6)
+  // Foco del modal de crear/editar evento (A1 / Manual 8.6)
   const modalCrearRef = useRef(null);
-  useFocoModal(modalCrearRef, mostrarFormCrear);
-
-  // Sección de usuarios asignados: destino del botón "Usuarios asignados" de accesos rápidos.
-  const seccionAsignadosRef = useRef(null);
+  useFocoModal(modalCrearRef, modalEventoAbierto);
 
   // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
   useEffect(() => {
-    if (!mostrarFormCrear) return;
-    const alTecla = (e) => { if (e.key === "Escape") setMostrarFormCrear(false); };
+    if (!modalEventoAbierto) return;
+    const alTecla = (e) => { if (e.key === "Escape") setModalEventoAbierto(false); };
     window.addEventListener("keydown", alTecla);
     document.body.style.overflow = "hidden";
     return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
-  }, [mostrarFormCrear]);
+  }, [modalEventoAbierto]);
   const [formEvento, setFormEvento] = useState(FORM_EVENTO_VACIO);
+
+  const abrirCrearEvento = () => {
+    setEditandoId(null);
+    setFormEvento(FORM_EVENTO_VACIO);
+    setModalEventoAbierto(true);
+  };
+
+  const abrirEditarEvento = (ev) => {
+    setEditandoId(ev.id);
+    setFormEvento({
+      nombre: ev.nombre || '',
+      lugar: ev.lugar || '',
+      coordenadas: ev.coordenadas || '',
+      imagen: ev.imagen || '',
+      fecha: isoADatetimeLocal(ev.fecha),
+      fechaFin: isoADatetimeLocal(ev.fechaFin),
+    });
+    setModalEventoAbierto(true);
+  };
   // Panel de asignar: filtro por rol + búsqueda por nombre/correo (ya no se elige rol).
   const [filtroRolAsignar, setFiltroRolAsignar] = useState('');
   const [busquedaUsuario, setBusquedaUsuario] = useState('');
@@ -92,7 +139,7 @@ export default function AdminGestionEventos() {
     const nuevo = await api.solicitudesEvento.aprobar(s.id);
     setEventos(prev => [nuevo, ...prev]);
     setSolicitudes(prev => prev.filter(x => x.id !== s.id));
-    setEventoIdDetalle(nuevo.id);
+    abrirDetalle(nuevo.id);
   };
 
   const rechazarSolicitud = async (s) => {
@@ -145,15 +192,22 @@ export default function AdminGestionEventos() {
     setFormEvento({ ...formEvento, [e.target.name]: e.target.value });
   };
 
-  const handleCrearEvento = async (e) => {
+  const handleGuardarEvento = async (e) => {
     e.preventDefault();
     if (!formEvento.nombre.trim() || !formEvento.lugar.trim() || !formEvento.fecha || !formEvento.fechaFin) return;
+
+    if (editandoId) {
+      const actualizado = await api.eventos.actualizar(editandoId, formEvento);
+      setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+      setModalEventoAbierto(false);
+      return;
+    }
 
     const nuevo = await api.eventos.crear(formEvento);
     setEventos(prev => [nuevo, ...prev]);
     setFormEvento(FORM_EVENTO_VACIO);
-    setMostrarFormCrear(false);
-    setEventoIdDetalle(nuevo.id);
+    setModalEventoAbierto(false);
+    abrirDetalle(nuevo.id);
   };
 
   const handleAsignar = async (usuario) => {
@@ -229,23 +283,33 @@ export default function AdminGestionEventos() {
             <img width="96" height="96" src={eventoDetalle.imagen} alt={eventoDetalle.nombre} className="pi-ges-detalle-imagen" />
             <div className="pi-ges-detalle-info">
               <h1>{eventoDetalle.nombre} <BadgeEstadoEvento evento={eventoDetalle} /></h1>
-              <span><FaMapMarkerAlt /> {eventoDetalle.lugar} · {formatearFecha(eventoDetalle.fecha)}</span>
+              <span>
+                <FaMapMarkerAlt /> {eventoDetalle.lugar}
+                {eventoDetalle.coordenadas ? ` (${eventoDetalle.coordenadas})` : ''} · {formatearFecha(eventoDetalle.fecha)}
+              </span>
             </div>
-            {eventoDetalle.archivadoEn ? (
-              <button type="button" className="pi-ges-btn-desarchivar" onClick={handleDesarchivar}>
-                <FaUndo /> Desarchivar
-              </button>
-            ) : (
-              <button
-                type="button"
-                className="pi-ges-btn-archivar"
-                onClick={handleArchivar}
-                disabled={estadoEvento(eventoDetalle) !== 'finalizado'}
-                title={estadoEvento(eventoDetalle) !== 'finalizado' ? 'Solo se archiva un evento finalizado' : undefined}
-              >
-                <FaArchive /> Archivar
-              </button>
-            )}
+            <div className="pi-ges-detalle-acciones">
+              {!eventoDetalle.archivadoEn && (
+                <button type="button" className="pi-ges-btn-editar" onClick={() => abrirEditarEvento(eventoDetalle)}>
+                  <FaPen /> Editar
+                </button>
+              )}
+              {eventoDetalle.archivadoEn ? (
+                <button type="button" className="pi-ges-btn-desarchivar" onClick={handleDesarchivar}>
+                  <FaUndo /> Desarchivar
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="pi-ges-btn-archivar"
+                  onClick={handleArchivar}
+                  disabled={estadoEvento(eventoDetalle) !== 'finalizado'}
+                  title={estadoEvento(eventoDetalle) !== 'finalizado' ? 'Solo se archiva un evento finalizado' : undefined}
+                >
+                  <FaArchive /> Archivar
+                </button>
+              )}
+            </div>
           </div>
 
           {eventoDetalle.archivadoEn && (
@@ -254,32 +318,33 @@ export default function AdminGestionEventos() {
             </p>
           )}
 
-          <div className="pi-ges-accesos-rapidos">
-            <button type="button" onClick={() => navigate('/AdminCrearTickets', { state: { eventoId: eventoDetalle.id } })}>
-              <FaTicketAlt /> Tickets del Evento
-            </button>
-            <button type="button" onClick={() => navigate('/admin/solicitudes', { state: { eventoId: eventoDetalle.id } })}>
-              <FaClipboardList /> Solicitudes de Entradas
-              {comprasPendientes > 0 && <span className="pi-ges-badge-contador">{comprasPendientes}</span>}
-            </button>
-            <button type="button" onClick={() => navigate('/admin/qr', { state: { eventoId: eventoDetalle.id } })}>
-              <FaQrcode /> Generar QR
-            </button>
-            <button type="button" onClick={() => navigate('/admin/config', { state: { eventoId: eventoDetalle.id } })}>
-              <FaCog /> Configurar Página
-            </button>
-            <button type="button" onClick={() => navigate('/Mapa', { state: { eventoId: eventoDetalle.id } })}>
-              <FaMapMarkedAlt /> Mapa
-            </button>
-            <button
-              type="button"
-              onClick={() => seccionAsignadosRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
-            >
-              <FaUserPlus /> Usuarios asignados
-            </button>
+          <div className="pi-ges-tabs" role="tablist" aria-label="Secciones del evento">
+            {PESTANAS.map(p => (
+              <button
+                key={p.id}
+                type="button"
+                role="tab"
+                aria-selected={pestana === p.id}
+                className={`pi-ges-tab${pestana === p.id ? ' activo' : ''}`}
+                onClick={() => setPestana(p.id)}
+              >
+                {p.icono} {p.label}
+                {p.id === 'solicitudes' && comprasPendientes > 0 && (
+                  <span className="pi-ges-badge-contador">{comprasPendientes}</span>
+                )}
+              </button>
+            ))}
           </div>
 
-          <section className="pi-ges-seccion" ref={seccionAsignadosRef}>
+          {pestana === 'tickets' && <AdminCrearTickets eventoId={eventoDetalle.id} embebido />}
+          {pestana === 'solicitudes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="solicitudesEntradas" />}
+          {pestana === 'reportes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="incidencias" />}
+          {pestana === 'qr' && <AdminCrearQr eventoId={eventoDetalle.id} embebido />}
+          {pestana === 'config' && <AdminConfigurarPagina eventoId={eventoDetalle.id} embebido />}
+          {pestana === 'mapa' && <Mapa eventoId={eventoDetalle.id} embebido />}
+
+          {pestana === 'asignados' && (
+          <section className="pi-ges-seccion">
             <h3 className="pi-ges-seccion-titulo"><FaUsers /> Usuarios asignados</h3>
 
             <div className="pi-ges-tabla-wrapper">
@@ -373,6 +438,7 @@ export default function AdminGestionEventos() {
               </ul>
             </div>
           </section>
+          )}
         </>
       ) : (
         <>
@@ -381,7 +447,7 @@ export default function AdminGestionEventos() {
               <h1>Gestión de eventos</h1>
               <p>Crea eventos y asigna usuarios con su rol para cada uno.</p>
             </div>
-            <button type="button" className="pi-ges-btn-crear" onClick={() => setMostrarFormCrear(true)}>
+            <button type="button" className="pi-ges-btn-crear" onClick={abrirCrearEvento}>
               <FaPlus /> Crear Evento
             </button>
           </div>
@@ -429,7 +495,7 @@ export default function AdminGestionEventos() {
 
           <div className="pi-ges-eventos-grid">
             {eventosFiltrados.map(ev => (
-              <button type="button" key={ev.id} className="pi-ges-evento-card" onClick={() => setEventoIdDetalle(ev.id)}>
+              <button type="button" key={ev.id} className="pi-ges-evento-card" onClick={() => abrirDetalle(ev.id)}>
                 <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-ges-evento-imagen" />
                 <div className="pi-ges-evento-info">
                   <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
@@ -445,18 +511,20 @@ export default function AdminGestionEventos() {
         </>
       )}
 
-      {mostrarFormCrear && (
-        <div className="pi-ges-modal-overlay" onClick={() => setMostrarFormCrear(false)}>
+      {modalEventoAbierto && (
+        <div className="pi-ges-modal-overlay" onClick={() => setModalEventoAbierto(false)}>
           <div ref={modalCrearRef} tabIndex={-1} className="pi-ges-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="ges-modal-titulo">
             <div className="pi-ges-modal-header">
-              <h2 id="ges-modal-titulo"><FaPlus aria-hidden="true" /> Crear Evento</h2>
-              <button type="button" className="pi-ges-btn-close-modal" onClick={() => setMostrarFormCrear(false)} aria-label="Cerrar">
+              <h2 id="ges-modal-titulo">
+                {editandoId ? <><FaPen aria-hidden="true" /> Editar Evento</> : <><FaPlus aria-hidden="true" /> Crear Evento</>}
+              </h2>
+              <button type="button" className="pi-ges-btn-close-modal" onClick={() => setModalEventoAbierto(false)} aria-label="Cerrar">
                 <FaTimes aria-hidden="true" />
               </button>
             </div>
 
             <div className="pi-ges-modal-body">
-              <form className="pi-ges-form" onSubmit={handleCrearEvento}>
+              <form className="pi-ges-form" onSubmit={handleGuardarEvento}>
                 <div className="pi-ges-input-group">
                   <label htmlFor="ev-nombre">Nombre del evento</label>
                   <input
@@ -469,6 +537,13 @@ export default function AdminGestionEventos() {
                   <input
                     id="ev-lugar" type="text" name="lugar" value={formEvento.lugar} onChange={handleChangeFormEvento}
                     placeholder="Ej: Campo Ferial, Cbba" required
+                  />
+                </div>
+                <div className="pi-ges-input-group">
+                  <label>Ubicación en el mapa (opcional)</label>
+                  <MapaSelector
+                    value={formEvento.coordenadas}
+                    onChange={(coords) => setFormEvento(f => ({ ...f, coordenadas: coords }))}
                   />
                 </div>
                 <div className="pi-ges-input-group">
@@ -500,10 +575,12 @@ export default function AdminGestionEventos() {
                 </div>
 
                 <div className="pi-ges-modal-actions">
-                  <button type="button" className="pi-ges-btn-cancelar" onClick={() => setMostrarFormCrear(false)}>
+                  <button type="button" className="pi-ges-btn-cancelar" onClick={() => setModalEventoAbierto(false)}>
                     Cancelar
                   </button>
-                  <button type="submit" className="pi-ges-btn-guardar">Crear Evento</button>
+                  <button type="submit" className="pi-ges-btn-guardar">
+                    {editandoId ? 'Guardar cambios' : 'Crear Evento'}
+                  </button>
                 </div>
               </form>
             </div>

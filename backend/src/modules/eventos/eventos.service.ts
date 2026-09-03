@@ -50,6 +50,7 @@ export class EventosService {
       data: {
         nombre: dto.nombre,
         lugar: dto.lugar,
+        coordenadas: dto.coordenadas,
         imagen: dto.imagen,
         qrPrefijo: dto.qrPrefijo,
         fecha: new Date(dto.fecha),
@@ -74,6 +75,7 @@ export class EventosService {
       data: {
         nombre: dto.nombre,
         lugar: dto.lugar,
+        coordenadas: dto.coordenadas,
         imagen: dto.imagen,
         estado: dto.estado,
         qrPrefijo: dto.qrPrefijo,

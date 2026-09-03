@@ -53,6 +53,7 @@ export class ReportesEntradaService {
             },
           },
         },
+        evento: { select: { nombre: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
