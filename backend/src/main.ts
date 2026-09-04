@@ -35,6 +35,14 @@ async function bootstrap() {
   app.use(
     '/uploads',
     (req: Request, res: Response, next: NextFunction) => {
+      // Sin este chequeo de método, esto también interceptaba el POST /uploads
+      // de subida (mismo prefijo, sin /api/ que nginx ya le sacó) y lo rechazaba
+      // porque una subida nueva nunca trae ?exp=&firma= — esos son de descarga.
+      // Solo GET/HEAD sirven un archivo; todo lo demás sigue de largo al router.
+      if (req.method !== 'GET' && req.method !== 'HEAD') {
+        next();
+        return;
+      }
       const rutaCompleta = `/uploads${req.path}`;
       const { exp, firma } = req.query;
       if (!verificarFirmaUpload(rutaCompleta, exp as string, firma as string)) {
