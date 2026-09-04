@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { FaCamera, FaTimes } from 'react-icons/fa';
 import './CapturarFoto.css';
 
-// Ancho máximo de la foto guardada: la cámara suele capturar a varios megapíxeles, muy pesado
-// para una simple foto de verificación que se guarda en base64. Se achica antes de codificar.
+// Ancho máximo de la foto capturada: la cámara suele capturar a varios megapíxeles, muy pesado
+// para una simple foto de verificación. Se achica antes de pasarla a onCapturada (que sube el
+// archivo real a /uploads — ver utils/imagenes.js — esto solo entrega el data URL del canvas).
 const ANCHO_MAXIMO = 640;
 
 // Cámara real para tomar una sola foto (a diferencia de EscanerQr, que lee continuamente
