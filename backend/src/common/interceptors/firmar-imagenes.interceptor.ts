@@ -27,7 +27,15 @@ function firmarProfundo(valor: unknown, profundidad = 0): unknown {
   if (valor == null || profundidad > PROFUNDIDAD_MAXIMA) return valor;
 
   if (typeof valor === 'string') {
-    return RUTA_UPLOAD.test(valor) ? firmarUrlUpload(valor) : valor;
+    if (!RUTA_UPLOAD.test(valor)) return valor;
+    // Por si esta MISMA URL ya venía firmada de antes (ej. un formulario que no
+    // tocó la imagen reenvió al backend la URL firmada que había recibido, y
+    // quedó guardada así en la BD): recortamos todo lo que haya después del
+    // primer "?" para volver siempre al path real del archivo antes de firmar
+    // de nuevo. Sin esto, cada lectura le pegaba una firma nueva ARRIBA de la
+    // vieja ("...jpg?exp=A&firma=A?exp=B&firma=B..."), una URL que ya no sirve.
+    const rutaLimpia = valor.split('?')[0];
+    return firmarUrlUpload(rutaLimpia);
   }
 
   if (Array.isArray(valor)) {
