@@ -9,7 +9,7 @@ Archivos relevantes:
 | `docker-compose.yml` | El stack de producción (lo lee Dokploy). |
 | `.env.example` | Lista de variables a cargar en Dokploy. |
 | `backend/Dockerfile` | Imagen del API. Aplica migraciones al arrancar. |
-| `frontend/Dockerfile` + `frontend/nginx.conf` | Build del front + nginx con fallback SPA. |
+| `frontend/Dockerfile` + `frontend/nginx.conf` | Build del front + nginx: fallback SPA y proxy `/api/` → `qpass-backend:4000`. |
 | `backend/docker-compose.yml` | **Solo dev local** (Postgres/Redis en tu máquina). No lo usa Dokploy. |
 
 ---
@@ -25,6 +25,13 @@ y lo proxya al backend por la red interna de Docker. Mismo origen → sin CORS.
 
 > `VITE_API_URL` se deja en `/api` (relativo). Si algún día tenés un subdominio
 > aparte para el API, ponés ahí la URL absoluta y sacás el `location /api/` del nginx.
+
+> **Nombre del backend en la red interna:** el nginx proxya a `http://qpass-backend:4000`,
+> **no** a `backend:4000`. El servicio `backend` tiene ese alias en la red `internal`
+> (`docker-compose.yml`). El nombre genérico `backend` colisiona con servicios homónimos
+> de otras apps que comparten `dokploy-network`, y el DNS de Docker puede devolver el de
+> otra app (→ `404` en todo `/api/*`). Si cambiás el alias, ajustá también
+> `frontend/nginx.conf`.
 
 ## 2. Crear la app en Dokploy
 
@@ -49,7 +56,21 @@ y lo proxya al backend por la red interna de Docker. Mismo origen → sin CORS.
 > inicializar el volumen vacío). Borrá el volumen y redeploy, o alineá la clave:
 > `docker compose exec db psql -U qpass -d qpass -c "ALTER USER qpass WITH PASSWORD 'LA_DEL_ENV';"`
 
-Healthchecks: `backend` expone `GET /health` → `{ "ok": true }`.
+Healthchecks: `backend` expone `GET /health` → `{ "ok": true }`. El healthcheck usa
+`http://127.0.0.1:4000/health`, **no** `localhost`: `localhost` resuelve primero a `::1`
+(IPv6) y Node escucha solo en IPv4, así que con `localhost` el healthcheck da
+`connection refused` y el contenedor queda `unhealthy` aunque el API funcione.
+
+> **Si `/api/*` responde `404` (y el frontend estático carga bien):** el nginx del
+> frontend no está llegando al backend correcto. Diagnóstico desde la terminal del
+> contenedor frontend en Dokploy:
+> ```sh
+> wget -qO- http://qpass-backend:4000/health   # debe dar {"ok":true}
+> ```
+> Si falla, revisá: (a) el contenedor `backend` está `healthy`; (b) `frontend` y
+> `backend` comparten la red `internal` en `docker-compose.yml`; (c) el `proxy_pass`
+> de `frontend/nginx.conf` apunta a `qpass-backend`, no a `backend`. Tras corregir,
+> **rebuild completo** (el nginx se hornea en el build del frontend).
 
 ## 4. Usuarios iniciales (seed)
 

@@ -65,9 +65,15 @@ services:
     expose:
       - "4000"
     networks:
-      - internal
+      internal:
+        # Alias único: "backend" a secas colisiona con otras apps de Dokploy
+        # que comparten dokploy-network. El nginx del frontend usa este nombre.
+        aliases:
+          - qpass-backend
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:4000/health || exit 1"]
+      # 127.0.0.1 y no "localhost": localhost resuelve a ::1 (IPv6) y Node solo
+      # escucha en IPv4, así el healthcheck daba connection refused -> unhealthy.
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:4000/health || exit 1"]
       interval: 15s
       timeout: 5s
       retries: 5
