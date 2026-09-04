@@ -675,6 +675,57 @@
   border: 1px solid var(--borde-suave);
 }
 
+.pi-ges-image-upload {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pi-ges-btn-upload {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  background: var(--blanco);
+  color: var(--texto-principal);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.pi-ges-btn-upload:hover {
+  border-color: var(--cian-digital);
+}
+
+.pi-ges-btn-quitar-imagen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--borde-medio);
+  border-radius: 8px;
+  background: var(--blanco);
+  color: var(--texto-secundario);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.pi-ges-btn-quitar-imagen:hover {
+  border-color: var(--rojo-error);
+  color: var(--rojo-error-texto);
+}
+
+.pi-ges-error-imagen {
+  margin-top: 8px;
+  font-size: 0.8125rem;
+  color: var(--rojo-error-texto);
+}
+
 .pi-ges-modal-actions {
   display: flex;
   justify-content: flex-end;

@@ -7,8 +7,21 @@ import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import { FaSearch, FaLocationArrow, FaTimes } from 'react-icons/fa';
 import './MapaSelector.css';
 
-// Los íconos por defecto de Leaflet no resuelven bien con bundlers: se fijan a mano.
+// Los íconos por defecto de Leaflet no resuelven bien con bundlers: la lógica
+// interna `_getIconUrl` le antepone una ruta y el PNG queda 404 en el build.
+// Se define un ícono explícito y se pasa a cada marcador.
+delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({ iconUrl, iconRetinaUrl, shadowUrl });
+
+const ICONO_MARCADOR = L.icon({
+  iconUrl,
+  iconRetinaUrl,
+  shadowUrl,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 // Centro por defecto si todavía no hay coordenadas (Cochabamba, Bolivia).
 const CENTRO_DEFECTO = [-17.3895, -66.1568];
@@ -48,13 +61,14 @@ export default function MapaSelector({ value, onChange }) {
     // formulario, no el zoom. Quedan los botones +/- y el doble clic.
     const mapa = L.map(contenedorRef.current, { scrollWheelZoom: false })
       .setView(inicial, parsear(value) ? 15 : 12);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       attribution: '&copy; OpenStreetMap',
       maxZoom: 19,
+      crossOrigin: true,
     }).addTo(mapa);
 
     if (parsear(value)) {
-      marcadorRef.current = L.marker(inicial, { draggable: true }).addTo(mapa);
+      marcadorRef.current = L.marker(inicial, { draggable: true, icon: ICONO_MARCADOR }).addTo(mapa);
       marcadorRef.current.on('dragend', () => {
         const { lat, lng } = marcadorRef.current.getLatLng();
         onChangeRef.current(formatear([lat, lng]));
@@ -66,7 +80,7 @@ export default function MapaSelector({ value, onChange }) {
       if (marcadorRef.current) {
         marcadorRef.current.setLatLng(latlng);
       } else {
-        marcadorRef.current = L.marker(latlng, { draggable: true }).addTo(mapa);
+        marcadorRef.current = L.marker(latlng, { draggable: true, icon: ICONO_MARCADOR }).addTo(mapa);
         marcadorRef.current.on('dragend', () => {
           const { lat, lng } = marcadorRef.current.getLatLng();
           onChangeRef.current(formatear([lat, lng]));
@@ -78,19 +92,36 @@ export default function MapaSelector({ value, onChange }) {
     mapaRef.current = mapa;
 
     // El contenedor está dentro de un modal recién abierto: hasta que no tiene
-    // tamaño real, los tiles se dibujan mal. Recalculamos varias veces y ante
-    // cualquier cambio de tamaño del contenedor.
-    const recalcular = () => mapa.invalidateSize();
-    requestAnimationFrame(recalcular);
-    const timers = [80, 250, 600].map((t) => setTimeout(recalcular, t));
+    // tamaño real, los tiles se dibujan a medias (quedan zonas grises).
+    // Recalculamos varias veces, cuando el mapa queda listo, ante cualquier
+    // cambio de tamaño del contenedor y cuando se vuelve visible.
+    const recalcular = () => {
+      if (!mapaRef.current) return;
+      mapa.invalidateSize({ animate: false });
+    };
+    mapa.whenReady(recalcular);
+    requestAnimationFrame(() => requestAnimationFrame(recalcular));
+    const timers = [80, 250, 600, 1200].map((t) => setTimeout(recalcular, t));
+
     const ro = typeof ResizeObserver !== 'undefined'
       ? new ResizeObserver(recalcular)
       : null;
     if (ro && contenedorRef.current) ro.observe(contenedorRef.current);
 
+    const io = typeof IntersectionObserver !== 'undefined'
+      ? new IntersectionObserver((entradas) => {
+          if (entradas.some((e) => e.isIntersecting)) recalcular();
+        })
+      : null;
+    if (io && contenedorRef.current) io.observe(contenedorRef.current);
+
+    window.addEventListener('resize', recalcular);
+
     return () => {
       timers.forEach(clearTimeout);
       ro?.disconnect();
+      io?.disconnect();
+      window.removeEventListener('resize', recalcular);
       mapa.remove();
       mapaRef.current = null;
       marcadorRef.current = null;
@@ -106,7 +137,7 @@ export default function MapaSelector({ value, onChange }) {
     if (marcadorRef.current) {
       marcadorRef.current.setLatLng(p);
     } else {
-      marcadorRef.current = L.marker(p, { draggable: true }).addTo(mapa);
+      marcadorRef.current = L.marker(p, { draggable: true, icon: ICONO_MARCADOR }).addTo(mapa);
       marcadorRef.current.on('dragend', () => {
         const { lat, lng } = marcadorRef.current.getLatLng();
         onChangeRef.current(formatear([lat, lng]));
@@ -120,7 +151,7 @@ export default function MapaSelector({ value, onChange }) {
     mapa.setView([lat, lng], zoom);
     if (marcadorRef.current) marcadorRef.current.setLatLng([lat, lng]);
     else {
-      marcadorRef.current = L.marker([lat, lng], { draggable: true }).addTo(mapa);
+      marcadorRef.current = L.marker([lat, lng], { draggable: true, icon: ICONO_MARCADOR }).addTo(mapa);
       marcadorRef.current.on('dragend', () => {
         const { lat: a, lng: b } = marcadorRef.current.getLatLng();
         onChangeRef.current(formatear([a, b]));

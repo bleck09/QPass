@@ -66,6 +66,8 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
   const [prefijo, setPrefijo] = useState('QP');
   const [anchoCm, setAnchoCm] = useState('5');
   const [altoCm, setAltoCm] = useState('5');
+  const [errores, setErrores] = useState({});
+  const limpiarError = (campo) => setErrores((prev) => (prev[campo] ? { ...prev, [campo]: undefined } : prev));
   const [pagina, setPagina] = useState(0);
   const [mostrarImagenes, setMostrarImagenes] = useState(false);
   const [codigoAVer, setCodigoAVer] = useState(null);
@@ -123,9 +125,26 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
 
   const handleGenerar = async (e) => {
     e.preventDefault();
+
+    const errs = {};
     const n = Number(cantidad);
-    if (!n || n < 1) return;
-    if (!prefijo.trim()) return;
+    if (!String(cantidad).trim()) errs.cantidad = 'Indicá cuántos códigos generar.';
+    else if (!Number.isFinite(n) || n < 1) errs.cantidad = 'Debe ser un número mayor a 0.';
+    else if (n > 2000) errs.cantidad = 'El máximo por tanda es 2000.';
+
+    if (!prefijo.trim()) errs.prefijo = 'Escribí un prefijo de 1 a 3 letras.';
+
+    const a = Number(anchoCm);
+    if (!String(anchoCm).trim()) errs.ancho = 'Indicá el ancho del QR.';
+    else if (!Number.isFinite(a) || a < 1 || a > 26) errs.ancho = 'Debe estar entre 1 y 26 cm.';
+
+    const h = Number(altoCm);
+    if (!String(altoCm).trim()) errs.alto = 'Indicá el alto del QR.';
+    else if (!Number.isFinite(h) || h < 1 || h > 26) errs.alto = 'Debe estar entre 1 y 26 cm.';
+
+    setErrores(errs);
+    if (Object.keys(errs).length > 0) return;
+
     await api.codigosQr.generar({ eventoId, cantidad: n, prefijo });
     await recargarCodigos();
     setPagina(0);
@@ -219,7 +238,7 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
 
       <div className="pi-adqr-card">
         <h3 className="pi-adqr-subtitulo">Generar nuevos códigos</h3>
-        <form onSubmit={handleGenerar} className="pi-adqr-form">
+        <form onSubmit={handleGenerar} className="pi-adqr-form" noValidate>
           <div className="pi-adqr-input-group">
             <label htmlFor="qr-cantidad">Cantidad a generar</label>
             <div className="pi-adqr-input-wrapper">
@@ -231,11 +250,13 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
                 min="1"
                 max="2000"
                 value={cantidad}
-                onChange={(e) => setCantidad(e.target.value)}
+                onChange={(e) => { setCantidad(e.target.value); limpiarError('cantidad'); }}
                 placeholder="Ej: 50"
-                required
+                aria-invalid={!!errores.cantidad}
+                aria-describedby={errores.cantidad ? 'qr-cantidad-error' : undefined}
               />
             </div>
+            {errores.cantidad && <p id="qr-cantidad-error" className="pi-adqr-error">{errores.cantidad}</p>}
           </div>
           <div className="pi-adqr-input-group">
             <label htmlFor="qr-prefijo">Prefijo (1 a 3 letras)</label>
@@ -245,12 +266,14 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
                 id="qr-prefijo"
                 type="text"
                 value={prefijo}
-                onChange={(e) => setPrefijo(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
+                onChange={(e) => { setPrefijo(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3)); limpiarError('prefijo'); }}
                 placeholder="Ej: VIP"
                 maxLength={3}
-                required
+                aria-invalid={!!errores.prefijo}
+                aria-describedby={errores.prefijo ? 'qr-prefijo-error' : undefined}
               />
             </div>
+            {errores.prefijo && <p id="qr-prefijo-error" className="pi-adqr-error">{errores.prefijo}</p>}
           </div>
           <div className="pi-adqr-input-group">
             <label htmlFor="qr-ancho">Ancho del QR (cm)</label>
@@ -263,11 +286,13 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
                 max="26"
                 step="0.1"
                 value={anchoCm}
-                onChange={(e) => setAnchoCm(e.target.value)}
+                onChange={(e) => { setAnchoCm(e.target.value); limpiarError('ancho'); }}
                 placeholder="Ej: 5"
-                required
+                aria-invalid={!!errores.ancho}
+                aria-describedby={errores.ancho ? 'qr-ancho-error' : undefined}
               />
             </div>
+            {errores.ancho && <p id="qr-ancho-error" className="pi-adqr-error">{errores.ancho}</p>}
           </div>
           <div className="pi-adqr-input-group">
             <label htmlFor="qr-alto">Alto del QR (cm)</label>
@@ -280,11 +305,13 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
                 max="26"
                 step="0.1"
                 value={altoCm}
-                onChange={(e) => setAltoCm(e.target.value)}
+                onChange={(e) => { setAltoCm(e.target.value); limpiarError('alto'); }}
                 placeholder="Ej: 5"
-                required
+                aria-invalid={!!errores.alto}
+                aria-describedby={errores.alto ? 'qr-alto-error' : undefined}
               />
             </div>
+            {errores.alto && <p id="qr-alto-error" className="pi-adqr-error">{errores.alto}</p>}
           </div>
           <button type="submit" className="pi-adqr-btn-add">
             <FaPlus /> Generar Códigos

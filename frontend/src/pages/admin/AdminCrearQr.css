@@ -150,6 +150,17 @@
   border-color: var(--cian-digital);
 }
 
+.pi-adqr-input-wrapper input[aria-invalid="true"] {
+  border-color: var(--rojo-error);
+}
+
+.pi-adqr-error {
+  margin: 6px 0 0;
+  max-width: 200px;
+  font-size: 0.75rem;
+  color: var(--rojo-error-texto);
+}
+
 .pi-adqr-btn-add {
   display: flex;
   align-items: center;

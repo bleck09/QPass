@@ -35,6 +35,7 @@ const PESTANAS = [
 
 const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
 const FORM_EVENTO_VACIO = { nombre: '', lugar: '', coordenadas: '', fecha: '', fechaFin: '', imagen: '' };
+const MAX_IMAGEN_BYTES = 3 * 1024 * 1024; // 3 MB
 
 // ISO -> valor para <input type="datetime-local"> (YYYY-MM-DDTHH:mm, hora local).
 const isoADatetimeLocal = (iso) => {
@@ -98,15 +99,21 @@ export default function AdminGestionEventos() {
     return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
   }, [modalEventoAbierto]);
   const [formEvento, setFormEvento] = useState(FORM_EVENTO_VACIO);
+  const [errorImagen, setErrorImagen] = useState('');
+  const [previewFallo, setPreviewFallo] = useState(false);
 
   const abrirCrearEvento = () => {
     setEditandoId(null);
+    setErrorImagen('');
+    setPreviewFallo(false);
     setFormEvento(FORM_EVENTO_VACIO);
     setModalEventoAbierto(true);
   };
 
   const abrirEditarEvento = (ev) => {
     setEditandoId(ev.id);
+    setErrorImagen('');
+    setPreviewFallo(false);
     setFormEvento({
       nombre: ev.nombre || '',
       lugar: ev.lugar || '',
@@ -190,6 +197,29 @@ export default function AdminGestionEventos() {
 
   const handleChangeFormEvento = (e) => {
     setFormEvento({ ...formEvento, [e.target.name]: e.target.value });
+  };
+
+  // La imagen se sube como archivo y se guarda en base64 (mismo criterio que el
+  // resto del panel: logos, fotos de perfil, portada de la página pública).
+  const handleImagenUpload = (e) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // permite volver a elegir el mismo archivo
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setErrorImagen('El archivo debe ser una imagen.');
+      return;
+    }
+    if (file.size > MAX_IMAGEN_BYTES) {
+      setErrorImagen('La imagen no debe superar los 3 MB.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setErrorImagen('');
+      setPreviewFallo(false);
+      setFormEvento(f => ({ ...f, imagen: reader.result }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleGuardarEvento = async (e) => {
@@ -561,16 +591,37 @@ export default function AdminGestionEventos() {
                   />
                 </div>
                 <div className="pi-ges-input-group">
-                  <label htmlFor="ev-imagen">Imagen (URL, opcional)</label>
-                  <div className="pi-ges-input-wrapper">
-                    <FaImage className="pi-ges-input-icon" aria-hidden="true" />
+                  <label htmlFor="ev-imagen">Imagen del evento (opcional)</label>
+                  <div className="pi-ges-image-upload">
+                    <label htmlFor="ev-imagen" className="pi-ges-btn-upload">
+                      <FaImage aria-hidden="true" /> {formEvento.imagen ? 'Cambiar imagen' : 'Subir imagen'}
+                    </label>
                     <input
-                      id="ev-imagen" type="text" name="imagen" value={formEvento.imagen} onChange={handleChangeFormEvento}
-                      placeholder="https://..."
+                      id="ev-imagen" type="file" accept="image/*" onChange={handleImagenUpload} hidden
                     />
+                    {formEvento.imagen && (
+                      <button
+                        type="button"
+                        className="pi-ges-btn-quitar-imagen"
+                        onClick={() => { setErrorImagen(''); setFormEvento(f => ({ ...f, imagen: '' })); }}
+                      >
+                        <FaTimes aria-hidden="true" /> Quitar
+                      </button>
+                    )}
                   </div>
-                  {formEvento.imagen && (
-                    <img width="320" height="100" src={formEvento.imagen} alt="Vista previa" className="pi-ges-imagen-preview" />
+                  {errorImagen && <p className="pi-ges-error-imagen">{errorImagen}</p>}
+                  {formEvento.imagen && !previewFallo && (
+                    <img
+                      width="320" height="100" src={formEvento.imagen} alt="Vista previa"
+                      className="pi-ges-imagen-preview"
+                      onError={() => setPreviewFallo(true)}
+                      onLoad={() => setPreviewFallo(false)}
+                    />
+                  )}
+                  {formEvento.imagen && previewFallo && (
+                    <p className="pi-ges-error-imagen">
+                      No se puede mostrar esta imagen. Probá con otra en formato JPG o PNG.
+                    </p>
                   )}
                 </div>
 
