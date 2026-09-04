@@ -9,6 +9,7 @@ import {
   FaMapMarkerAlt
 } from 'react-icons/fa';
 import api from '../../api/index.js';
+import { subirImagenDeInput } from '../../utils/imagenes.js';
 import { ROLES } from '../../constants/roles.js';
 import './UsuNegoCreaAyudante.css';
 
@@ -72,14 +73,15 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
     });
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormAyudante({ ...formAyudante, foto: reader.result });
-      };
-      reader.readAsDataURL(file);
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const url = await subirImagenDeInput(file, 'perfiles');
+      setFormAyudante(f => ({ ...f, foto: url }));
+    } catch (err) {
+      window.alert(err.message);
     }
   };
 

@@ -12,6 +12,7 @@ import {
   FaCalendarAlt
 } from 'react-icons/fa';
 import api from '../../api/index.js';
+import { subirImagenDeInput } from '../../utils/imagenes.js';
 import { ROLES } from '../../constants/roles.js';
 import './Mapa.css';
 
@@ -169,12 +170,15 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
     setForm({ ...form, negocioId, nombre: neg?.nombre || '' });
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => setForm({ ...form, logo: reader.result });
-      reader.readAsDataURL(file);
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const url = await subirImagenDeInput(file, 'puestos');
+      setForm(f => ({ ...f, logo: url }));
+    } catch (err) {
+      mostrarAlerta(err.message, 'error');
     }
   };
 

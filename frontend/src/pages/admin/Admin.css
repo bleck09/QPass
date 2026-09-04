@@ -638,24 +638,65 @@
   margin-bottom: 20px;
 }
 
-.pi-dash-solicitud-detalle-celda {
-  padding: 0 !important;
-  border-bottom: 1px solid var(--borde-suave);
+/* Chips de filtro por estado (pendientes por defecto / aprobados / rechazados / todos) */
+.pi-dash-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
-.pi-dash-solicitud-detalle {
-  background-color: var(--gris-niebla);
-  padding: 16px 20px;
-}
-
-.pi-dash-solicitud-detalle .pi-dash-tabla {
+.pi-dash-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--borde-medio);
   background: var(--blanco);
-  border-radius: 10px;
-  overflow: hidden;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--texto-secundario);
+  cursor: pointer;
+  transition: all 0.2s;
 }
 
-.pi-dash-solicitud-detalle .pi-dash-tabla th,
-.pi-dash-solicitud-detalle .pi-dash-tabla td {
-  font-size: 0.8125rem;
-  padding: 8px 12px;
+.pi-dash-chip:hover {
+  border-color: var(--indigo-profundo);
+  color: var(--indigo-profundo);
+}
+
+.pi-dash-chip-activo {
+  background-color: var(--indigo-profundo);
+  border-color: var(--indigo-profundo);
+  color: var(--texto-sobre-oscuro);
+}
+
+.pi-dash-chip-pend-activo {
+  background-color: var(--ambar-aviso-suave);
+  border-color: var(--ambar-aviso);
+  color: var(--ambar-aviso-texto);
+}
+
+.pi-dash-chip-ok-activo {
+  background-color: var(--verde-recarga-suave);
+  border-color: var(--verde-recarga-texto);
+  color: var(--verde-recarga-texto);
+}
+
+/* Modal de detalle de solicitud: el comprobante debe ser lo más visible posible */
+.pi-dash-comprobante-link {
+  display: block;
+  width: fit-content;
+}
+
+.pi-dash-comprobante-img {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  max-height: 60vh;
+  border-radius: 8px;
+  border: 1px solid var(--borde-suave);
+  object-fit: contain;
+  background-color: var(--gris-niebla);
 }

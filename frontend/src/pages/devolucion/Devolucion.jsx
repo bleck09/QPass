@@ -10,6 +10,7 @@ import {
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
+import { subirFotoCapturada } from '../../utils/imagenes.js';
 import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
@@ -432,7 +433,14 @@ export default function Devolucion() {
 
                   {capturandoFotoCarnet ? (
                     <CapturarFoto
-                      onCapturada={(foto) => { setFotoCarnet(foto); setCapturandoFotoCarnet(false); }}
+                      onCapturada={async (foto) => {
+                        setCapturandoFotoCarnet(false);
+                        try {
+                          setFotoCarnet(await subirFotoCapturada(foto, 'carnets'));
+                        } catch (err) {
+                          setErrorEscaneo(err.message);
+                        }
+                      }}
                       onCancelar={() => setCapturandoFotoCarnet(false)}
                     />
                   ) : fotoCarnet ? (

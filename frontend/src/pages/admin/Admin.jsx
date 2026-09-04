@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useFocoModal } from '../../utils/useFocoModal.js';
 import { useApi } from '../../utils/useApi.js';
@@ -258,6 +258,7 @@ export default function Admin({
 
   // --- SOLICITUDES DE COMPRA DE ENTRADAS Y REPORTES DE DATOS ---
   const [solicitudAbierta, setSolicitudAbierta] = useState(null);
+  const [filtroSolicitudes, setFiltroSolicitudes] = useState('pendiente'); // pendiente (por defecto) | confirmado | rechazado | todos
   const [reporteEnEdicion, setReporteEnEdicion] = useState(null);
   const [valorCorreccion, setValorCorreccion] = useState('');
 
@@ -268,6 +269,15 @@ export default function Admin({
   const reportesEntradasPendientes = useMemo(
     () => reportesEntradas.filter(r => r.estado === 'pendiente'),
     [reportesEntradas]
+  );
+
+  const solicitudesFiltradas = useMemo(
+    () => filtroSolicitudes === 'todos' ? solicitudes : solicitudes.filter(c => c.estado === filtroSolicitudes),
+    [solicitudes, filtroSolicitudes]
+  );
+  const compraAbierta = useMemo(
+    () => solicitudes.find(c => c.id === solicitudAbierta) || null,
+    [solicitudes, solicitudAbierta]
   );
 
   const toggleSolicitud = (id) => setSolicitudAbierta(prev => prev === id ? null : id);
@@ -292,6 +302,22 @@ export default function Admin({
       document.body.style.overflow = '';
     };
   }, [passwordsAMostrar]);
+
+  // Foco del modal de detalle de solicitud (A1 / Manual 8.6)
+  const modalSolicitudRef = useRef(null);
+  useFocoModal(modalSolicitudRef, !!compraAbierta);
+
+  // Modal de detalle de solicitud: ESC lo cierra y el fondo no scrollea (Manual 8.6).
+  useEffect(() => {
+    if (!compraAbierta) return;
+    const alTecla = (e) => { if (e.key === 'Escape') setSolicitudAbierta(null); };
+    window.addEventListener('keydown', alTecla);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', alTecla);
+      document.body.style.overflow = '';
+    };
+  }, [compraAbierta]);
 
   const aprobarSolicitud = async (compra) => {
     const { passwordsGeneradas, ...actualizada } = await api.compras.aprobar(compra.id);
@@ -1160,6 +1186,37 @@ export default function Admin({
             </div>
           </div>
 
+          <div className="pi-dash-chips" role="group" aria-label="Filtrar solicitudes por estado">
+            <button
+              type="button"
+              className={`pi-dash-chip${filtroSolicitudes === 'pendiente' ? ' pi-dash-chip-pend-activo' : ''}`}
+              onClick={() => setFiltroSolicitudes('pendiente')}
+            >
+              <FaHourglassHalf /> Pendientes ({solicitudes.filter(c => c.estado === 'pendiente').length})
+            </button>
+            <button
+              type="button"
+              className={`pi-dash-chip${filtroSolicitudes === 'confirmado' ? ' pi-dash-chip-ok-activo' : ''}`}
+              onClick={() => setFiltroSolicitudes('confirmado')}
+            >
+              <FaCheckCircle /> Aprobados ({solicitudes.filter(c => c.estado === 'confirmado').length})
+            </button>
+            <button
+              type="button"
+              className={`pi-dash-chip${filtroSolicitudes === 'rechazado' ? ' pi-dash-chip-activo' : ''}`}
+              onClick={() => setFiltroSolicitudes('rechazado')}
+            >
+              <FaExclamationTriangle /> Rechazados ({solicitudes.filter(c => c.estado === 'rechazado').length})
+            </button>
+            <button
+              type="button"
+              className={`pi-dash-chip${filtroSolicitudes === 'todos' ? ' pi-dash-chip-activo' : ''}`}
+              onClick={() => setFiltroSolicitudes('todos')}
+            >
+              Todos ({solicitudes.length})
+            </button>
+          </div>
+
           <div className="pi-dash-tabla-wrapper">
             <table className="pi-dash-tabla">
               <thead>
@@ -1173,93 +1230,48 @@ export default function Admin({
                 </tr>
               </thead>
               <tbody>
-                {solicitudes.map(compra => (
-                  <Fragment key={compra.id}>
-                    <tr>
-                      <td>
-                        <div className="fila-nombre">{compra.comprador.nombre}</div>
-                        <div className="celda-secundaria">{compra.comprador.email}</div>
-                      </td>
-                      <td>{compra.entradas.length}</td>
-                      <td className="pi-dash-monto-celda">Bs. {compra.montoTotal}</td>
-                      <td>
-                        {compra.estado === 'confirmado' && <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Aprobado</span>}
-                        {compra.estado === 'pendiente' && <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> En revisión</span>}
-                        {compra.estado === 'rechazado' && (
-                          <span className="pi-dash-badge pi-dash-badge-salio" title={compra.motivoRechazo || ''}>
-                            <FaExclamationTriangle /> Rechazado
-                          </span>
+                {solicitudesFiltradas.map(compra => (
+                  <tr key={compra.id}>
+                    <td>
+                      <div className="fila-nombre">{compra.comprador.nombre}</div>
+                      <div className="celda-secundaria">{compra.comprador.email}</div>
+                    </td>
+                    <td>{compra.entradas.length}</td>
+                    <td className="pi-dash-monto-celda">Bs. {compra.montoTotal}</td>
+                    <td>
+                      {compra.estado === 'confirmado' && <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Aprobado</span>}
+                      {compra.estado === 'pendiente' && <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> En revisión</span>}
+                      {compra.estado === 'rechazado' && (
+                        <span className="pi-dash-badge pi-dash-badge-salio" title={compra.motivoRechazo || ''}>
+                          <FaExclamationTriangle /> Rechazado
+                        </span>
+                      )}
+                    </td>
+                    <td>{new Date(compra.createdAt).toLocaleDateString('es-BO')}</td>
+                    <td>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        {!soloLectura && compra.estado === 'pendiente' && (
+                          <>
+                            <button type="button" className="pi-dash-btn-ver" onClick={() => aprobarSolicitud(compra)}>
+                              <FaCheckCircle /> Aprobar
+                            </button>
+                            <button type="button" className="pi-dash-btn-ver" onClick={() => rechazarSolicitudCompra(compra)}>
+                              <FaExclamationTriangle /> Rechazar
+                            </button>
+                          </>
                         )}
-                      </td>
-                      <td>{new Date(compra.createdAt).toLocaleDateString('es-BO')}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '8px' }}>
-                          {!soloLectura && compra.estado === 'pendiente' && (
-                            <>
-                              <button type="button" className="pi-dash-btn-ver" onClick={() => aprobarSolicitud(compra)}>
-                                <FaCheckCircle /> Aprobar
-                              </button>
-                              <button type="button" className="pi-dash-btn-ver" onClick={() => rechazarSolicitudCompra(compra)}>
-                                <FaExclamationTriangle /> Rechazar
-                              </button>
-                            </>
-                          )}
-                          <button type="button" className="pi-dash-btn-ver" onClick={() => toggleSolicitud(compra.id)}>
-                            {solicitudAbierta === compra.id ? 'Ocultar' : 'Ver detalle'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    {solicitudAbierta === compra.id && (
-                      <tr>
-                        <td colSpan={6} className="pi-dash-solicitud-detalle-celda">
-                          <div className="pi-dash-solicitud-detalle" style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
-                            <div style={{ flex: '0 0 auto' }}>
-                              <p style={{ fontWeight: 700, marginBottom: '8px' }}>Comprobante de pago</p>
-                              {compra.comprobanteUrl ? (
-                                <a href={compra.comprobanteUrl} target="_blank" rel="noopener noreferrer">
-                                  <img
-                                    src={compra.comprobanteUrl}
-                                    alt={`Comprobante de ${compra.comprador.nombre}`}
-                                    style={{ maxWidth: '220px', maxHeight: '280px', borderRadius: '8px', border: '1px solid var(--borde-suave)', objectFit: 'contain' }}
-                                  />
-                                </a>
-                              ) : (
-                                <span className="pi-dash-sin-resultados">Sin comprobante</span>
-                              )}
-                            </div>
-                            <table className="pi-dash-tabla" style={{ flex: '1 1 320px' }}>
-                              <thead>
-                                <tr><th scope="col">Persona</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Celular</th><th scope="col">Categoría</th><th scope="col">Precio</th></tr>
-                              </thead>
-                              <tbody>
-                                {compra.entradas.map((ent, i) => (
-                                  <tr key={ent.id}>
-                                    <td>{ent.isTitular ? 'Titular' : `Invitado ${i + 1}`}</td>
-                                    <td>{ent.nombre}</td>
-                                    <td>{ent.correo}</td>
-                                    <td>{ent.celular || '—'}</td>
-                                    <td>{ent.categoriaTicket?.nombre || '—'}</td>
-                                    <td className="pi-dash-monto-celda">
-                                      {ent.categoriaTicket ? `Bs. ${ent.categoriaTicket.precio}` : '—'}
-                                    </td>
-                                  </tr>
-                                ))}
-                                <tr>
-                                  <td colSpan={5} style={{ textAlign: 'right', fontWeight: 700 }}>Total</td>
-                                  <td className="pi-dash-monto-celda">Bs. {compra.montoTotal}</td>
-                                </tr>
-                              </tbody>
-                            </table>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
-                  </Fragment>
+                        <button type="button" className="pi-dash-btn-ver" onClick={() => toggleSolicitud(compra.id)}>
+                          Ver detalle
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
                 ))}
-                {solicitudes.length === 0 && (
+                {solicitudesFiltradas.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="pi-dash-sin-resultados">No hay solicitudes de compra registradas.</td>
+                    <td colSpan={6} className="pi-dash-sin-resultados">
+                      {solicitudes.length === 0 ? 'No hay solicitudes de compra registradas.' : 'No hay solicitudes con este estado.'}
+                    </td>
                   </tr>
                 )}
               </tbody>
@@ -1308,6 +1320,105 @@ export default function Admin({
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- MODAL: DETALLE DE SOLICITUD DE COMPRA --- */}
+      {compraAbierta && (
+        <div
+          onClick={() => setSolicitudAbierta(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)', padding: '20px' }}
+        >
+          <div
+            ref={modalSolicitudRef}
+            tabIndex={-1}
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="dash-modal-solicitud-titulo"
+            className="pi-dash-modal-solicitud"
+            style={{ background: 'var(--blanco, #fff)', borderRadius: '12px', padding: '24px', maxWidth: '760px', width: '90%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}
+          >
+            <button
+              type="button"
+              onClick={() => setSolicitudAbierta(null)}
+              aria-label="Cerrar"
+              style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
+            >
+              <FaTimes aria-hidden="true" />
+            </button>
+            <h3 id="dash-modal-solicitud-titulo" className="pi-dash-seccion-titulo">Detalle de la solicitud</h3>
+            <div className="pi-dash-detalle-header">
+              <div>
+                <div className="fila-nombre">{compraAbierta.comprador.nombre}</div>
+                <div className="celda-secundaria">{compraAbierta.comprador.email}</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {compraAbierta.estado === 'confirmado' && <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Aprobado</span>}
+                {compraAbierta.estado === 'pendiente' && <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> En revisión</span>}
+                {compraAbierta.estado === 'rechazado' && (
+                  <span className="pi-dash-badge pi-dash-badge-salio" title={compraAbierta.motivoRechazo || ''}>
+                    <FaExclamationTriangle /> Rechazado
+                  </span>
+                )}
+                <span className="pi-dash-detalle-total">{new Date(compraAbierta.createdAt).toLocaleDateString('es-BO')}</span>
+              </div>
+            </div>
+            {compraAbierta.estado === 'rechazado' && compraAbierta.motivoRechazo && (
+              <p className="pi-dash-incidencias-nota"><strong>Motivo del rechazo:</strong> {compraAbierta.motivoRechazo}</p>
+            )}
+
+            <p style={{ fontWeight: 700, marginBottom: '10px' }}>Comprobante de pago</p>
+            {compraAbierta.comprobanteUrl ? (
+              <a href={compraAbierta.comprobanteUrl} target="_blank" rel="noopener noreferrer" className="pi-dash-comprobante-link">
+                <img
+                  src={compraAbierta.comprobanteUrl}
+                  alt={`Comprobante de ${compraAbierta.comprador.nombre}`}
+                  className="pi-dash-comprobante-img"
+                />
+              </a>
+            ) : (
+              <span className="pi-dash-sin-resultados">Sin comprobante</span>
+            )}
+
+            <p style={{ fontWeight: 700, margin: '20px 0 10px' }}>Entradas de este lote</p>
+            <div className="pi-dash-tabla-wrapper">
+              <table className="pi-dash-tabla">
+                <thead>
+                  <tr><th scope="col">Persona</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Celular</th><th scope="col">Categoría</th><th scope="col">Precio</th></tr>
+                </thead>
+                <tbody>
+                  {compraAbierta.entradas.map((ent, i) => (
+                    <tr key={ent.id}>
+                      <td>{ent.isTitular ? 'Titular' : `Invitado ${i + 1}`}</td>
+                      <td>{ent.nombre}</td>
+                      <td>{ent.correo}</td>
+                      <td>{ent.celular || '—'}</td>
+                      <td>{ent.categoriaTicket?.nombre || '—'}</td>
+                      <td className="pi-dash-monto-celda">
+                        {ent.categoriaTicket ? `Bs. ${ent.categoriaTicket.precio}` : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  <tr>
+                    <td colSpan={5} style={{ textAlign: 'right', fontWeight: 700 }}>Total</td>
+                    <td className="pi-dash-monto-celda">Bs. {compraAbierta.montoTotal}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            {!soloLectura && compraAbierta.estado === 'pendiente' && (
+              <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
+                <button type="button" className="pi-dash-btn-ver" onClick={() => { aprobarSolicitud(compraAbierta); setSolicitudAbierta(null); }}>
+                  <FaCheckCircle /> Aprobar
+                </button>
+                <button type="button" className="pi-dash-btn-ver" onClick={() => rechazarSolicitudCompra(compraAbierta)}>
+                  <FaExclamationTriangle /> Rechazar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}

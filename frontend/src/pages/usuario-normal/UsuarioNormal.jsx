@@ -14,6 +14,7 @@ import './UsuarioNormal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
+import { subirImagenDeInput } from '../../utils/imagenes.js';
 import { esVigente, formatearFecha, imagenEvento } from '../../utils/eventos.js';
 
 const MAX_ENTRADAS = 6;
@@ -246,12 +247,16 @@ export default function UsuarioNormal() {
     }));
   };
 
-  const handleComprobanteUpload = (e) => {
+  const handleComprobanteUpload = async (e) => {
     const file = e.target.files[0];
+    e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setComprobante({ nombreArchivo: file.name, previewUrl: reader.result });
-    reader.readAsDataURL(file);
+    try {
+      const url = await subirImagenDeInput(file, 'comprobantes');
+      setComprobante({ nombreArchivo: file.name, previewUrl: url });
+    } catch (err) {
+      setErrorForm(err.message);
+    }
   };
 
   const handleEnviarComprobante = async () => {

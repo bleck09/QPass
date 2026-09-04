@@ -12,6 +12,7 @@ import {
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
+import { subirImagenDeInput } from '../../utils/imagenes.js';
 import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import MapaSelector from '../../components/MapaSelector.jsx';
@@ -199,9 +200,9 @@ export default function AdminGestionEventos() {
     setFormEvento({ ...formEvento, [e.target.name]: e.target.value });
   };
 
-  // La imagen se sube como archivo y se guarda en base64 (mismo criterio que el
-  // resto del panel: logos, fotos de perfil, portada de la página pública).
-  const handleImagenUpload = (e) => {
+  // La imagen se sube como archivo real a /uploads y en el formulario solo se guarda
+  // la URL devuelta (antes se codificaba entera en base64 dentro del propio formulario).
+  const handleImagenUpload = async (e) => {
     const file = e.target.files?.[0];
     e.target.value = ''; // permite volver a elegir el mismo archivo
     if (!file) return;
@@ -213,13 +214,15 @@ export default function AdminGestionEventos() {
       setErrorImagen('La imagen no debe superar los 3 MB.');
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
+    try {
+      setErrorImagen('Subiendo imagen...');
+      const url = await subirImagenDeInput(file, 'eventos');
       setErrorImagen('');
       setPreviewFallo(false);
-      setFormEvento(f => ({ ...f, imagen: reader.result }));
-    };
-    reader.readAsDataURL(file);
+      setFormEvento(f => ({ ...f, imagen: url }));
+    } catch (err) {
+      setErrorImagen(err.message);
+    }
   };
 
   const handleGuardarEvento = async (e) => {

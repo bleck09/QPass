@@ -12,6 +12,7 @@ import {
 import Admin from '../admin/Admin.jsx';
 import { leerSesion } from '../../api/client.js';
 import api from '../../api/index.js';
+import { subirImagenDeInput } from '../../utils/imagenes.js';
 import './Cliente.css';
 
 const SOLICITUD_VACIA = {
@@ -94,14 +95,16 @@ export default function Cliente() {
     setSolicitud({ ...solicitud, [e.target.name]: e.target.value });
   };
 
-  const handleImageUpload = (e, campo) => {
+  const handleImageUpload = async (e, campo) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setSolicitud({ ...solicitud, [campo]: reader.result });
-      };
-      reader.readAsDataURL(file);
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const url = await subirImagenDeInput(file, 'solicitudes-evento');
+      setSolicitud(s => ({ ...s, [campo]: url }));
+    } catch (err) {
+      setMensaje({ texto: err.message, tipo: 'error' });
+      setTimeout(() => setMensaje({ texto: '', tipo: '' }), 4000);
     }
   };
 

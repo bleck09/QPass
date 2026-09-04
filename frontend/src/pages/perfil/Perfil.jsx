@@ -10,6 +10,7 @@ import { EVENTO_USUARIO_ACTUALIZADO } from '../../layout/MenuLateral';
 import { leerSesion, guardarSesion } from '../../api/client.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
+import { subirImagenDeInput } from '../../utils/imagenes.js';
 import './Perfil.css';
 
 const getIniciales = (nombre = 'Usuario') => nombre.substring(0, 2).toUpperCase();
@@ -108,12 +109,16 @@ export default function Perfil() {
 
   const fechaCreacion = usuario?.createdAt ? soloFecha(usuario.createdAt) : '';
 
-  const handleFotoUpload = (e) => {
+  const handleFotoUpload = async (e) => {
     const file = e.target.files[0];
+    e.target.value = '';
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => setFoto(reader.result);
-    reader.readAsDataURL(file);
+    try {
+      const url = await subirImagenDeInput(file, 'perfiles');
+      setFoto(url);
+    } catch (err) {
+      window.alert(err.message);
+    }
   };
 
   const cancelarEdicion = () => {

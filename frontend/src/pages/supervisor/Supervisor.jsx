@@ -15,6 +15,7 @@ import {
 const MARGEN_INGRESO_ANTICIPADO_HORAS = 3;
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
+import { subirFotoCapturada } from '../../utils/imagenes.js';
 import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
@@ -467,7 +468,14 @@ export default function Supervisor() {
 
             {capturandoFoto && (
               <CapturarFoto
-                onCapturada={(foto) => { setFotoCapturadaTemporal(foto); setCapturandoFoto(false); }}
+                onCapturada={async (foto) => {
+                  setCapturandoFoto(false);
+                  try {
+                    setFotoCapturadaTemporal(await subirFotoCapturada(foto, 'ingresos'));
+                  } catch (err) {
+                    setErrorEscaneo(err.message);
+                  }
+                }}
                 onCancelar={() => setCapturandoFoto(false)}
               />
             )}

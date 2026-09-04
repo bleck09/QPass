@@ -13,6 +13,7 @@ import {
   FaTimes, FaClock, FaCalendarAlt
 } from 'react-icons/fa';
 import api from '../../api/index.js';
+import { subirImagenDeInput } from '../../utils/imagenes.js';
 import './AdminConfigurarPagina.css';
 
 // Configuración por defecto (Estilo Dark / Glassmorphism)
@@ -104,14 +105,16 @@ export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, e
     setConfig({ ...config, [e.target.name]: e.target.value });
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setConfig({ ...config, imagen: reader.result });
-      };
-      reader.readAsDataURL(file);
+    e.target.value = ''; // permite volver a elegir el mismo archivo
+    if (!file) return;
+    try {
+      const url = await subirImagenDeInput(file, 'landing');
+      setConfig({ ...config, imagen: url });
+    } catch (err) {
+      setMensaje({ texto: err.message, tipo: 'aviso' });
+      setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
     }
   };
 

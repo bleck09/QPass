@@ -24,6 +24,10 @@ networks:
 
 volumes:
   qpass_db_data:
+  # Fotos, comprobantes, logos... antes se guardaban en base64 en la BD; ahora
+  # son archivos reales que vive el backend en /app/uploads (ver UPLOADS_DIR).
+  # Este volumen es lo que hace que sobrevivan a un redeploy del contenedor.
+  qpass_uploads_data:
 
 services:
   db:
@@ -62,6 +66,11 @@ services:
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
+      # Carpeta donde el backend guarda las imágenes subidas (ver src/main.ts y
+      # modules/uploads). Coincide con el punto de montaje del volumen de abajo.
+      UPLOADS_DIR: /app/uploads
+    volumes:
+      - qpass_uploads_data:/app/uploads
     expose:
       - "4000"
     networks:

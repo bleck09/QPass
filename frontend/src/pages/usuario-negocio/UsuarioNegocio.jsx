@@ -14,6 +14,7 @@ import '../supervisor/GestionEntrega.css';
 import UsuNegoCreaAyudante from './UsuNegoCreaAyudante';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
+import { subirImagenDeInput } from '../../utils/imagenes.js';
 import { formatearFecha } from '../../utils/eventos.js';
 
 const initialStateFormPuesto = { nombre: '', descripcion: '', logo: '' };
@@ -82,14 +83,15 @@ export default function UsuarioNegocio() {
     setFormPuesto({ ...formPuesto, [e.target.name]: e.target.value });
   };
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormPuesto({ ...formPuesto, logo: reader.result });
-      };
-      reader.readAsDataURL(file);
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const url = await subirImagenDeInput(file, 'puestos');
+      setFormPuesto(f => ({ ...f, logo: url }));
+    } catch (err) {
+      window.alert(err.message);
     }
   };
 
@@ -148,14 +150,15 @@ export default function UsuarioNegocio() {
     setFormProducto({ ...formProducto, [e.target.name]: e.target.value });
   };
 
-  const handleProductoImageUpload = (e) => {
+  const handleProductoImageUpload = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormProducto({ ...formProducto, imagen: reader.result });
-      };
-      reader.readAsDataURL(file);
+    e.target.value = '';
+    if (!file) return;
+    try {
+      const url = await subirImagenDeInput(file, 'productos');
+      setFormProducto(f => ({ ...f, imagen: url }));
+    } catch (err) {
+      window.alert(err.message);
     }
   };
 

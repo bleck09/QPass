@@ -18,6 +18,7 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
 import { ExcepcionHttpFilter } from './common/filters/excepcion-http.filter';
 import { IdempotenciaInterceptor } from './common/interceptors/idempotencia.interceptor';
+import { FirmarImagenesInterceptor } from './common/interceptors/firmar-imagenes.interceptor';
 
 import { AuthModule } from './modules/auth/auth.module';
 import { UsuariosModule } from './modules/usuarios/usuarios.module';
@@ -36,6 +37,7 @@ import { ProductosModule } from './modules/productos/productos.module';
 import { PuestoAyudantesModule } from './modules/puesto-ayudantes/puesto-ayudantes.module';
 import { VentasModule } from './modules/ventas/ventas.module';
 import { LandingConfigModule } from './modules/landing-config/landing-config.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -62,6 +64,7 @@ import { LandingConfigModule } from './modules/landing-config/landing-config.mod
     PuestoAyudantesModule,
     VentasModule,
     LandingConfigModule,
+    UploadsModule,
   ],
   controllers: [HealthController],
   providers: [
@@ -69,6 +72,12 @@ import { LandingConfigModule } from './modules/landing-config/landing-config.mod
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_FILTER, useClass: ExcepcionHttpFilter },
+    // FirmarImagenesInterceptor va ANTES que IdempotenciaInterceptor a propósito:
+    // los interceptores se anidan en el orden del array (el primero es el más
+    // externo), así que esto firma la respuesta tanto si viene fresca del
+    // handler como si viene del caché de idempotencia — nunca deja pasar una
+    // firma vieja guardada de una request anterior.
+    { provide: APP_INTERCEPTOR, useClass: FirmarImagenesInterceptor },
     { provide: APP_INTERCEPTOR, useClass: IdempotenciaInterceptor },
   ],
 })

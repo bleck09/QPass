@@ -1,4 +1,15 @@
-import { apiGet, apiPost, apiPatch, apiPut, apiDelete, qs } from './client.js';
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete, apiUpload, qs } from './client.js';
+
+export const uploads = {
+  // Sube una imagen real (File/Blob) y devuelve { url }: la ruta pública guardada en
+  // la BD ("/uploads/<carpeta>/<archivo>"), ya no el base64 de antes. "carpeta" agrupa
+  // el volumen por tipo (perfiles, comprobantes, eventos...) — ver uploads.controller.ts.
+  subir: (archivo, carpeta) => {
+    const formData = new FormData();
+    formData.append('archivo', archivo, archivo.name || 'imagen.jpg');
+    return apiUpload(`/uploads${qs({ carpeta })}`, formData);
+  },
+};
 
 export const auth = {
   login: (email, password) => apiPost('/auth/login', { email, password }),
