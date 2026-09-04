@@ -401,6 +401,149 @@
   margin: 0;
 }
 
+/* --- BORRADOR / PUBLICADO --- */
+.pi-ges-badge-publicacion {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+  vertical-align: middle;
+}
+
+.pi-ges-badge-publicacion.publicado {
+  background: var(--verde-recarga-suave);
+  color: var(--verde-recarga-texto);
+}
+
+.pi-ges-badge-publicacion.borrador {
+  background: var(--gris-niebla);
+  color: var(--texto-secundario);
+}
+
+.pi-ges-btn-publicar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--indigo-profundo);
+  background: var(--indigo-profundo);
+  color: var(--texto-sobre-oscuro);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-ges-btn-publicar:hover:not(:disabled) {
+  filter: brightness(1.1);
+}
+
+.pi-ges-btn-publicar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pi-ges-btn-despublicar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid var(--borde-medio);
+  background: var(--blanco);
+  color: var(--texto-principal);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pi-ges-btn-despublicar:hover {
+  background: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+  border-color: var(--ambar-aviso-texto);
+}
+
+/* --- BARRA DE PROGRESO DE CONFIGURACIÓN (evento en borrador) --- */
+.pi-ges-progreso {
+  background: var(--gris-niebla);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+}
+
+.pi-ges-progreso-encabezado {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.pi-ges-progreso-titulo {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--texto-secundario);
+}
+
+.pi-ges-progreso-fraccion {
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--indigo-profundo);
+  white-space: nowrap;
+}
+
+.pi-ges-progreso-barra {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--borde-suave);
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.pi-ges-progreso-barra-relleno {
+  height: 100%;
+  background: var(--indigo-profundo);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.pi-ges-progreso-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 8px;
+}
+
+.pi-ges-progreso-lista li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8125rem;
+  color: var(--texto-secundario);
+}
+
+.pi-ges-progreso-lista li.listo {
+  color: var(--verde-recarga-texto);
+  font-weight: 600;
+}
+
+.pi-ges-progreso-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ambar-aviso-texto);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  margin: 12px 0 0;
+}
+
 /* El badge de estado va dentro de <h1>/<strong>; anulamos la regla genérica
    ".pi-ges-detalle-info span" / ".pi-ges-evento-info ... span" que lo aplastaría. */
 .pi-ges-detalle-info h1 .pi-badge-estado-evento,

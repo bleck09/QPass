@@ -134,7 +134,11 @@ export default function Admin({
 
   useEffect(() => {
     if (embebido || reportesGlobal) return; // evento fijo/no aplica: no hace falta la lista
-    api.eventos.listar().then(todos => {
+    // soloLectura es siempre el Cliente viendo (filtrado por eventosPermitidos) el estado de
+    // SU evento — no tiene el rol Admin, así que usa el listado público (solo publicados) y
+    // no el de Admin (que exige ese rol). El propio Admin en su panel sí ve los borradores.
+    const listado = soloLectura ? api.eventos.listar() : api.eventos.listarTodos();
+    listado.then(todos => {
       const disponibles = eventosPermitidos ? todos.filter(ev => eventosPermitidos.includes(ev.id)) : todos;
       setEventosDisponibles(disponibles);
       setEventoId(prev => prev || disponibles[0]?.id || '');

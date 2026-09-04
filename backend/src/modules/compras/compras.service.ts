@@ -60,6 +60,11 @@ export class ComprasService {
         'Este evento ya finalizó; no se pueden comprar entradas',
       );
     }
+    if (!evento.publicadoEn) {
+      throw new ConflictException(
+        'Este evento todavía no está publicado; no se pueden comprar entradas',
+      );
+    }
 
     const correos = dto.entradas.map((e) => e.correo.trim().toLowerCase());
     if (new Set(correos).size !== correos.length) {
@@ -284,6 +289,10 @@ export class ComprasService {
                 celular: entrada.celular,
                 passwordHash: cred.passwordHash,
                 rol: 'UsuarioNormal',
+                // Cuenta generada por el sistema con contraseña temporal: en su
+                // primer login se lo manda a /completar-perfil a cambiarla y a
+                // cargar su CI (obligatorio para la verificación en la puerta).
+                debeCompletarPerfil: true,
               },
             });
             passwordsGeneradas[entrada.id] = cred.password;

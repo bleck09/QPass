@@ -40,7 +40,7 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
 
   useEffect(() => {
     if (embebido) return;
-    api.eventos.listar().then(lista => {
+    api.eventos.listarTodos().then(lista => {
       setEventosDisponibles(lista);
       setEventoId(prev => prev || lista[0]?.id);
     });

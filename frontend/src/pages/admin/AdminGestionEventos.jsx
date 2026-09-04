@@ -8,7 +8,8 @@ import { useLocation } from 'react-router-dom';
 import {
   FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode,
-  FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen
+  FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen,
+  FaRegCircle, FaRocket, FaEyeSlash
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
@@ -53,7 +54,7 @@ export default function AdminGestionEventos() {
   // Carga primaria (4 listas en paralelo) con cargando/error/reintentar (Manual 8.9).
   const cargarTodo = useCallback(async () => {
     const [eventos, usuarios, asignaciones, solicitudes] = await Promise.all([
-      api.eventos.listar(),
+      api.eventos.listarTodos(),
       api.usuarios.listar(),
       api.asignaciones.listar(),
       api.solicitudesEvento.listar({ estado: 'pendiente' }),
@@ -173,6 +174,19 @@ export default function AdminGestionEventos() {
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
+  // Qué le falta al evento para poder publicarse (tickets, QR, página, mapa).
+  // Se recarga cada vez que se cambia de pestaña: es el punto natural en el que
+  // el admin "vuelve" después de completar un paso en otra pestaña.
+  const cargarProgreso = useCallback(async () => {
+    if (!eventoDetalle) return null;
+    return api.eventos.progreso(eventoDetalle.id).catch(() => null);
+  }, [eventoDetalle?.id]);
+  const { data: progresoEvento, recargar: recargarProgreso } = useApi(cargarProgreso, {
+    inicial: null,
+    activo: !!eventoDetalle,
+  });
+  useEffect(() => { recargarProgreso(); }, [pestana, recargarProgreso]);
+
   const asignacionesDelEvento = useMemo(
     () => asignaciones.filter(a => a.eventoId === eventoIdDetalle),
     [asignaciones, eventoIdDetalle]
@@ -287,6 +301,32 @@ export default function AdminGestionEventos() {
     setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
   };
 
+  const [errorPublicar, setErrorPublicar] = useState('');
+
+  const handlePublicar = async () => {
+    if (!eventoDetalle) return;
+    setErrorPublicar('');
+    try {
+      const actualizado = await api.eventos.publicar(eventoDetalle.id);
+      setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+    } catch (err) {
+      setErrorPublicar(err.message);
+    }
+  };
+
+  const handleDespublicar = async () => {
+    if (!eventoDetalle) return;
+    const ok = await confirmar({
+      titulo: '¿Volver a borrador?',
+      mensaje: `"${eventoDetalle.nombre}" dejará de verse en la página pública y no se podrán comprar más entradas hasta que lo publiques de nuevo.`,
+      textoConfirmar: 'Volver a borrador',
+      peligroso: true,
+    });
+    if (!ok) return;
+    const actualizado = await api.eventos.despublicar(eventoDetalle.id);
+    setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+  };
+
   if (errorDatos) {
     return (
       <div className="pi-ges-container">
@@ -315,13 +355,35 @@ export default function AdminGestionEventos() {
           <div className="pi-ges-detalle-header">
             <img width="96" height="96" src={eventoDetalle.imagen} alt={eventoDetalle.nombre} className="pi-ges-detalle-imagen" />
             <div className="pi-ges-detalle-info">
-              <h1>{eventoDetalle.nombre} <BadgeEstadoEvento evento={eventoDetalle} /></h1>
+              <h1>
+                {eventoDetalle.nombre} <BadgeEstadoEvento evento={eventoDetalle} />{' '}
+                <span className={`pi-ges-badge-publicacion ${eventoDetalle.publicadoEn ? 'publicado' : 'borrador'}`}>
+                  {eventoDetalle.publicadoEn ? <><FaCheckCircle /> Publicado</> : <><FaEyeSlash /> Borrador</>}
+                </span>
+              </h1>
               <span>
                 <FaMapMarkerAlt /> {eventoDetalle.lugar}
                 {eventoDetalle.coordenadas ? ` (${eventoDetalle.coordenadas})` : ''} · {formatearFecha(eventoDetalle.fecha)}
               </span>
             </div>
             <div className="pi-ges-detalle-acciones">
+              {!eventoDetalle.archivadoEn && (
+                eventoDetalle.publicadoEn ? (
+                  <button type="button" className="pi-ges-btn-despublicar" onClick={handleDespublicar}>
+                    <FaEyeSlash /> Volver a borrador
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="pi-ges-btn-publicar"
+                    onClick={handlePublicar}
+                    disabled={progresoEvento ? !progresoEvento.listoParaPublicar : true}
+                    title={progresoEvento && !progresoEvento.listoParaPublicar ? 'Completa los pasos de abajo antes de publicar' : undefined}
+                  >
+                    <FaRocket /> Publicar evento
+                  </button>
+                )
+              )}
               {!eventoDetalle.archivadoEn && (
                 <button type="button" className="pi-ges-btn-editar" onClick={() => abrirEditarEvento(eventoDetalle)}>
                   <FaPen /> Editar
@@ -349,6 +411,45 @@ export default function AdminGestionEventos() {
             <p className="pi-ges-aviso-archivado">
               <FaArchive /> Evento archivado — solo lectura. Desarchívalo para volver a hacer cambios.
             </p>
+          )}
+
+          {!eventoDetalle.archivadoEn && !eventoDetalle.publicadoEn && progresoEvento && (
+            <div className="pi-ges-progreso">
+              <div className="pi-ges-progreso-encabezado">
+                <p className="pi-ges-progreso-titulo">
+                  Este evento está en <strong>borrador</strong>: nadie lo ve en la página pública ni puede comprar
+                  entradas hasta que lo publiques.
+                </p>
+                <span className="pi-ges-progreso-fraccion">
+                  {Object.values(progresoEvento.pasos).filter(Boolean).length} de {Object.keys(progresoEvento.pasos).length}
+                </span>
+              </div>
+              <div className="pi-ges-progreso-barra">
+                <div
+                  className="pi-ges-progreso-barra-relleno"
+                  style={{
+                    width: `${(Object.values(progresoEvento.pasos).filter(Boolean).length / Object.keys(progresoEvento.pasos).length) * 100}%`,
+                  }}
+                />
+              </div>
+              <ul className="pi-ges-progreso-lista">
+                <li className={progresoEvento.pasos.tickets ? 'listo' : ''}>
+                  {progresoEvento.pasos.tickets ? <FaCheckCircle /> : <FaRegCircle />} Crear al menos un tipo de entrada
+                </li>
+                <li className={progresoEvento.pasos.qr ? 'listo' : ''}>
+                  {progresoEvento.pasos.qr ? <FaCheckCircle /> : <FaRegCircle />} Generar los códigos QR
+                </li>
+                <li className={progresoEvento.pasos.landing ? 'listo' : ''}>
+                  {progresoEvento.pasos.landing ? <FaCheckCircle /> : <FaRegCircle />} Configurar la página del evento
+                </li>
+                <li className={progresoEvento.pasos.mapa ? 'listo' : ''}>
+                  {progresoEvento.pasos.mapa ? <FaCheckCircle /> : <FaRegCircle />} Armar el mapa (al menos un puesto)
+                </li>
+              </ul>
+              {errorPublicar && (
+                <p className="pi-ges-progreso-error"><FaExclamationTriangle /> {errorPublicar}</p>
+              )}
+            </div>
           )}
 
           <div className="pi-ges-tabs" role="tablist" aria-label="Secciones del evento">
@@ -531,7 +632,12 @@ export default function AdminGestionEventos() {
               <button type="button" key={ev.id} className="pi-ges-evento-card" onClick={() => abrirDetalle(ev.id)}>
                 <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-ges-evento-imagen" />
                 <div className="pi-ges-evento-info">
-                  <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
+                  <strong>
+                    {ev.nombre} <BadgeEstadoEvento evento={ev} />{' '}
+                    <span className={`pi-ges-badge-publicacion ${ev.publicadoEn ? 'publicado' : 'borrador'}`}>
+                      {ev.publicadoEn ? <><FaCheckCircle /> Publicado</> : <><FaEyeSlash /> Borrador</>}
+                    </span>
+                  </strong>
                   <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
                   <span className="pi-ges-evento-usuarios"><FaUsers /> {contarAsignados(ev.id)} usuarios asignados</span>
                 </div>

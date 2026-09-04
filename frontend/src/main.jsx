@@ -29,14 +29,18 @@ import Ayudante from './pages/ayudante/Ayudante.jsx'
 import Perfil from './pages/perfil/Perfil.jsx'
 import Registrar from './pages/publico/Registrar.jsx'
 import RecuperarContra from './pages/publico/RecuperarContra.jsx'
+import CompletarPerfil from './pages/publico/CompletarPerfil.jsx'
 
 const router = createBrowserRouter([
   // 2. ACTUALIZAMOS LAS RUTAS PÚBLICAS PRINCIPALES
   { path: "/", element: <PaginaPrincipal /> }, // La vista corporativa global de QPass
   { path: "/evento/:id", element: <App /> },   // La vista específica del evento (Landing del cliente)
   { path: "/login", element: <Login /> },
-   { path: "/Registrar", element: <Registrar/> },   
-   { path: "/recuperar", element: <RecuperarContra/> }, 
+   { path: "/Registrar", element: <Registrar/> },
+   { path: "/recuperar", element: <RecuperarContra/> },
+   // Sin MenuLateral a propósito: mientras falte completar, no debe poder navegar
+   // a otro lado (ver el guard en MenuLateral.jsx que redirige acá).
+   { path: "/completar-perfil", element: <CompletarPerfil /> },
       // Pantalla de inicio de sesión
   
   // RUTAS PRIVADAS (Con Menú Lateral)

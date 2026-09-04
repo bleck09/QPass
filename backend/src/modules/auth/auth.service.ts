@@ -107,6 +107,9 @@ export class AuthService {
         email: usuario.email,
         rol: usuario.rol,
         foto: usuario.foto,
+        // El frontend manda a /completar-perfil si esto viene true (cuenta
+        // generada al aprobar una compra, ver ComprasService.aprobar).
+        debeCompletarPerfil: usuario.debeCompletarPerfil,
       },
     };
   }

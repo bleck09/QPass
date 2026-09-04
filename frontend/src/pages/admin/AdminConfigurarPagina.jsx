@@ -91,7 +91,7 @@ export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, e
 
   useEffect(() => {
     if (embebido) return;
-    api.eventos.listar().then(lista => {
+    api.eventos.listarTodos().then(lista => {
       setEventosDisponibles(lista);
       setEventoId(prev => prev || lista[0]?.id);
     });

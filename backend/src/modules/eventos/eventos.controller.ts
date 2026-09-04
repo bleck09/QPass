@@ -25,10 +25,23 @@ export class EventosController {
     return this.eventosService.listar();
   }
 
+  // Antes de ':id' a propósito: si no, "todos" se interpretaría como un id.
+  @Get('todos')
+  @Roles('Admin')
+  listarTodos() {
+    return this.eventosService.listarTodos();
+  }
+
   @Get(':id')
   @Publico()
   obtenerPorId(@Param('id') id: string) {
     return this.eventosService.obtenerPorId(id);
+  }
+
+  @Get(':id/progreso')
+  @Roles('Admin')
+  progreso(@Param('id') id: string) {
+    return this.eventosService.progreso(id);
   }
 
   @Post()
@@ -63,5 +76,19 @@ export class EventosController {
   @HttpCode(HttpStatus.OK)
   desarchivar(@Param('id') id: string) {
     return this.eventosService.desarchivar(id);
+  }
+
+  @Post(':id/publicar')
+  @Roles('Admin')
+  @HttpCode(HttpStatus.OK)
+  publicar(@Param('id') id: string, @UsuarioActual('id') adminId: number) {
+    return this.eventosService.publicar(id, adminId);
+  }
+
+  @Post(':id/despublicar')
+  @Roles('Admin')
+  @HttpCode(HttpStatus.OK)
+  despublicar(@Param('id') id: string) {
+    return this.eventosService.despublicar(id);
   }
 }

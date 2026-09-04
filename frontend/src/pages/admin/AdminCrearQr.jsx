@@ -92,7 +92,7 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
 
   useEffect(() => {
     if (embebido) return;
-    api.eventos.listar().then(lista => {
+    api.eventos.listarTodos().then(lista => {
       setEventosDisponibles(lista);
       setEventoId(prev => prev || lista[0]?.id);
     });

@@ -88,6 +88,13 @@ export default function MenuLateral({ children }) {
     return <Navigate to="/login" replace />;
   }
 
+  // Cuenta generada al aprobar una compra (contraseña temporal, sin CI): no puede
+  // usar el resto de la app hasta pasar por /completar-perfil (ver ese componente
+  // y ComprasService.aprobar / UsuariosService.reevaluarCompletarPerfil).
+  if (usuario.debeCompletarPerfil) {
+    return <Navigate to="/completar-perfil" replace />;
+  }
+
   const handleCerrarSesion = () => {
     cerrarSesion();
     navigate('/');

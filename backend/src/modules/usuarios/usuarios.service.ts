@@ -35,6 +35,7 @@ const SELECT_PUBLICO = {
   createdAt: true,
   saldo: true,
   negocioAsignadoId: true,
+  debeCompletarPerfil: true,
 } satisfies Prisma.UsuarioSelect;
 
 @Injectable()
@@ -59,15 +60,31 @@ export class UsuariosService {
 
   async actualizar(id: number, dto: ActualizarUsuarioDto, actor: UsuarioJwt) {
     this.exigirPropioOAdmin(id, actor);
-    return this.prisma.usuario.update({
+
+    // El CI solo se puede CARGAR (una vez), nunca pisar uno que ya existe —
+    // evita que un update sin querer borre/cambie el CI de alguien.
+    const actual = await this.prisma.usuario.findUnique({
+      where: { id },
+      select: { ci: true },
+    });
+    const ci = !actual?.ci && dto.ci ? dto.ci : undefined;
+
+    await this.prisma.usuario.update({
       where: { id },
       data: {
+        ci,
         celular: dto.celular,
         ciudad: dto.ciudad,
         biografia: dto.biografia,
         foto: dto.foto,
         fechaNacimiento: aFecha(dto.fechaNacimiento),
       },
+    });
+    await this.reevaluarCompletarPerfil(id);
+    // Recién acá se lee el estado final: reevaluarCompletarPerfil puede haber
+    // apagado debeCompletarPerfil después del update de arriba.
+    return this.prisma.usuario.findUniqueOrThrow({
+      where: { id },
       select: SELECT_PUBLICO,
     });
   }
@@ -88,6 +105,30 @@ export class UsuariosService {
       this.prisma.usuario.update({ where: { id }, data: { passwordHash } }),
       this.prisma.cambioPassword.create({ data: { usuarioId: id, origen: 'self' } }),
     ]);
+    await this.reevaluarCompletarPerfil(id);
+  }
+
+  /**
+   * Apaga debeCompletarPerfil apenas se cumplen las DOS condiciones: ya tiene CI
+   * y ya cambió la contraseña alguna vez (self). Se llama después de tocar
+   * cualquiera de los dos — no importa el orden en que el usuario los complete.
+   */
+  private async reevaluarCompletarPerfil(id: number): Promise<void> {
+    const usuario = await this.prisma.usuario.findUnique({
+      where: { id },
+      select: { ci: true, debeCompletarPerfil: true },
+    });
+    if (!usuario?.debeCompletarPerfil || !usuario.ci) return;
+
+    const yaCambioPassword = await this.prisma.cambioPassword.count({
+      where: { usuarioId: id, origen: 'self' },
+    });
+    if (yaCambioPassword === 0) return;
+
+    await this.prisma.usuario.update({
+      where: { id },
+      data: { debeCompletarPerfil: false },
+    });
   }
 
   async historialPassword(id: number, actor: UsuarioJwt) {

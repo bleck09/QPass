@@ -63,7 +63,7 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
 
   useEffect(() => {
     if (!embebido) {
-      api.eventos.listar().then(lista => {
+      api.eventos.listarTodos().then(lista => {
         setEventosDisponibles(lista);
         setEventoId(prev => prev || lista[0]?.id);
       });

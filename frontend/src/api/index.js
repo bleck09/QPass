@@ -29,13 +29,20 @@ export const usuarios = {
 };
 
 export const eventos = {
+  // Solo eventos publicados — para la landing pública y el selector del comprador.
   listar: () => apiGet('/eventos'),
+  // TODOS los eventos (publicados o en borrador) — solo para el panel de Admin.
+  listarTodos: () => apiGet('/eventos/todos'),
   obtener: (id) => apiGet(`/eventos/${id}`),
   crear: (datos) => apiPost('/eventos', datos),
   actualizar: (id, datos) => apiPatch(`/eventos/${id}`, datos),
   cerrar: (id) => apiPost(`/eventos/${id}/cerrar`),
   archivar: (id) => apiPost(`/eventos/${id}/archivar`),
   desarchivar: (id) => apiPost(`/eventos/${id}/desarchivar`),
+  // Qué le falta a un evento en borrador para poder publicarse (tickets, QR, página, mapa).
+  progreso: (id) => apiGet(`/eventos/${id}/progreso`),
+  publicar: (id) => apiPost(`/eventos/${id}/publicar`),
+  despublicar: (id) => apiPost(`/eventos/${id}/despublicar`),
   // Solo los eventos donde Admin asignó a este usuario con este rol (Supervisor, Recargador,
   // Devolucion, UsuarioNegocio): evita que un operador vea/opere eventos que no le tocan.
   misAsignados: async (usuarioId, rol) => {

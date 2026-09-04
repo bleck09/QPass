@@ -93,6 +93,13 @@ model Usuario {
   ciudad           String?
   biografia        String?
   foto             String?
+  // true SOLO para la cuenta que se auto-crea al aprobar una Compra (el invitado
+  // recibe una contraseña temporal por correo, ver ComprasService.aprobar). Obliga
+  // a pasar por /completar-perfil antes de usar el resto de la app: ahí cambia esa
+  // contraseña y completa su CI (obligatorio; el resto de los campos, opcional).
+  // Se pone en false solo (UsuariosService.reevaluarCompletarPerfil) una vez que
+  // YA tiene ci Y ya cambió la contraseña alguna vez (CambioPassword origen=self).
+  debeCompletarPerfil Boolean @default(false)
   saldo            Decimal  @default(0) @db.Decimal(10, 2) // cache; billetera PERSONAL, compartida
                                                             // entre todos los eventos. Fuente de
                                                             // verdad: Transaccion.usuarioId
@@ -128,6 +135,7 @@ model Usuario {
   solicitudesResueltas  SolicitudEvento[]      @relation("AdminQueResuelveSolicitud")
   eventosCreados        Evento[]               @relation("AdminQueCreaEvento")
   eventosArchivados     Evento[]               @relation("AdminQueArchivaEvento")
+  eventosPublicados     Evento[]               @relation("AdminQuePublicaEvento")
   codigosRecuperacion   CodigoRecuperacion[]
   cambiosPassword       CambioPassword[]
 
@@ -198,6 +206,14 @@ model Evento {
   // solo un evento ya finalizado. archivadoPorId audita quién lo hizo.
   archivadoEn    DateTime?
   archivadoPorId Int?
+  // Un evento nace en borrador (publicadoEn null): no aparece en el listado ni la
+  // página pública, y no se pueden comprar entradas (ver EventosService/ComprasService).
+  // Admin lo publica a mano desde el panel cuando ya está listo (ver requisitosPublicacion
+  // en eventos.service.ts: tickets creados, QR generado, página configurada y mapa armado).
+  // Los eventos que ya existían antes de esta migración quedaron publicados (ver migration.sql)
+  // para no ocultar de golpe nada que ya estuviera visible/vendiendo.
+  publicadoEn    DateTime?
+  publicadoPorId Int?
   qrPrefijo   String?      // 3 letras que van al inicio de cada CodigoQr.codigo generado
   qrAncho     Float?       // ancho de impresión de la manilla/QR (config del lote generado)
   qrAlto      Float?       // alto de impresión de la manilla/QR
@@ -206,6 +222,7 @@ model Evento {
 
   creadoPor         Usuario      @relation("AdminQueCreaEvento", fields: [creadoPorId], references: [id])
   archivadoPor      Usuario?     @relation("AdminQueArchivaEvento", fields: [archivadoPorId], references: [id])
+  publicadoPor      Usuario?     @relation("AdminQuePublicaEvento", fields: [publicadoPorId], references: [id])
   asignaciones      Asignacion[]
   categoriasTicket  CategoriaTicket[]
   compras           Compra[]
