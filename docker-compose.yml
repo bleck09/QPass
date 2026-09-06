@@ -28,10 +28,6 @@ volumes:
   # después archivos en un volumen del propio backend; ahora viven en un
   # contenedor aparte (minio) para que el backend quede sin estado.
   qpass_minio_data:
-  # Volumen VIEJO de imágenes (cuando las servía el backend desde /app/uploads).
-  # Solo sigue acá para que el job de un uso "migrate-uploads" pueda copiarlas a
-  # MinIO. Una vez migrado y verificado, borrar este volumen y el job (ver abajo).
-  qpass_uploads_data:
 
 services:
   db:
@@ -97,38 +93,6 @@ services:
       - internal
     restart: "no"
 
-  # ---------------------------------------------------------------------------
-  # Job de UN SOLO USO: copia las imágenes del volumen viejo (qpass_uploads_data,
-  # cuando las servía el backend) al bucket de MinIO. `mc mirror` sin --overwrite
-  # solo sube lo que falta, así que re-ejecutarlo en un redeploy es inofensivo.
-  # El backend espera a que este job termine OK antes de arrancar.
-  #
-  # DESPUÉS DE MIGRAR Y VERIFICAR: borrar este servicio, el volumen
-  # qpass_uploads_data y el depends_on de `migrate-uploads` en `backend`.
-  # ---------------------------------------------------------------------------
-  migrate-uploads:
-    image: minio/mc:RELEASE.2024-10-08T09-37-26Z
-    depends_on:
-      minio-init:
-        condition: service_completed_successfully
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        set -e
-        mc alias set local http://minio:9000 "$$S3_ACCESS_KEY" "$$S3_SECRET_KEY"
-        mc mirror /origen "local/$$S3_BUCKET"
-        echo 'migracion de uploads OK'
-    environment:
-      S3_ACCESS_KEY: ${S3_ACCESS_KEY}
-      S3_SECRET_KEY: ${S3_SECRET_KEY}
-      S3_BUCKET: ${S3_BUCKET:-qpass-uploads}
-    volumes:
-      - qpass_uploads_data:/origen:ro
-    networks:
-      - internal
-    restart: "no"
-
   backend:
     build:
       context: ./backend
@@ -137,9 +101,6 @@ services:
       db:
         condition: service_healthy
       minio-init:
-        condition: service_completed_successfully
-      # Quitar tras migrar y verificar (ver comentario en migrate-uploads).
-      migrate-uploads:
         condition: service_completed_successfully
     environment:
       NODE_ENV: production
