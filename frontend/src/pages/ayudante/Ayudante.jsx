@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useModal } from '../../utils/useModal.js';
+import Modal from '../../components/Modal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
@@ -38,12 +39,6 @@ export default function Ayudante() {
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
 
-  // Gestión de foco de los modales (A1 / Manual 8.6): el foco entra al modal,
-  // queda atrapado con Tab y vuelve al disparador al cerrar.
-  const modalEscanerRef = useRef(null);
-  const modalTarjetaRef = useRef(null);
-  useFocoModal(modalEscanerRef, escaneando);
-  useFocoModal(modalTarjetaRef, !!tarjetaQR);
   const [buscando, setBuscando] = useState(false);
   const [errorEscaneo, setErrorEscaneo] = useState('');
   const [ventaExitosa, setVentaExitosa] = useState(null);
@@ -123,22 +118,9 @@ export default function Ayudante() {
     setVentaExitosa(null);
   };
 
-  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  const hayModalAbierto = escaneando || !!tarjetaQR;
-  useEffect(() => {
-    if (!hayModalAbierto) return;
-    const alTecla = (e) => {
-      if (e.key !== 'Escape') return;
-      setEscaneando(false);
-      cerrarTarjeta();
-    };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [hayModalAbierto]);
+  // Foco + ESC + scroll-lock de la tarjeta de cobro (look propio). El escáner
+  // usa <Modal>, que ya trae ese comportamiento.
+  const refTarjeta = useModal(!!tarjetaQR, cerrarTarjeta);
 
   const confirmarCobro = async () => {
     if (!tarjetaQR || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
@@ -327,22 +309,13 @@ export default function Ayudante() {
 
       {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
       {escaneando && (
-        <div className="pi-ayu-modal-overlay" onClick={() => setEscaneando(false)}>
-          <div
-            ref={modalEscanerRef}
-            tabIndex={-1}
-            className="pi-ayu-modal-tarjeta"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="ayu-modal-escaner-titulo"
-          >
-            <h3 id="ayu-modal-escaner-titulo" style={{ textAlign: 'center', marginBottom: '14px' }}>
-              <FaQrcode aria-hidden="true" /> Escanear manilla
-            </h3>
-            <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
-          </div>
-        </div>
+        <Modal
+          titulo={<><FaQrcode aria-hidden="true" /> Escanear manilla</>}
+          onCerrar={() => setEscaneando(false)}
+          tamano="sm"
+        >
+          <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
+        </Modal>
       )}
 
       {/* --- PESTAÑA: HISTORIAL --- */}
@@ -400,7 +373,7 @@ export default function Ayudante() {
       {tarjetaQR && (
         <div className="pi-ayu-modal-overlay" onClick={cerrarTarjeta}>
           <div
-            ref={modalTarjetaRef}
+            ref={refTarjeta}
             tabIndex={-1}
             className="pi-ayu-modal-tarjeta"
             onClick={(e) => e.stopPropagation()}

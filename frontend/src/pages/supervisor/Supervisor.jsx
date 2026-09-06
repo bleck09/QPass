@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useModal } from '../../utils/useModal.js';
+import Modal from '../../components/Modal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
@@ -48,12 +49,6 @@ export default function Supervisor() {
   const [capturandoFoto, setCapturandoFoto] = useState(false);
   const [escaneando, setEscaneando] = useState(false);
 
-  // Gestión de foco de los modales (A1 / Manual 8.6): el foco entra al modal,
-  // queda atrapado con Tab y vuelve al disparador al cerrar.
-  const modalEscanerRef = useRef(null);
-  const modalTarjetaRef = useRef(null);
-  useFocoModal(modalEscanerRef, escaneando);
-  useFocoModal(modalTarjetaRef, !!tarjetaQR);
   const [buscando, setBuscando] = useState(false);
   const [errorEscaneo, setErrorEscaneo] = useState('');
 
@@ -140,21 +135,9 @@ export default function Supervisor() {
   };
 
   // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  const hayModalAbierto = escaneando || !!tarjetaQR || !!confirmacion;
-  useEffect(() => {
-    if (!hayModalAbierto) return;
-    const alTecla = (e) => {
-      if (e.key !== 'Escape') return;
-      setEscaneando(false);
-      cerrarTarjeta();
-    };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [hayModalAbierto]);
+  // Foco + ESC + scroll-lock de la tarjeta del asistente (look propio). El
+  // escáner usa <Modal>; el flash de confirmación es transitorio (1 s).
+  const refTarjeta = useModal(!!tarjetaQR, cerrarTarjeta);
 
   // Paso 1: el flash de confirmación dura ~1 s; al terminar se vuelve a la tarjeta del
   // asistente (ya actualizada) y arranca su cuenta regresiva de cierre.
@@ -395,22 +378,13 @@ export default function Supervisor() {
 
       {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
       {escaneando && (
-        <div className="pi-sup-modal-overlay" onClick={() => setEscaneando(false)}>
-          <div
-            ref={modalEscanerRef}
-            tabIndex={-1}
-            className="pi-sup-modal-tarjeta"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="sup-modal-escaner-titulo"
-          >
-            <h3 id="sup-modal-escaner-titulo" style={{ textAlign: 'center', marginBottom: '14px' }}>
-              <FaQrcode aria-hidden="true" /> Escanear manilla
-            </h3>
-            <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
-          </div>
-        </div>
+        <Modal
+          titulo={<><FaQrcode aria-hidden="true" /> Escanear manilla</>}
+          onCerrar={() => setEscaneando(false)}
+          tamano="sm"
+        >
+          <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
+        </Modal>
       )}
 
       {/* =========================================================
@@ -419,7 +393,7 @@ export default function Supervisor() {
       {tarjetaQR && (
         <div className="pi-sup-modal-overlay" onClick={cerrarTarjeta}>
           <div
-            ref={modalTarjetaRef}
+            ref={refTarjeta}
             tabIndex={-1}
             className="pi-sup-modal-tarjeta"
             onClick={(e) => e.stopPropagation()}

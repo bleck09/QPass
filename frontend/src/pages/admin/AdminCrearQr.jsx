@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useModal } from '../../utils/useModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
@@ -73,22 +73,9 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
   const [codigoAVer, setCodigoAVer] = useState(null);
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
-  // Foco del modal de QR ampliado (A1 / Manual 8.6)
-  const modalQrRef = useRef(null);
-  useFocoModal(modalQrRef, !!codigoAVer);
+  // Modal del QR ampliado (look propio): foco + ESC + scroll-lock (Manual 8.6).
+  const modalQrRef = useModal(!!codigoAVer, () => setCodigoAVer(null));
   const [generandoPdf, setGenerandoPdf] = useState(null); // { actual, total } | null
-
-  // Modal del QR ampliado: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  useEffect(() => {
-    if (!codigoAVer) return;
-    const alTecla = (e) => { if (e.key === 'Escape') setCodigoAVer(null); };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [codigoAVer]);
 
   useEffect(() => {
     if (embebido) return;

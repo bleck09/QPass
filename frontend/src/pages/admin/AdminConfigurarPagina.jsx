@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useModal } from '../../utils/useModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga } from '../../components/EstadosAsync.jsx';
@@ -76,18 +76,8 @@ export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, e
   const [showPreview, setShowPreview] = useState(false);
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
-  // Foco del modal de vista previa (A1 / Manual 8.6)
-  const modalPreviewRef = useRef(null);
-  useFocoModal(modalPreviewRef, showPreview);
-
-  // Modal de vista previa: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  useEffect(() => {
-    if (!showPreview) return;
-    const alTecla = (e) => { if (e.key === "Escape") setShowPreview(false); };
-    window.addEventListener("keydown", alTecla);
-    document.body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
-  }, [showPreview]);
+  // Modal de vista previa (look propio "dark glass"): foco + ESC + scroll-lock.
+  const modalPreviewRef = useModal(showPreview, () => setShowPreview(false));
 
   useEffect(() => {
     if (embebido) return;

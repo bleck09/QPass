@@ -1,6 +1,6 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import Modal from '../../components/Modal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation } from 'react-router-dom';
@@ -119,32 +119,6 @@ export default function UsuarioNegocio() {
     setShowModalAyudantesPuesto(true);
   };
 
-  const cerrarModales = () => {
-    setShowModalPuesto(false);
-    setShowModalCatalogo(false);
-    setShowModalAyudantesPuesto(false);
-  };
-
-  // Algún modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  const hayModalAbierto = showModalPuesto || showModalCatalogo || showModalAyudantesPuesto;
-
-  // Foco de cada modal (A1 / Manual 8.6)
-  const modalPuestoRef = useRef(null);
-  const modalCatalogoRef = useRef(null);
-  const modalAyudantesRef = useRef(null);
-  useFocoModal(modalPuestoRef, showModalPuesto);
-  useFocoModal(modalCatalogoRef, showModalCatalogo);
-  useFocoModal(modalAyudantesRef, showModalAyudantesPuesto);
-  useEffect(() => {
-    if (!hayModalAbierto) return;
-    const alTecla = (e) => { if (e.key === 'Escape') cerrarModales(); };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [hayModalAbierto]);
 
   const handleProductoChange = (e) => {
     setFormProducto({ ...formProducto, [e.target.name]: e.target.value });
@@ -332,14 +306,10 @@ export default function UsuarioNegocio() {
           MODAL 1: CREAR NUEVO PUESTO
       ========================================= */}
       {showModalPuesto && (
-        <div className="modal-overlay" onClick={() => setShowModalPuesto(false)}>
-          <div ref={modalPuestoRef} tabIndex={-1} className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="neg-modal-puesto-titulo">
-            <div className="modal-header">
-              <h2 id="neg-modal-puesto-titulo"><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Puesto</h2>
-              <button type="button" className="btn-close-modal" onClick={() => setShowModalPuesto(false)} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
+        <Modal
+          titulo={<><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Puesto</>}
+          onCerrar={() => setShowModalPuesto(false)}
+        >
             <div className="modal-body">
               <form onSubmit={crearPuesto} className="formulario">
                 <div className="input-group">
@@ -372,24 +342,19 @@ export default function UsuarioNegocio() {
                 </div>
               </form>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* =========================================
           MODAL 2: GESTIONAR CATÁLOGO (PRODUCTOS CON FOTO)
       ========================================= */}
       {showModalCatalogo && puestoSeleccionado && (
-        <div className="modal-overlay" onClick={() => setShowModalCatalogo(false)}>
-          <div ref={modalCatalogoRef} tabIndex={-1} className="modal modal-grande" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="neg-modal-catalogo-titulo">
-            
-            <div className="modal-header">
-              <h2 id="neg-modal-catalogo-titulo"><FaBoxOpen color="var(--indigo-profundo)" aria-hidden="true" /> Catálogo: {puestoSeleccionado.nombre}</h2>
-              <button type="button" className="btn-close-modal" onClick={() => setShowModalCatalogo(false)} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
-
+        <Modal
+          titulo={<><FaBoxOpen color="var(--indigo-profundo)" aria-hidden="true" /> Catálogo: {puestoSeleccionado.nombre}</>}
+          onCerrar={() => setShowModalCatalogo(false)}
+          tamano="lg"
+          className="modal-grande"
+        >
             <div className="modal-body bg-gris">
               
               <div className="form-añadir-producto">
@@ -489,23 +454,17 @@ export default function UsuarioNegocio() {
               </div>
 
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* =========================================
           MODAL 3: VER EQUIPO (AYUDANTES ASIGNADOS) ¡NUEVO!
       ========================================= */}
       {showModalAyudantesPuesto && puestoSeleccionado && (
-        <div className="modal-overlay" onClick={() => setShowModalAyudantesPuesto(false)}>
-          <div ref={modalAyudantesRef} tabIndex={-1} className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="neg-modal-ayudantes-titulo">
-            <div className="modal-header">
-              <h2 id="neg-modal-ayudantes-titulo"><FaUsers color="var(--indigo-profundo)" aria-hidden="true" /> Equipo: {puestoSeleccionado.nombre}</h2>
-              <button type="button" className="btn-close-modal" onClick={() => setShowModalAyudantesPuesto(false)} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
-            
+        <Modal
+          titulo={<><FaUsers color="var(--indigo-profundo)" aria-hidden="true" /> Equipo: {puestoSeleccionado.nombre}</>}
+          onCerrar={() => setShowModalAyudantesPuesto(false)}
+        >
             <div className="modal-body bg-gris">
               <div className="pi-unegocio-card no-margin">
                 <div className="pi-unegocio-table-wrapper">
@@ -557,8 +516,7 @@ export default function UsuarioNegocio() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
     </div>

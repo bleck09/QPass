@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import Modal from '../../components/Modal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -8,7 +8,7 @@ import {
   FaTicketAlt, FaWallet, FaQrcode, FaUpload, FaPlus, FaTrash, FaUserPlus,
   FaCheckCircle, FaHourglassHalf, FaEnvelope, FaHistory,
   FaStore, FaCoins, FaExclamationTriangle, FaUserTag, FaIdCard,
-  FaSearch, FaTimes, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt
+  FaSearch, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
@@ -344,36 +344,6 @@ export default function UsuarioNormal() {
     setCamposReporte(prev => prev.includes(campo) ? prev.filter(c => c !== campo) : [...prev, campo]);
   };
 
-  // Cualquier modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  const hayModalAbierto = pagoIniciado || !!entradaReportando || !!compraEnRevision;
-
-  // Foco de cada modal (A1 / Manual 8.6): entra al abrir, atrapado con Tab, vuelve al disparador al cerrar.
-  const modalPagoRef = useRef(null);
-  const modalReporteRef = useRef(null);
-  const modalRevisionRef = useRef(null);
-  useFocoModal(modalPagoRef, pagoIniciado);
-  useFocoModal(modalReporteRef, !!entradaReportando && !compraEnRevision);
-  useFocoModal(modalRevisionRef, !!compraEnRevision);
-  useEffect(() => {
-    if (!hayModalAbierto) return;
-    const alTecla = (e) => {
-      if (e.key !== 'Escape') return;
-      setPagoIniciado(false);
-      cancelarReporte();
-      cerrarRevision();
-    };
-    window.addEventListener('keydown', alTecla);
-    // Bloqueo de scroll del fondo mientras el modal está abierto (patrón estándar).
-    // eslint-disable-next-line react-hooks/immutability
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-    // El handler solo llama a cerradores (setState); no necesita re-suscribirse
-    // cuando cambian esas funciones, solo cuando se abre/cierra un modal.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hayModalAbierto]);
 
   // Genera un reporte por cada dato marcado (nombre, correo y/o celular), así se pueden
   // reportar varios datos mal puestos de una sola vez en lugar de solo uno.
@@ -715,22 +685,12 @@ export default function UsuarioNormal() {
 
       {/* --- PANTALLA GRANDE DE PAGO: QR del negocio y luego subir el comprobante --- */}
       {pagoIniciado && (
-        <div className="pi-usr-modal-overlay" onClick={() => setPagoIniciado(false)}>
-          <div
-            ref={modalPagoRef}
-            tabIndex={-1}
-            className="pi-usr-modal pi-usr-modal-pago"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="usr-modal-pago-titulo"
-          >
-            <div className="pi-usr-modal-header">
-              <h3 id="usr-modal-pago-titulo"><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Pagar entradas</h3>
-              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={() => setPagoIniciado(false)} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
+        <Modal
+          titulo={<><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Pagar entradas</>}
+          onCerrar={() => setPagoIniciado(false)}
+          tamano="lg"
+          className="pi-usr-modal-pago"
+        >
             <div className="pi-usr-modal-body">
               <div className="pi-usr-qr-card pi-usr-qr-card-grande">
                 <img width="200" height="200" src={DATOS_PAGO_NEGOCIO.qrUrl} alt="QR de pago del negocio" />
@@ -771,8 +731,7 @@ export default function UsuarioNormal() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* =========================================================
@@ -967,49 +926,25 @@ export default function UsuarioNormal() {
 
       {/* --- REPORTAR ERROR DE DATOS (desde Mis Entradas) --- */}
       {entradaReportando && !compraEnRevision && (
-        <div className="pi-usr-modal-overlay" onClick={cancelarReporte}>
-          <div
-            ref={modalReporteRef}
-            tabIndex={-1}
-            className="pi-usr-modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="usr-modal-reporte-titulo"
-          >
-            <div className="pi-usr-modal-header">
-              <h3 id="usr-modal-reporte-titulo"><FaExclamationTriangle color="var(--ambar-aviso-texto)" aria-hidden="true" /> Reportar error de datos</h3>
-              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={cancelarReporte} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
+        <Modal
+          titulo={<><FaExclamationTriangle color="var(--ambar-aviso-texto)" aria-hidden="true" /> Reportar error de datos</>}
+          onCerrar={cancelarReporte}
+          className="pi-usr-modal"
+        >
             <div className="pi-usr-modal-body">
               <p className="texto-ayuda">Entrada de: <strong>{entradaReportando.entrada.nombre}</strong></p>
               {formularioReporte}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* --- REVISAR MI SOLICITUD --- */}
       {compraEnRevision && (
-        <div className="pi-usr-modal-overlay" onClick={cerrarRevision}>
-          <div
-            ref={modalRevisionRef}
-            tabIndex={-1}
-            className="pi-usr-modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="usr-modal-revision-titulo"
-          >
-            <div className="pi-usr-modal-header">
-              <h3 id="usr-modal-revision-titulo"><FaSearch color="var(--indigo-profundo)" aria-hidden="true" /> Revisar mi solicitud</h3>
-              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={cerrarRevision} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
-
+        <Modal
+          titulo={<><FaSearch color="var(--indigo-profundo)" aria-hidden="true" /> Revisar mi solicitud</>}
+          onCerrar={cerrarRevision}
+          className="pi-usr-modal"
+        >
             <div className="pi-usr-modal-body">
               <p className="texto-ayuda">
                 Lote de {compraEnRevision.entradas.length} entrada(s) · {formatearFecha(compraEnRevision.createdAt)}
@@ -1149,8 +1084,7 @@ export default function UsuarioNormal() {
                 </>
               ) : null}
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

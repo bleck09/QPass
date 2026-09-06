@@ -1,6 +1,6 @@
-import { useCallback, useState, useEffect, useRef } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useModal } from '../../utils/useModal.js';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
@@ -89,9 +89,8 @@ export default function App() {
 
   const [puestoModal, setPuestoModal] = useState(null);
 
-  // Foco del modal de puesto (A1 / Manual 8.6)
-  const modalPuestoRef = useRef(null);
-  useFocoModal(modalPuestoRef, !!puestoModal);
+  // Foco + ESC + scroll-lock del modal de puesto (look "glass" propio del landing).
+  const modalPuestoRef = useModal(!!puestoModal, () => setPuestoModal(null));
 
   // ESTADOS DEL CONTADOR
   const [timeLeft, setTimeLeft] = useState({ dias: 0, horas: 0, minutos: 0, seg: 0 });
@@ -122,18 +121,6 @@ export default function App() {
   const handleLoginClick = () => navigate('/login');
   const handleVolverInicio = () => navigate('/');
 
-  // Modal del puesto: ESC lo cierra y el fondo no scrollea mientras está abierto
-  // (Manual 8.6). Al cerrar se restaura el scroll.
-  useEffect(() => {
-    if (!puestoModal) return;
-    const alTecla = (e) => { if (e.key === 'Escape') setPuestoModal(null); };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [puestoModal]);
 
   const fechaEventoMostrada = new Date(evento?.fecha || defaultLandingData.fechaEvento);
   const diaEvento = fechaEventoMostrada.getDate();

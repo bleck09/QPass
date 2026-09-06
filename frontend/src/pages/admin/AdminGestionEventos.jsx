@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import Modal from '../../components/Modal.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
@@ -88,18 +88,6 @@ export default function AdminGestionEventos() {
   const [editandoId, setEditandoId] = useState(null); // null = crear; id = editar
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
-  // Foco del modal de crear/editar evento (A1 / Manual 8.6)
-  const modalCrearRef = useRef(null);
-  useFocoModal(modalCrearRef, modalEventoAbierto);
-
-  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  useEffect(() => {
-    if (!modalEventoAbierto) return;
-    const alTecla = (e) => { if (e.key === "Escape") setModalEventoAbierto(false); };
-    window.addEventListener("keydown", alTecla);
-    document.body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
-  }, [modalEventoAbierto]);
   const [formEvento, setFormEvento] = useState(FORM_EVENTO_VACIO);
   const [errorImagen, setErrorImagen] = useState('');
   const [previewFallo, setPreviewFallo] = useState(false);
@@ -651,18 +639,12 @@ export default function AdminGestionEventos() {
       )}
 
       {modalEventoAbierto && (
-        <div className="pi-ges-modal-overlay" onClick={() => setModalEventoAbierto(false)}>
-          <div ref={modalCrearRef} tabIndex={-1} className="pi-ges-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="ges-modal-titulo">
-            <div className="pi-ges-modal-header">
-              <h2 id="ges-modal-titulo">
-                {editandoId ? <><FaPen aria-hidden="true" /> Editar Evento</> : <><FaPlus aria-hidden="true" /> Crear Evento</>}
-              </h2>
-              <button type="button" className="pi-ges-btn-close-modal" onClick={() => setModalEventoAbierto(false)} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
-
-            <div className="pi-ges-modal-body">
+        <Modal
+          titulo={editandoId ? <><FaPen aria-hidden="true" /> Editar Evento</> : <><FaPlus aria-hidden="true" /> Crear Evento</>}
+          onCerrar={() => setModalEventoAbierto(false)}
+          tamano="lg"
+          className="pi-ges-modal"
+        >
               <form className="pi-ges-form" onSubmit={handleGuardarEvento}>
                 <div className="pi-ges-input-group">
                   <label htmlFor="ev-nombre">Nombre del evento</label>
@@ -743,9 +725,7 @@ export default function AdminGestionEventos() {
                   </button>
                 </div>
               </form>
-            </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {DialogoConfirmar}

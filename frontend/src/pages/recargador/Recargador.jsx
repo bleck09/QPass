@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useModal } from '../../utils/useModal.js';
 import { useApi } from '../../utils/useApi.js';
+import Modal from '../../components/Modal.jsx';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -64,14 +65,6 @@ export default function Recargador() {
   const [notaIncidenciaHist, setNotaIncidenciaHist] = useState('');
   const [historialReportados, setHistorialReportados] = useState([]);
 
-  // Refs + gestión de foco de cada modal (A1 / Manual 8.6): al abrir el foco entra
-  // al modal y queda atrapado; al cerrar vuelve al botón que lo disparó.
-  const modalEscanerRef = useRef(null);
-  const modalTarjetaRef = useRef(null);
-  const modalReporteRef = useRef(null);
-  useFocoModal(modalEscanerRef, escaneando);
-  useFocoModal(modalTarjetaRef, !!tarjetaQR);
-  useFocoModal(modalReporteRef, !!historialAReportar);
 
   const abrirEvento = (ev) => {
     setEventoDetalle(ev);
@@ -182,23 +175,10 @@ export default function Recargador() {
     cerrarReporteHistorial();
   };
 
-  // Cualquier modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  const hayModalAbierto = escaneando || !!tarjetaQR || !!historialAReportar;
-  useEffect(() => {
-    if (!hayModalAbierto) return;
-    const alTecla = (e) => {
-      if (e.key !== 'Escape') return;
-      setEscaneando(false);
-      cerrarTarjeta();
-      cerrarReporteHistorial();
-    };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [hayModalAbierto]);
+  // Foco atrapado + ESC + scroll-lock de cada modal con look propio (Manual 8.6).
+  // El modal del escáner usa <Modal>, que ya trae ese comportamiento.
+  const refTarjeta = useModal(!!tarjetaQR, cerrarTarjeta);
+  const refReporte = useModal(!!historialAReportar, cerrarReporteHistorial);
 
   if (!eventoDetalle) {
     return (
@@ -285,22 +265,13 @@ export default function Recargador() {
 
       {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}
       {escaneando && (
-        <div className="pi-rec-modal-overlay" onClick={() => setEscaneando(false)}>
-          <div
-            ref={modalEscanerRef}
-            tabIndex={-1}
-            className="pi-rec-modal-tarjeta"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="rec-modal-escaner-titulo"
-          >
-            <h3 id="rec-modal-escaner-titulo" style={{ textAlign: 'center', marginBottom: '14px' }}>
-              <FaQrcode aria-hidden="true" /> Escanear manilla
-            </h3>
-            <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
-          </div>
-        </div>
+        <Modal
+          titulo={<><FaQrcode aria-hidden="true" /> Escanear manilla</>}
+          onCerrar={() => setEscaneando(false)}
+          tamano="sm"
+        >
+          <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
+        </Modal>
       )}
 
       {/* --- PESTAÑA: HISTORIAL --- */}
@@ -432,7 +403,7 @@ export default function Recargador() {
       {tarjetaQR && (
         <div className="pi-rec-modal-overlay" onClick={cerrarTarjeta}>
           <div
-            ref={modalTarjetaRef}
+            ref={refTarjeta}
             tabIndex={-1}
             className="pi-rec-modal-tarjeta"
             onClick={(e) => e.stopPropagation()}
@@ -575,7 +546,7 @@ export default function Recargador() {
       {historialAReportar && (
         <div className="pi-rec-modal-overlay" onClick={cerrarReporteHistorial}>
           <div
-            ref={modalReporteRef}
+            ref={refReporte}
             tabIndex={-1}
             className="pi-rec-modal-tarjeta"
             onClick={(e) => e.stopPropagation()}

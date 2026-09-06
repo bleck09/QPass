@@ -1,5 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
+import { useModal } from '../../utils/useModal.js';
+import Modal from '../../components/Modal.jsx';
 import {
   FaMapMarkerAlt, FaSearch, FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
   FaUsers, FaHourglassHalf, FaExclamationTriangle,
@@ -145,6 +147,9 @@ export default function GestionEntrega() {
     setVerificando(false);
   };
 
+  // Foco + ESC + scroll-lock del resultado de verificación (look propio).
+  const refVerif = useModal(!!entradaVerificada, cerrarVerificacion);
+
   return (
     <div className="pi-entrega-container">
 
@@ -288,15 +293,11 @@ export default function GestionEntrega() {
 
       {/* MODAL: VINCULAR CÓDIGO QR */}
       {participanteVinculando && (
-        <div className="pi-entrega-modal-overlay" onClick={cerrarVincular}>
-          <div className="pi-entrega-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="pi-entrega-modal-header">
-              <h3><FaQrcode color="var(--indigo-profundo)" /> Vincular QR: {participanteVinculando.nombre}</h3>
-              <button className="pi-entrega-btn-cerrar-modal" onClick={cerrarVincular}>
-                <FaTimes />
-              </button>
-            </div>
-
+        <Modal
+          titulo={<><FaQrcode color="var(--indigo-profundo)" /> Vincular QR: {participanteVinculando.nombre}</>}
+          onCerrar={cerrarVincular}
+          className="pi-entrega-modal"
+        >
             <div className="pi-entrega-modal-body">
               {escaneando ? (
                 <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
@@ -385,27 +386,18 @@ export default function GestionEntrega() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* MODAL: ESCÁNER DE VERIFICACIÓN (cámara real) */}
       {verificando && (
-        <div className="pi-sup-modal-overlay" onClick={() => setVerificando(false)}>
-          <div
-            className="pi-sup-modal-tarjeta"
-            onClick={(e) => e.stopPropagation()}
-            style={{ padding: '24px' }}
-            role="dialog"
-            aria-modal="true"
-            aria-label="Escanear manilla para verificar"
-          >
-            <h3 style={{ textAlign: 'center', marginBottom: '14px' }}>
-              <FaQrcode aria-hidden="true" /> Escanear manilla
-            </h3>
-            <EscanerQr onDetectado={handleManillaVerificada} onCancelar={() => setVerificando(false)} />
-          </div>
-        </div>
+        <Modal
+          titulo={<><FaQrcode aria-hidden="true" /> Escanear manilla</>}
+          onCerrar={() => setVerificando(false)}
+          tamano="sm"
+        >
+          <EscanerQr onDetectado={handleManillaVerificada} onCancelar={() => setVerificando(false)} />
+        </Modal>
       )}
 
       {/* MODAL: RESULTADO DE LA VERIFICACIÓN (solo lectura) */}
@@ -414,6 +406,8 @@ export default function GestionEntrega() {
         return (
           <div className="pi-sup-modal-overlay" onClick={cerrarVerificacion}>
             <div
+              ref={refVerif}
+              tabIndex={-1}
               className="pi-sup-modal-tarjeta"
               onClick={(e) => e.stopPropagation()}
               role="dialog"

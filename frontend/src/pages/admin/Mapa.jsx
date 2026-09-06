@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import Modal from '../../components/Modal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -45,18 +45,6 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
 
   const [mostrarModal, setMostrarModal] = useState(false);
 
-  // Foco del modal de elemento del plano (A1 / Manual 8.6)
-  const modalPlanoRef = useRef(null);
-  useFocoModal(modalPlanoRef, mostrarModal);
-
-  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  useEffect(() => {
-    if (!mostrarModal) return;
-    const alTecla = (e) => { if (e.key === "Escape") setMostrarModal(false); };
-    window.addEventListener("keydown", alTecla);
-    document.body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
-  }, [mostrarModal]);
   const [modoEdicion, setModoEdicion] = useState(false);
 
   const [form, setForm] = useState({ id: '', negocioId: '', nombre: '', categoria: 'Comida', logo: '', ancho: 100, alto: 100 });
@@ -421,16 +409,12 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
           MODAL: AÑADIR / EDITAR
       ======================================================= */}
       {mostrarModal && (
-        <div className="modal-overlay" onClick={cerrarModal}>
-          <div ref={modalPlanoRef} tabIndex={-1} className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="mapa-modal-titulo">
-            <div className="modal-header">
-              <h2 id="mapa-modal-titulo"><FaMap color="var(--indigo-profundo)" aria-hidden="true" /> {modoEdicion ? "Editar Elemento" : "Añadir al Plano"}</h2>
-              <button type="button" className="btn-close-modal" onClick={cerrarModal} aria-label="Cerrar"><FaTimes aria-hidden="true" /></button>
-            </div>
+        <Modal
+          titulo={<><FaMap color="var(--indigo-profundo)" aria-hidden="true" /> {modoEdicion ? "Editar Elemento" : "Añadir al Plano"}</>}
+          onCerrar={cerrarModal}
+        >
+          <form onSubmit={guardarElemento} className="formulario">
 
-            <div className="modal-body">
-              <form onSubmit={guardarElemento} className="formulario">
-                
                 {!modoEdicion && (
                   <div className="input-group" style={{ backgroundColor: 'var(--gris-niebla)', padding: '15px', borderRadius: '8px' }}>
                     <label htmlFor="mapa-negocio">Usuario Negocio dueño del puesto</label>
@@ -493,10 +477,8 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
                   <button type="submit" className="btn-primario"><FaSave /> Guardar Elemento</button>
                 </div>
 
-              </form>
-            </div>
-          </div>
-        </div>
+          </form>
+        </Modal>
       )}
 
     </div>

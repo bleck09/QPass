@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import Modal from '../../components/Modal.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
@@ -29,19 +29,6 @@ export default function AdCreaUsuarioNegocio() {
 
   const [showModal, setShowModal] = useState(false);
   const [confirmar, DialogoConfirmar] = useConfirmar();
-
-  // Foco del modal de crear usuario (A1 / Manual 8.6)
-  const modalCrearUsuRef = useRef(null);
-  useFocoModal(modalCrearUsuRef, showModal);
-
-  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  useEffect(() => {
-    if (!showModal) return;
-    const alTecla = (e) => { if (e.key === "Escape") setShowModal(false); };
-    window.addEventListener("keydown", alTecla);
-    document.body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", alTecla); document.body.style.overflow = ""; };
-  }, [showModal]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroRol, setFiltroRol] = useState('Todos');
 
@@ -249,23 +236,18 @@ export default function AdCreaUsuarioNegocio() {
 
       {/* --- MODAL (VENTANA EMERGENTE) PARA CREAR --- */}
       {showModal && (
-        <div className="pi-adnegocio-modal-overlay" onClick={() => setShowModal(false)}>
-          <div ref={modalCrearUsuRef} tabIndex={-1} className="pi-adnegocio-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="adneg-modal-titulo">
-            
-            <div className="pi-adnegocio-modal-header">
-              <h2 id="adneg-modal-titulo"><FaUsersCog color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Nuevo Usuario</h2>
-              <button type="button" className="btn-close-modal" onClick={() => setShowModal(false)} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
+        <Modal
+          titulo={<><FaUsersCog color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Nuevo Usuario</>}
+          onCerrar={() => setShowModal(false)}
+          tamano="md"
+          className="pi-adnegocio-modal"
+        >
+          <p className="pi-adnegocio-hint">
+            Asigna el rol correcto. El sistema adaptará los accesos y paneles automáticamente.
+          </p>
 
-            <div className="pi-adnegocio-modal-body">
-              <p className="pi-adnegocio-hint">
-                Asigna el rol correcto. El sistema adaptará los accesos y paneles automáticamente.
-              </p>
+          <form onSubmit={handleSubmit} className="pi-adnegocio-form">
 
-              <form onSubmit={handleSubmit} className="pi-adnegocio-form">
-                
                 <div className="pi-adnegocio-input-group">
                   <label htmlFor="adneg-rol">Tipo de cuenta (rol)</label>
                   <div className="input-wrapper">
@@ -344,10 +326,7 @@ export default function AdCreaUsuarioNegocio() {
                   </button>
                 </div>
               </form>
-            </div>
-
-          </div>
-        </div>
+        </Modal>
       )}
 
       {DialogoConfirmar}

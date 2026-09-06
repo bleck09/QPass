@@ -1,5 +1,5 @@
-import { useCallback, useState, useEffect, useMemo, useRef } from 'react';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import { useCallback, useState, useMemo } from 'react';
+import Modal from '../../components/Modal.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
@@ -97,28 +97,6 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
     setFormAyudante(initialStateForm);
   };
 
-  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  const hayModalAbierto = showModal || ayudanteAsignandoId != null;
-
-  // Foco de cada modal (A1 / Manual 8.6): entra al abrir, atrapado con Tab, vuelve al disparador al cerrar.
-  const modalCrearRef = useRef(null);
-  const modalAsignarRef = useRef(null);
-  useFocoModal(modalCrearRef, showModal);
-  useFocoModal(modalAsignarRef, ayudanteAsignandoId != null);
-  useEffect(() => {
-    if (!hayModalAbierto) return;
-    const alTecla = (e) => {
-      if (e.key !== 'Escape') return;
-      cerrarModal();
-      cerrarAsignarPuestos();
-    };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [hayModalAbierto]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -257,25 +235,11 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
 
       {/* MODAL PARA CREAR AYUDANTE */}
       {showModal && (
-        <div className="pi-usr-modal-overlay" onClick={cerrarModal}>
-          <div
-            ref={modalCrearRef}
-            tabIndex={-1}
-            className="pi-usr-modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="crea-ayu-titulo"
-          >
-            <div className="pi-usr-modal-header">
-              <h3 id="crea-ayu-titulo">
-                <FaUserTie color="var(--indigo-profundo)" aria-hidden="true" />
-                Registrar Nuevo Ayudante
-              </h3>
-              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={cerrarModal} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
+        <Modal
+          titulo={<><FaUserTie color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Nuevo Ayudante</>}
+          onCerrar={cerrarModal}
+          className="pi-usr-modal"
+        >
             <div className="pi-usr-modal-body">
               <form onSubmit={handleSubmit} className="formulario">
                 <div className="input-group">
@@ -331,31 +295,16 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
                 </div>
               </form>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* MODAL RÁPIDO: ASIGNAR PUESTOS */}
       {ayudanteAsignando && (
-        <div className="pi-usr-modal-overlay" onClick={cerrarAsignarPuestos}>
-          <div
-            ref={modalAsignarRef}
-            tabIndex={-1}
-            className="pi-usr-modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="asignar-puestos-titulo"
-          >
-            <div className="pi-usr-modal-header">
-              <h3 id="asignar-puestos-titulo">
-                <FaMapMarkerAlt color="var(--indigo-profundo)" aria-hidden="true" />
-                Asignar Puestos: {ayudanteAsignando.nombre}
-              </h3>
-              <button type="button" className="pi-usr-btn-cerrar-modal" onClick={cerrarAsignarPuestos} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
+        <Modal
+          titulo={<><FaMapMarkerAlt color="var(--indigo-profundo)" aria-hidden="true" /> Asignar Puestos: {ayudanteAsignando.nombre}</>}
+          onCerrar={cerrarAsignarPuestos}
+          className="pi-usr-modal"
+        >
             <div className="pi-usr-modal-body">
               <p className="pi-ayudante-nota">
                 Marca en qué puestos puede trabajar. Los cambios se guardan al instante.
@@ -379,8 +328,7 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
                 <button type="button" className="pi-usr-btn-enviar" onClick={cerrarAsignarPuestos}>Listo</button>
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {DialogoConfirmar}

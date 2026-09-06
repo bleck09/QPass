@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState, useRef } from 'react';
+import { useCallback, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import Modal from '../../components/Modal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -39,10 +39,6 @@ export default function Cliente() {
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
   const [showPreview, setShowPreview] = useState(false);
 
-  // Foco del modal de vista previa (A1 / Manual 8.6)
-  const modalPreviewRef = useRef(null);
-  useFocoModal(modalPreviewRef, showPreview);
-
   const [solicitudId, setSolicitudId] = useState(null); // null = formulario en blanco (nueva)
   const [solicitud, setSolicitud] = useState(SOLICITUD_VACIA);
 
@@ -68,17 +64,6 @@ export default function Cliente() {
   const misSolicitudes = datos.solicitudes;
   const eventosPermitidos = datos.eventosPermitidos;
 
-  // Modal de vista previa: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  useEffect(() => {
-    if (!showPreview) return;
-    const alTecla = (e) => { if (e.key === 'Escape') setShowPreview(false); };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [showPreview]);
 
 
   const abrirSolicitud = (s) => {
@@ -450,23 +435,12 @@ export default function Cliente() {
 
       {/* --- MODAL DE VISTA PREVIA --- */}
       {showPreview && (
-        <div className="modal-overlay" onClick={() => setShowPreview(false)}>
-          <div
-            ref={modalPreviewRef}
-            tabIndex={-1}
-            className="modal modal-preview"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cliente-preview-titulo"
-          >
-            <div className="modal-header">
-              <h2 id="cliente-preview-titulo"><FaEye color="var(--indigo-profundo)" aria-hidden="true" /> Así lucirá la Landing Page</h2>
-              <button type="button" className="btn-close-modal" onClick={() => setShowPreview(false)} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
-            </div>
-
+        <Modal
+          titulo={<><FaEye color="var(--indigo-profundo)" aria-hidden="true" /> Así lucirá la Landing Page</>}
+          onCerrar={() => setShowPreview(false)}
+          tamano="lg"
+          className="modal-preview"
+        >
             <div className="modal-body preview-container" style={{ backgroundColor: solicitud.colorFondo }}>
               <div className="preview-text">
                 {/* Vista previa de la landing, no es encabezado real de la pantalla → <div> */}
@@ -488,8 +462,7 @@ export default function Cliente() {
                 )}
               </div>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
       </>
       )}

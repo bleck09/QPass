@@ -14,12 +14,36 @@
   --ambar-aviso: #FFB020;      /* advertencias, saldo bajo */
   --rojo-error: #E5484D;       /* errores, saldo insuficiente, fallos */
 
-  /* --- Acento y neutros --- */
+  /* --- Acento --- */
   --coral-compra: #FF6B4A;     /* botones de acción: comprar, confirmar pago */
-  --gris-niebla: #F5F7FB;      /* fondo claro general */
-  --gris-medio: #8A94A6;       /* SOLO decoración: íconos inactivos, bordes, separadores.
+
+  /* ============================================================
+     ESCALA DE NEUTRALES (Nivel 1) — Anexo A A6 / Manual 6.2.
+     10 peldaños + blanco, tintados con el tono índigo (hue ~230,
+     croma bajísimo): la interfaz se siente de una pieza sin que el
+     tinte se perciba como color. Anclada en los grises ya probados
+     de QPass -> los tokens de abajo apuntan aquí SIN cambiar de valor:
+       n-50  = gris-niebla   n-200 = borde-suave   n-300 = borde-medio
+       n-600 = texto-secundario (AA)   n-950 = azul-noche
+     ============================================================ */
+  --n-0:   #FFFFFF;
+  --n-50:  #F5F7FB;
+  --n-100: #ECEFF5;
+  --n-200: #E3E6EE;
+  --n-300: #CDD3E0;
+  --n-400: #A5AEBF;
+  --n-500: #7B8494;
+  --n-600: #5E6773;
+  --n-700: #454E5E;
+  --n-800: #2C3444;
+  --n-900: #171D2C;
+  --n-950: #0A0E27;
+
+  /* --- Neutros con nombre (legado) — ahora peldaños de la escala --- */
+  --gris-niebla: var(--n-50);  /* fondo claro general */
+  --gris-medio: #8A94A6;       /* SOLO decoración: íconos inactivos, separadores.
                                   Como TEXTO no llega a 4.5:1 (Anexo A 6.3) -> usar --texto-secundario. */
-  --blanco: #FFFFFF;           /* tarjetas, texto sobre fondos oscuros */
+  --blanco: var(--n-0);        /* tarjetas, texto sobre fondos oscuros */
 
   /* --- Hover / interacción (mismo tono, ~15% más oscuro) --- */
   --indigo-profundo-hover: #12204f;
@@ -59,15 +83,70 @@
   --rojo-error-suave: #fdecec;
   --coral-compra-suave: #ffece6;
 
-  /* --- Bordes y superficies neutras --- */
-  --borde-suave: #e3e6ee;
-  --borde-medio: #cdd3e0;
+  /* --- Bordes y superficies neutras (legado -> escala) --- */
+  --borde-suave: var(--n-200);
+  --borde-medio: var(--n-300);
 
   /* --- Texto general --- */
   --texto-principal: var(--azul-noche);
-  /* Gris legible: >=4.5:1 sobre blanco (5.7) y sobre gris-niebla (5.3), AA (Anexo A 6.3).
+  /* Gris legible: >=4.5:1 sobre blanco (5.6) y sobre gris-niebla, AA (Anexo A 6.3).
      El gris de marca #8A94A6 se quedaba en ~2.9:1 como texto. */
-  --texto-secundario: #5E6773;
+  --texto-secundario: var(--n-600);
+
+  /* ============================================================
+     CAPA SEMÁNTICA (Nivel 2) — Manual 7.2 / Anexo A PASO 7.
+     Tokens por ROL, no por color. TODO componente nuevo o migrado
+     usa SOLO estos (o tokens de componente que apunten aquí); nunca
+     --indigo-profundo / --cian-digital directo.
+     Por ahora apuntan a los primitivos actuales -> cero cambio visual.
+     La escala de neutrales (--n-*) y el modo oscuro re-apuntan
+     ESTOS tokens, sin tocar componentes. Ver reglas/APLICACION (S-C*).
+     ============================================================ */
+
+  /* Superficies / fondos */
+  --bg-page:     var(--gris-niebla);   /* fondo de la app */
+  --bg-surface:  var(--blanco);        /* tarjetas, tablas, modales, inputs */
+  --bg-raised:   var(--blanco);        /* elevado (dropdown, popover) = surface + sombra */
+  --bg-sunken:   var(--gris-niebla);   /* franjas alternas, code, zonas hundidas (afina en S-C2) */
+  --bg-hover:    var(--gris-niebla);   /* hover de fila / ítem de lista */
+  --bg-overlay:  rgba(10, 14, 39, 0.5); /* backdrop de modal (azul-noche, no negro) */
+
+  /* Texto */
+  --text-primary:    var(--texto-principal);
+  --text-secondary:  var(--texto-secundario);
+  --text-muted:      var(--gris-medio);        /* placeholder, deshabilitado, NO cuerpo */
+  --text-on-accent:  var(--blanco);            /* texto sobre --action (índigo) */
+  --text-on-vivid:   var(--azul-noche);        /* texto sobre cian/verde/ámbar/rojo/coral */
+  --text-link:       var(--cian-digital-texto);
+
+  /* Bordes */
+  --border:         var(--borde-suave);
+  --border-strong:  var(--borde-medio);        /* borde de input en reposo */
+  --border-focus:   var(--cian-digital);
+
+  /* Acción / interacción */
+  --action:          var(--indigo-profundo);   /* botón primario */
+  --action-hover:    var(--indigo-profundo-hover);
+  --accent:          var(--cian-digital);       /* interacción secundaria, escaneo QR */
+  --accent-hover:    var(--cian-digital-hover);
+  --commerce:        var(--coral-compra);       /* CTA de compra / confirmar pago */
+  --commerce-hover:  var(--coral-compra-hover);
+  --focus-ring:      var(--cian-digital);
+
+  /* Estados semánticos (color base + texto AA + fondo suave) */
+  --ok:        var(--verde-recarga);
+  --ok-text:   var(--verde-recarga-texto);
+  --ok-bg:     var(--verde-recarga-suave);
+  --warn:      var(--ambar-aviso);
+  --warn-text: var(--ambar-aviso-texto);
+  --warn-bg:   var(--ambar-aviso-suave);
+  --danger:      var(--rojo-error);
+  --danger-text: var(--rojo-error-texto);
+  --danger-bg:   var(--rojo-error-suave);
+  --info:      var(--cian-digital);
+  --info-text: var(--cian-digital-texto);
+  --info-bg:   var(--cian-digital-suave);
+  --brand-bg:  var(--indigo-profundo-suave);   /* badge / chip de marca */
 
   /* ============================================================
      TIPOGRAFÍA — Manual Parte 5.

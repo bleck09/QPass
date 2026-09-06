@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useFocoModal } from '../../utils/useFocoModal.js';
+import Modal from '../../components/Modal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
@@ -10,7 +10,7 @@ import {
   FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends, FaUsers,
   FaArrowLeft, FaSearch, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
   FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt, FaMapMarkerAlt,
-  FaKey, FaTimes
+  FaKey
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { formatearFecha } from '../../utils/eventos.js';
@@ -291,37 +291,6 @@ export default function Admin({
   const [passwordsAMostrar, setPasswordsAMostrar] = useState(null);
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
-  // Foco del modal de contraseñas generadas (A1 / Manual 8.6)
-  const modalPassRef = useRef(null);
-  useFocoModal(modalPassRef, !!passwordsAMostrar);
-
-  // Modal de contraseñas: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  useEffect(() => {
-    if (!passwordsAMostrar) return;
-    const alTecla = (e) => { if (e.key === 'Escape') setPasswordsAMostrar(null); };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [passwordsAMostrar]);
-
-  // Foco del modal de detalle de solicitud (A1 / Manual 8.6)
-  const modalSolicitudRef = useRef(null);
-  useFocoModal(modalSolicitudRef, !!compraAbierta);
-
-  // Modal de detalle de solicitud: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  useEffect(() => {
-    if (!compraAbierta) return;
-    const alTecla = (e) => { if (e.key === 'Escape') setSolicitudAbierta(null); };
-    window.addEventListener('keydown', alTecla);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = '';
-    };
-  }, [compraAbierta]);
 
   const aprobarSolicitud = async (compra) => {
     const { passwordsGeneradas, ...actualizada } = await api.compras.aprobar(compra.id);
@@ -1289,28 +1258,10 @@ export default function Admin({
 
       {/* --- CONTRASEÑAS GENERADAS AL APROBAR (no hay envío de correo real) --- */}
       {passwordsAMostrar && (
-        <div
-          onClick={() => setPasswordsAMostrar(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)' }}
+        <Modal
+          titulo={<><FaKey aria-hidden="true" /> Cuentas nuevas creadas</>}
+          onCerrar={() => setPasswordsAMostrar(null)}
         >
-          <div
-            ref={modalPassRef}
-            tabIndex={-1}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="dash-modal-pass-titulo"
-            style={{ background: 'var(--blanco, #fff)', borderRadius: '12px', padding: '24px', maxWidth: '520px', width: '90%', position: 'relative' }}
-          >
-            <button
-              type="button"
-              onClick={() => setPasswordsAMostrar(null)}
-              aria-label="Cerrar"
-              style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
-            >
-              <FaTimes aria-hidden="true" />
-            </button>
-            <h3 id="dash-modal-pass-titulo"><FaKey aria-hidden="true" /> Cuentas nuevas creadas</h3>
             <p className="pi-dash-incidencias-nota">
               No hay envío de correo automático — comparte esta contraseña temporal a mano con cada invitado. Solo se muestra esta vez.
             </p>
@@ -1324,35 +1275,17 @@ export default function Admin({
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* --- MODAL: DETALLE DE SOLICITUD DE COMPRA --- */}
       {compraAbierta && (
-        <div
-          onClick={() => setSolicitudAbierta(null)}
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 'var(--z-modal)', padding: '20px' }}
+        <Modal
+          titulo="Detalle de la solicitud"
+          onCerrar={() => setSolicitudAbierta(null)}
+          tamano="lg"
+          className="pi-dash-modal-solicitud"
         >
-          <div
-            ref={modalSolicitudRef}
-            tabIndex={-1}
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="dash-modal-solicitud-titulo"
-            className="pi-dash-modal-solicitud"
-            style={{ background: 'var(--blanco, #fff)', borderRadius: '12px', padding: '24px', maxWidth: '760px', width: '90%', maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}
-          >
-            <button
-              type="button"
-              onClick={() => setSolicitudAbierta(null)}
-              aria-label="Cerrar"
-              style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}
-            >
-              <FaTimes aria-hidden="true" />
-            </button>
-            <h3 id="dash-modal-solicitud-titulo" className="pi-dash-seccion-titulo">Detalle de la solicitud</h3>
             <div className="pi-dash-detalle-header">
               <div>
                 <div className="fila-nombre">{compraAbierta.comprador.nombre}</div>
@@ -1423,8 +1356,7 @@ export default function Admin({
                 </button>
               </div>
             )}
-          </div>
-        </div>
+        </Modal>
       )}
 
       {DialogoConfirmar}

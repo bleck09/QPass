@@ -1,0 +1,79 @@
+/* Modal reutilizable (components/Modal.jsx). Estilos SOLO con tokens de la capa
+   semántica (Nivel 2) — así el modo oscuro (S-C6) no toca este archivo. */
+
+.qp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--bg-overlay);
+  overflow-y: auto;
+}
+
+.qp-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-height: calc(100vh - var(--space-8));
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+}
+
+.qp-modal--sm { max-width: 420px; }
+.qp-modal--md { max-width: 560px; }
+.qp-modal--lg { max-width: 760px; }
+.qp-modal--xl { max-width: 980px; }
+
+.qp-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-5) var(--space-3);
+}
+
+.qp-modal__titulo {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+  color: var(--text-primary);
+}
+
+.qp-modal__cerrar {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+}
+.qp-modal__cerrar:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.qp-modal__body {
+  padding: 0 var(--space-5) var(--space-5);
+  overflow-y: auto;
+}
+/* Si no hay header, el body recupera el padding superior. */
+.qp-modal__header + .qp-modal__body { padding-top: 0; }
+.qp-modal > .qp-modal__body:first-child { padding-top: var(--space-5); }
