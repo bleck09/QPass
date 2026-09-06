@@ -39,18 +39,18 @@
 .pi-layout-logo { display: flex; align-items: center; gap: 16px; overflow: hidden; }
 
 .logo-icon-wrapper {
-  min-width: 40px; height: 40px; border-radius: 12px;
+  min-width: 40px; height: 40px; border-radius: var(--radius-lg);
   background-color: rgba(0, 180, 216, 0.15);
   display: flex; justify-content: center; align-items: center;
 }
 
 .logo-text { white-space: nowrap; }
-.logo-text h2 { margin: 0; font-size: 1.25rem; font-weight: 800; color: var(--blanco); letter-spacing: 0.5px; }
-.logo-text p { margin: 0; font-size: 0.75rem; color: var(--cian-digital); font-weight: 600; }
+.logo-text h2 { margin: 0; font-size: var(--text-lg); font-weight: 800; color: var(--text-on-accent); letter-spacing: 0.5px; }
+.logo-text p { margin: 0; font-size: var(--text-xs); color: var(--cian-digital); font-weight: 600; }
 
 .pi-btn-collapse {
   position: absolute; right: -15px; top: 30px; width: 30px; height: 30px;
-  background-color: var(--indigo-profundo); color: var(--blanco);
+  background-color: var(--indigo-profundo); color: var(--text-on-accent);
   border: 4px solid var(--azul-noche); border-radius: 50%;
   display: flex; justify-content: center; align-items: center;
   cursor: pointer; z-index: 10; transition: transform 0.2s, background 0.2s;
@@ -66,7 +66,7 @@
 }
 
 .pi-layout-nav::-webkit-scrollbar { width: 4px; }
-.pi-layout-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
+.pi-layout-nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: var(--radius-sm); }
 
 /* =======================================================
    ESTRUCTURA DEL BOTÓN Y ANIMACIONES INTERNAS
@@ -74,7 +74,7 @@
 
 .pi-layout-nav-item {
   position: relative;
-  border-radius: 30px 0 0 30px;
+  border-radius: var(--radius-xl) 0 0 var(--radius-xl);
   cursor: pointer;
   background-color: transparent;
   /* Reset de <button>: ahora estos ítems son botones reales (accesibilidad). */
@@ -91,7 +91,7 @@
 .pi-layout-nav-content {
   display: flex; align-items: center; gap: 16px;
   padding: 16px 20px;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   position: relative;
   z-index: 2;
   white-space: nowrap;
@@ -101,11 +101,11 @@
 }
 
 .pi-layout-nav-icon {
-  font-size: 1.25rem; min-width: 24px; display: flex; justify-content: center;
+  font-size: var(--text-lg); min-width: 24px; display: flex; justify-content: center;
   transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1), color 0.2s ease-in-out;
 }
 
-.pi-layout-nav-text { font-size: 0.875rem; font-weight: 600; }
+.pi-layout-nav-text { font-size: var(--text-sm); font-weight: 600; }
 
 /* --- MAGIA MATEMÁTICA: LAS CURVAS --- */
 .curve-top, .curve-bottom {
@@ -117,8 +117,8 @@
   display: none; /* CRÍTICO: Totalmente apagadas por defecto */
 }
 
-.curve-top { top: -40px; box-shadow: 20px 20px 0 0 var(--gris-niebla); }
-.curve-bottom { bottom: -40px; box-shadow: 20px -20px 0 0 var(--gris-niebla); }
+.curve-top { top: -40px; box-shadow: 20px 20px 0 0 var(--bg-page); }
+.curve-bottom { bottom: -40px; box-shadow: 20px -20px 0 0 var(--bg-page); }
 
 
 /* =======================================================
@@ -127,7 +127,7 @@
 
 /* 1. ESTADO ACTIVO (CLICADO) - APARECE DE GOLPE SIN GLITCH */
 .pi-layout-nav-item.activo {
-  background-color: var(--gris-niebla);
+  background-color: var(--bg-page);
   padding-left: 0;
 }
 
@@ -154,7 +154,7 @@
 }
 
 .pi-layout-nav-item:hover:not(.activo) .pi-layout-nav-content {
-  color: var(--blanco);
+  color: var(--text-on-accent);
   transform: translateX(8px); /* Deslizamiento suave a la derecha */
 }
 
@@ -188,9 +188,9 @@
 
 .pi-layout-main {
   flex: 1; width: 100%;
-  background-color: var(--gris-niebla);
-  border-radius: 30px; display: flex; flex-direction: column;
-  overflow: hidden; box-shadow: -5px 0 20px rgba(0,0,0,0.15); position: relative;
+  background-color: var(--bg-page);
+  border-radius: var(--radius-xl); display: flex; flex-direction: column;
+  overflow: hidden; box-shadow: -5px 0 20px rgba(10, 14, 39,0.15); position: relative;
 }
 
 .pi-layout-sidebar.collapsed + .pi-layout-main-wrapper .pi-layout-main {
@@ -204,54 +204,54 @@
 }
 
 .pi-layout-header-left { display: flex; align-items: center; gap: 16px; }
-.pi-btn-mobile-menu { display: none; background: none; border: none; color: var(--texto-principal); cursor: pointer; }
-.pi-layout-header-left h3 { margin: 0; color: var(--texto-principal); font-size: 1.25rem; font-weight: 700; }
+.pi-btn-mobile-menu { display: none; background: none; border: none; color: var(--text-primary); cursor: pointer; }
+.pi-layout-header-left h3 { margin: 0; color: var(--text-primary); font-size: var(--text-lg); font-weight: 700; }
 .pi-layout-header-right { position: relative; }
 
 /* BOTÓN DEL PERFIL SUPERIOR */
 .pi-layout-perfil-btn {
   display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 8px 12px;
-  border-radius: 30px; background-color: var(--blanco); border: 1px solid var(--borde-suave);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.02); transition: all 0.2s;
+  border-radius: var(--radius-xl); background-color: var(--bg-surface); border: 1px solid var(--border);
+  box-shadow: 0 2px 5px rgba(10, 14, 39,0.02); transition: all 0.2s;
   font: inherit; color: inherit; appearance: none; -webkit-appearance: none;
 }
 .pi-layout-perfil-btn:hover { border-color: var(--cian-digital); box-shadow: 0 2px 8px rgba(0, 180, 216, 0.1); }
 
 .pi-layout-avatar {
   width: 36px; height: 36px; border-radius: 50%; background-color: var(--indigo-profundo);
-  color: var(--blanco); display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: 0.875rem; overflow: hidden;
+  color: var(--text-on-accent); display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: var(--text-sm); overflow: hidden;
 }
 .pi-layout-avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
 .pi-layout-info-perfil { display: flex; flex-direction: column; text-align: left; }
-.pi-layout-nombre { font-size: 0.8125rem; font-weight: 700; color: var(--texto-principal); line-height: 1.2; }
-.pi-layout-rol-header { font-size: 0.75rem; color: var(--texto-secundario); text-transform: uppercase; letter-spacing: 0.5px;}
+.pi-layout-nombre { font-size: var(--text-xs); font-weight: 700; color: var(--text-primary); line-height: 1.2; }
+.pi-layout-rol-header { font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;}
 
 /* MENÚ DESPLEGABLE (DROPDOWN PERFIL) */
 .pi-layout-dropdown {
-  position: absolute; top: 55px; right: 0; width: 250px; background-color: var(--blanco);
-  border-radius: 12px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); border: 1px solid var(--borde-suave);
+  position: absolute; top: 55px; right: 0; width: 250px; background-color: var(--bg-surface);
+  border-radius: var(--radius-lg); box-shadow: 0 10px 25px rgba(10, 14, 39, 0.1); border: 1px solid var(--border);
   overflow: hidden; animation: slideDown 0.2s ease-out;
 }
 
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 .pi-layout-dropdown-header {
-  padding: 16px; background-color: var(--gris-niebla); border-bottom: 1px solid var(--borde-suave); display: flex; flex-direction: column;
+  padding: 16px; background-color: var(--bg-page); border-bottom: 1px solid var(--border); display: flex; flex-direction: column;
 }
-.pi-layout-dropdown-header strong { font-size: 0.875rem; color: var(--texto-principal); }
-.pi-layout-dropdown-header span { font-size: 0.75rem; color: var(--texto-secundario); margin-top: 2px; }
+.pi-layout-dropdown-header strong { font-size: var(--text-sm); color: var(--text-primary); }
+.pi-layout-dropdown-header span { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px; }
 
 .pi-layout-dropdown-body { padding: 8px 0; }
 .pi-layout-dropdown-body button {
   width: 100%; padding: 12px 20px; background: none; border: none; text-align: left;
-  display: flex; align-items: center; gap: 8px; font-size: 0.875rem; font-weight: 600; cursor: pointer;
-  color: var(--texto-principal); transition: background 0.2s;
+  display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); font-weight: 600; cursor: pointer;
+  color: var(--text-primary); transition: background 0.2s;
 }
-.pi-layout-dropdown-body button:hover { background-color: var(--gris-niebla); color: var(--indigo-profundo); }
+.pi-layout-dropdown-body button:hover { background-color: var(--bg-page); color: var(--indigo-profundo); }
 
 .pi-layout-dropdown-body button.btn-logout {
-  color: var(--rojo-error-texto); border-top: 1px solid var(--borde-suave); margin-top: 4px; padding-top: 16px;
+  color: var(--rojo-error-texto); border-top: 1px solid var(--border); margin-top: 4px; padding-top: 16px;
 }
 .pi-layout-dropdown-body button.btn-logout:hover { background-color: var(--rojo-error-suave); color: var(--rojo-error); }
 
@@ -272,7 +272,7 @@
     transform: translateX(-100%); width: 280px; padding-top: 0;
   }
 
-  .pi-layout-sidebar.mobile-open { transform: translateX(0); box-shadow: 5px 0 25px rgba(0,0,0,0.5); }
+  .pi-layout-sidebar.mobile-open { transform: translateX(0); box-shadow: 5px 0 25px rgba(10, 14, 39,0.5); }
   .pi-mobile-overlay {
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
     background-color: rgba(10, 14, 39, 0.7); z-index: var(--z-overlay); backdrop-filter: blur(3px);
@@ -281,7 +281,7 @@
   .pi-layout-nav { padding-left: 8px; }
   .pi-layout-nav-item.activo .curve-top, 
   .pi-layout-nav-item.activo .curve-bottom { display: none; }
-  .pi-layout-nav-item.activo { border-radius: 12px; margin: 0 8px; }
+  .pi-layout-nav-item.activo { border-radius: var(--radius-lg); margin: 0 8px; }
   
   .pi-layout-content { padding: 16px; }
   .pi-layout-header { padding: 0 16px; height: 60px; }

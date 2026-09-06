@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
+import StatCard from '../../components/StatCard.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
@@ -546,26 +547,10 @@ export default function Admin({
           <section className="pi-dash-seccion">
             <h3 className="pi-dash-seccion-titulo">Resumen Financiero del Evento</h3>
             <div className="pi-dash-resumen-grid">
-              <div className="pi-dash-resumen-card">
-                <FaCoins color="var(--verde-recarga-texto)" size={22} />
-                <span className="numero">{totalRecargadoEvento} pts</span>
-                <span className="label">Total Recargado</span>
-              </div>
-              <div className="pi-dash-resumen-card">
-                <FaBoxOpen color="var(--ambar-aviso-texto)" size={22} />
-                <span className="numero">{totalDevueltoEvento} pts</span>
-                <span className="label">Total Devuelto</span>
-              </div>
-              <div className="pi-dash-resumen-card">
-                <FaShoppingBag color="var(--coral-compra)" size={22} />
-                <span className="numero">{totalConsumoClientes} pts</span>
-                <span className="label">Consumido por Clientes (total de totales)</span>
-              </div>
-              <div className="pi-dash-resumen-card">
-                <FaWallet color="var(--indigo-profundo)" size={22} />
-                <span className="numero">{totalRecargadoEvento - totalDevueltoEvento - totalConsumoClientes} pts</span>
-                <span className="label">Saldo en Circulación</span>
-              </div>
+              <StatCard icon={<FaCoins />} tono="ok" valor={`${totalRecargadoEvento} pts`} label="Total Recargado" />
+              <StatCard icon={<FaBoxOpen />} tono="warn" valor={`${totalDevueltoEvento} pts`} label="Total Devuelto" />
+              <StatCard icon={<FaShoppingBag />} valor={`${totalConsumoClientes} pts`} label="Consumido por Clientes (total de totales)" />
+              <StatCard icon={<FaWallet />} tono="total" valor={`${totalRecargadoEvento - totalDevueltoEvento - totalConsumoClientes} pts`} label="Saldo en Circulación" />
             </div>
           </section>
 
@@ -573,43 +558,19 @@ export default function Admin({
           <section className="pi-dash-seccion">
             <h3 className="pi-dash-seccion-titulo">Entradas al Evento</h3>
             <div className="pi-dash-stats-grid">
-              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas')}>
-                <div className="pi-dash-stat-icon pi-dash-icon-total"><FaTicketAlt /></div>
-                <div className="pi-dash-stat-info">
-                  <span className="numero">{statsEntradas.total}</span>
-                  <span className="label">Total de Entradas</span>
-                </div>
-              </button>
-              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'ingresado')}>
-                <div className="pi-dash-stat-icon pi-dash-icon-ok"><FaCheckCircle /></div>
-                <div className="pi-dash-stat-info">
-                  <span className="numero">{statsEntradas.ingresaron}</span>
-                  <span className="label">Ya Ingresaron</span>
-                </div>
-                <span className="pi-dash-porcentaje pi-dash-badge-ok">{statsEntradas.pctIngresaron}%</span>
-              </button>
-              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'dentro')}>
-                <div className="pi-dash-stat-icon pi-dash-icon-dentro"><FaUsers /></div>
-                <div className="pi-dash-stat-info">
-                  <span className="numero">{statsEntradas.dentro}</span>
-                  <span className="label">Están Dentro</span>
-                </div>
-              </button>
-              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'pendiente')}>
-                <div className="pi-dash-stat-icon pi-dash-icon-pend"><FaHourglassHalf /></div>
-                <div className="pi-dash-stat-info">
-                  <span className="numero">{statsEntradas.faltan}</span>
-                  <span className="label">Faltan por Ingresar</span>
-                </div>
-                <span className="pi-dash-porcentaje pi-dash-badge-pend">{statsEntradas.pctFaltan}%</span>
-              </button>
-              <button type="button" className="pi-dash-stat-card pi-dash-stat-card-click" onClick={() => abrirDetalle('entradas', 'salio')}>
-                <div className="pi-dash-stat-icon pi-dash-icon-salio"><FaSignOutAlt /></div>
-                <div className="pi-dash-stat-info">
-                  <span className="numero">{statsEntradas.salieron}</span>
-                  <span className="label">Ya Salieron</span>
-                </div>
-              </button>
+              <StatCard onClick={() => abrirDetalle('entradas')} icon={<FaTicketAlt />} tono="total" valor={statsEntradas.total} label="Total de Entradas" />
+              <StatCard
+                onClick={() => abrirDetalle('entradas', 'ingresado')}
+                icon={<FaCheckCircle />} tono="ok" valor={statsEntradas.ingresaron} label="Ya Ingresaron"
+                extra={<span className="pi-dash-porcentaje pi-dash-badge-ok">{statsEntradas.pctIngresaron}%</span>}
+              />
+              <StatCard onClick={() => abrirDetalle('entradas', 'dentro')} icon={<FaUsers />} tono="info" valor={statsEntradas.dentro} label="Están Dentro" />
+              <StatCard
+                onClick={() => abrirDetalle('entradas', 'pendiente')}
+                icon={<FaHourglassHalf />} tono="warn" valor={statsEntradas.faltan} label="Faltan por Ingresar"
+                extra={<span className="pi-dash-porcentaje pi-dash-badge-pend">{statsEntradas.pctFaltan}%</span>}
+              />
+              <StatCard onClick={() => abrirDetalle('entradas', 'salio')} icon={<FaSignOutAlt />} valor={statsEntradas.salieron} label="Ya Salieron" />
             </div>
 
             <div className="pi-dash-progreso-barra">
@@ -1142,21 +1103,9 @@ export default function Admin({
           </p>
 
           <div className="pi-dash-resumen-grid pi-dash-resumen-espaciado">
-            <div className="pi-dash-resumen-card">
-              <FaTicketAlt color="var(--indigo-profundo)" size={20} />
-              <span className="numero">{solicitudes.length}</span>
-              <span className="label">Solicitudes</span>
-            </div>
-            <div className="pi-dash-resumen-card">
-              <FaUsers color="var(--cian-digital-texto)" size={20} />
-              <span className="numero">{totalEntradasCompradas}</span>
-              <span className="label">Entradas compradas en total</span>
-            </div>
-            <div className="pi-dash-resumen-card">
-              <FaExclamationTriangle color="var(--ambar-aviso-texto)" size={20} />
-              <span className="numero">{reportesEntradasPendientes.length}</span>
-              <span className="label">Reportes de datos pendientes</span>
-            </div>
+            <StatCard icon={<FaTicketAlt />} tono="total" valor={solicitudes.length} label="Solicitudes" />
+            <StatCard icon={<FaUsers />} tono="info" valor={totalEntradasCompradas} label="Entradas compradas en total" />
+            <StatCard icon={<FaExclamationTriangle />} tono="warn" valor={reportesEntradasPendientes.length} label="Reportes de datos pendientes" />
           </div>
 
           <div className="pi-dash-chips" role="group" aria-label="Filtrar solicitudes por estado">

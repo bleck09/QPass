@@ -8,8 +8,17 @@
       name="description"
       content="QPass "
     />
-    <meta name="color-scheme" content="light" />
+    <meta name="color-scheme" content="light dark" />
     <title>QPass </title>
+    <script>
+      /* Aplica el tema guardado ANTES de pintar, para no ver un flash claro. */
+      try {
+        var t = localStorage.getItem('qpass-tema');
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.setAttribute('data-theme', t);
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -3,6 +3,7 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import { useApi } from '../../utils/useApi.js';
 import Modal from '../../components/Modal.jsx';
+import StatCard from '../../components/StatCard.jsx';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -278,18 +279,9 @@ export default function Recargador() {
       {pestana === 'historial' && (
         <div className="pi-rec-historial">
           <div className="pi-rec-historial-stats">
-            <div className="pi-rec-historial-stat">
-              <span className="numero">{historial.length}</span>
-              <span className="label">Recargas realizadas</span>
-            </div>
-            <div className="pi-rec-historial-stat">
-              <span className="numero">{totalHistorialHoy} pts</span>
-              <span className="label">Total recargado</span>
-            </div>
-            <div className="pi-rec-historial-stat">
-              <span className="numero">{sesion.nombre}</span>
-              <span className="label">Recargador</span>
-            </div>
+            <StatCard valor={historial.length} label="Recargas realizadas" />
+            <StatCard valor={`${totalHistorialHoy} pts`} label="Total recargado" />
+            <StatCard valor={sesion.nombre} label="Recargador" />
           </div>
 
           <div className="pi-rec-tabla-wrapper">

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import StatCard from '../../components/StatCard.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -201,26 +202,10 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
       )}
 
       <div className="pi-adqr-kpi-grid">
-        <div className="pi-adqr-kpi-card">
-          <FaQrcode color="var(--indigo-profundo)" size={20} />
-          <span className="numero">{stats.total}</span>
-          <span className="label">Códigos generados</span>
-        </div>
-        <div className="pi-adqr-kpi-card">
-          <FaLink color="var(--verde-recarga-texto)" size={20} />
-          <span className="numero">{stats.vinculados}</span>
-          <span className="label">Vinculados (activos)</span>
-        </div>
-        <div className="pi-adqr-kpi-card">
-          <FaBan color="var(--rojo-error-texto)" size={20} />
-          <span className="numero">{stats.anulados}</span>
-          <span className="label">Anulados (cambio de manilla)</span>
-        </div>
-        <div className="pi-adqr-kpi-card">
-          <FaBoxes color="var(--indigo-profundo)" size={20} />
-          <span className="numero">{stats.libres}</span>
-          <span className="label">Libres (sin vincular)</span>
-        </div>
+        <StatCard icon={<FaQrcode />} tono="total" valor={stats.total} label="Códigos generados" />
+        <StatCard icon={<FaLink />} tono="ok" valor={stats.vinculados} label="Vinculados (activos)" />
+        <StatCard icon={<FaBan />} tono="danger" valor={stats.anulados} label="Anulados (cambio de manilla)" />
+        <StatCard icon={<FaBoxes />} tono="total" valor={stats.libres} label="Libres (sin vincular)" />
       </div>
 
       <div className="pi-adqr-card">

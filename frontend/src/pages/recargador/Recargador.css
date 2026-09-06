@@ -15,16 +15,16 @@
 
 .pi-rec-header h1,
 .pi-rec-header h2 {
-  color: var(--texto-principal);
-  font-size: 1.375rem;
+  color: var(--text-primary);
+  font-size: var(--text-xl);
 }
 
 .pi-rec-tabs {
   display: flex;
   gap: 8px;
-  background-color: var(--gris-niebla);
+  background-color: var(--bg-page);
   padding: 4px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
 }
 
 .pi-rec-tabs button {
@@ -34,42 +34,42 @@
   border: none;
   background: none;
   padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 0.8125rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .pi-rec-tabs button.activo {
-  background-color: var(--blanco);
+  background-color: var(--bg-surface);
   color: var(--indigo-profundo);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 4px rgba(10, 14, 39, 0.1);
 }
 
 /* --- PANEL DE ESCANEO --- */
 .pi-rec-escanear-panel {
-  background: var(--blanco);
-  border-radius: 16px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-xl);
   padding: 60px 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   text-align: center;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
 }
 
 .pi-rec-escanear-panel h3 {
-  color: var(--texto-principal);
-  font-size: 1.25rem;
+  color: var(--text-primary);
+  font-size: var(--text-lg);
   margin-top: 8px;
 }
 
 .pi-rec-escanear-panel p {
-  color: var(--texto-secundario);
-  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
   max-width: 380px;
   margin-bottom: 8px;
 }
@@ -82,8 +82,8 @@
   color: var(--texto-sobre-vivo);
   border: none;
   padding: 16px 24px;
-  border-radius: 10px;
-  font-size: 1rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
   font-weight: 700;
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(0, 180, 216, 0.35);
@@ -113,32 +113,32 @@
 }
 
 .pi-rec-historial-stat {
-  background: var(--blanco);
-  border-radius: 14px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
   padding: 16px 20px;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
 }
 
 .pi-rec-historial-stat .numero {
-  font-size: 1.375rem;
+  font-size: var(--text-xl);
   font-weight: 700;
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .pi-rec-historial-stat .label {
-  font-size: 0.8125rem;
-  color: var(--texto-secundario);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .pi-rec-tabla-wrapper {
-  background: var(--blanco);
-  border-radius: 14px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
   padding: 16px 20px;
   overflow-x: auto;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
 }
 
 .pi-rec-tabla {
@@ -148,19 +148,19 @@
 
 .pi-rec-tabla th {
   text-align: left;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   padding: 8px 12px;
-  border-bottom: 1px solid var(--borde-suave);
+  border-bottom: 1px solid var(--border);
 }
 
 .pi-rec-tabla td {
   padding: 12px;
-  border-bottom: 1px solid var(--borde-suave);
-  font-size: 0.875rem;
-  color: var(--texto-principal);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
 }
 
 .pi-rec-fila-persona {
@@ -168,7 +168,7 @@
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .pi-rec-mini-avatar {
@@ -185,7 +185,7 @@
 
 .pi-rec-sin-resultados {
   text-align: center;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   padding: 32px 0 !important;
 }
 
@@ -207,14 +207,14 @@
 }
 
 .pi-rec-modal-tarjeta {
-  background: var(--blanco);
+  background: var(--bg-surface);
   width: 100%;
   max-width: 420px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   padding: 32px 28px 24px;
   position: relative;
   text-align: center;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 20px 50px rgba(10, 14, 39, 0.25);
   animation: pi-rec-slideUp 0.2s ease-out;
 }
 
@@ -228,8 +228,8 @@
   top: 16px;
   right: 16px;
   border: none;
-  background-color: var(--gris-niebla);
-  color: var(--texto-secundario);
+  background-color: var(--bg-page);
+  color: var(--text-secondary);
   width: 32px;
   height: 32px;
   border-radius: 50%;
@@ -243,10 +243,10 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   padding: 8px 16px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   margin-bottom: 20px;
   background-color: var(--verde-recarga-suave);
   color: var(--verde-recarga-texto);
@@ -268,8 +268,8 @@
 
 .pi-rec-tarjeta-nombre {
   margin-top: 16px;
-  font-size: 1.375rem;
-  color: var(--texto-principal);
+  font-size: var(--text-xl);
+  color: var(--text-primary);
 }
 
 .pi-rec-tarjeta-datos {
@@ -278,8 +278,8 @@
   flex-direction: column;
   gap: 16px;
   text-align: left;
-  background-color: var(--gris-niebla);
-  border-radius: 12px;
+  background-color: var(--bg-page);
+  border-radius: var(--radius-lg);
   padding: 16px 16px;
 }
 
@@ -288,7 +288,7 @@
   align-items: center;
   gap: 16px;
   color: var(--indigo-profundo);
-  font-size: 1.125rem;
+  font-size: var(--text-lg);
 }
 
 .pi-rec-tarjeta-dato > div {
@@ -297,16 +297,16 @@
 }
 
 .pi-rec-tarjeta-dato .label {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
 }
 
 .pi-rec-tarjeta-dato .valor {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 600;
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 /* --- FORMULARIO DE MONTO --- */
@@ -319,20 +319,20 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--texto-principal);
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .pi-rec-form-monto input {
   width: 100%;
   padding: 12px 16px;
-  border: 1px solid var(--borde-medio);
-  border-radius: 10px;
-  font-size: 1.125rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-lg);
   font-weight: 700;
-  color: var(--texto-principal);
+  color: var(--text-primary);
   outline: none;
   transition: border-color 0.2s;
 }
@@ -350,10 +350,10 @@
 .pi-rec-montos-rapidos button {
   flex: 1;
   padding: 8px;
-  border: 1px solid var(--borde-suave);
-  background-color: var(--gris-niebla);
-  border-radius: 8px;
-  font-size: 0.8125rem;
+  border: 1px solid var(--border);
+  background-color: var(--bg-page);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
   font-weight: 600;
   color: var(--indigo-profundo);
   cursor: pointer;
@@ -374,8 +374,8 @@
 .pi-rec-tarjeta-acciones button {
   flex: 1;
   padding: 12px;
-  border-radius: 10px;
-  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
   font-weight: 700;
   cursor: pointer;
   border: none;
@@ -386,12 +386,12 @@
 }
 
 .pi-rec-btn-cancelar {
-  background-color: var(--gris-niebla);
-  color: var(--texto-principal);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
 }
 
 .pi-rec-btn-cancelar:hover {
-  background-color: var(--borde-suave);
+  background-color: var(--border);
 }
 
 /* Botón de acción principal (confirmar pago / recarga) */
@@ -419,13 +419,13 @@
 }
 
 .pi-rec-exito h3 {
-  color: var(--texto-principal);
+  color: var(--text-primary);
   margin-top: 8px;
 }
 
 .pi-rec-exito p {
-  color: var(--texto-secundario);
-  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
 }
 
 .pi-rec-exito-saldo {
@@ -435,8 +435,8 @@
   background-color: var(--indigo-profundo-suave);
   color: var(--indigo-profundo);
   padding: 8px 16px;
-  border-radius: 10px;
-  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
   margin: 8px 0 16px;
 }
 
@@ -446,8 +446,8 @@
 
 /* --- INCIDENCIAS DE RECARGA INCOMPLETA --- */
 .pi-rec-incidencias-nota {
-  font-size: 0.8125rem;
-  color: var(--texto-secundario);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
   max-width: 640px;
 }
 
@@ -455,10 +455,10 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   padding: 4px 8px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
 }
 
 .pi-rec-badge-pend {
@@ -480,19 +480,19 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--texto-principal);
+  color: var(--text-primary);
   margin-bottom: 8px;
 }
 
 .pi-rec-form-incidencia input {
   width: 100%;
   padding: 8px 12px;
-  border: 1px solid var(--borde-medio);
-  border-radius: 10px;
-  font-size: 0.875rem;
-  color: var(--texto-principal);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
   outline: none;
   transition: border-color 0.2s;
 }
@@ -508,8 +508,8 @@
   background-color: var(--ambar-aviso-suave);
   color: var(--ambar-aviso-texto);
   padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 0.8125rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
   font-weight: 600;
   margin-top: 8px;
   text-align: left;
@@ -524,11 +524,11 @@
   width: 100%;
   margin-top: 8px;
   padding: 8px 12px;
-  border: 1px solid var(--borde-medio);
-  border-radius: 10px;
-  font-size: 0.8125rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
   font-family: inherit;
-  color: var(--texto-principal);
+  color: var(--text-primary);
   outline: none;
   resize: vertical;
   transition: border-color 0.2s;
@@ -540,9 +540,9 @@
 
 .pi-rec-label-opcional {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   margin-top: 12px;
   margin-bottom: 8px;
 }
@@ -554,8 +554,8 @@
 }
 
 .pi-rec-alerta-info {
-  font-size: 0.75rem;
-  color: var(--texto-secundario);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
   margin-top: 8px;
   text-align: left;
 }
@@ -570,8 +570,8 @@
   border: 1px dashed var(--ambar-aviso);
   color: var(--ambar-aviso-texto);
   padding: 8px;
-  border-radius: 10px;
-  font-size: 0.8125rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
   font-weight: 600;
   cursor: pointer;
   margin-bottom: 8px;
@@ -590,8 +590,8 @@
   background: none;
   color: var(--ambar-aviso-texto);
   padding: 8px 8px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;

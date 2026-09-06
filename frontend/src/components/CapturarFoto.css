@@ -9,7 +9,7 @@
   width: 100%;
   max-width: 260px;
   padding: 8px 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--borde-suave, #ddd);
   font-weight: 600;
 }
@@ -18,7 +18,7 @@
   width: 100%;
   max-width: 260px;
   aspect-ratio: 1 / 1;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   overflow: hidden;
   background: #000;
 }
@@ -45,7 +45,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 8px 16px;
   font-weight: 600;
   cursor: pointer;
@@ -58,6 +58,6 @@
 
 .pi-captura-foto-btn-tomar {
   background: var(--indigo-profundo, #1a2b6b);
-  color: #fff;
+  color: var(--text-on-accent);
   border: none;
 }

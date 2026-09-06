@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
+import StatCard from '../../components/StatCard.jsx';
 import {
   FaMapMarkerAlt, FaSearch, FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
   FaUsers, FaHourglassHalf, FaExclamationTriangle,
@@ -181,27 +182,9 @@ export default function GestionEntrega() {
           )}
 
           <div className="pi-entrega-stats-grid">
-            <div className="pi-entrega-stat-card">
-              <div className="pi-entrega-stat-icon pi-entrega-icon-total"><FaUsers /></div>
-              <div className="pi-entrega-stat-info">
-                <span className="numero">{stats.total}</span>
-                <span className="label">Total Participantes</span>
-              </div>
-            </div>
-            <div className="pi-entrega-stat-card">
-              <div className="pi-entrega-stat-icon pi-entrega-icon-ok"><FaCheckCircle /></div>
-              <div className="pi-entrega-stat-info">
-                <span className="numero">{stats.entregados}</span>
-                <span className="label">Ya se Entregó</span>
-              </div>
-            </div>
-            <div className="pi-entrega-stat-card">
-              <div className="pi-entrega-stat-icon pi-entrega-icon-pend"><FaHourglassHalf /></div>
-              <div className="pi-entrega-stat-info">
-                <span className="numero">{stats.faltan}</span>
-                <span className="label">Falta Entregar</span>
-              </div>
-            </div>
+            <StatCard icon={<FaUsers />} tono="total" valor={stats.total} label="Total Participantes" />
+            <StatCard icon={<FaCheckCircle />} tono="ok" valor={stats.entregados} label="Ya se Entregó" />
+            <StatCard icon={<FaHourglassHalf />} tono="warn" valor={stats.faltan} label="Falta Entregar" />
           </div>
 
           <div className="pi-entrega-buscador">

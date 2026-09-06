@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
+import StatCard from '../../components/StatCard.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -253,14 +254,8 @@ export default function Devolucion() {
       {pestana === 'historial' && (
         <div className="pi-dev-historial">
           <div className="pi-dev-resumen">
-            <div className="pi-dev-resumen-stat">
-              <span className="numero">{retiros.length}</span>
-              <span className="label">Retiros realizados</span>
-            </div>
-            <div className="pi-dev-resumen-stat">
-              <span className="numero">{totalRetiradoHoy} pts</span>
-              <span className="label">Total devuelto</span>
-            </div>
+            <StatCard valor={retiros.length} label="Retiros realizados" />
+            <StatCard valor={`${totalRetiradoHoy} pts`} label="Total devuelto" />
           </div>
 
           <div className="pi-dev-tabla-wrapper">

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
+import StatCard from '../../components/StatCard.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
@@ -289,28 +290,15 @@ export default function Supervisor() {
 
       {/* --- ESTADÍSTICAS --- */}
       <div className="pi-sup-stats-grid">
-        <div className="pi-sup-stat-card">
-          <div className="pi-sup-stat-icon pi-sup-icon-total"><FaUsers /></div>
-          <div className="pi-sup-stat-info">
-            <span className="pi-sup-stat-numero">{stats.total}</span>
-            <span className="pi-sup-stat-label">Total Participantes</span>
-          </div>
-        </div>
-        <div className="pi-sup-stat-card">
-          <div className="pi-sup-stat-icon pi-sup-icon-ok"><FaUserCheck /></div>
-          <div className="pi-sup-stat-info">
-            <span className="pi-sup-stat-numero">{stats.adentro}</span>
-            <span className="pi-sup-stat-label">Personas Adentro</span>
-          </div>
-          <span className="pi-sup-stat-porcentaje pi-sup-badge-ok">{stats.pctAdentro}%</span>
-        </div>
-        <div className="pi-sup-stat-card">
-          <div className="pi-sup-stat-icon pi-sup-icon-out"><FaSignOutAlt /></div>
-          <div className="pi-sup-stat-info">
-            <span className="pi-sup-stat-numero">{stats.afuera}</span>
-            <span className="pi-sup-stat-label">Salieron Temporalmente</span>
-          </div>
-        </div>
+        <StatCard icon={<FaUsers />} tono="total" valor={stats.total} label="Total Participantes" />
+        <StatCard
+          icon={<FaUserCheck />}
+          tono="ok"
+          valor={stats.adentro}
+          label="Personas Adentro"
+          extra={<span className="pi-sup-stat-porcentaje pi-sup-badge-ok">{stats.pctAdentro}%</span>}
+        />
+        <StatCard icon={<FaSignOutAlt />} valor={stats.afuera} label="Salieron Temporalmente" />
       </div>
 
       {/* --- LISTADO DE AUDITORÍA --- */}

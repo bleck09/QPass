@@ -49,10 +49,10 @@
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   cursor: pointer;
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   transition: all 0.3s;
 }
 
@@ -77,27 +77,27 @@
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 25px 50px -12px rgba(10, 14, 39, 0.5);
 }
 
 .pi-login-card {
   width: 100%;
   max-width: 420px;
   padding: 40px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   text-align: center;
   margin-bottom: 20px;
 }
 
 .pi-login-title {
-  font-size: 1.75rem;
+  font-size: var(--text-2xl);
   font-weight: 800;
   margin: 0 0 8px 0;
   color: #ffffff;
 }
 
 .pi-login-subtitle {
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   color: #94A3B8;
   margin: 0 0 32px 0;
   line-height: 1.5;
@@ -112,7 +112,7 @@
 }
 
 .pi-login-input-group label {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   color: #cbd5e1;
   margin-bottom: 8px;
@@ -141,9 +141,9 @@
   padding: 16px 44px 16px 44px; 
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   color: #fff;
-  font-size: 1rem;
+  font-size: var(--text-base);
   outline: none;
   transition: all 0.3s;
 }
@@ -193,7 +193,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
 }
 
 .pi-login-checkbox {
@@ -220,8 +220,8 @@
   background-color: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.2);
   padding: 8px;
-  border-radius: 8px;
-  font-size: 0.8125rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
   text-align: center;
   font-weight: 600;
 }
@@ -233,8 +233,8 @@
   background-color: var(--color-primario, #00B4D8);
   color: #fff;
   border: none;
-  border-radius: 12px;
-  font-size: 1rem;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-base);
   font-weight: 800;
   cursor: pointer;
   letter-spacing: 1px;
@@ -252,7 +252,7 @@
   align-items: center;
   text-align: center;
   color: #64748b;
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
   margin: 8px 0;
 }
 
@@ -273,8 +273,8 @@
   background: transparent;
   color: #fff;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 12px;
-  font-size: 0.875rem;
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
   font-weight: 700;
   cursor: pointer;
   display: flex;
@@ -297,7 +297,7 @@
 .pi-login-dev-btn {
   width: 100%;
   padding: 16px 20px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   color: #fff;
   border: none;
   cursor: pointer;
@@ -314,13 +314,13 @@
 .pi-login-dev-content {
   margin-top: 8px;
   padding: 20px;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .pi-login-dev-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
 }
 
 .pi-login-dev-table th, 

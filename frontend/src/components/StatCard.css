@@ -1,0 +1,71 @@
+/* Tile de KPI/estadística (components/StatCard.jsx). Solo tokens de Nivel 2, así
+   el modo oscuro (S-C6) no toca este archivo. */
+
+.qp-stat {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  text-align: left;
+}
+
+/* Variante clickable -> se renderiza como <button>; reset + affordance. */
+.qp-stat--click {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  appearance: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+.qp-stat--click:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.qp-stat__icon {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-lg);
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+}
+.qp-stat__icon--total  { background: var(--brand-bg);  color: var(--action); }
+.qp-stat__icon--ok     { background: var(--ok-bg);     color: var(--ok-text); }
+.qp-stat__icon--warn   { background: var(--warn-bg);   color: var(--warn-text); }
+.qp-stat__icon--danger { background: var(--danger-bg); color: var(--danger-text); }
+.qp-stat__icon--info   { background: var(--info-bg);   color: var(--info-text); }
+
+.qp-stat__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.qp-stat__valor {
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  line-height: 1.1;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+.qp-stat__label {
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.qp-stat__extra {
+  flex: none;
+  margin-left: auto;
+}

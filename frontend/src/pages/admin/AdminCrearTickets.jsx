@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import StatCard from '../../components/StatCard.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -123,36 +124,12 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
 
       {/* --- KPIs --- */}
       <div className="pi-adtick-kpi-grid">
-        <div className="pi-adtick-kpi-card">
-          <FaTags color="var(--indigo-profundo)" size={20} />
-          <span className="numero">{totales.totalCategorias}</span>
-          <span className="label">Categorías creadas</span>
-        </div>
-        <div className="pi-adtick-kpi-card">
-          <FaTicketAlt color="var(--cian-digital-texto)" size={20} />
-          <span className="numero">{totales.cupoTotal}</span>
-          <span className="label">Cupo total</span>
-        </div>
-        <div className="pi-adtick-kpi-card">
-          <FaCheckCircle color="var(--verde-recarga-texto)" size={20} />
-          <span className="numero">{totales.vendidas}</span>
-          <span className="label">Vendidas (aprobadas)</span>
-        </div>
-        <div className="pi-adtick-kpi-card">
-          <FaHourglassHalf color="var(--ambar-aviso-texto)" size={20} />
-          <span className="numero">{totales.reservadas}</span>
-          <span className="label">Reservadas (por aprobar)</span>
-        </div>
-        <div className="pi-adtick-kpi-card">
-          <FaBoxes color="var(--indigo-profundo)" size={20} />
-          <span className="numero">{totales.disponibles}</span>
-          <span className="label">Disponibles</span>
-        </div>
-        <div className="pi-adtick-kpi-card">
-          <FaCoins color="var(--verde-recarga-texto)" size={20} />
-          <span className="numero">Bs. {totales.ingresoPotencial}</span>
-          <span className="label">Ingreso potencial</span>
-        </div>
+        <StatCard icon={<FaTags />} tono="total" valor={totales.totalCategorias} label="Categorías creadas" />
+        <StatCard icon={<FaTicketAlt />} tono="info" valor={totales.cupoTotal} label="Cupo total" />
+        <StatCard icon={<FaCheckCircle />} tono="ok" valor={totales.vendidas} label="Vendidas (aprobadas)" />
+        <StatCard icon={<FaHourglassHalf />} tono="warn" valor={totales.reservadas} label="Reservadas (por aprobar)" />
+        <StatCard icon={<FaBoxes />} tono="total" valor={totales.disponibles} label="Disponibles" />
+        <StatCard icon={<FaCoins />} tono="ok" valor={`Bs. ${totales.ingresoPotencial}`} label="Ingreso potencial" />
       </div>
 
       {/* --- FORMULARIO: NUEVA CATEGORÍA --- */}

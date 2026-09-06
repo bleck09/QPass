@@ -103,25 +103,25 @@
      ESTOS tokens, sin tocar componentes. Ver reglas/APLICACION (S-C*).
      ============================================================ */
 
-  /* Superficies / fondos */
-  --bg-page:     var(--gris-niebla);   /* fondo de la app */
-  --bg-surface:  var(--blanco);        /* tarjetas, tablas, modales, inputs */
-  --bg-raised:   var(--blanco);        /* elevado (dropdown, popover) = surface + sombra */
-  --bg-sunken:   var(--gris-niebla);   /* franjas alternas, code, zonas hundidas (afina en S-C2) */
-  --bg-hover:    var(--gris-niebla);   /* hover de fila / ítem de lista */
+  /* Superficies / fondos — sobre la escala de neutrales */
+  --bg-page:     var(--n-50);   /* fondo de la app (= gris-niebla) */
+  --bg-surface:  var(--n-0);    /* tarjetas, tablas, modales, inputs */
+  --bg-raised:   var(--n-0);    /* elevado (dropdown, popover) = surface + sombra */
+  --bg-sunken:   var(--n-100);  /* franjas alternas, code, zonas hundidas */
+  --bg-hover:    var(--n-100);  /* hover de fila / ítem de lista */
   --bg-overlay:  rgba(10, 14, 39, 0.5); /* backdrop de modal (azul-noche, no negro) */
 
   /* Texto */
-  --text-primary:    var(--texto-principal);
-  --text-secondary:  var(--texto-secundario);
-  --text-muted:      var(--gris-medio);        /* placeholder, deshabilitado, NO cuerpo */
-  --text-on-accent:  var(--blanco);            /* texto sobre --action (índigo) */
-  --text-on-vivid:   var(--azul-noche);        /* texto sobre cian/verde/ámbar/rojo/coral */
+  --text-primary:    var(--n-950);            /* títulos y cuerpo (= azul-noche) */
+  --text-secondary:  var(--n-600);            /* descripciones, metadatos (AA) */
+  --text-muted:      var(--n-400);            /* placeholder, deshabilitado, NO cuerpo */
+  --text-on-accent:  var(--n-0);              /* texto sobre --action (índigo) */
+  --text-on-vivid:   var(--azul-noche);       /* texto sobre cian/verde/ámbar/rojo/coral */
   --text-link:       var(--cian-digital-texto);
 
   /* Bordes */
-  --border:         var(--borde-suave);
-  --border-strong:  var(--borde-medio);        /* borde de input en reposo */
+  --border:         var(--n-200);             /* divisor, borde de tarjeta */
+  --border-strong:  var(--n-300);             /* borde de input en reposo */
   --border-focus:   var(--cian-digital);
 
   /* Acción / interacción */
@@ -191,11 +191,12 @@
   --space-16: 4rem;     /* 64px */
   --space-20: 5rem;     /* 80px */
 
-  /* Forma (Manual 7.3) — el original ya usa 8/12/20; se nombran */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 20px;
+  /* Forma (Manual 7.3) — escala 4/8/12/16 + full. Una sola personalidad;
+     todo border-radius en px se redondea al peldaño más cercano (S-C3). */
+  --radius-sm: 4px;    /* chips, tags, badges */
+  --radius-md: 8px;    /* botones, inputs */
+  --radius-lg: 12px;   /* tarjetas */
+  --radius-xl: 16px;   /* modales, contenedores grandes */
   --radius-full: 9999px;
 
   /* Sombras — una sola fuente de luz, tinte azul noche (Manual 7.3) */
@@ -214,7 +215,95 @@
   --duration-fast: 150ms;
   --duration-normal: 250ms;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  color-scheme: light dark;
 }
+
+/* ============================================================
+   MODO OSCURO — Anexo A A12 / Manual 11.6.
+   Re-apunta SOLO los tokens semánticos (Nivel 2); ni un componente
+   cambia. Tres estados: elección explícita (data-theme="dark"/"light")
+   y "sistema" (sin atributo -> solo prefers-color-scheme).
+   Los DOS bloques de abajo deben tener los mismos valores.
+   NOTA: los acentos de marca que algún CSS usa directo todavía
+   (--indigo-profundo, --verde-recarga-*, --x-suave...) aún NO se
+   adaptan -> pasada S-C6b.
+   ============================================================ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+
+    --bg-page:     #0C0F17;
+    --bg-surface:  #161A24;
+    --bg-raised:   #1E2330;
+    --bg-sunken:   #0A0D14;
+    --bg-hover:    rgba(255, 255, 255, 0.05);
+    --bg-overlay:  rgba(4, 6, 14, 0.6);
+
+    --text-primary:   #E7E9F0;
+    --text-secondary: #9AA1B7;
+    --text-muted:     #6B7488;
+    --text-link:      #4DD0E8;
+
+    --border:        #2A2F3D;
+    --border-strong: #3A4152;
+    --border-focus:  #4DD0E8;
+    --focus-ring:    #4DD0E8;
+
+    --action:       #4A5FA8;
+    --action-hover: #5A6FB8;
+    --accent:       #38C7E6;
+    --accent-hover: #5AD3EC;
+
+    --ok:     #34D399;  --ok-text:     #34D399;  --ok-bg:     rgba(0, 196, 140, 0.15);
+    --warn:   #FBBF24;  --warn-text:   #FBBF24;  --warn-bg:   rgba(255, 176, 32, 0.15);
+    --danger: #F87171;  --danger-text: #F87171;  --danger-bg: rgba(229, 72, 77, 0.16);
+    --info:   #38C7E6;  --info-text:   #38C7E6;  --info-bg:   rgba(0, 180, 216, 0.15);
+    --brand-bg: rgba(110, 130, 200, 0.16);
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.5);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-page:     #0C0F17;
+  --bg-surface:  #161A24;
+  --bg-raised:   #1E2330;
+  --bg-sunken:   #0A0D14;
+  --bg-hover:    rgba(255, 255, 255, 0.05);
+  --bg-overlay:  rgba(4, 6, 14, 0.6);
+
+  --text-primary:   #E7E9F0;
+  --text-secondary: #9AA1B7;
+  --text-muted:     #6B7488;
+  --text-link:      #4DD0E8;
+
+  --border:        #2A2F3D;
+  --border-strong: #3A4152;
+  --border-focus:  #4DD0E8;
+  --focus-ring:    #4DD0E8;
+
+  --action:       #4A5FA8;
+  --action-hover: #5A6FB8;
+  --accent:       #38C7E6;
+  --accent-hover: #5AD3EC;
+
+  --ok:     #34D399;  --ok-text:     #34D399;  --ok-bg:     rgba(0, 196, 140, 0.15);
+  --warn:   #FBBF24;  --warn-text:   #FBBF24;  --warn-bg:   rgba(255, 176, 32, 0.15);
+  --danger: #F87171;  --danger-text: #F87171;  --danger-bg: rgba(229, 72, 77, 0.16);
+  --info:   #38C7E6;  --info-text:   #38C7E6;  --info-bg:   rgba(0, 180, 216, 0.15);
+  --brand-bg: rgba(110, 130, 200, 0.16);
+
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 18px 40px rgba(0, 0, 0, 0.5);
+}
+
+:root[data-theme="light"] { color-scheme: light; }
 
 /* Reseteo global para eliminar márgenes y paddings por defecto */
 * {
@@ -233,8 +322,8 @@ body {
   font-family: var(--font-body);
   font-size: var(--text-base);          /* base 16 -> 18 fluido (Manual 5.1) */
   line-height: var(--leading-normal);   /* >= 1.5 (WCAG) */
-  background-color: var(--gris-niebla);
-  color: var(--texto-principal);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
 
   /* Evitamos estrictamente el scroll horizontal */
   overflow-x: hidden;
@@ -262,7 +351,7 @@ a {
 :focus-visible {
   outline: 2px solid var(--cian-digital);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
 }
 /* El header/sidebar fijos no deben tapar el elemento enfocado (WCAG 2.4.11) */
 a, button, input, select, textarea, [tabindex] {
@@ -296,8 +385,8 @@ a, button, input, select, textarea, [tabindex] {
   z-index: 10000;
   padding: 12px 16px;
   background: var(--indigo-profundo);
-  color: var(--blanco);
-  border-radius: 0 0 8px 0;
+  color: var(--text-on-accent);
+  border-radius: 0 0 var(--radius-md) 0;
   font-weight: 600;
 }
 .skip-link:focus {

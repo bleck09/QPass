@@ -15,7 +15,7 @@
 .confirmar-modal {
   width: 100%;
   max-width: 420px;
-  background: var(--blanco);
+  background: var(--bg-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: var(--space-8) var(--space-6) var(--space-6);
@@ -33,8 +33,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-full);
-  font-size: 1.375rem;
+  border-radius: var(--radius-xl);
+  font-size: var(--text-xl);
   background: var(--indigo-profundo-suave);
   color: var(--indigo-profundo);
 }
@@ -48,14 +48,14 @@
   margin: 0 0 var(--space-2);
   font-size: var(--text-lg);
   font-weight: var(--weight-bold);
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .confirmar-mensaje {
   margin: 0 0 var(--space-6);
   font-size: var(--text-sm);
   line-height: var(--leading-normal);
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
 }
 
 /* Campo de nota (variante que reemplaza a window.prompt) */
@@ -69,18 +69,18 @@
   margin-bottom: var(--space-2);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .confirmar-nota {
   width: 100%;
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borde-medio);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   font: inherit;
   font-size: var(--text-sm);
-  color: var(--texto-principal);
-  background: var(--blanco);
+  color: var(--text-primary);
+  background: var(--bg-surface);
   resize: vertical;
 }
 
@@ -107,13 +107,13 @@
 }
 
 .confirmar-btn-cancelar {
-  background: var(--blanco);
-  border-color: var(--borde-medio);
-  color: var(--texto-principal);
+  background: var(--bg-surface);
+  border-color: var(--border-strong);
+  color: var(--text-primary);
 }
 
 .confirmar-btn-cancelar:hover {
-  background: var(--gris-niebla);
+  background: var(--bg-page);
 }
 
 .confirmar-btn-ok {

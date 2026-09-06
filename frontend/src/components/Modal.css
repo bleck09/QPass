@@ -60,7 +60,7 @@
   background: transparent;
   color: var(--text-secondary);
   font: inherit;
-  font-size: 1rem;
+  font-size: var(--text-base);
   line-height: 1;
   cursor: pointer;
   appearance: none;

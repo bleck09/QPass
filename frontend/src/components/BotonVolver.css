@@ -6,7 +6,7 @@
   border: none;
   color: var(--indigo-profundo, #1a2b6b);
   font: inherit;
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   cursor: pointer;
   padding: 0;

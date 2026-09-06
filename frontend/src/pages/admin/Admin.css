@@ -15,8 +15,8 @@
 
 .pi-dash-header h1,
 .pi-dash-header h2 {
-  color: var(--texto-principal);
-  font-size: 1.375rem;
+  color: var(--text-primary);
+  font-size: var(--text-xl);
 }
 
 .pi-dash-header-titulo {
@@ -33,7 +33,7 @@
   background: none;
   border: none;
   color: var(--indigo-profundo);
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   cursor: pointer;
   padding: 0;
@@ -56,9 +56,9 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  background-color: var(--gris-niebla);
-  border: 1px solid var(--borde-suave);
-  border-radius: 12px;
+  background-color: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   overflow: hidden;
   padding: 0;
   cursor: pointer;
@@ -70,7 +70,7 @@
 .pi-dash-evento-card:hover {
   border-color: var(--indigo-profundo);
   transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 6px 16px rgba(10, 14, 39, 0.08);
 }
 
 .pi-dash-evento-imagen {
@@ -88,16 +88,16 @@
 }
 
 .pi-dash-evento-info strong {
-  font-size: 1rem;
-  color: var(--texto-principal);
+  font-size: var(--text-base);
+  color: var(--text-primary);
 }
 
 .pi-dash-evento-info span {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.75rem;
-  color: var(--texto-secundario);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .pi-dash-evento-detalle {
@@ -107,15 +107,15 @@
 
 /* --- SECCIONES --- */
 .pi-dash-seccion {
-  background: var(--blanco);
-  border-radius: 14px;
+  background: var(--bg-surface);
+  border-radius: var(--radius-lg);
   padding: 24px 24px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
 }
 
 .pi-dash-seccion-titulo {
-  font-size: 1.0625rem;
-  color: var(--texto-principal);
+  font-size: var(--text-base);
+  color: var(--text-primary);
   margin-bottom: 16px;
 }
 
@@ -123,9 +123,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--texto-principal);
+  color: var(--text-primary);
   margin-bottom: 12px;
 }
 
@@ -142,9 +142,9 @@
 }
 
 .pi-dash-stat-card {
-  background: var(--gris-niebla);
+  background: var(--bg-page);
   border: none;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   padding: 16px;
   display: flex;
   align-items: center;
@@ -169,11 +169,11 @@
   width: 46px;
   height: 46px;
   min-width: 46px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: var(--text-lg);
   color: var(--texto-sobre-oscuro);
 }
 
@@ -181,7 +181,7 @@
 .pi-dash-icon-ok { background-color: var(--verde-recarga); color: var(--texto-sobre-vivo); }
 .pi-dash-icon-pend { background-color: var(--ambar-aviso); color: var(--texto-sobre-vivo); }
 .pi-dash-icon-dentro { background-color: var(--cian-digital); color: var(--texto-sobre-vivo); }
-.pi-dash-icon-salio { background-color: var(--texto-secundario); color: var(--texto-sobre-vivo); }
+.pi-dash-icon-salio { background-color: var(--text-secondary); color: var(--texto-sobre-vivo); }
 
 .pi-dash-stat-info {
   display: flex;
@@ -189,31 +189,31 @@
 }
 
 .pi-dash-stat-info .numero {
-  font-size: 1.5rem;
+  font-size: var(--text-xl);
   font-weight: 700;
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .pi-dash-stat-info .label {
-  font-size: 0.8125rem;
-  color: var(--texto-secundario);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .pi-dash-porcentaje {
   position: absolute;
   top: 14px;
   right: 14px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   padding: 4px 8px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
 }
 
 .pi-dash-progreso-barra {
   width: 100%;
   height: 10px;
-  background-color: var(--borde-suave);
-  border-radius: 20px;
+  background-color: var(--border);
+  border-radius: var(--radius-xl);
   overflow: hidden;
   margin-bottom: 16px;
 }
@@ -221,7 +221,7 @@
 .pi-dash-progreso-relleno {
   height: 100%;
   background: linear-gradient(90deg, var(--cian-digital), var(--indigo-profundo));
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
   transition: width 0.5s ease;
 }
 
@@ -233,8 +233,8 @@
   color: var(--texto-sobre-vivo);
   border: none;
   padding: 12px 20px;
-  border-radius: 8px;
-  font-size: 0.8125rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
   font-weight: 700;
   cursor: pointer;
   transition: background 0.2s;
@@ -256,9 +256,9 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  background-color: var(--gris-niebla);
-  border: 1px solid var(--borde-suave);
-  border-radius: 12px;
+  background-color: var(--bg-page);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
   padding: 20px 12px;
   cursor: pointer;
   transition: all 0.2s;
@@ -271,21 +271,21 @@
 }
 
 .pi-dash-rol-icon {
-  font-size: 1.375rem;
+  font-size: var(--text-xl);
   color: var(--indigo-profundo);
   margin-bottom: 4px;
 }
 
 .pi-dash-rol-card .numero {
-  font-size: 1.375rem;
+  font-size: var(--text-xl);
   font-weight: 700;
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .pi-dash-rol-card .label {
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   text-align: center;
 }
 
@@ -297,7 +297,7 @@
   background: none;
   border: none;
   color: var(--indigo-profundo);
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   cursor: pointer;
   padding: 0;
@@ -313,10 +313,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background-color: var(--gris-niebla);
-  border-radius: 8px;
+  background-color: var(--bg-page);
+  border-radius: var(--radius-md);
   padding: 8px 12px;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   max-width: 320px;
   margin-bottom: 16px;
 }
@@ -325,8 +325,8 @@
   border: none;
   background: none;
   outline: none;
-  font-size: 0.8125rem;
-  color: var(--texto-principal);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
   width: 100%;
 }
 
@@ -342,19 +342,19 @@
 
 .pi-dash-tabla th {
   text-align: left;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   padding: 8px 12px;
-  border-bottom: 1px solid var(--borde-suave);
+  border-bottom: 1px solid var(--border);
 }
 
 .pi-dash-tabla td {
   padding: 12px;
-  border-bottom: 1px solid var(--borde-suave);
-  font-size: 0.875rem;
-  color: var(--texto-principal);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
 }
 
 .pi-dash-fila-persona {
@@ -362,7 +362,7 @@
   align-items: center;
   gap: 8px;
   font-weight: 600;
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .pi-dash-mini-avatar {
@@ -385,7 +385,7 @@
 
 .pi-dash-sin-resultados {
   text-align: center;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   padding: 32px 0 !important;
 }
 
@@ -394,10 +394,10 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.75rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   padding: 4px 8px;
-  border-radius: 20px;
+  border-radius: var(--radius-xl);
 }
 
 .pi-dash-badge-ok {
@@ -411,8 +411,8 @@
 }
 
 .pi-dash-badge-salio {
-  background-color: var(--borde-suave);
-  color: var(--texto-secundario);
+  background-color: var(--border);
+  color: var(--text-secondary);
 }
 
 /* --- PODIO (TOP 3) --- */
@@ -428,8 +428,8 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  background-color: var(--gris-niebla);
-  border-radius: 12px;
+  background-color: var(--bg-page);
+  border-radius: var(--radius-lg);
   padding: 16px 16px;
   text-align: center;
 }
@@ -443,17 +443,17 @@
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .pi-dash-podio-nombre {
-  font-size: 0.8125rem;
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .pi-dash-podio-valor {
-  font-size: 1rem;
+  font-size: var(--text-base);
   font-weight: 700;
   color: var(--indigo-profundo);
 }
@@ -469,21 +469,21 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  background-color: var(--gris-niebla);
-  border-radius: 12px;
+  background-color: var(--bg-page);
+  border-radius: var(--radius-lg);
   padding: 16px;
 }
 
 .pi-dash-resumen-card .numero {
-  font-size: 1.25rem;
+  font-size: var(--text-lg);
   font-weight: 700;
-  color: var(--texto-principal);
+  color: var(--text-primary);
   margin-top: 4px;
 }
 
 .pi-dash-resumen-card .label {
-  font-size: 0.75rem;
-  color: var(--texto-secundario);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 /* --- ACTIVIDAD RECIENTE --- */
@@ -497,8 +497,8 @@
   align-items: center;
   gap: 12px;
   padding: 12px 4px;
-  border-bottom: 1px solid var(--borde-suave);
-  font-size: 0.8125rem;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-xs);
 }
 
 .pi-dash-actividad-item:last-child {
@@ -513,12 +513,12 @@
   height: 30px;
   min-width: 30px;
   border-radius: 50%;
-  background-color: var(--gris-niebla);
+  background-color: var(--bg-page);
 }
 
 .pi-dash-actividad-detalle {
   flex: 1;
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .pi-dash-actividad-monto {
@@ -527,8 +527,8 @@
 }
 
 .pi-dash-actividad-hora {
-  color: var(--texto-secundario);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
   min-width: 42px;
   text-align: right;
 }
@@ -548,8 +548,8 @@
 }
 
 .pi-dash-detalle-total {
-  font-size: 0.8125rem;
-  color: var(--texto-secundario);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
 }
 
 .pi-dash-detalle-total strong {
@@ -561,10 +561,10 @@
   align-items: center;
   gap: 8px;
   background-color: var(--verde-recarga-suave);
-  color: var(--texto-principal);
+  color: var(--text-primary);
   padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 0.875rem;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
   margin-bottom: 20px;
 }
 
@@ -576,13 +576,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  border: 1px solid var(--borde-medio);
-  background: var(--blanco);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
   padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--texto-principal);
+  color: var(--text-primary);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -604,8 +604,8 @@
 }
 
 .pi-dash-incidencias-nota {
-  font-size: 0.8125rem;
-  color: var(--texto-secundario);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
   margin-bottom: 16px;
   max-width: 640px;
 }
@@ -619,9 +619,9 @@
 .pi-dash-resolver-form input {
   width: 70px;
   padding: 8px 8px;
-  border: 1px solid var(--borde-medio);
-  border-radius: 6px;
-  font-size: 0.8125rem;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
   outline: none;
 }
 
@@ -650,13 +650,13 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  border: 1px solid var(--borde-medio);
-  background: var(--blanco);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
   padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
+  border-radius: var(--radius-xl);
+  font-size: var(--text-xs);
   font-weight: 600;
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.2s;
 }
@@ -695,8 +695,8 @@
   width: 100%;
   max-width: 480px;
   max-height: 60vh;
-  border-radius: 8px;
-  border: 1px solid var(--borde-suave);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
   object-fit: contain;
-  background-color: var(--gris-niebla);
+  background-color: var(--bg-page);
 }

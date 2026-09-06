@@ -12,9 +12,9 @@
   border-radius: var(--radius-sm);
   background: linear-gradient(
     90deg,
-    var(--borde-suave) 25%,
-    var(--gris-niebla) 37%,
-    var(--borde-suave) 63%
+    var(--border) 25%,
+    var(--bg-page) 37%,
+    var(--border) 63%
   );
   background-size: 400% 100%;
   animation: estado-carga-brillo 1.4s ease infinite;
@@ -34,7 +34,7 @@
 @media (prefers-reduced-motion: reduce) {
   .estado-carga-barra {
     animation: none;
-    background: var(--borde-suave);
+    background: var(--border);
   }
 }
 
@@ -45,11 +45,11 @@
   text-align: center;
   gap: var(--space-2);
   padding: var(--space-10) var(--space-4);
-  color: var(--texto-secundario);
+  color: var(--text-secondary);
 }
 
 .estado-error-icono {
-  font-size: 1.75rem;
+  font-size: var(--text-2xl);
   color: var(--ambar-aviso-texto);
   margin-bottom: var(--space-1);
 }
@@ -58,7 +58,7 @@
   margin: 0;
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
-  color: var(--texto-principal);
+  color: var(--text-primary);
 }
 
 .estado-error-mensaje {
@@ -72,16 +72,16 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-5);
-  border: 1px solid var(--borde-medio);
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
-  background: var(--blanco);
+  background: var(--bg-surface);
   font: inherit;
   font-weight: var(--weight-semibold);
-  color: var(--texto-principal);
+  color: var(--text-primary);
   cursor: pointer;
   transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .estado-error-btn:hover {
-  background: var(--gris-niebla);
+  background: var(--bg-page);
 }

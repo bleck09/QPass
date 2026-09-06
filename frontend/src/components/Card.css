@@ -1,0 +1,13 @@
+/* Caja de contenido genérica (components/Card.jsx). Solo tokens de Nivel 2.
+   El mismo estándar que aplican los `pi-x-card` legado tras S-D3. */
+
+.qp-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.qp-card--surface { box-shadow: var(--shadow-sm); }
+.qp-card--raised  { box-shadow: var(--shadow-md); }
+
+.qp-card--pad { padding: var(--space-6); }

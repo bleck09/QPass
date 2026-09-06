@@ -3,11 +3,13 @@ import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   FaChartPie, FaUsers, FaSignOutAlt, FaUserCircle,
   FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet,
-  FaExclamationTriangle, FaBars, FaCalendarAlt, FaLink
+  FaExclamationTriangle, FaBars, FaCalendarAlt, FaLink,
+  FaSun, FaMoon
 } from 'react-icons/fa';
 import { MdAccountBalance, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'react-icons/md';
 import { ROLES, ROLE_LABELS } from '../constants/roles.js';
 import { leerSesion, cerrarSesion } from '../api/client.js';
+import { leerTema, aplicarTema } from '../utils/tema.js';
 import './MenuLateral.css';
 
 // Configuración de menús según el rol
@@ -63,6 +65,13 @@ export default function MenuLateral({ children }) {
   
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const [tema, setTema] = useState(leerTema);
+
+  const cambiarTema = () => {
+    const sig = tema === 'dark' ? 'light' : 'dark';
+    setTema(sig);
+    aplicarTema(sig);
+  };
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -171,6 +180,28 @@ export default function MenuLateral({ children }) {
             );
           })}
         </nav>
+
+        {/* Tema claro / oscuro */}
+        <div className="pi-layout-logout-section">
+          <button
+            type="button"
+            className="pi-layout-nav-item"
+            onClick={cambiarTema}
+            title={isCollapsed ? (tema === 'dark' ? 'Tema claro' : 'Tema oscuro') : ''}
+            aria-label={tema === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+          >
+            <span className="pi-layout-nav-content">
+              <span className="pi-layout-nav-icon" aria-hidden="true">
+                {tema === 'dark' ? <FaSun /> : <FaMoon />}
+              </span>
+              {!isCollapsed && (
+                <span className="pi-layout-nav-text">
+                  {tema === 'dark' ? 'Tema claro' : 'Tema oscuro'}
+                </span>
+              )}
+            </span>
+          </button>
+        </div>
 
         {/* Botón Salir */}
         <div className="pi-layout-logout-section">
