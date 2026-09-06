@@ -27,6 +27,19 @@ const esquemaEnv = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   // Vacío o "*" => todos los orígenes (como el backend Express anterior).
   CORS_ORIGEN: z.string().default('*'),
+
+  // Almacenamiento de imágenes (S3 compatible: MinIO en prod, ver
+  // docker-compose.yml). Requeridas: sin esto la subida/servido de fotos no
+  // funciona, así que la app no debe levantar a medias.
+  S3_ENDPOINT: z.string().url(),
+  S3_BUCKET: z.string().min(1).default('qpass-uploads'),
+  S3_ACCESS_KEY: z.string().min(1),
+  S3_SECRET_KEY: z.string().min(1),
+  S3_REGION: z.string().default('us-east-1'),
+  // MinIO exige path-style; se deja activado salvo que se ponga "false".
+  S3_FORCE_PATH_STYLE: z
+    .enum(['true', 'false'])
+    .default('true'),
 });
 
 export type VariablesEntorno = z.infer<typeof esquemaEnv>;

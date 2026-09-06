@@ -8,19 +8,20 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
-import { mkdirSync } from 'fs';
-import { diskStorage } from 'multer';
-import { extname, join } from 'path';
-import { directorioUploads } from './uploads-dir';
-import { LIMITE_TOTAL_BYTES, tamanioDirectorio } from './tamanio-uploads';
+import { memoryStorage } from 'multer';
+import { extname } from 'path';
+import { BUCKET_UPLOADS, clienteS3 } from './s3.client';
+import { LIMITE_TOTAL_BYTES, tamanioBucket } from './tamanio-uploads';
 
 /* ----------------------------------------------------------------------------
  * Sube una imagen (comprobante, foto de perfil, logo de puesto, portada de
- * evento...) y la guarda como archivo real en el volumen — antes estas imágenes
- * viajaban en base64 dentro del body de cada formulario y se guardaban así en
- * la BD. Ahora el formulario solo guarda la URL que devuelve este endpoint.
+ * evento...) al almacenamiento de objetos (MinIO / S3, ver s3.client.ts) — antes
+ * estas imágenes viajaban en base64 dentro del body de cada formulario, después
+ * pasaron a un archivo en un volumen del backend, y ahora a un bucket aparte.
+ * El formulario sigue guardando solo la URL que devuelve este endpoint.
  *
  * Requiere sesión (JwtAuthGuard global), pero ningún rol en particular: lo usan
  * Cliente/UsuarioNormal (comprobante), Admin (portada/landing), UsuarioNegocio
@@ -28,7 +29,7 @@ import { LIMITE_TOTAL_BYTES, tamanioDirectorio } from './tamanio-uploads';
  * editando su propio perfil.
  * -------------------------------------------------------------------------- */
 
-// Una carpeta por tipo de imagen: organiza el volumen y evita que "carpeta" venga
+// Una carpeta por tipo de imagen: organiza el bucket y evita que "carpeta" venga
 // con algo tipo "../../etc" — cualquier valor fuera de esta lista cae en "general".
 const CARPETAS_VALIDAS = new Set([
   'perfiles',
@@ -53,6 +54,9 @@ export class UploadsController {
   @UseInterceptors(
     FileInterceptor('archivo', {
       limits: { fileSize: MAX_BYTES },
+      // El archivo se retiene en memoria (máx 8 MB) y se sube al bucket desde el
+      // handler — no se escribe nada en disco.
+      storage: memoryStorage(),
       fileFilter: (
         _req: Request,
         file: Express.Multer.File,
@@ -64,40 +68,37 @@ export class UploadsController {
         }
         cb(null, true);
       },
-      storage: diskStorage({
-        destination: (
-          req: Request,
-          _file: Express.Multer.File,
-          cb: (error: Error | null, destination: string) => void,
-        ) => {
-          const dirRaiz = directorioUploads();
-          if (tamanioDirectorio(dirRaiz) >= LIMITE_TOTAL_BYTES) {
-            cb(
-              new HttpException(
-                'Se alcanzó el límite de almacenamiento de imágenes (10 GB). Avisá al administrador.',
-                507, // Insufficient Storage
-              ),
-              '',
-            );
-            return;
-          }
-          const dir = join(dirRaiz, carpetaSegura(req.query.carpeta));
-          mkdirSync(dir, { recursive: true });
-          cb(null, dir);
-        },
-        // Nombre único (no el original, para no pisar archivos ni filtrar nombres reales).
-        filename: (
-          _req: Request,
-          file: Express.Multer.File,
-          cb: (error: Error | null, filename: string) => void,
-        ) => {
-          cb(null, `${randomUUID()}${extname(file.originalname).toLowerCase()}`);
-        },
-      }),
     }),
   )
-  subir(@UploadedFile() archivo: Express.Multer.File, @Query('carpeta') carpeta: string) {
+  async subir(
+    @UploadedFile() archivo: Express.Multer.File,
+    @Query('carpeta') carpeta: string,
+  ) {
     if (!archivo) throw new BadRequestException('Falta el archivo ("archivo").');
-    return { url: `/uploads/${carpetaSegura(carpeta)}/${archivo.filename}` };
+
+    if ((await tamanioBucket()) >= LIMITE_TOTAL_BYTES) {
+      throw new HttpException(
+        'Se alcanzó el límite de almacenamiento de imágenes (10 GB). Avisá al administrador.',
+        507, // Insufficient Storage
+      );
+    }
+
+    // Key única (no el nombre original, para no pisar archivos ni filtrar nombres
+    // reales). La carpeta es el prefijo del objeto: "perfiles/<uuid>.jpg".
+    const key = `${carpetaSegura(carpeta)}/${randomUUID()}${extname(
+      archivo.originalname,
+    ).toLowerCase()}`;
+
+    await clienteS3().send(
+      new PutObjectCommand({
+        Bucket: BUCKET_UPLOADS,
+        Key: key,
+        Body: archivo.buffer,
+        ContentType: archivo.mimetype,
+        ContentLength: archivo.size,
+      }),
+    );
+
+    return { url: `/uploads/${key}` };
   }
 }

@@ -7,11 +7,12 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { json, static as expressStatic, Request, Response, NextFunction } from 'express';
-import { mkdirSync } from 'fs';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
+import { json, Request, Response, NextFunction } from 'express';
+import type { Readable } from 'stream';
 import { AppModule } from './app.module';
 import { VariablesEntorno } from './config/env.validation';
-import { directorioUploads } from './modules/uploads/uploads-dir';
+import { BUCKET_UPLOADS, clienteS3, keyDesdeRuta } from './modules/uploads/s3.client';
 import { verificarFirmaUpload } from './modules/uploads/firma-uploads';
 
 async function bootstrap() {
@@ -23,15 +24,14 @@ async function bootstrap() {
   // para el resto de los payloads (listas, configuración de la landing, etc).
   app.use(json({ limit: '2mb' }));
 
-  // Sirve los archivos subidos (fotos, comprobantes, logos...). El directorio vive
-  // en un volumen de Docker (ver docker-compose.yml) para sobrevivir a un redeploy.
+  // Sirve los archivos subidos (fotos, comprobantes, logos...). Los objetos viven
+  // en el bucket de MinIO/S3 (contenedor aparte, ver docker-compose.yml); acá se
+  // streamean pasando por el backend para no exponer el bucket ni tocar CORS.
   //
   // Antes de servir CUALQUIER archivo se exige la firma que FirmarImagenesInterceptor
   // le agregó a la URL cuando salió en una respuesta de la API — sin eso, cualquiera
   // con el link (aunque fuera un UUID impredecible) podía verlo para siempre sin
   // loguearse. Ver modules/uploads/firma-uploads.ts.
-  const dirUploads = directorioUploads();
-  mkdirSync(dirUploads, { recursive: true });
   app.use(
     '/uploads',
     (req: Request, res: Response, next: NextFunction) => {
@@ -49,11 +49,41 @@ async function bootstrap() {
         res.status(403).json({ error: 'Enlace de imagen inválido o vencido.' });
         return;
       }
-      next();
+
+      clienteS3()
+        .send(
+          new GetObjectCommand({
+            Bucket: BUCKET_UPLOADS,
+            Key: keyDesdeRuta(req.path),
+          }),
+        )
+        .then((objeto) => {
+          if (objeto.ContentType) res.setHeader('Content-Type', objeto.ContentType);
+          if (objeto.ContentLength != null) {
+            res.setHeader('Content-Length', String(objeto.ContentLength));
+          }
+          if (objeto.ETag) res.setHeader('ETag', objeto.ETag);
+          // maxAge corto: la URL trae su propia firma con vencimiento (30 min,
+          // ver firma-uploads.ts), no tiene sentido cachearla más tiempo.
+          res.setHeader('Cache-Control', 'private, max-age=1800');
+
+          if (req.method === 'HEAD') {
+            res.end();
+            return;
+          }
+          (objeto.Body as Readable).pipe(res);
+        })
+        .catch((error: { name?: string; $metadata?: { httpStatusCode?: number } }) => {
+          if (
+            error?.name === 'NoSuchKey' ||
+            error?.$metadata?.httpStatusCode === 404
+          ) {
+            res.status(404).json({ error: 'Imagen no encontrada.' });
+            return;
+          }
+          next(error);
+        });
     },
-    // maxAge corto: la URL trae su propia firma con vencimiento (30 min, ver
-    // firma-uploads.ts), no tiene sentido cachearla más tiempo que eso.
-    expressStatic(dirUploads, { maxAge: '30m' }),
   );
 
   const origen = config.get('CORS_ORIGEN', { infer: true });
