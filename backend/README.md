@@ -17,25 +17,33 @@ patrón Ledger para el dinero (Anexo C).
 ## Requisitos
 
 - Node 20+ (probado con Node 22/24)
-- Docker (para Postgres y Redis)
+- Docker (para Postgres, Redis y MinIO)
 
 ## Cómo levantarlo
 
 ```bash
-cp .env.example .env          # ajustá JWT_SECRET (usá el mismo que ../backend/.env)
-docker compose up -d          # postgres (5433) + redis (6379)
+cp .env.example .env          # ajustá JWT_SECRET; el resto ya apunta a la infra local
+docker compose up -d          # postgres (5433) + redis (6379) + minio (9000/9001)
 npm install
-npx prisma migrate deploy     # aplica prisma/migrations sobre la BD "qpass"
+npm run prisma:deploy         # aplica prisma/migrations sobre la BD "qpass"
 npm run prisma:seed           # 8 usuarios de prueba, password "123456"
 npm run start:dev             # http://localhost:4000
 ```
 
-Usa la **misma base `qpass`** que el backend Express: lo reemplaza. Solo puede
-escuchar uno a la vez en el puerto 4000. La migración `..._anexo_c_idempotencia_qr_index`
-(tabla `solicitudes_idempotentes` + índice único parcial de `codigos_qr`) es la única
-que este backend agrega sobre el schema que ya existía.
-
 `GET http://localhost:4000/health` → `{ "ok": true }`.
+Consola de MinIO: http://localhost:9001 (`qpass-minio` / `qpass-minio-secret`).
+
+## Imágenes (uploads)
+
+Las fotos, comprobantes, logos y portadas se guardan como **objetos en MinIO / S3**
+(no en disco ni en la BD). Flujo: `POST /uploads` sube el archivo al bucket y
+devuelve `{ url: "/uploads/<carpeta>/<uuid>.<ext>" }`; la BD guarda solo esa
+cadena. Al servir, el backend valida una firma HMAC de vida corta
+(`FirmarImagenesInterceptor` + `firma-uploads.ts`) y streamea el objeto desde
+MinIO. Ver [src/modules/uploads/](src/modules/uploads/) y `src/main.ts`.
+
+En producción MinIO es otro contenedor del [../docker-compose.yml](../docker-compose.yml);
+en local, el servicio `minio` de este compose.
 
 ## Variables de entorno
 
@@ -48,6 +56,11 @@ que este backend agrega sobre el schema que ya existía.
 | `SMTP_*` | Correo saliente. Hoy `MailService` solo loguea, no envía. |
 | `PORT` | Puerto del servidor (`4000` = lo que espera `VITE_API_URL` del frontend). |
 | `CORS_ORIGEN` | Origen permitido (Vite dev = `http://localhost:5173`). Vacío/`*` = todos. |
+| `S3_ENDPOINT` | URL del MinIO/S3 (`http://localhost:9000` local, `http://minio:9000` en prod). |
+| `S3_BUCKET` | Bucket de las imágenes (`qpass-uploads`). |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Credenciales de MinIO (secret ≥ 8 chars, sin espacios). |
+| `S3_REGION` | Región S3 (`us-east-1`, MinIO la ignora pero el SDK la pide). |
+| `S3_FORCE_PATH_STYLE` | `true` para MinIO (no soporta virtual-hosted style). |
 
 `src/config/env.validation.ts` valida todo esto al arrancar (zod): si falta algo,
 la app no levanta.

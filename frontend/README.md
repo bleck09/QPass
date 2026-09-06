@@ -1,16 +1,53 @@
-# React + Vite
+# QPass — Frontend (React + Vite)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SPA de QPass: landing pública, login y paneles por rol (Admin, Cliente,
+Recargador, Supervisor, Devolución, Usuario Normal, Usuario Negocio, Ayudante).
+React 19 + React Router + Vite. Sin TypeScript.
 
-Currently, two official plugins are available:
+## Desarrollo local
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Necesita el backend corriendo en `http://localhost:4000` (ver
+[../backend/README.md](../backend/README.md)).
 
-## React Compiler
+```bash
+npm install
+npm run dev        # http://localhost:5173
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+El cliente HTTP ([src/api/client.js](src/api/client.js)) usa
+`import.meta.env.VITE_API_URL` y, si no está, cae en `http://localhost:4000`. Para
+desarrollo normal no hace falta configurar nada. Si querés forzarlo, creá un
+`.env`:
 
-## Expanding the ESLint configuration
+```
+VITE_API_URL=http://localhost:4000
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+La sesión (token JWT + datos del usuario) se guarda en `localStorage` bajo la
+clave `usuarioProyectoIngresos`. Cualquier respuesta `401` del backend la borra y
+redirige a `/login`.
+
+## Comandos
+
+| Comando | Qué hace |
+|---|---|
+| `npm run dev` | Servidor de desarrollo con HMR |
+| `npm run build` | Compila a `dist/` |
+| `npm run preview` | Sirve el `dist/` ya compilado |
+| `npm run lint` | ESLint |
+
+## Producción
+
+Se construye y se sirve dentro de un contenedor ([Dockerfile](Dockerfile)):
+
+1. **Build**: `vite build` con `VITE_API_URL` como *build arg* (Vite hornea las
+   `VITE_*` en el bundle, no se leen en runtime). Por defecto `/api`.
+2. **Runtime**: nginx ([nginx.conf](nginx.conf)) sirve el estático y hace de proxy
+   en el mismo dominio:
+   - `/api/*` → `http://qpass-backend:4000/*` (le saca el prefijo `/api`).
+   - `/uploads/*` → `http://qpass-backend:4000/uploads/*` (conserva el prefijo y
+     el query `?exp=&firma=` con el que el backend valida la firma de cada imagen).
+   - cualquier otra ruta → `index.html` (React Router).
+
+Todo el stack de producción está en [../docker-compose.yml](../docker-compose.yml)
+(Dokploy). Un solo dominio apunta al service `frontend`, puerto `80`.
