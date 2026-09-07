@@ -18,7 +18,8 @@ import {
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
-import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
+import { formatearFecha, estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import MapaSelector from '../../components/MapaSelector.jsx';
 import AdminCrearTickets from './AdminCrearTickets.jsx';
@@ -79,14 +80,23 @@ export default function AdminGestionEventos() {
   const setSolicitudes = (fn) => setDatos(d => ({ ...d, solicitudes: typeof fn === 'function' ? fn(d.solicitudes) : fn }));
 
   const [busqueda, setBusqueda] = useState('');
-  // Al volver desde una subpágina se llega con location.state.eventoId -> abrimos
-  // ese evento directo, no la lista.
-  const [eventoIdDetalle, setEventoIdDetalle] = useState(location.state?.eventoId ?? null);
+  const [filtroEstadoEvento, setFiltroEstadoEvento] = useState('todos');
+  // El detalle de evento vive en la URL (?evento=<id>): así el botón "Atrás" del
+  // navegador vuelve a la lista en vez de salir de la página, y el enlace es
+  // compartible / sobrevive un refresco.
+  const [eventoIdDetalle, abrirEventoUrl, cerrarDetalle] = useDetalleUrl('evento');
   const [pestana, setPestana] = useState('asignados');
 
+  // Compat.: si se llega con location.state.eventoId (accesos rápidos de otra
+  // página) y aún no está en la URL, lo abrimos.
+  useEffect(() => {
+    if (location.state?.eventoId && !eventoIdDetalle) abrirEventoUrl(location.state.eventoId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const abrirDetalle = (id) => {
-    setEventoIdDetalle(id);
     setPestana('asignados');
+    abrirEventoUrl(id);
   };
   const [modalEventoAbierto, setModalEventoAbierto] = useState(false);
   const [modalSolicitudesAbierto, setModalSolicitudesAbierto] = useState(false);
@@ -157,13 +167,10 @@ export default function AdminGestionEventos() {
     setSolicitudes(prev => prev.filter(x => x.id !== s.id));
   };
 
-  const eventosFiltrados = useMemo(() => {
-    const termino = busqueda.toLowerCase();
-    return eventos.filter(ev =>
-      ev.nombre.toLowerCase().includes(termino) ||
-      ev.lugar.toLowerCase().includes(termino)
-    );
-  }, [eventos, busqueda]);
+  const eventosFiltrados = useMemo(
+    () => filtrarEventos(eventos, busqueda, filtroEstadoEvento),
+    [eventos, busqueda, filtroEstadoEvento],
+  );
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
@@ -341,7 +348,7 @@ export default function AdminGestionEventos() {
     <div className="pi-ges-container">
       {eventoDetalle ? (
         <>
-          <button type="button" className="pi-ges-btn-volver" onClick={() => setEventoIdDetalle(null)}>
+          <button type="button" className="pi-ges-btn-volver" onClick={cerrarDetalle}>
             <FaArrowLeft /> Volver a Gestión de Eventos
           </button>
 
@@ -515,29 +522,24 @@ export default function AdminGestionEventos() {
                 ]}
               />
 
-              <ul className="pi-ges-asignar-lista">
-                {usuariosAsignables.map(u => (
-                  <li key={u.id} className="pi-ges-asignar-item">
-                    <div className="pi-ges-asignar-item-info">
-                      <strong>{u.nombre}</strong>
-                      <span>{u.email}</span>
-                    </div>
-                    <span className="pi-ges-badge">{ROLE_LABELS[u.rol] || u.rol}</span>
-                    <button
-                      type="button"
-                      className="pi-ges-btn-asignar"
-                      onClick={() => handleAsignar(u)}
-                    >
-                      <FaUserPlus /> Asignar
-                    </button>
-                  </li>
-                ))}
-                {usuariosAsignables.length === 0 && (
-                  <li className="pi-ges-sin-resultados">
-                    No hay usuarios que coincidan (o ya están todos asignados).
-                  </li>
+              <Tabla
+                columnas={['Usuario', 'Correo', 'Rol', { texto: 'Acciones', srOnly: true }]}
+                datos={usuariosAsignables}
+                porPagina={8}
+                vacio="No hay usuarios que coincidan (o ya están todos asignados)."
+                renderFila={u => (
+                  <tr key={u.id}>
+                    <td>{u.nombre}</td>
+                    <td>{u.email}</td>
+                    <td><span className="pi-ges-badge">{ROLE_LABELS[u.rol] || u.rol}</span></td>
+                    <td>
+                      <button type="button" className="pi-ges-btn-asignar" onClick={() => handleAsignar(u)}>
+                        <FaUserPlus /> Asignar
+                      </button>
+                    </td>
+                  </tr>
                 )}
-              </ul>
+              />
             </div>
           </section>
           )}
@@ -570,6 +572,10 @@ export default function AdminGestionEventos() {
             valor={busqueda}
             onCambio={setBusqueda}
             placeholder="Buscar evento por nombre o lugar…"
+            filtros={FILTROS_ESTADO_EVENTO}
+            filtroActivo={filtroEstadoEvento}
+            onFiltro={setFiltroEstadoEvento}
+            etiquetaFiltros="Filtrar eventos por estado"
           />
 
           <GrillaEventos

@@ -21,27 +21,54 @@
 
 .pi-dash-header-titulo {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
 }
 
-.pi-dash-btn-volver-evento {
+/* Ruta de migas: reemplaza los botones "Cambiar de evento" / "Volver al dashboard". */
+.pi-dash-crumbs {
   display: flex;
   align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: var(--indigo-profundo);
+  flex-wrap: wrap;
+  gap: 2px;
   font-size: var(--text-xs);
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0;
-  margin-right: 8px;
 }
 
-.pi-dash-btn-volver-evento:hover {
-  text-decoration: underline;
+.pi-dash-crumb-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.pi-dash-crumb-sep {
+  color: var(--text-muted);
+  font-size: 9px;
+  margin: 0 2px;
+}
+
+.pi-dash-crumb {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  font: inherit;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: color 0.15s, background-color 0.15s;
+}
+
+button.pi-dash-crumb:hover {
+  color: var(--action);
+  background: var(--bg-hover);
+}
+
+.pi-dash-crumb.is-current {
+  color: var(--text-primary);
+  font-weight: 700;
+  cursor: default;
 }
 
 /* --- SELECCIÓN DE EVENTO (CARDS) --- */
@@ -111,12 +138,16 @@
   border-radius: var(--radius-lg);
   padding: 24px 24px;
   box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
+  /* Espaciado uniforme entre controles (título, resumen, filtros, buscador, tabla…). */
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
 .pi-dash-seccion-titulo {
   font-size: var(--text-base);
   color: var(--text-primary);
-  margin-bottom: 16px;
+  margin: 0;
 }
 
 .pi-dash-subtitulo {
@@ -126,11 +157,11 @@
   font-size: var(--text-sm);
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 12px;
+  margin: 0;
 }
 
 .pi-dash-subtitulo-espaciado {
-  margin-top: 28px;
+  margin-top: 10px;
 }
 
 /* --- STATS DE ENTRADAS --- */
@@ -287,25 +318,6 @@
   font-weight: 600;
   color: var(--text-secondary);
   text-align: center;
-}
-
-/* --- NAVEGACIÓN DE DETALLE --- */
-.pi-dash-btn-volver {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: var(--indigo-profundo);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  cursor: pointer;
-  padding: 0;
-  margin-bottom: 16px;
-}
-
-.pi-dash-btn-volver:hover {
-  text-decoration: underline;
 }
 
 /* --- BUSCADOR --- */
@@ -584,32 +596,100 @@
   max-width: 640px;
 }
 
-.pi-dash-resolver-form {
-  display: flex;
+.pi-dash-btn-guardar {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-}
-
-.pi-dash-resolver-form input {
-  width: 70px;
-  padding: 8px 8px;
-  border: 1px solid var(--border-strong);
+  border: none;
+  background: var(--indigo-profundo);
+  color: var(--text-on-accent);
+  padding: 9px 16px;
   border-radius: var(--radius-sm);
   font-size: var(--text-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.pi-dash-btn-guardar:hover:not(:disabled) {
+  background: var(--indigo-profundo-hover);
+}
+.pi-dash-btn-guardar:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- MODAL DE RESOLUCIÓN DE REPORTE (incidencia / dato) --- */
+.pi-dash-reporte-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 20px;
+  margin-bottom: 16px;
+}
+.pi-dash-reporte-datos > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pi-dash-reporte-datos span {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.pi-dash-reporte-datos strong {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.pi-dash-reporte-nota {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  margin: 0 0 16px;
+}
+.pi-dash-reporte-nota span {
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.pi-dash-reporte-label {
+  display: block;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+.pi-dash-reporte-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  background: var(--bg-surface);
   outline: none;
 }
-
-.pi-dash-resolver-form input:focus {
-  border-color: var(--cian-digital);
+.pi-dash-reporte-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 24%, transparent);
 }
-
-.pi-dash-resolver-form.ancho input {
-  width: 180px;
+.pi-dash-reporte-ayuda {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin: 8px 0 0;
+}
+.pi-dash-reporte-acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
 }
 
 /* --- SOLICITUDES DE COMPRA DE ENTRADAS --- */
+/* La sección ya separa con gap; se conserva la clase por compatibilidad. */
 .pi-dash-resumen-espaciado {
-  margin-bottom: 20px;
+  margin-bottom: 0;
 }
 
 /* Modal de detalle de solicitud: el comprobante debe ser lo más visible posible */

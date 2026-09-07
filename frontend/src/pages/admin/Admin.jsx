@@ -14,7 +14,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
   FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends, FaUsers,
-  FaArrowLeft, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
+  FaChevronRight, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
   FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt,
   FaKey
 } from 'react-icons/fa';
@@ -23,6 +23,12 @@ import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import './Admin.css';
 
 const ETIQUETA_CAMPO_ENTRADA = { nombre: 'Nombre completo', correo: 'Correo electrónico', celular: 'Celular' };
+
+const FILTROS_ESTADO_REPORTE = [
+  { valor: 'pendiente', texto: 'Pendientes' },
+  { valor: 'resuelto', texto: 'Resueltos' },
+  { valor: 'todos', texto: 'Todos' },
+];
 
 const EVENTO_ACTIVIDAD_VACIA = { negocios: [], recargadores: [], devoluciones: [], supervisores: [], entradas: [] };
 
@@ -158,7 +164,13 @@ export default function Admin({
     });
   }, [eventosPermitidos, soloLectura, embebido, reportesGlobal]);
 
-  const [incidenciaEnResolucion, setIncidenciaEnResolucion] = useState(null);
+  // Apartado "Reportes": sub-pestaña activa, buscador y filtro por estado (compartidos).
+  const [tabReporte, setTabReporte] = useState('incidencias'); // 'incidencias' | 'datos'
+  const [busquedaReporte, setBusquedaReporte] = useState('');
+  const [filtroEstadoReporte, setFiltroEstadoReporte] = useState('pendiente'); // 'pendiente' | 'resuelto' | 'todos'
+  // Caso abierto en modal para resolver / corregir (el objeto completo, no solo el id).
+  const [incidenciaModal, setIncidenciaModal] = useState(null);
+  const [reporteDatoModal, setReporteDatoModal] = useState(null);
   const [montoAjuste, setMontoAjuste] = useState('');
 
   // Carga del dashboard del evento (11 llamadas en paralelo) con estados
@@ -252,30 +264,30 @@ export default function Admin({
   );
 
   const abrirResolucion = (incidencia) => {
-    setIncidenciaEnResolucion(incidencia.id);
+    setIncidenciaModal(incidencia);
     // Admin decide libremente cuánto acreditar; si el recargador dejó un monto
     // de referencia lo usamos como punto de partida, si no arranca en blanco.
     setMontoAjuste(incidencia.montoSolicitado != null ? String(incidencia.montoSolicitado) : '');
   };
 
-  const cancelarResolucion = () => {
-    setIncidenciaEnResolucion(null);
+  const cerrarResolucion = () => {
+    setIncidenciaModal(null);
     setMontoAjuste('');
   };
 
-  const confirmarAjuste = async (incidencia) => {
+  const confirmarAjuste = async () => {
+    const incidencia = incidenciaModal;
     const valor = Number(montoAjuste);
-    if (montoAjuste === '' || Number.isNaN(valor) || valor < 0) return;
+    if (!incidencia || montoAjuste === '' || Number.isNaN(valor) || valor < 0) return;
 
     await api.incidencias.resolver(incidencia.id, valor);
     setIncidencias(await api.incidencias.listar(reportesGlobal ? {} : { eventoId }));
-    cancelarResolucion();
+    cerrarResolucion();
   };
 
   // --- SOLICITUDES DE COMPRA DE ENTRADAS Y REPORTES DE DATOS ---
   const [solicitudAbierta, setSolicitudAbierta] = useState(null);
   const [filtroSolicitudes, setFiltroSolicitudes] = useState('pendiente'); // pendiente (por defecto) | confirmado | rechazado | todos
-  const [reporteEnEdicion, setReporteEnEdicion] = useState(null);
   const [valorCorreccion, setValorCorreccion] = useState('');
 
   const totalEntradasCompradas = useMemo(
@@ -332,24 +344,53 @@ export default function Admin({
   };
 
   const abrirCorreccion = (reporte) => {
-    setReporteEnEdicion(reporte.id);
+    setReporteDatoModal(reporte);
     const valorActual = reporte.campo === 'nombre' ? reporte.entrada.nombre
       : reporte.campo === 'correo' ? reporte.entrada.correo
       : reporte.entrada.celular;
     setValorCorreccion(valorActual || '');
   };
 
-  const cancelarCorreccion = () => {
-    setReporteEnEdicion(null);
+  const cerrarCorreccion = () => {
+    setReporteDatoModal(null);
     setValorCorreccion('');
   };
 
-  const guardarCorreccion = async (reporte) => {
-    if (!valorCorreccion.trim()) return;
-    await api.reportesEntrada.corregir(reporte.id, valorCorreccion.trim());
+  const guardarCorreccion = async () => {
+    if (!reporteDatoModal || !valorCorreccion.trim()) return;
+    await api.reportesEntrada.corregir(reporteDatoModal.id, valorCorreccion.trim());
     await recargarDash();
-    cancelarCorreccion();
+    cerrarCorreccion();
   };
+
+  // Buscador + filtro por estado del apartado Reportes (aplica a las dos sub-tablas).
+  const filtroCoincideEstado = (estado) =>
+    filtroEstadoReporte === 'todos' ||
+    (filtroEstadoReporte === 'pendiente' ? estado === 'pendiente' : estado !== 'pendiente');
+
+  const incidenciasFiltradas = useMemo(() => {
+    const q = busquedaReporte.trim().toLowerCase();
+    return incidencias.filter(i =>
+      filtroCoincideEstado(i.estado) &&
+      (!q ||
+        `${i.entrada?.nombre || ''} ${i.entrada?.documento || ''} ${i.recargador?.nombre || ''} ${i.evento?.nombre || ''}`
+          .toLowerCase().includes(q)),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incidencias, busquedaReporte, filtroEstadoReporte]);
+
+  const reportesEntradasFiltrados = useMemo(() => {
+    const q = busquedaReporte.trim().toLowerCase();
+    return reportesEntradas.filter(r =>
+      filtroCoincideEstado(r.estado) &&
+      (!q ||
+        `${r.entrada?.nombre || ''} ${r.entrada?.compra?.comprador?.nombre || ''} ${r.evento?.nombre || ''}`
+          .toLowerCase().includes(q)),
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reportesEntradas, busquedaReporte, filtroEstadoReporte]);
+
+  const hayFiltroReporte = busquedaReporte.trim() !== '' || filtroEstadoReporte !== 'pendiente';
 
   const eventoActual = eventosDisponibles.find(ev => ev.id === eventoId);
 
@@ -459,7 +500,8 @@ export default function Admin({
     if (vista === 'incidencias') {
       api.incidencias.listar({ eventoId }).then(setIncidencias);
       api.reportesEntrada.listar({ eventoId }).then(setReportesEntradas);
-      cancelarCorreccion();
+      cerrarCorreccion();
+      cerrarResolucion();
     }
     // Refrescamos por si hay solicitudes nuevas de Usuario Normal.
     if (vista === 'solicitudesEntradas') {
@@ -492,12 +534,50 @@ export default function Admin({
 
   const volverALaLista = () => setItemSeleccionado(null);
 
+  // Ruta de migas del panel: reemplaza los dos botones "Cambiar de evento" +
+  // "Volver al dashboard" apilados por una sola línea Eventos › Evento › Vista › Ítem.
+  const tituloVista = {
+    entradas: tituloEntradasFiltro,
+    recargadores: 'Recargadores',
+    devoluciones: 'Encargados de Devolución',
+    negocios: 'Usuarios Negocio',
+    supervisores: 'Supervisores',
+    incidencias: 'Reportes',
+    solicitudesEntradas: 'Solicitudes de Entradas',
+  }[vistaActual];
+
   const recargadorAbierto = vistaActual === 'recargadores' && itemSeleccionado
     ? recargadoresOrdenados.find(r => r.id === itemSeleccionado) : null;
   const devolucionAbierta = vistaActual === 'devoluciones' && itemSeleccionado
     ? devolucionesOrdenadas.find(d => d.id === itemSeleccionado) : null;
   const negocioAbierto = vistaActual === 'negocios' && itemSeleccionado
     ? negociosOrdenados.find(n => n.id === itemSeleccionado) : null;
+
+  const itemAbiertoNombre = recargadorAbierto?.nombre || devolucionAbierta?.nombre || negocioAbierto?.nombre || null;
+
+  const migas = [];
+  if (!embebido && !reportesGlobal && !mostrarSelectorEventos && eventoActual) {
+    migas.push({
+      texto: vieneDeEvento ? 'Evento' : 'Eventos',
+      onClick: vieneDeEvento ? volverAlEvento : volverASeleccionEvento,
+    });
+    const enDetalle = vistaActual !== null;
+    migas.push({
+      texto: eventoActual.nombre,
+      // "Volver al dashboard" solo aplica cuando el panel general existe (no en las
+      // rutas directas /admin/reportes y /admin/solicitudes).
+      onClick: enDetalle && !enReportes && !enSolicitudes ? volver : undefined,
+      actual: !enDetalle,
+    });
+    if (enDetalle) {
+      if (itemAbiertoNombre) {
+        migas.push({ texto: tituloVista, onClick: volverALaLista });
+        migas.push({ texto: itemAbiertoNombre, actual: true });
+      } else {
+        migas.push({ texto: tituloVista, actual: true });
+      }
+    }
+  }
 
   return (
     <div className="pi-dash-container">
@@ -510,14 +590,24 @@ export default function Admin({
             <h1>Selecciona un evento</h1>
           ) : (
             <div className="pi-dash-header-titulo">
-              <button
-                type="button"
-                className="pi-dash-btn-volver-evento"
-                onClick={vieneDeEvento ? volverAlEvento : volverASeleccionEvento}
-              >
-                <FaArrowLeft /> {vieneDeEvento ? 'Volver al evento' : 'Cambiar de evento'}
-              </button>
-              <h1>{eventoActual?.nombre}</h1>
+              <nav className="pi-dash-crumbs" aria-label="Ubicación">
+                {migas.map((m, i) => (
+                  <span className="pi-dash-crumb-item" key={i}>
+                    {i > 0 && <FaChevronRight className="pi-dash-crumb-sep" aria-hidden="true" />}
+                    {m.onClick && !m.actual ? (
+                      <button type="button" className="pi-dash-crumb" onClick={m.onClick}>{m.texto}</button>
+                    ) : (
+                      <span
+                        className={`pi-dash-crumb${m.actual ? ' is-current' : ''}`}
+                        aria-current={m.actual ? 'page' : undefined}
+                      >
+                        {m.texto}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </nav>
+              <h1>{itemAbiertoNombre || tituloVista || eventoActual?.nombre}</h1>
             </div>
           )}
         </div>
@@ -670,7 +760,6 @@ export default function Admin({
       {/* ================= DETALLE: ENTRADAS ================= */}
       {vistaActual === 'entradas' && (
         <section className="pi-dash-seccion">
-          <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
           <h3 className="pi-dash-seccion-titulo">{tituloEntradasFiltro}</h3>
 
           <Buscador
@@ -712,7 +801,6 @@ export default function Admin({
         <section className="pi-dash-seccion">
           {recargadorAbierto ? (
             <>
-              <button type="button" className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft aria-hidden="true" /> Volver a Recargadores</button>
               <div className="pi-dash-detalle-header">
                 <h3 className="pi-dash-seccion-titulo">{recargadorAbierto.nombre}</h3>
                 <span className="pi-dash-detalle-total">Total recargado: <strong>{recargadorAbierto.totalRecargado} pts</strong></span>
@@ -732,7 +820,6 @@ export default function Admin({
             </>
           ) : (
             <>
-              <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
               <h3 className="pi-dash-seccion-titulo">Recargadores</h3>
 
               <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Recargadores</h4>
@@ -764,7 +851,6 @@ export default function Admin({
         <section className="pi-dash-seccion">
           {devolucionAbierta ? (
             <>
-              <button type="button" className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft aria-hidden="true" /> Volver a Devoluciones</button>
               <div className="pi-dash-detalle-header">
                 <h3 className="pi-dash-seccion-titulo">{devolucionAbierta.nombre}</h3>
                 <span className="pi-dash-detalle-total">Total devuelto: <strong>{devolucionAbierta.totalDevuelto} pts</strong></span>
@@ -784,7 +870,6 @@ export default function Admin({
             </>
           ) : (
             <>
-              <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
               <h3 className="pi-dash-seccion-titulo">Encargados de Devolución</h3>
 
               <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Devoluciones</h4>
@@ -816,7 +901,6 @@ export default function Admin({
         <section className="pi-dash-seccion">
           {negocioAbierto ? (
             <>
-              <button type="button" className="pi-dash-btn-volver" onClick={volverALaLista}><FaArrowLeft aria-hidden="true" /> Volver a Usuarios Negocio</button>
               <div className="pi-dash-detalle-header">
                 <h3 className="pi-dash-seccion-titulo">{negocioAbierto.nombre}</h3>
                 <span className="pi-dash-detalle-total">Ventas totales: <strong>{negocioAbierto.ventasTotal} pts</strong> · {negocioAbierto.ayudantes} ayudante(s)</span>
@@ -836,7 +920,6 @@ export default function Admin({
             </>
           ) : (
             <>
-              <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
               <h3 className="pi-dash-seccion-titulo">Usuarios Negocio</h3>
 
               <div className="pi-dash-total-destacado">
@@ -885,7 +968,6 @@ export default function Admin({
       {/* ================= DETALLE: SUPERVISORES ================= */}
       {vistaActual === 'supervisores' && (
         <section className="pi-dash-seccion">
-          <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
           <h3 className="pi-dash-seccion-titulo">Supervisores</h3>
           <p className="pi-dash-incidencias-nota">
             El sistema no registra qué supervisor gestionó cada ingreso individual; en total,
@@ -909,26 +991,60 @@ export default function Admin({
       {/* ================= DETALLE: REPORTES (INCIDENCIAS DE RECARGA + DATOS DE ENTRADAS) ================= */}
       {vistaActual === 'incidencias' && (
         <section className="pi-dash-seccion">
-          {!vieneDeEvento && !reportesGlobal && (
-            <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
-          )}
-          <h3 className="pi-dash-seccion-titulo">Reportes</h3>
+          <div className="pi-dash-resumen-grid pi-dash-resumen-espaciado">
+            <StatCard
+              icon={<FaCoins />}
+              tono={incidenciasPendientes.length ? 'warn' : 'ok'}
+              valor={incidenciasPendientes.length}
+              label="Incidencias de recarga pendientes"
+              onClick={() => setTabReporte('incidencias')}
+            />
+            <StatCard
+              icon={<FaTicketAlt />}
+              tono={reportesEntradasPendientes.length ? 'warn' : 'ok'}
+              valor={reportesEntradasPendientes.length}
+              label="Reportes de datos pendientes"
+              onClick={() => setTabReporte('datos')}
+            />
+          </div>
 
-          <h4 className="pi-dash-subtitulo"><FaCoins color="var(--verde-recarga-texto)" /> Incidencias de Recarga</h4>
-          <p className="pi-dash-incidencias-nota">
-            Reportes de un Recargador contando qué pasó con una recarga. Lee cada caso y decide qué hacer
-            (por ejemplo, cuántos puntos acreditar) para cerrarlo.
-          </p>
+          <Filtros
+            etiqueta="Tipo de reporte"
+            activo={tabReporte}
+            onCambio={setTabReporte}
+            opciones={[
+              { valor: 'incidencias', texto: <><FaCoins /> Incidencias de recarga</>, conteo: incidenciasPendientes.length },
+              { valor: 'datos', texto: <><FaTicketAlt /> Datos de entradas</>, conteo: reportesEntradasPendientes.length },
+            ]}
+          />
 
-          <Tabla
-            columnas={[
-              reportesGlobal && 'Evento',
-              'Participante', 'Documento', 'Se le dio', 'Dijo que quería', 'Qué pasó', 'Recargador', 'Estado',
-              { texto: 'Acciones', srOnly: true },
-            ].filter(Boolean)}
-            datos={incidencias}
-            vacio="No hay incidencias de recarga reportadas."
-            renderFila={inc => (
+          <Buscador
+            valor={busquedaReporte}
+            onCambio={setBusquedaReporte}
+            placeholder={tabReporte === 'incidencias'
+              ? 'Buscar por participante, recargador o evento…'
+              : 'Buscar por persona, comprador o evento…'}
+            filtros={FILTROS_ESTADO_REPORTE}
+            filtroActivo={filtroEstadoReporte}
+            onFiltro={setFiltroEstadoReporte}
+            etiquetaFiltros="Filtrar por estado"
+          />
+
+          {tabReporte === 'incidencias' ? (
+            <>
+              <p className="pi-dash-incidencias-nota">
+                Reportes de un Recargador contando qué pasó con una recarga. Abrí cada caso y decidí cuántos
+                puntos acreditar para cerrarlo.
+              </p>
+              <Tabla
+                columnas={[
+                  reportesGlobal && 'Evento',
+                  'Participante', 'Documento', 'Se le dio', 'Dijo que quería', 'Qué pasó', 'Recargador', 'Estado',
+                  { texto: 'Acciones', srOnly: true },
+                ].filter(Boolean)}
+                datos={incidenciasFiltradas}
+                vacio={hayFiltroReporte ? 'Ninguna incidencia coincide con el filtro.' : 'No hay incidencias de recarga reportadas.'}
+                renderFila={inc => (
                   <tr key={inc.id}>
                     {reportesGlobal && <td>{inc.evento?.nombre || '—'}</td>}
                     <td>
@@ -949,49 +1065,30 @@ export default function Admin({
                     </td>
                     <td>
                       {!soloLectura && inc.estado === 'pendiente' && (
-                        incidenciaEnResolucion === inc.id ? (
-                          <div className="pi-dash-resolver-form">
-                            <input
-                              type="number"
-                              min="0"
-                              inputMode="numeric"
-                              aria-label="Monto a acreditar de más"
-                              value={montoAjuste}
-                              onChange={(e) => setMontoAjuste(e.target.value)}
-                              autoFocus
-                            />
-                            <button type="button" className="pi-dash-btn-ver" onClick={() => confirmarAjuste(inc)}>
-                              <FaCheckCircle /> Aplicar
-                            </button>
-                            <button type="button" className="pi-dash-btn-ver" onClick={cancelarResolucion}>Cancelar</button>
-                          </div>
-                        ) : (
-                          <button type="button" className="pi-dash-btn-ver" onClick={() => abrirResolucion(inc)}>
-                            <FaCoins /> Resolver
-                          </button>
-                        )
+                        <button type="button" className="pi-dash-btn-ver" onClick={() => abrirResolucion(inc)}>
+                          <FaCoins /> Resolver
+                        </button>
                       )}
                     </td>
                   </tr>
-            )}
-          />
-
-          <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado">
-            <FaTicketAlt color="var(--ambar-aviso-texto)" /> Reportes de Datos de Entradas
-          </h4>
-          <p className="pi-dash-incidencias-nota">
-            Reportes de Usuario Normal sobre nombre, correo o celular mal puestos en una entrada ya aprobada.
-            Corrige el dato para cerrar el reporte.
-          </p>
-          <Tabla
-            columnas={[
-              reportesGlobal && 'Evento',
-              'Comprador', 'Persona', 'Dato reportado', 'Valor actual', 'Descripción', 'Estado',
-              { texto: 'Acciones', srOnly: true },
-            ].filter(Boolean)}
-            datos={reportesEntradas}
-            vacio="No hay reportes de datos incorrectos."
-            renderFila={rep => (
+                )}
+              />
+            </>
+          ) : (
+            <>
+              <p className="pi-dash-incidencias-nota">
+                Reportes de Usuario Normal sobre nombre, correo o celular mal puestos en una entrada ya aprobada.
+                Abrí el reporte y corregí el dato para cerrarlo.
+              </p>
+              <Tabla
+                columnas={[
+                  reportesGlobal && 'Evento',
+                  'Comprador', 'Persona', 'Dato reportado', 'Valor actual', 'Descripción', 'Estado',
+                  { texto: 'Acciones', srOnly: true },
+                ].filter(Boolean)}
+                datos={reportesEntradasFiltrados}
+                vacio={hayFiltroReporte ? 'Ningún reporte coincide con el filtro.' : 'No hay reportes de datos incorrectos.'}
+                renderFila={rep => (
                   <tr key={rep.id}>
                     {reportesGlobal && <td>{rep.evento?.nombre || '—'}</td>}
                     <td>{rep.entrada.compra?.comprador.nombre || '—'}</td>
@@ -1006,37 +1103,20 @@ export default function Admin({
                     </td>
                     <td>
                       {!soloLectura && rep.estado === 'pendiente' && (
-                        reporteEnEdicion === rep.id ? (
-                          <div className="pi-dash-resolver-form ancho">
-                            <input
-                              type="text"
-                              aria-label="Valor corregido"
-                              value={valorCorreccion}
-                              onChange={(e) => setValorCorreccion(e.target.value)}
-                              autoFocus
-                            />
-                            <button type="button" className="pi-dash-btn-ver" onClick={() => guardarCorreccion(rep)}>
-                              <FaCheckCircle /> Guardar
-                            </button>
-                            <button type="button" className="pi-dash-btn-ver" onClick={cancelarCorreccion}>Cancelar</button>
-                          </div>
-                        ) : (
-                          <button type="button" className="pi-dash-btn-ver" onClick={() => abrirCorreccion(rep)}>Corregir</button>
-                        )
+                        <button type="button" className="pi-dash-btn-ver" onClick={() => abrirCorreccion(rep)}>Corregir</button>
                       )}
                     </td>
                   </tr>
-            )}
-          />
+                )}
+              />
+            </>
+          )}
         </section>
       )}
 
       {/* ================= DETALLE: SOLICITUDES DE COMPRA DE ENTRADAS ================= */}
       {vistaActual === 'solicitudesEntradas' && (
         <section className="pi-dash-seccion">
-          {!vieneDeEvento && (
-            <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
-          )}
           <h3 className="pi-dash-seccion-titulo">Solicitudes de Compra de Entradas</h3>
           <p className="pi-dash-incidencias-nota">
             Detalle de cada lote de entradas compradas: para quién, con qué correo y celular, y si ya fue aprobado.
@@ -1204,6 +1284,93 @@ export default function Admin({
                 </button>
               </div>
             )}
+        </Modal>
+      )}
+
+      {/* --- MODAL: RESOLVER INCIDENCIA DE RECARGA --- */}
+      {incidenciaModal && (
+        <Modal
+          titulo={<><FaCoins aria-hidden="true" /> Resolver incidencia de recarga</>}
+          onCerrar={cerrarResolucion}
+          className="pi-dash-modal-reporte"
+        >
+          <div className="pi-dash-reporte-datos">
+            <div><span>Participante</span><strong>{incidenciaModal.entrada.nombre}</strong></div>
+            <div><span>Documento</span><strong>{incidenciaModal.entrada.documento || '—'}</strong></div>
+            <div><span>Recargador</span><strong>{incidenciaModal.recargador.nombre}</strong></div>
+            {reportesGlobal && <div><span>Evento</span><strong>{incidenciaModal.evento?.nombre || '—'}</strong></div>}
+            <div><span>Se le dio</span><strong>{incidenciaModal.montoEntregado} pts</strong></div>
+            <div><span>Dijo que quería</span><strong>{incidenciaModal.montoSolicitado != null ? `${incidenciaModal.montoSolicitado} pts` : '—'}</strong></div>
+          </div>
+          {incidenciaModal.nota && (
+            <p className="pi-dash-reporte-nota"><span>Qué pasó:</span> {incidenciaModal.nota}</p>
+          )}
+
+          <label className="pi-dash-reporte-label" htmlFor="ajuste-monto">Puntos a acreditar de más</label>
+          <input
+            id="ajuste-monto"
+            className="pi-dash-reporte-input"
+            type="number"
+            min="0"
+            inputMode="numeric"
+            value={montoAjuste}
+            onChange={(e) => setMontoAjuste(e.target.value)}
+            autoFocus
+          />
+          <p className="pi-dash-reporte-ayuda">Se sumará al saldo del participante y la incidencia quedará resuelta. Poné 0 si no corresponde acreditar nada.</p>
+
+          <div className="pi-dash-reporte-acciones">
+            <button type="button" className="pi-dash-btn-ver" onClick={cerrarResolucion}>Cancelar</button>
+            <button type="button" className="pi-dash-btn-guardar" onClick={confirmarAjuste}>
+              <FaCheckCircle /> Aplicar y cerrar
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* --- MODAL: CORREGIR DATO DE UNA ENTRADA --- */}
+      {reporteDatoModal && (
+        <Modal
+          titulo={<><FaTicketAlt aria-hidden="true" /> Corregir dato de la entrada</>}
+          onCerrar={cerrarCorreccion}
+          className="pi-dash-modal-reporte"
+        >
+          <div className="pi-dash-reporte-datos">
+            <div><span>Persona</span><strong>{reporteDatoModal.entrada.nombre}</strong></div>
+            <div><span>Comprador</span><strong>{reporteDatoModal.entrada.compra?.comprador.nombre || '—'}</strong></div>
+            {reportesGlobal && <div><span>Evento</span><strong>{reporteDatoModal.evento?.nombre || '—'}</strong></div>}
+            <div><span>Dato reportado</span><strong>{ETIQUETA_CAMPO_ENTRADA[reporteDatoModal.campo]}</strong></div>
+            <div>
+              <span>Valor actual</span>
+              <strong>
+                {reporteDatoModal.campo === 'nombre' ? reporteDatoModal.entrada.nombre
+                  : reporteDatoModal.campo === 'correo' ? reporteDatoModal.entrada.correo
+                  : (reporteDatoModal.entrada.celular || '—')}
+              </strong>
+            </div>
+          </div>
+          {reporteDatoModal.descripcion && (
+            <p className="pi-dash-reporte-nota"><span>Lo que reportó:</span> {reporteDatoModal.descripcion}</p>
+          )}
+
+          <label className="pi-dash-reporte-label" htmlFor="correccion-valor">
+            Nuevo valor de {ETIQUETA_CAMPO_ENTRADA[reporteDatoModal.campo]?.toLowerCase()}
+          </label>
+          <input
+            id="correccion-valor"
+            className="pi-dash-reporte-input"
+            type={reporteDatoModal.campo === 'correo' ? 'email' : 'text'}
+            value={valorCorreccion}
+            onChange={(e) => setValorCorreccion(e.target.value)}
+            autoFocus
+          />
+
+          <div className="pi-dash-reporte-acciones">
+            <button type="button" className="pi-dash-btn-ver" onClick={cerrarCorreccion}>Cancelar</button>
+            <button type="button" className="pi-dash-btn-guardar" onClick={guardarCorreccion} disabled={!valorCorreccion.trim()}>
+              <FaCheckCircle /> Guardar corrección
+            </button>
+          </div>
         </Modal>
       )}
 

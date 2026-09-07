@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
@@ -18,6 +18,7 @@ import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import { useApi } from '../../utils/useApi.js';
+import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import './GestionEntrega.css';
 import './Supervisor.css';
@@ -38,7 +39,9 @@ export default function GestionEntrega() {
     recargar: recargarEventos,
   } = useApi(cargarEventos, { inicial: [] });
 
-  const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
+  // El evento abierto vive en la URL (?evento=<id>): el botón "Atrás" del
+  // navegador vuelve al selector en vez de salir de la página.
+  const [eventoIdDetalle, abrirEventoUrl, cerrarEventoUrl] = useDetalleUrl('evento');
   const [participantes, setParticipantes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEntrega, setFiltroEntrega] = useState('todos');
@@ -68,17 +71,20 @@ export default function GestionEntrega() {
     api.entradas.listar({ eventoId }).then(setParticipantes);
   };
 
+  // Carga participantes según el evento de la URL: abrir desde el selector,
+  // refrescar la página y el botón Atrás/Adelante del navegador.
+  useEffect(() => {
+    if (!eventoIdDetalle) return;
+    refrescarEvento(eventoIdDetalle);
+  }, [eventoIdDetalle]);
+
   const abrirEvento = (ev) => {
-    setEventoIdDetalle(ev.id);
-    refrescarEvento(ev.id);
+    abrirEventoUrl(ev.id);
     setBusqueda('');
     setFiltroEntrega('todos');
   };
 
-  const volverALista = () => {
-    setEventoIdDetalle(null);
-    setParticipantes([]);
-  };
+  const volverALista = () => cerrarEventoUrl();
 
   const participantesFiltrados = useMemo(() => {
     const termino = busqueda.toLowerCase();

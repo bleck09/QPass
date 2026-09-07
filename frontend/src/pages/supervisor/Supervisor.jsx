@@ -8,6 +8,7 @@ import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import { useApi } from '../../utils/useApi.js';
+import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaUsers, FaCheckCircle, FaQrcode, FaTimes,
@@ -45,7 +46,9 @@ export default function Supervisor() {
     recargar: recargarEventos,
   } = useApi(cargarEventos, { inicial: [] });
 
-  const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
+  // El evento abierto vive en la URL (?evento=<id>): el botón "Atrás" del
+  // navegador vuelve al selector en vez de salir de la página.
+  const [eventoIdDetalle, abrirEventoUrl, cerrarEventoUrl] = useDetalleUrl('evento');
   const [participantes, setParticipantes] = useState([]);
 
   const [tarjetaQR, setTarjetaQR] = useState(null);
@@ -72,15 +75,15 @@ export default function Supervisor() {
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
-  const abrirEvento = (ev) => {
-    setEventoIdDetalle(ev.id);
-    api.entradas.listar({ eventoId: ev.id }).then(setParticipantes);
-  };
+  // Carga los participantes del evento de la URL. Cubre abrir desde el selector,
+  // refrescar la página y el botón Atrás/Adelante del navegador.
+  useEffect(() => {
+    if (!eventoIdDetalle) return;
+    api.entradas.listar({ eventoId: eventoIdDetalle }).then(setParticipantes);
+  }, [eventoIdDetalle]);
 
-  const volverALista = () => {
-    setEventoIdDetalle(null);
-    setParticipantes([]);
-  };
+  const abrirEvento = (ev) => abrirEventoUrl(ev.id);
+  const volverALista = () => cerrarEventoUrl();
 
   const stats = useMemo(() => {
     const total = participantes.length;
