@@ -136,11 +136,16 @@ export const puestoAyudantes = {
 export const ventas = {
   listar: (params) => apiGet(`/ventas${qs(params)}`),
   crear: (datos) => apiPost('/ventas', datos),
+  anular: (id, motivo) => apiPost(`/ventas/${id}/anular`, { motivo }),
 };
 
 export const landingConfig = {
   obtener: (eventoId) => apiGet(`/landing-config/${eventoId}`),
   guardar: (eventoId, datos) => apiPut(`/landing-config/${eventoId}`, datos),
+};
+
+export const auditoria = {
+  listar: (params) => apiGet(`/auditoria${qs(params)}`),
 };
 
 export const solicitudesEvento = {
@@ -152,10 +157,40 @@ export const solicitudesEvento = {
   rechazar: (id, motivoRechazo) => apiPost(`/solicitudes-evento/${id}/rechazar`, { motivoRechazo }),
 };
 
+// Arqueo de caja de un operador con efectivo (Recargador / Devolucion), §5.2.
+export const cortesCaja = {
+  actual: (params) => apiGet(`/cortes-caja/actual${qs(params)}`),
+  listar: (params) => apiGet(`/cortes-caja${qs(params)}`),
+  abrir: (datos) => apiPost('/cortes-caja/abrir', datos),
+  cerrar: (id, datos) => apiPost(`/cortes-caja/${id}/cerrar`, datos),
+};
+
+export const dashboard = {
+  // Tablero ADMIN GENERAL (todo el sistema). Espeja backend dashboard.controller.
+  adminPendientes: () => apiGet('/dashboard/admin/pendientes'),
+  adminKpis: (rango) => apiGet(`/dashboard/admin/kpis${qs(rango)}`),
+  adminEventos: () => apiGet('/dashboard/admin/eventos'),
+  adminAlertas: () => apiGet('/dashboard/admin/alertas'),
+  adminEmbudo: () => apiGet('/dashboard/admin/embudo'),
+  adminVivo: () => apiGet('/dashboard/admin/vivo'),
+  adminCortesCaja: () => apiGet('/dashboard/admin/cortes-caja'),
+  // Gráficos históricos (W1/W2/W4/W5).
+  adminRecaudacionDiaria: (rango) => apiGet(`/dashboard/admin/recaudacion-diaria${qs(rango)}`),
+  adminPorEvento: (rango) => apiGet(`/dashboard/admin/por-evento${qs(rango)}`),
+  adminComprasDiarias: (rango) => apiGet(`/dashboard/admin/compras-diarias${qs(rango)}`),
+  adminIncidenciasRecargador: () => apiGet('/dashboard/admin/incidencias-por-recargador'),
+  // Tablero del Usuario Negocio: sus puestos/ventas en un evento (negocioId sale del token).
+  negocio: (eventoId, rango) => apiGet(`/dashboard/negocio${qs({ eventoId, ...rango })}`),
+  // Tablero del Cliente organizador: sus eventos + resumen agregado por evento.
+  clienteEventos: () => apiGet('/dashboard/cliente/eventos'),
+  clienteEvento: (id) => apiGet(`/dashboard/cliente/evento/${id}`),
+};
+
 const api = {
   auth, usuarios, eventos, asignaciones, categoriasTicket, compras, entradas,
   codigosQr, transacciones, incidencias, reportesEntrada, puestos, productos,
-  puestoAyudantes, ventas, landingConfig, solicitudesEvento,
+  puestoAyudantes, ventas, landingConfig, solicitudesEvento, cortesCaja,
+  auditoria, dashboard,
 };
 
 export default api;

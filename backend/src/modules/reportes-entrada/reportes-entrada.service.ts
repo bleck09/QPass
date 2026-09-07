@@ -14,6 +14,7 @@ import {
 import { EstadoCaso, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 import {
   CorregirReporteEntradaDto,
@@ -25,6 +26,7 @@ export class ReportesEntradaService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventoPolicy: EventoPolicy,
+    private readonly auditoria: AuditoriaService,
   ) {}
 
   async listar(
@@ -130,6 +132,20 @@ export class ReportesEntradaService {
     }
 
     const resultados = await this.prisma.$transaction(operaciones);
+
+    await this.auditoria.registrar(null, {
+      actorId: adminId,
+      entidad: 'reporte_entrada',
+      entidadId: reporte.id,
+      accion: 'corregir',
+      antes: {
+        estado: reporte.estado,
+        campo: campoEntrada,
+        valorAnterior: entrada[campoEntrada as 'nombre' | 'correo' | 'celular'],
+      },
+      despues: { estado: 'resuelto', valorCorregido: valor },
+    });
+
     return resultados[1]; // el reporte actualizado
   }
 }

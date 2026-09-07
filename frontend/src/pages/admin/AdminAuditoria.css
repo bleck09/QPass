@@ -1,0 +1,123 @@
+/* Prefijo único: pi-aud- (vista de auditoría del Admin). Solo tokens de Nivel 2. */
+
+.pi-aud-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pi-aud-header h1 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+  font-size: var(--text-xl);
+  margin: 0;
+}
+
+.pi-aud-header p {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  margin: 4px 0 0;
+}
+
+.pi-aud-accion {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-xl);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  background: var(--brand-bg);
+  color: var(--action);
+}
+
+.pi-aud-btn-ver {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.pi-aud-btn-ver:hover {
+  border-color: var(--cian-digital);
+  color: var(--text-primary);
+}
+
+.pi-aud-paginador {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.pi-aud-paginador button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+}
+
+.pi-aud-paginador button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* --- Modal detalle --- */
+.pi-aud-detalle {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pi-aud-detalle-meta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.pi-aud-detalle-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.pi-aud-detalle-cols h4 {
+  margin: 0 0 6px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.pi-aud-detalle-cols pre {
+  margin: 0;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  font-family: var(--font-mono, monospace);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow: auto;
+}

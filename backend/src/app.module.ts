@@ -11,6 +11,7 @@ import { HealthController } from './health.controller';
 import { ConfigModule } from './config/config.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { PoliticasModule } from './common/politicas/politicas.module';
+import { AuditoriaModule } from './modules/auditoria/auditoria.module';
 import { MailModule } from './mail/mail.module';
 import { JobsModule } from './jobs/jobs.module';
 
@@ -38,12 +39,15 @@ import { PuestoAyudantesModule } from './modules/puesto-ayudantes/puesto-ayudant
 import { VentasModule } from './modules/ventas/ventas.module';
 import { LandingConfigModule } from './modules/landing-config/landing-config.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { CorteCajaModule } from './modules/corte-caja/corte-caja.module';
 
 @Module({
   imports: [
     ConfigModule,
     PrismaModule,
     PoliticasModule,
+    AuditoriaModule,
     MailModule,
     JobsModule,
 
@@ -65,6 +69,8 @@ import { UploadsModule } from './modules/uploads/uploads.module';
     VentasModule,
     LandingConfigModule,
     UploadsModule,
+    DashboardModule,
+    CorteCajaModule,
   ],
   controllers: [HealthController],
   providers: [

@@ -706,7 +706,8 @@
   margin-bottom: 8px;
 }
 
-.pi-ges-input-group input {
+.pi-ges-input-group input,
+.pi-ges-input-group select {
   width: 100%;
   padding: 8px 12px;
   border: 1px solid var(--border-strong);
@@ -719,7 +720,8 @@
   transition: border-color 0.2s;
 }
 
-.pi-ges-input-group input:focus {
+.pi-ges-input-group input:focus,
+.pi-ges-input-group select:focus {
   border-color: var(--cian-digital);
 }
 

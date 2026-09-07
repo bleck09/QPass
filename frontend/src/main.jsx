@@ -10,6 +10,8 @@ import Login from './pages/publico/Login.jsx'
 import MenuLateral from './layout/MenuLateral.jsx'
 
 import Admin from './pages/admin/Admin.jsx'
+import AdminGeneral from './pages/admin/AdminGeneral.jsx'
+import AdminAuditoria from './pages/admin/AdminAuditoria.jsx'
 import AdminGestionEventos from './pages/admin/AdminGestionEventos.jsx'
 import AdminConfigurarPagina from './pages/admin/AdminConfigurarPagina.jsx'
 import UsuNegoDasboar from './pages/usuario-negocio/UsuNegoDasboar.jsx'
@@ -19,6 +21,7 @@ import AdminCrearQr from './pages/admin/AdminCrearQr.jsx'
 import Mapa from './pages/admin/Mapa.jsx'
 
 import Cliente from './pages/cliente/Cliente.jsx'
+import ClienteDashboard from './pages/cliente/ClienteDashboard.jsx'
 import Recargador from './pages/recargador/Recargador.jsx'
 import Supervisor from './pages/supervisor/Supervisor.jsx'
 import GestionEntrega from './pages/supervisor/GestionEntrega.jsx'
@@ -49,12 +52,20 @@ const router = createBrowserRouter([
     element: <MenuLateral><Admin /></MenuLateral>,
   },
   {
+    path: "/admin/general",
+    element: <MenuLateral><AdminGeneral /></MenuLateral>,
+  },
+  {
     path: "/admin/reportes",
     element: <MenuLateral><Admin /></MenuLateral>,
   },
   {
     path: "/admin/solicitudes",
     element: <MenuLateral><Admin /></MenuLateral>,
+  },
+  {
+    path: "/admin/auditoria",
+    element: <MenuLateral><AdminAuditoria /></MenuLateral>,
   },
   {
     path: "/admin/eventos",
@@ -87,7 +98,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/Cliente/dashboard",
-    element: <MenuLateral><Cliente/></MenuLateral>,
+    element: <MenuLateral><ClienteDashboard/></MenuLateral>,
   },
   {
     path: "/recargador/historial",
@@ -95,6 +106,10 @@ const router = createBrowserRouter([
   },
   {
     path: "/recargador/incidencias",
+    element: <MenuLateral><Recargador /></MenuLateral>,
+  },
+  {
+    path: "/recargador/caja",
     element: <MenuLateral><Recargador /></MenuLateral>,
   },
   {
@@ -115,6 +130,10 @@ const router = createBrowserRouter([
   },
   {
     path: "/devolucion/historial",
+    element: <MenuLateral><Devolucion /></MenuLateral>,
+  },
+  {
+    path: "/devolucion/caja",
     element: <MenuLateral><Devolucion /></MenuLateral>,
   },
   {

@@ -48,4 +48,10 @@ export class CrearEventoDto {
   @Type(() => Number)
   @IsNumber()
   qrAlto?: number;
+
+  // Cliente organizador de un evento creado directo por Admin (opcional).
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  clienteId?: number;
 }

@@ -20,6 +20,7 @@ import { randomBytes } from 'node:crypto';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { MailService } from '../../mail/mail.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { SinCupoDisponibleException } from '../../common/excepciones/dominio.excepciones';
 import {
   CorregirEntradasDto,
@@ -37,6 +38,7 @@ export class ComprasService {
     private readonly prisma: PrismaService,
     private readonly eventoPolicy: EventoPolicy,
     private readonly mail: MailService,
+    private readonly auditoria: AuditoriaService,
   ) {}
 
   async crear(dto: CrearCompraDto, compradorId: number) {
@@ -313,6 +315,15 @@ export class ComprasService {
           resueltoEn: new Date(),
         },
       });
+
+      await this.auditoria.registrar(tx, {
+        actorId: adminId,
+        entidad: 'compra',
+        entidadId: compra.id,
+        accion: 'aprobar',
+        antes: { estado: compra.estado, montoTotal: compra.montoTotal },
+        despues: { estado: 'confirmado', entradas: compra.entradas.length },
+      });
     });
 
     const actualizada = await this.prisma.compra.findUnique({
@@ -386,6 +397,15 @@ export class ComprasService {
       }),
     ];
     await this.prisma.$transaction(operaciones);
+
+    await this.auditoria.registrar(null, {
+      actorId: adminId,
+      entidad: 'compra',
+      entidadId: compra.id,
+      accion: 'rechazar',
+      antes: { estado: compra.estado, montoTotal: compra.montoTotal },
+      despues: { estado: 'rechazado', motivoRechazo: motivoRechazo ?? null },
+    });
 
     const actualizada = await this.prisma.compra.findUnique({
       where: { id: compra.id },

@@ -41,7 +41,7 @@ const PESTANAS = [
 ];
 
 const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
-const FORM_EVENTO_VACIO = { nombre: '', lugar: '', coordenadas: '', fecha: '', fechaFin: '', imagen: '' };
+const FORM_EVENTO_VACIO = { nombre: '', lugar: '', coordenadas: '', fecha: '', fechaFin: '', imagen: '', clienteId: '' };
 const MAX_IMAGEN_BYTES = 3 * 1024 * 1024; // 3 MB
 
 // ISO -> valor para <input type="datetime-local"> (YYYY-MM-DDTHH:mm, hora local).
@@ -74,6 +74,7 @@ export default function AdminGestionEventos() {
     recargar: recargarDatos,
   } = useApi(cargarTodo, { inicial: { eventos: [], usuarios: [], asignaciones: [], solicitudes: [] } });
   const { eventos, usuarios, asignaciones, solicitudes } = datos;
+  const clientes = usuarios.filter(u => u.rol === 'Cliente');
   // Helpers para conservar las actualizaciones optimistas que había con setState.
   const setEventos = (fn) => setDatos(d => ({ ...d, eventos: typeof fn === 'function' ? fn(d.eventos) : fn }));
   const setAsignaciones = (fn) => setDatos(d => ({ ...d, asignaciones: typeof fn === 'function' ? fn(d.asignaciones) : fn }));
@@ -126,6 +127,7 @@ export default function AdminGestionEventos() {
       imagen: ev.imagen || '',
       fecha: isoADatetimeLocal(ev.fecha),
       fechaFin: isoADatetimeLocal(ev.fechaFin),
+      clienteId: ev.clienteId != null ? String(ev.clienteId) : '',
     });
     setModalEventoAbierto(true);
   };
@@ -243,14 +245,18 @@ export default function AdminGestionEventos() {
     e.preventDefault();
     if (!formEvento.nombre.trim() || !formEvento.lugar.trim() || !formEvento.fecha || !formEvento.fechaFin) return;
 
+    // clienteId vacío -> se omite (el backend lo trata como opcional).
+    const { clienteId, ...resto } = formEvento;
+    const payload = clienteId ? { ...resto, clienteId: Number(clienteId) } : resto;
+
     if (editandoId) {
-      const actualizado = await api.eventos.actualizar(editandoId, formEvento);
+      const actualizado = await api.eventos.actualizar(editandoId, payload);
       setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
       setModalEventoAbierto(false);
       return;
     }
 
-    const nuevo = await api.eventos.crear(formEvento);
+    const nuevo = await api.eventos.crear(payload);
     setEventos(prev => [nuevo, ...prev]);
     setFormEvento(FORM_EVENTO_VACIO);
     setModalEventoAbierto(false);
@@ -625,6 +631,17 @@ export default function AdminGestionEventos() {
                     id="ev-lugar" type="text" name="lugar" value={formEvento.lugar} onChange={handleChangeFormEvento}
                     placeholder="Ej: Campo Ferial, Cbba" required
                   />
+                </div>
+                <div className="pi-ges-input-group">
+                  <label htmlFor="ev-cliente">Cliente organizador (opcional)</label>
+                  <select
+                    id="ev-cliente" name="clienteId" value={formEvento.clienteId} onChange={handleChangeFormEvento}
+                  >
+                    <option value="">Sin cliente asignado</option>
+                    {clientes.map(c => (
+                      <option key={c.id} value={c.id}>{c.nombre} ({c.email})</option>
+                    ))}
+                  </select>
                 </div>
                 <div className="pi-ges-input-group">
                   <label>Ubicación en el mapa (opcional)</label>

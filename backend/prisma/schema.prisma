@@ -53,6 +53,12 @@ enum EstadoEvento {
   finalizado
 }
 
+// Arqueo de caja de un operador con efectivo (Recargador / Devolucion): §5.2.
+enum EstadoCorteCaja {
+  abierta
+  cerrada
+}
+
 enum EstadoCaso {
   pendiente
   resuelto
@@ -63,12 +69,16 @@ enum EstadoCaso {
 // "recarga" = crédito a la billetera del dueño de la Entrada escaneada, hecho por un Recargador.
 // "devolucion" = retiro total/parcial hecho por rol Devolucion.
 // "ajuste" = corrección manual (ej. tras resolver una IncidenciaRecarga).
+// "reverso_consumo" / "reverso_venta" = las dos filas que revierten una Venta anulada (§5.3):
+//   reverso_consumo reintegra el saldo al comprador, reverso_venta se lo quita al negocio.
 enum TipoTransaccion {
   recarga
   consumo
   venta
   devolucion
   ajuste
+  reverso_consumo
+  reverso_venta
 }
 
 enum CampoReportado {
@@ -136,8 +146,13 @@ model Usuario {
   eventosCreados        Evento[]               @relation("AdminQueCreaEvento")
   eventosArchivados     Evento[]               @relation("AdminQueArchivaEvento")
   eventosPublicados     Evento[]               @relation("AdminQuePublicaEvento")
+  eventosComoCliente    Evento[]               @relation("ClienteDeEvento")
   codigosRecuperacion   CodigoRecuperacion[]
   cambiosPassword       CambioPassword[]
+  cortesCajaComoOperador CorteCaja[]           @relation("CorteCajaOperador")
+  cortesCajaCerrados     CorteCaja[]           @relation("CorteCajaCerradoPor")
+  ventasAnuladas         Venta[]               @relation("VentaAnuladaPor")
+  auditorias             RegistroAuditoria[]   @relation("ActorAuditoria")
 
   @@map("usuarios")
 }
@@ -218,11 +233,16 @@ model Evento {
   qrAncho     Float?       // ancho de impresión de la manilla/QR (config del lote generado)
   qrAlto      Float?       // alto de impresión de la manilla/QR
   creadoPorId Int
+  // Cliente organizador. Se llena al aprobar una SolicitudEvento (= SolicitudEvento.clienteId)
+  // o a mano cuando Admin crea el evento directo. NULL en eventos directos sin cliente.
+  // Denormaliza la Asignacion rol=Cliente que se crea en solicitudes-evento.service.aprobar.
+  clienteId   Int?
   createdAt   DateTime     @default(now())
 
   creadoPor         Usuario      @relation("AdminQueCreaEvento", fields: [creadoPorId], references: [id])
   archivadoPor      Usuario?     @relation("AdminQueArchivaEvento", fields: [archivadoPorId], references: [id])
   publicadoPor      Usuario?     @relation("AdminQuePublicaEvento", fields: [publicadoPorId], references: [id])
+  cliente           Usuario?     @relation("ClienteDeEvento", fields: [clienteId], references: [id])
   asignaciones      Asignacion[]
   categoriasTicket  CategoriaTicket[]
   compras           Compra[]
@@ -234,8 +254,61 @@ model Evento {
   reportesEntrada    ReporteEntrada[]
   landingConfig     LandingConfig?
   solicitudOrigen   SolicitudEvento?
+  resumen           ResumenEvento?
+  cortesCaja        CorteCaja[]
 
+  @@index([clienteId])
   @@map("eventos")
+}
+
+// Arqueo de caja de un operador con efectivo, por evento (§5.2). Se abre al
+// empezar el turno y se cierra declarando el efectivo contado; el sistema
+// calcula lo que debería haber (fondo inicial ± Σ transacciones del operador
+// en la ventana) y la diferencia. Un solo abierto por (operador, evento)
+// -> índice parcial en la migración.
+model CorteCaja {
+  id             String          @id @default(cuid())
+  eventoId       String
+  operadorId     Int
+  rol            Rol // Recargador | Devolucion (denormalizado del operador)
+  estado         EstadoCorteCaja @default(abierta)
+  montoInicial   Decimal         @default(0) @db.Decimal(10, 2)
+  abiertaEn      DateTime        @default(now())
+  cerradaEn      DateTime?
+  montoSistema   Decimal?        @db.Decimal(10, 2)
+  montoEsperado  Decimal?        @db.Decimal(10, 2)
+  montoDeclarado Decimal?        @db.Decimal(10, 2)
+  diferencia     Decimal?        @db.Decimal(10, 2)
+  observacion    String?
+  cerradaPorId   Int?
+
+  evento     Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  operador   Usuario  @relation("CorteCajaOperador", fields: [operadorId], references: [id])
+  cerradaPor Usuario? @relation("CorteCajaCerradoPor", fields: [cerradaPorId], references: [id])
+
+  @@index([eventoId, rol])
+  @@index([operadorId, abiertaEn])
+  @@map("cortes_caja")
+}
+
+// Foto inmutable de los números del evento, generada al ARCHIVARLO (que es
+// cuando dejan de entrar escrituras — ver EventoPolicy). El dashboard histórico
+// y el informe de cierre leen de acá para no recalcular sobre tablas vivas
+// (spec 5.7). Se borra al desarchivar, y así se vuelve a calcular en vivo.
+model ResumenEvento {
+  eventoId         String   @id
+  entradasVendidas Int
+  asistentes       Int
+  recaudado        Decimal  @db.Decimal(10, 2)
+  recargado        Decimal  @db.Decimal(10, 2)
+  consumido        Decimal  @db.Decimal(10, 2)
+  devuelto         Decimal  @db.Decimal(10, 2)
+  saldoRemanente   Decimal  @db.Decimal(10, 2)
+  generadoEn       DateTime @default(now())
+
+  evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@map("resumenes_evento")
 }
 
 // Rol que cumple un usuario DENTRO de un evento específico (además de su rol global de cuenta).
@@ -310,6 +383,7 @@ model CategoriaTicket {
   evento   Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   entradas Entrada[]
 
+  @@index([eventoId])
   @@map("categorias_ticket")
 }
 
@@ -335,6 +409,7 @@ model Compra {
   entradas  Entrada[]
 
   @@index([eventoId, estado])
+  @@index([compradorId])
   @@map("compras")
 }
 
@@ -436,6 +511,7 @@ model CodigoQr {
 
   @@unique([eventoId, numero])
   @@index([entradaId])
+  @@index([eventoId, anulado])
   @@map("codigos_qr")
 }
 
@@ -558,6 +634,8 @@ model Puesto {
   ayudantes PuestoAyudante[]
   ventas    Venta[]
 
+  @@index([eventoId])
+  @@index([negocioId, eventoId])
   @@map("puestos")
 }
 
@@ -572,6 +650,7 @@ model Producto {
   puesto     Puesto      @relation(fields: [puestoId], references: [id], onDelete: Cascade)
   ventaItems VentaItem[]
 
+  @@index([puestoId])
   @@map("productos")
 }
 
@@ -607,12 +686,23 @@ model Venta {
   montoTotal Decimal  @db.Decimal(10, 2)
   createdAt  DateTime @default(now())
 
+  // Anulación (§5.3): al anular se generan 2 Transaccion de reverso con el mismo
+  // ventaId. anuladaEn != null => la venta no cuenta en los dashboards (neto).
+  anuladaEn       DateTime?
+  anuladaPorId    Int?
+  motivoAnulacion String?
+
   puesto        Puesto        @relation(fields: [puestoId], references: [id], onDelete: Cascade)
   ayudante      Usuario       @relation("Vendedor", fields: [ayudanteId], references: [id])
   entrada       Entrada       @relation(fields: [entradaId], references: [id])
+  anuladaPor    Usuario?      @relation("VentaAnuladaPor", fields: [anuladaPorId], references: [id])
   items         VentaItem[]
-  transacciones Transaccion[] // exactamente 2: una consumo (entrada) + una venta (negocio)
+  transacciones Transaccion[] // 2 al crear (consumo + venta); +2 al anular (reverso_*)
 
+  @@index([puestoId, createdAt])
+  @@index([ayudanteId, createdAt])
+  @@index([entradaId])
+  @@index([anuladaEn])
   @@map("ventas")
 }
 
@@ -627,6 +717,8 @@ model VentaItem {
   venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
   producto Producto @relation(fields: [productoId], references: [id])
 
+  @@index([ventaId])
+  @@index([productoId])
   @@map("venta_items")
 }
 
@@ -649,4 +741,25 @@ model LandingConfig {
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
 
   @@map("landing_config")
+}
+// Registro de auditoría de las escrituras sensibles (§5.8): quién hizo qué, con
+// el antes y el después. Se escribe fire-and-forget (nunca rompe la operación).
+// entidad/accion son String a propósito: la lista crece y no queremos migrar
+// cada vez que se audita algo nuevo.
+model RegistroAuditoria {
+  id        String   @id @default(cuid())
+  actorId   Int
+  entidad   String   // 'compra' | 'incidencia_recarga' | 'reporte_entrada' | 'evento' | 'solicitud_evento' | 'venta' | 'corte_caja'
+  entidadId String
+  accion    String   // 'aprobar' | 'rechazar' | 'resolver' | 'corregir' | 'actualizar' | 'archivar' | 'desarchivar' | 'publicar' | 'despublicar' | 'cerrar' | 'anular'
+  antes     Json?
+  despues   Json?
+  createdAt DateTime @default(now())
+
+  actor Usuario @relation("ActorAuditoria", fields: [actorId], references: [id])
+
+  @@index([entidad, entidadId])
+  @@index([actorId])
+  @@index([createdAt])
+  @@map("registros_auditoria")
 }

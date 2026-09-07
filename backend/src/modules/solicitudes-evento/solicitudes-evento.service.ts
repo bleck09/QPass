@@ -14,6 +14,7 @@ import {
 } from '@nestjs/common';
 import { EstadoSolicitudEvento, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 import { aFecha, aFechaCon } from '../../common/utils/fechas.utils';
 import {
@@ -23,7 +24,10 @@ import {
 
 @Injectable()
 export class SolicitudesEventoService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditoria: AuditoriaService,
+  ) {}
 
   async listar(actor: UsuarioJwt, estado?: EstadoSolicitudEvento) {
     return this.prisma.solicitudEvento.findMany({
@@ -85,7 +89,7 @@ export class SolicitudesEventoService {
       throw new ConflictException('Esta solicitud ya fue resuelta');
     }
 
-    return this.prisma.solicitudEvento.update({
+    const actualizada = await this.prisma.solicitudEvento.update({
       where: { id },
       data: {
         nombreEvento: dto.nombreEvento,
@@ -104,6 +108,15 @@ export class SolicitudesEventoService {
         fechaFin: aFecha(dto.fechaFin),
       },
     });
+    await this.auditoria.registrar(null, {
+      actorId: actor.id,
+      entidad: 'solicitud_evento',
+      entidadId: id,
+      accion: 'actualizar',
+      antes: { nombreEvento: solicitud.nombreEvento, lugar: solicitud.lugar },
+      despues: { nombreEvento: actualizada.nombreEvento, lugar: actualizada.lugar },
+    });
+    return actualizada;
   }
 
   async aprobar(id: string, adminId: number) {
@@ -124,6 +137,7 @@ export class SolicitudesEventoService {
           fechaFin: solicitud.fechaFin,
           imagen: solicitud.imagenPortada,
           creadoPorId: adminId,
+          clienteId: solicitud.clienteId, // en sync con la Asignacion rol=Cliente de abajo
         },
       });
       await tx.landingConfig.create({
@@ -164,6 +178,14 @@ export class SolicitudesEventoService {
           resueltoEn: new Date(),
         },
       });
+      await this.auditoria.registrar(tx, {
+        actorId: adminId,
+        entidad: 'solicitud_evento',
+        entidadId: solicitud.id,
+        accion: 'aprobar',
+        antes: { estado: solicitud.estado, nombreEvento: solicitud.nombreEvento },
+        despues: { estado: 'aprobado', eventoId: nuevoEvento.id },
+      });
       return nuevoEvento;
     });
   }
@@ -177,7 +199,7 @@ export class SolicitudesEventoService {
       throw new ConflictException('Esta solicitud ya fue resuelta');
     }
 
-    return this.prisma.solicitudEvento.update({
+    const rechazada = await this.prisma.solicitudEvento.update({
       where: { id: solicitud.id },
       data: {
         estado: 'rechazado',
@@ -186,5 +208,14 @@ export class SolicitudesEventoService {
         resueltoEn: new Date(),
       },
     });
+    await this.auditoria.registrar(null, {
+      actorId: adminId,
+      entidad: 'solicitud_evento',
+      entidadId: solicitud.id,
+      accion: 'rechazar',
+      antes: { estado: solicitud.estado, nombreEvento: solicitud.nombreEvento },
+      despues: { estado: 'rechazado', motivoRechazo: motivoRechazo ?? null },
+    });
+    return rechazada;
   }
 }

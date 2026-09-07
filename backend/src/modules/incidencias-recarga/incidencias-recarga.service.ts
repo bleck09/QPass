@@ -11,6 +11,7 @@ import { EstadoCaso, Rol } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { TransaccionesService } from '../transacciones/transacciones.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 import {
   CrearIncidenciaRecargaDto,
@@ -23,6 +24,7 @@ export class IncidenciasRecargaService {
     private readonly prisma: PrismaService,
     private readonly eventoPolicy: EventoPolicy,
     private readonly transacciones: TransaccionesService,
+    private readonly auditoria: AuditoriaService,
   ) {}
 
   async listar(
@@ -94,7 +96,7 @@ export class IncidenciasRecargaService {
           });
         }
       }
-      return tx.incidenciaRecarga.update({
+      const resuelta = await tx.incidenciaRecarga.update({
         where: { id: incidencia.id },
         data: {
           estado: 'resuelto',
@@ -103,6 +105,15 @@ export class IncidenciasRecargaService {
           resueltoEn: new Date(),
         },
       });
+      await this.auditoria.registrar(tx, {
+        actorId: adminId,
+        entidad: 'incidencia_recarga',
+        entidadId: incidencia.id,
+        accion: 'resolver',
+        antes: { estado: incidencia.estado, montoEntregado: incidencia.montoEntregado },
+        despues: { estado: 'resuelto', ajusteAplicado: valor },
+      });
+      return resuelta;
     });
   }
 }

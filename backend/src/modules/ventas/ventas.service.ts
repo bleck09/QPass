@@ -7,10 +7,18 @@
  * el mismo ventaId, atómica con la creación de la Venta.
  * ========================================================================= */
 
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { TransaccionesService } from '../transacciones/transacciones.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
+import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 import { CrearVentaDto } from './dto/crear-venta.dto';
 
 @Injectable()
@@ -19,6 +27,7 @@ export class VentasService {
     private readonly prisma: PrismaService,
     private readonly eventoPolicy: EventoPolicy,
     private readonly transacciones: TransaccionesService,
+    private readonly auditoria: AuditoriaService,
   ) {}
 
   async listar(filtros: { puestoId?: string; entradaId?: string; eventoId?: string }) {
@@ -98,6 +107,62 @@ export class VentasService {
       });
 
       return venta;
+    });
+  }
+
+  /**
+   * Anula una venta (§5.3): revierte las 2 filas de saldo y marca la Venta.
+   * Puede hacerlo Admin o el Usuario Negocio dueño del puesto.
+   */
+  async anular(id: string, motivo: string, actor: UsuarioJwt) {
+    const venta = await this.prisma.venta.findUnique({
+      where: { id },
+      include: { puesto: true, entrada: true },
+    });
+    if (!venta) throw new NotFoundException('Venta no encontrada');
+    if (venta.anuladaEn) {
+      throw new ConflictException('Esta venta ya está anulada');
+    }
+    await this.eventoPolicy.porPuesto(venta.puestoId);
+    if (
+      actor.rol === 'UsuarioNegocio' &&
+      venta.puesto.negocioId !== actor.id
+    ) {
+      throw new ForbiddenException('Esa venta no es de tu negocio');
+    }
+    if (!venta.entrada.usuarioId) {
+      throw new BadRequestException(
+        'La entrada de esta venta no tiene cuenta vinculada',
+      );
+    }
+
+    return this.prisma.$transaction(async (tx) => {
+      await this.transacciones.anularVenta(tx, {
+        eventoId: venta.entrada.eventoId,
+        ventaId: venta.id,
+        entradaId: venta.entradaId,
+        duenoEntradaId: venta.entrada.usuarioId!,
+        duenoNegocioId: venta.puesto.negocioId,
+        monto: Number(venta.montoTotal),
+        operadorId: actor.id,
+      });
+      const actualizada = await tx.venta.update({
+        where: { id },
+        data: {
+          anuladaEn: new Date(),
+          anuladaPorId: actor.id,
+          motivoAnulacion: motivo,
+        },
+      });
+      await this.auditoria.registrar(tx, {
+        actorId: actor.id,
+        entidad: 'venta',
+        entidadId: id,
+        accion: 'anular',
+        antes: { montoTotal: venta.montoTotal, anuladaEn: venta.anuladaEn },
+        despues: { anuladaEn: actualizada.anuladaEn, motivoAnulacion: motivo },
+      });
+      return actualizada;
     });
   }
 }

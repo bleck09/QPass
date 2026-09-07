@@ -53,15 +53,19 @@ export class EventosController {
   @Patch(':id')
   @Roles('Admin')
   @HttpCode(HttpStatus.OK)
-  actualizar(@Param('id') id: string, @Body() dto: ActualizarEventoDto) {
-    return this.eventosService.actualizar(id, dto);
+  actualizar(
+    @Param('id') id: string,
+    @Body() dto: ActualizarEventoDto,
+    @UsuarioActual('id') adminId: number,
+  ) {
+    return this.eventosService.actualizar(id, dto, adminId);
   }
 
   @Post(':id/cerrar')
   @Roles('Admin')
   @HttpCode(HttpStatus.OK)
-  cerrar(@Param('id') id: string) {
-    return this.eventosService.cerrar(id);
+  cerrar(@Param('id') id: string, @UsuarioActual('id') adminId: number) {
+    return this.eventosService.cerrar(id, adminId);
   }
 
   @Post(':id/archivar')
@@ -74,8 +78,8 @@ export class EventosController {
   @Post(':id/desarchivar')
   @Roles('Admin')
   @HttpCode(HttpStatus.OK)
-  desarchivar(@Param('id') id: string) {
-    return this.eventosService.desarchivar(id);
+  desarchivar(@Param('id') id: string, @UsuarioActual('id') adminId: number) {
+    return this.eventosService.desarchivar(id, adminId);
   }
 
   @Post(':id/publicar')
@@ -88,7 +92,7 @@ export class EventosController {
   @Post(':id/despublicar')
   @Roles('Admin')
   @HttpCode(HttpStatus.OK)
-  despublicar(@Param('id') id: string) {
-    return this.eventosService.despublicar(id);
+  despublicar(@Param('id') id: string, @UsuarioActual('id') adminId: number) {
+    return this.eventosService.despublicar(id, adminId);
   }
 }

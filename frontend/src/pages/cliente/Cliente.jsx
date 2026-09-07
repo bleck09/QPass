@@ -9,8 +9,6 @@ import {
   FaListUl, FaClock, FaPlus, FaTrash, FaPaperPlane,
   FaUpload, FaTimes, FaEye, FaFileAlt, FaChartPie, FaCheckCircle, FaHourglassHalf, FaExclamationTriangle
 } from 'react-icons/fa';
-import Admin from '../admin/Admin.jsx';
-import { leerSesion } from '../../api/client.js';
 import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
 import './Cliente.css';
@@ -31,9 +29,8 @@ export default function Cliente() {
   useTituloPagina('Mis eventos');
   const location = useLocation();
   const navigate = useNavigate();
-  const sesion = leerSesion();
-  // /Cliente/dashboard entra directo a la pestaña Dashboard General (accesible también
-  // desde el menú lateral), sin pasar por la pestaña de Propuesta.
+  // El botón "Dashboard General" navega a /Cliente/dashboard, que renderiza
+  // <ClienteDashboard/> (otra página). Acá solo vive el editor de propuestas.
   const pestana = location.pathname.endsWith('/dashboard') ? 'dashboard' : 'propuesta';
 
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
@@ -42,27 +39,19 @@ export default function Cliente() {
   const [solicitudId, setSolicitudId] = useState(null); // null = formulario en blanco (nueva)
   const [solicitud, setSolicitud] = useState(SOLICITUD_VACIA);
 
-  // Carga primaria (mis solicitudes + eventos donde quedé asignado) con
-  // estados cargando/error/reintentar (Manual 8.9).
-  const cargarDatos = useCallback(async () => {
-    const [solicitudes, asignaciones] = await Promise.all([
-      api.solicitudesEvento.listar(),
-      api.asignaciones.listar(),
-    ]);
-    const idSesion = sesion?.id;
-    const eventosPermitidos = idSesion
-      ? [...new Set(asignaciones.filter(a => a.usuarioId === idSesion).map(a => a.eventoId))]
-      : [];
-    return { solicitudes, eventosPermitidos };
-  }, [sesion?.id]);
+  // Carga primaria (mis solicitudes) con estados cargando/error/reintentar (Manual 8.9).
+  // El dashboard de evento vive en su propia página (/Cliente/dashboard -> ClienteDashboard).
+  const cargarDatos = useCallback(
+    () => api.solicitudesEvento.listar().then((solicitudes) => ({ solicitudes })),
+    [],
+  );
   const {
     data: datos,
     cargando: cargandoDatos,
     error: errorDatos,
     recargar: recargarSolicitudes,
-  } = useApi(cargarDatos, { inicial: { solicitudes: [], eventosPermitidos: [] } });
+  } = useApi(cargarDatos, { inicial: { solicitudes: [] } });
   const misSolicitudes = datos.solicitudes;
-  const eventosPermitidos = datos.eventosPermitidos;
 
 
 
@@ -153,10 +142,6 @@ export default function Cliente() {
           <FaChartPie aria-hidden="true" /> Dashboard General
         </button>
       </div>
-
-      {pestana === 'dashboard' && (
-        <Admin soloLectura eventosPermitidos={eventosPermitidos} />
-      )}
 
       {pestana === 'propuesta' && (
       <>

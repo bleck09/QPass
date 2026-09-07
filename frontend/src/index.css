@@ -133,6 +133,12 @@
   --commerce-hover:  var(--coral-compra-hover);
   --focus-ring:      var(--cian-digital);
 
+  /* Series de gráficos (dataviz): paleta de referencia validada (skill dataviz).
+     Se re-apuntan en oscuro. W1/W2 usan serie-1; W5 serie-1 + serie-2; W4 usa
+     los tokens de estado (--ok/--warn/--danger). */
+  --viz-serie-1:    #2a78d6;
+  --viz-serie-2:    #eb6834;
+
   /* Estados semánticos (color base + texto AA + fondo suave) */
   --ok:        var(--verde-recarga);
   --ok-text:   var(--verde-recarga-texto);
@@ -250,6 +256,9 @@
     --border-focus:  #4DD0E8;
     --focus-ring:    #4DD0E8;
 
+    --viz-serie-1:   #3987e5;
+    --viz-serie-2:   #d95926;
+
     --action:       #4A5FA8;
     --action-hover: #5A6FB8;
     --accent:       #38C7E6;
@@ -294,6 +303,9 @@
   --border-strong: #3A4152;
   --border-focus:  #4DD0E8;
   --focus-ring:    #4DD0E8;
+
+  --viz-serie-1:   #3987e5;
+  --viz-serie-2:   #d95926;
 
   --action:       #4A5FA8;
   --action-hover: #5A6FB8;

@@ -14,10 +14,16 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { aFecha, aFechaCon } from '../../common/utils/fechas.utils';
 import { CrearEventoDto } from './dto/crear-evento.dto';
 import { ActualizarEventoDto } from './dto/actualizar-evento.dto';
+import { ResumenEventoService } from './resumen-evento.service';
+import { AuditoriaService } from '../auditoria/auditoria.service';
 
 @Injectable()
 export class EventosService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly resumenEvento: ResumenEventoService,
+    private readonly auditoria: AuditoriaService,
+  ) {}
 
   /** Agrega `precioDesde` (precio mínimo de sus categorías de ticket) a una lista de eventos. */
   private async conPrecioDesde(eventos: { id: string }[]) {
@@ -88,20 +94,21 @@ export class EventosService {
         fechaFin: aFechaCon(dto.fechaFin, dto.fecha),
         qrAncho: dto.qrAncho,
         qrAlto: dto.qrAlto,
+        clienteId: dto.clienteId ?? null,
         creadoPorId,
       },
     });
   }
 
   /** Actualiza campos parciales de un evento existente. */
-  async actualizar(id: string, dto: ActualizarEventoDto) {
+  async actualizar(id: string, dto: ActualizarEventoDto, adminId: number) {
     const evento = await this.obtenerPorIdAdmin(id);
     if (evento.archivadoEn) {
       throw new ConflictException(
         'El evento está archivado: quedó de solo lectura. Desarchívalo para editarlo.',
       );
     }
-    return this.prisma.evento.update({
+    const actualizado = await this.prisma.evento.update({
       where: { id },
       data: {
         nombre: dto.nombre,
@@ -114,20 +121,53 @@ export class EventosService {
         fechaFin: aFecha(dto.fechaFin),
         qrAncho: dto.qrAncho,
         qrAlto: dto.qrAlto,
+        clienteId: dto.clienteId,
       },
     });
+    await this.auditoria.registrar(null, {
+      actorId: adminId,
+      entidad: 'evento',
+      entidadId: id,
+      accion: 'actualizar',
+      antes: {
+        nombre: evento.nombre,
+        lugar: evento.lugar,
+        fecha: evento.fecha,
+        fechaFin: evento.fechaFin,
+        estado: evento.estado,
+        clienteId: evento.clienteId,
+      },
+      despues: {
+        nombre: actualizado.nombre,
+        lugar: actualizado.lugar,
+        fecha: actualizado.fecha,
+        fechaFin: actualizado.fechaFin,
+        estado: actualizado.estado,
+        clienteId: actualizado.clienteId,
+      },
+    });
+    return actualizado;
   }
 
   /** Cierra el evento manualmente, antes de su fechaFin si hace falta (C22). */
-  async cerrar(id: string) {
+  async cerrar(id: string, adminId: number) {
     const evento = await this.obtenerPorIdAdmin(id);
     if (evento.archivadoEn) {
       throw new ConflictException('El evento ya está archivado.');
     }
-    return this.prisma.evento.update({
+    const actualizado = await this.prisma.evento.update({
       where: { id },
       data: { estado: 'finalizado' },
     });
+    await this.auditoria.registrar(null, {
+      actorId: adminId,
+      entidad: 'evento',
+      entidadId: id,
+      accion: 'cerrar',
+      antes: { estado: evento.estado },
+      despues: { estado: 'finalizado' },
+    });
+    return actualizado;
   }
 
   /**
@@ -144,21 +184,48 @@ export class EventosService {
         'Solo se puede archivar un evento finalizado. Ciérralo primero.',
       );
     }
-    return this.prisma.evento.update({
-      where: { id },
-      data: { archivadoEn: new Date(), archivadoPorId: adminId },
+    // Archivar = solo lectura: se congela la foto de cierre (spec 5.7) en la
+    // misma transacción para que quede consistente con el estado archivado.
+    return this.prisma.$transaction(async (tx) => {
+      const actualizado = await tx.evento.update({
+        where: { id },
+        data: { archivadoEn: new Date(), archivadoPorId: adminId },
+      });
+      await this.resumenEvento.generar(id, tx);
+      await this.auditoria.registrar(tx, {
+        actorId: adminId,
+        entidad: 'evento',
+        entidadId: id,
+        accion: 'archivar',
+        antes: { archivadoEn: null, estado: evento.estado },
+        despues: { archivadoEn: actualizado.archivadoEn },
+      });
+      return actualizado;
     });
   }
 
   /** Deshace el archivado (Admin): el evento vuelve a admitir cambios. */
-  async desarchivar(id: string) {
+  async desarchivar(id: string, adminId: number) {
     const evento = await this.obtenerPorIdAdmin(id);
     if (!evento.archivadoEn) {
       throw new ConflictException('El evento no está archivado.');
     }
-    return this.prisma.evento.update({
-      where: { id },
-      data: { archivadoEn: null, archivadoPorId: null },
+    // Vuelve a ser editable -> los números se recalculan en vivo; se borra la foto.
+    return this.prisma.$transaction(async (tx) => {
+      await this.resumenEvento.borrar(id, tx);
+      const actualizado = await tx.evento.update({
+        where: { id },
+        data: { archivadoEn: null, archivadoPorId: null },
+      });
+      await this.auditoria.registrar(tx, {
+        actorId: adminId,
+        entidad: 'evento',
+        entidadId: id,
+        accion: 'desarchivar',
+        antes: { archivadoEn: evento.archivadoEn },
+        despues: { archivadoEn: null },
+      });
+      return actualizado;
     });
   }
 
@@ -202,22 +269,40 @@ export class EventosService {
         .map(([paso]) => ETIQUETA_PASO[paso as keyof typeof pasos]);
       throw new ConflictException(`Todavía falta: ${faltantes.join(', ')}.`);
     }
-    return this.prisma.evento.update({
+    const actualizado = await this.prisma.evento.update({
       where: { id },
       data: { publicadoEn: new Date(), publicadoPorId: adminId },
     });
+    await this.auditoria.registrar(null, {
+      actorId: adminId,
+      entidad: 'evento',
+      entidadId: id,
+      accion: 'publicar',
+      antes: { publicadoEn: null },
+      despues: { publicadoEn: actualizado.publicadoEn },
+    });
+    return actualizado;
   }
 
   /** Vuelve el evento a borrador: deja de verse/venderse públicamente. */
-  async despublicar(id: string) {
+  async despublicar(id: string, adminId: number) {
     const evento = await this.obtenerPorIdAdmin(id);
     if (!evento.publicadoEn) {
       throw new ConflictException('El evento ya está en borrador.');
     }
-    return this.prisma.evento.update({
+    const actualizado = await this.prisma.evento.update({
       where: { id },
       data: { publicadoEn: null, publicadoPorId: null },
     });
+    await this.auditoria.registrar(null, {
+      actorId: adminId,
+      entidad: 'evento',
+      entidadId: id,
+      accion: 'despublicar',
+      antes: { publicadoEn: evento.publicadoEn },
+      despues: { publicadoEn: null },
+    });
+    return actualizado;
   }
 }
 

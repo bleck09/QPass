@@ -22,7 +22,7 @@ export const ROLE_LABELS = {
 };
 
 export const ROLE_HOME_PATH = {
-  [ROLES.ADMIN]: '/admin',
+  [ROLES.ADMIN]: '/admin/general',
   [ROLES.CLIENTE]: '/Cliente',
   [ROLES.RECARGADOR]: '/recargador',
   [ROLES.SUPERVISOR]: '/supervisor',

@@ -69,9 +69,11 @@ const agruparVentasPorNegocio = (ventas, puestos, usuariosPorId) => {
       });
     }
     porNegocio.get(negocioId).ventas.push({
+      id: v.id,
       hora: hora(v.createdAt),
       cliente: v.entrada?.nombre || '—',
       monto: Number(v.montoTotal),
+      anulada: v.anuladaEn != null,
     });
   });
   return [...porNegocio.values()];
@@ -336,6 +338,27 @@ export default function Admin({
   const [filtroSolicitudes, setFiltroSolicitudes] = useState('pendiente'); // pendiente (por defecto) | confirmado | rechazado | todos
   const [valorCorreccion, setValorCorreccion] = useState('');
 
+  // --- ANULAR VENTA (§5.3) ---
+  const [ventaAnular, setVentaAnular] = useState(null);
+  const [motivoAnular, setMotivoAnular] = useState('');
+  const [anulandoVenta, setAnulandoVenta] = useState(false);
+  const [errAnularVenta, setErrAnularVenta] = useState('');
+  const confirmarAnularVenta = async () => {
+    if (motivoAnular.trim().length < 3) return;
+    setAnulandoVenta(true);
+    setErrAnularVenta('');
+    try {
+      await api.ventas.anular(ventaAnular.id, motivoAnular.trim());
+      setVentaAnular(null);
+      setMotivoAnular('');
+      await recargarDash();
+    } catch (e) {
+      setErrAnularVenta(e.message);
+    } finally {
+      setAnulandoVenta(false);
+    }
+  };
+
   const totalEntradasCompradas = useMemo(
     () => solicitudes.reduce((suma, c) => suma + c.entradas.length, 0),
     [solicitudes]
@@ -471,7 +494,7 @@ export default function Admin({
   );
   const negociosOrdenados = useMemo(
     () => [...datos.negocios]
-      .map(n => ({ ...n, ventasTotal: sumar(n.ventas, 'monto') }))
+      .map(n => ({ ...n, ventasTotal: sumar(n.ventas.filter(v => !v.anulada), 'monto') }))
       .sort((a, b) => b.ventasTotal - a.ventasTotal),
     [datos]
   );
@@ -963,14 +986,23 @@ export default function Admin({
                 <span className="pi-dash-detalle-total">Ventas totales: <strong>{negocioAbierto.ventasTotal} pts</strong> · {negocioAbierto.ayudantes} ayudante(s)</span>
               </div>
               <Tabla
-                columnas={['Hora', 'Cliente', 'Monto']}
+                columnas={['Hora', 'Cliente', 'Monto', { texto: 'Acciones', srOnly: true }]}
                 datos={negocioAbierto.ventas}
                 vacio="Este negocio no tiene ventas."
                 renderFila={(t, i) => (
-                  <tr key={i}>
+                  <tr key={t.id || i} className={t.anulada ? 'pi-dash-fila-anulada' : ''}>
                     <td>{t.hora}</td>
                     <td>{t.cliente}</td>
                     <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {t.monto} pts</td>
+                    <td style={{ textAlign: 'right' }}>
+                      {t.anulada
+                        ? <span className="pi-dash-badge-anulada">Anulada</span>
+                        : !soloLectura && (
+                          <button type="button" className="pi-dash-btn-anular" onClick={() => { setVentaAnular({ id: t.id, monto: t.monto, cliente: t.cliente }); setMotivoAnular(''); setErrAnularVenta(''); }}>
+                            Anular
+                          </button>
+                        )}
+                    </td>
                   </tr>
                 )}
               />
@@ -1427,6 +1459,33 @@ export default function Admin({
             <button type="button" className="pi-dash-btn-guardar" onClick={guardarCorreccion} disabled={!valorCorreccion.trim()}>
               <FaCheckCircle /> Guardar corrección
             </button>
+          </div>
+        </Modal>
+      )}
+
+      {ventaAnular && (
+        <Modal titulo="Anular venta" onCerrar={() => setVentaAnular(null)} tamano="sm">
+          <div className="pi-dash-form-anular">
+            <p>
+              Anular la venta de <strong>{ventaAnular.monto} pts</strong> a {ventaAnular.cliente}.
+              El saldo vuelve al comprador y se le descuenta al negocio.
+            </p>
+            <label htmlFor="admin-motivo-anular">Motivo</label>
+            <textarea
+              id="admin-motivo-anular"
+              rows={2}
+              placeholder="Ej: el ayudante cobró de más"
+              value={motivoAnular}
+              onChange={(e) => setMotivoAnular(e.target.value)}
+              autoFocus
+            />
+            {errAnularVenta && <p className="pi-dash-err-anular">{errAnularVenta}</p>}
+            <div className="pi-dash-form-anular-acciones">
+              <button type="button" className="pi-dash-btn-cancelar-anular" onClick={() => setVentaAnular(null)} disabled={anulandoVenta}>Cancelar</button>
+              <button type="button" className="pi-dash-btn-anular pi-dash-btn-anular--fuerte" onClick={confirmarAnularVenta} disabled={anulandoVenta || motivoAnular.trim().length < 3}>
+                Anular venta
+              </button>
+            </div>
           </div>
         </Modal>
       )}

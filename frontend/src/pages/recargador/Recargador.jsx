@@ -12,12 +12,13 @@ import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaHistory, FaTimes, FaIdCard, FaCoins, FaCheckCircle, FaWallet,
-  FaExclamationTriangle, FaClipboardList, FaArrowLeft
+  FaExclamationTriangle, FaClipboardList, FaArrowLeft, FaCashRegister
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
+import CorteCaja from '../../components/CorteCaja.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import './Recargador.css';
 import '../supervisor/GestionEntrega.css';
@@ -32,6 +33,7 @@ export default function Recargador() {
   const navigate = useNavigate();
   const pestana = location.pathname.endsWith('/incidencias')
     ? 'incidencias'
+    : location.pathname.endsWith('/caja') ? 'caja'
     : location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
 
   // Carga primaria (lista de eventos asignados) con estados cargando/error/reintentar (Manual 8.9).
@@ -272,8 +274,17 @@ export default function Recargador() {
           >
             <FaClipboardList /> Incidencias ({incidencias.filter(i => i.estado === 'pendiente').length})
           </button>
+          <button
+            className={pestana === 'caja' ? 'activo' : ''}
+            onClick={() => navigate('/recargador/caja')}
+          >
+            <FaCashRegister /> Arqueo de caja
+          </button>
         </div>
       </div>
+
+      {/* --- PESTAÑA: ARQUEO DE CAJA --- */}
+      {pestana === 'caja' && <CorteCaja evento={eventoDetalle} modo="recarga" />}
 
       {/* --- PESTAÑA: ESCANEAR --- */}
       {pestana === 'escanear' && (

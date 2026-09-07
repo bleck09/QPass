@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
-  FaChartPie, FaUsers, FaSignOutAlt, FaUserCircle,
-  FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet,
-  FaExclamationTriangle, FaBars, FaCalendarAlt, FaLink,
+  FaChartPie, FaChartBar, FaUsers, FaSignOutAlt, FaUserCircle,
+  FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet, FaMoneyBillWave,
+  FaExclamationTriangle, FaBars, FaCalendarAlt, FaLink, FaHistory,
   FaSun, FaMoon
 } from 'react-icons/fa';
 import { MdAccountBalance, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'react-icons/md';
@@ -15,21 +15,24 @@ import './MenuLateral.css';
 // Configuración de menús según el rol
 const menuConfig = {
   [ROLES.ADMIN]: [
-    { titulo: 'Dashboard General', ruta: '/admin', icono: <FaChartPie /> },
+    { titulo: 'Dashboard General', ruta: '/admin/general', icono: <FaChartPie /> },
+    { titulo: 'Por Eventos', ruta: '/admin', icono: <FaChartBar /> },
     { titulo: 'Gestión de Eventos', ruta: '/admin/eventos', icono: <FaCalendarAlt /> },
     { titulo: 'Gestión de Usuarios', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
     // Tickets del Evento, Generar QR, Configurar Página y Mapa se acceden desde
     // Gestión de Eventos (accesos rápidos del detalle), no desde la barra lateral.
-    { titulo: 'Reportes', ruta: '/admin/reportes', icono: <FaExclamationTriangle /> }
+    { titulo: 'Reportes', ruta: '/admin/reportes', icono: <FaExclamationTriangle /> },
+    { titulo: 'Auditoría', ruta: '/admin/auditoria', icono: <FaHistory /> }
   ],
   [ROLES.CLIENTE]: [
     { titulo: 'Mi Propuesta', ruta: '/Cliente', icono: <FaCashRegister /> },
     { titulo: 'Dashboard General', ruta: '/Cliente/dashboard', icono: <FaChartPie /> }
   ],
   [ROLES.RECARGADOR]: [
-    { titulo: 'Mi Caja', ruta: '/recargador', icono: <FaCashRegister /> },
+    { titulo: 'Recargar', ruta: '/recargador', icono: <FaCashRegister /> },
     { titulo: 'Historial Recargas', ruta: '/recargador/historial', icono: <FaFileInvoiceDollar /> },
-    { titulo: 'Incidencias', ruta: '/recargador/incidencias', icono: <FaExclamationTriangle /> }
+    { titulo: 'Incidencias', ruta: '/recargador/incidencias', icono: <FaExclamationTriangle /> },
+    { titulo: 'Arqueo de Caja', ruta: '/recargador/caja', icono: <FaMoneyBillWave /> }
   ],
   [ROLES.SUPERVISOR]: [
     { titulo: 'Panel de Control', ruta: '/supervisor', icono: <FaChartPie /> },
@@ -37,7 +40,8 @@ const menuConfig = {
   ],
   [ROLES.DEVOLUCION]: [
     { titulo: 'Gestión Devoluciones', ruta: '/devolucion', icono: <FaBoxOpen /> },
-    { titulo: 'Historial', ruta: '/devolucion/historial', icono: <FaFileInvoiceDollar /> }
+    { titulo: 'Historial', ruta: '/devolucion/historial', icono: <FaFileInvoiceDollar /> },
+    { titulo: 'Arqueo de Caja', ruta: '/devolucion/caja', icono: <FaMoneyBillWave /> }
   ],
   [ROLES.USUARIO_NORMAL]: [
     { titulo: 'Eventos', ruta: '/usuarionormal/eventos', icono: <FaCalendarAlt /> },

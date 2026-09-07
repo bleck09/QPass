@@ -12,13 +12,15 @@ import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaTimes, FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle,
-  FaMoneyBillWave, FaUser, FaBuilding, FaHistory, FaCamera, FaRedo, FaArrowLeft
+  FaMoneyBillWave, FaUser, FaBuilding, FaHistory, FaCamera, FaRedo, FaArrowLeft,
+  FaCashRegister
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirFotoCapturada } from '../../utils/imagenes.js';
 import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
+import CorteCaja from '../../components/CorteCaja.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
 import './Devolucion.css';
@@ -30,7 +32,9 @@ export default function Devolucion() {
   const sesion = leerSesion();
   const location = useLocation();
   const navigate = useNavigate();
-  const pestana = location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
+  const pestana = location.pathname.endsWith('/caja')
+    ? 'caja'
+    : location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
 
   // Carga primaria (eventos asignados + negocios) con cargando/error/reintentar (Manual 8.9).
   const cargarInicial = useCallback(async () => {
@@ -239,8 +243,19 @@ export default function Devolucion() {
           >
             <FaHistory aria-hidden="true" /> Historial ({retiros.length})
           </button>
+          <button
+            type="button"
+            className={pestana === 'caja' ? 'activo' : ''}
+            aria-current={pestana === 'caja' ? 'page' : undefined}
+            onClick={() => navigate('/devolucion/caja')}
+          >
+            <FaCashRegister aria-hidden="true" /> Arqueo de caja
+          </button>
         </div>
       </div>
+
+      {/* --- PESTAÑA: ARQUEO DE CAJA --- */}
+      {pestana === 'caja' && <CorteCaja evento={eventoDetalle} modo="devolucion" />}
 
       {/* --- PESTAÑA: ESCANEAR --- */}
       {pestana === 'escanear' && (

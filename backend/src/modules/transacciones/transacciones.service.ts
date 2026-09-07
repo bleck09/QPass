@@ -10,7 +10,12 @@
  * IncidenciasRecargaService), lo reutilizan para no romper la atomicidad.
  * ========================================================================= */
 
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
@@ -230,6 +235,71 @@ export class TransaccionesService {
         entradaId: params.entradaId,
         operadorId: params.operadorId,
       },
+    });
+  }
+
+  /**
+   * Revierte las 2 filas de una Venta anulada (§5.3), espejo de registrarVenta:
+   * le quita el saldo al negocio (guarded) y se lo reintegra al comprador.
+   * Deja 2 filas nuevas (reverso_venta / reverso_consumo) con el mismo ventaId.
+   */
+  async anularVenta(
+    tx: PrismaTx,
+    params: {
+      eventoId: string;
+      ventaId: string;
+      entradaId: string;
+      duenoEntradaId: number;
+      duenoNegocioId: number;
+      monto: number;
+      operadorId: number;
+    },
+  ) {
+    const clawback = await tx.usuario.updateMany({
+      where: { id: params.duenoNegocioId, saldo: { gte: params.monto } },
+      data: { saldo: { decrement: params.monto } },
+    });
+    if (clawback.count === 0) {
+      throw new ConflictException(
+        'El negocio ya retiró ese saldo; no se puede revertir automáticamente, hacé un ajuste manual.',
+      );
+    }
+
+    const negocio = await tx.usuario.findUniqueOrThrow({
+      where: { id: params.duenoNegocioId },
+      select: { saldo: true },
+    });
+    const comprador = await tx.usuario.update({
+      where: { id: params.duenoEntradaId },
+      data: { saldo: { increment: params.monto } },
+      select: { saldo: true },
+    });
+
+    await tx.transaccion.createMany({
+      data: [
+        {
+          eventoId: params.eventoId,
+          tipo: 'reverso_venta',
+          monto: params.monto,
+          saldoResultante: negocio.saldo,
+          usuarioId: params.duenoNegocioId,
+          entradaId: params.entradaId,
+          ventaId: params.ventaId,
+          operadorId: params.operadorId,
+          nota: 'anulación de venta',
+        },
+        {
+          eventoId: params.eventoId,
+          tipo: 'reverso_consumo',
+          monto: params.monto,
+          saldoResultante: comprador.saldo,
+          usuarioId: params.duenoEntradaId,
+          entradaId: params.entradaId,
+          ventaId: params.ventaId,
+          operadorId: params.operadorId,
+          nota: 'anulación de venta',
+        },
+      ],
     });
   }
 }

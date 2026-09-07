@@ -1,90 +1,37 @@
-import { useCallback, useMemo, useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  FaArrowLeft, FaDollarSign, FaShoppingCart, FaReceipt, FaWallet,
+  FaStore, FaClock, FaTrophy, FaUsers, FaBan,
+} from 'react-icons/fa';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useApi } from '../../utils/useApi.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import api from '../../api/index.js';
+import { leerSesion } from '../../api/client.js';
+import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import StatCard from '../../components/StatCard.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
-import Tabla from '../../components/Tabla.jsx';
-import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
-import {
-  FaStore, FaDollarSign, FaUsers, FaShoppingCart,
-  FaChartBar, FaTrophy, FaMedal, FaArrowLeft, FaBoxOpen, FaEye,
-  FaUserTie, FaRegClock, FaTag
-} from 'react-icons/fa';
-import api from '../../api/index.js';
-import { leerSesion } from '../../api/client.js';
+import Modal from '../../components/Modal.jsx';
+import SelectorRango from '../../components/SelectorRango.jsx';
+import { rangoDe } from '../../utils/rangoFechas.js';
+import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import './UsuNegoDasboar.css';
 import '../supervisor/GestionEntrega.css';
 
-const iniciales = (nombre = '') => nombre.substring(0, 2).toUpperCase();
-
-const DATA_VACIA = { totalIngresos: 0, totalVentas: 0, puestosActivos: 0, totalAyudantes: 0, topProductos: [], listaAyudantes: [], ventasPorPuesto: [] };
-
-// Construye el mismo shape que antes venía de mock, pero desde /puestos + /ventas + /puesto-ayudantes reales.
-const construirDashboard = async (eventoId, negocioId) => {
-  const puestos = await api.puestos.listar({ eventoId, negocioId });
-  if (puestos.length === 0) return DATA_VACIA;
-
-  const ventasPorPuestoRaw = await Promise.all(puestos.map(p => api.ventas.listar({ puestoId: p.id })));
-
-  const ayudantesPorId = new Map();
-  const ventasPorPuesto = puestos.map((puesto, idx) => {
-    const ventas = ventasPorPuestoRaw[idx];
-    const productosPorId = new Map(puesto.productos.map(p => [p.id, { id: p.id, nombre: p.nombre, precio: Number(p.precio), ventas: 0, ingresos: 0, historial: [] }]));
-
-    ventas.forEach(venta => {
-      puesto.ayudantes.forEach(a => ayudantesPorId.set(a.ayudante.id, { ...a.ayudante, sucursales: new Set([...(ayudantesPorId.get(a.ayudante.id)?.sucursales || []), puesto.nombre]) }));
-
-      venta.items.forEach(item => {
-        const prod = productosPorId.get(item.productoId) || { id: item.productoId, nombre: item.nombreProducto, precio: Number(item.precioUnitario), ventas: 0, ingresos: 0, historial: [] };
-        prod.ventas += item.cantidad;
-        prod.ingresos += Number(item.precioUnitario) * item.cantidad;
-        prod.historial.push({
-          idVenta: venta.id, hora: new Date(venta.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' }),
-          vendedor: venta.ayudante?.nombre || '—', precio: Number(item.precioUnitario),
-        });
-        productosPorId.set(prod.id, prod);
-      });
-    });
-
-    return {
-      id: puesto.id, nombre: puesto.nombre,
-      ingresos: ventas.reduce((s, v) => s + Number(v.montoTotal), 0),
-      ventas: ventas.length,
-      ayudantes: puesto.ayudantes.length,
-      productos: [...productosPorId.values()],
-    };
-  });
-
-  const productosGlobales = new Map();
-  ventasPorPuesto.forEach(p => p.productos.forEach(prod => {
-    const actual = productosGlobales.get(prod.nombre) || { id: prod.id, nombre: prod.nombre, ventas: 0, ingresos: 0 };
-    actual.ventas += prod.ventas;
-    actual.ingresos += prod.ingresos;
-    productosGlobales.set(prod.nombre, actual);
-  }));
-
-  return {
-    totalIngresos: ventasPorPuesto.reduce((s, p) => s + p.ingresos, 0),
-    totalVentas: ventasPorPuesto.reduce((s, p) => s + p.ventas, 0),
-    puestosActivos: puestos.length,
-    totalAyudantes: ayudantesPorId.size,
-    topProductos: [...productosGlobales.values()].sort((a, b) => b.ingresos - a.ingresos).slice(0, 5),
-    listaAyudantes: [...ayudantesPorId.values()].map(a => ({ ...a, sucursales: [...a.sucursales], avatar: iniciales(a.nombre) })),
-    ventasPorPuesto,
-  };
-};
+const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })}`;
+const fmtHoraNum = (h) => `${String(h).padStart(2, '0')}:00`;
+const fmtHora = (iso) => new Date(iso).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
 
 export default function UsuNegoDasboar() {
   useTituloPagina('Dashboard de negocio');
   const sesion = leerSesion();
+
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const eventoId = eventoSeleccionado?.id || '';
-  const [cargarGrafico, setCargarGrafico] = useState(false);
 
-  // Carga primaria (eventos asignados) y dashboard del evento, cada uno con sus
-  // estados cargando/error/reintentar (Manual 8.9).
+  // --- Carga 1: eventos asignados (para el selector) ---
   const cargarEventos = useCallback(
     () => api.eventos.misAsignados(sesion.id, sesion.rol),
     [sesion.id, sesion.rol],
@@ -103,56 +50,68 @@ export default function UsuNegoDasboar() {
     [eventos, busquedaEvento, filtroEvento],
   );
 
-  const cargarDashboard = useCallback(
-    () => construirDashboard(eventoId, sesion.id),
-    [eventoId, sesion.id],
+  // --- Carga 2: dashboard del evento elegido ---
+  const [rango, setRango] = useState('todo'); // por defecto: todo el evento
+  const cargarDash = useCallback(
+    () => api.dashboard.negocio(eventoId, rangoDe(rango)),
+    [eventoId, rango],
   );
   const {
     data,
-    cargando: cargandoData,
-    error: errorData,
-    recargar: recargarDashboard,
-  } = useApi(cargarDashboard, { inicial: DATA_VACIA, activo: !!eventoId });
+    cargando,
+    error,
+    recargar,
+  } = useApi(cargarDash, { inicial: null, activo: !!eventoId });
 
-  // SISTEMA DE VISTAS (PANTALLA COMPLETA)
-  // 'GENERAL' | 'SUCURSAL' | 'AYUDANTES' | 'PRODUCTO'
-  const [vistaActual, setVistaActual] = useState('GENERAL');
-
-  // Datos temporales de la vista seleccionada
-  const [sucursalSeleccionada, setSucursalSeleccionada] = useState(null);
-  const [productoSeleccionado, setProductoSeleccionado] = useState(null);
-  const [busquedaAyudantes, setBusquedaAyudantes] = useState('');
-  const [busquedaHistProd, setBusquedaHistProd] = useState('');
+  // Anima las barras: cada vez que cambia el evento, vuelven a crecer desde 0.
+  const [animar, setAnimar] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setAnimar(true), 100);
+    return () => {
+      clearTimeout(t);
+      setAnimar(false);
+    };
+  }, [eventoId]);
 
   const volverALista = () => setEventoSeleccionado(null);
 
-  // Efecto para animar barras sin error de React
-  useEffect(() => {
-    const timer = setTimeout(() => setCargarGrafico(true), 100);
-    return () => {
-      clearTimeout(timer);
-      setCargarGrafico(false);
-    };
-  }, [vistaActual]);
+  // Anulación de venta (§5.3)
+  const [ventaAnular, setVentaAnular] = useState(null);
+  const [motivoAnular, setMotivoAnular] = useState('');
+  const [anulando, setAnulando] = useState(false);
+  const [errAnular, setErrAnular] = useState('');
+  const confirmarAnular = async () => {
+    if (motivoAnular.trim().length < 3) return;
+    setAnulando(true);
+    setErrAnular('');
+    try {
+      await api.ventas.anular(ventaAnular.id, motivoAnular.trim());
+      setVentaAnular(null);
+      setMotivoAnular('');
+      await recargar();
+    } catch (e) {
+      setErrAnular(e.message);
+    } finally {
+      setAnulando(false);
+    }
+  };
 
-  // ==============================================================
-  // RENDER: 0. SELECCIÓN DE EVENTO (antes de mostrar cualquier vista)
-  // ==============================================================
+  // ---------- SELECTOR DE EVENTO ----------
   if (!eventoSeleccionado) {
     return (
-      <div className="pi-dashboard-container animate-fade">
-        <div className="pi-dashboard-header">
-          <div>
-            <h1>Dashboard general</h1>
-            <p>Elige el evento del que quieres ver el resumen.</p>
-          </div>
+      <div className="pi-ngd-container">
+        <div className="pi-ngd-header">
+          <h1>Dashboard de negocio</h1>
+          <p>Elige el evento del que quieres ver el resumen.</p>
         </div>
         {errorEventos ? (
           <EstadoError onReintentar={recargarEventos} />
         ) : cargandoEventos ? (
           <EstadoCarga filas={3} />
         ) : eventos.length === 0 ? (
-          <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+          <p className="pi-entrega-sin-eventos">
+            Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.
+          </p>
         ) : (
           <>
             <Buscador
@@ -166,7 +125,7 @@ export default function UsuNegoDasboar() {
               etiquetaFiltros="Filtrar eventos por estado"
             />
             <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
-              {ev => (
+              {(ev) => (
                 <EventoCard
                   key={ev.id}
                   evento={ev}
@@ -181,382 +140,219 @@ export default function UsuNegoDasboar() {
     );
   }
 
-  // Estados de la carga del dashboard (Manual 8.9), antes de cualquier vista.
-  if (errorData || cargandoData) {
-    return (
-      <div className="pi-dashboard-container animate-fade">
-        <div className="pi-dashboard-header">
-          <div>
-            <button className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={volverALista}>
-              <FaArrowLeft /> Cambiar de evento
-            </button>
-            <h1>{eventoSeleccionado.nombre}</h1>
-          </div>
+  // ---------- DASHBOARD ----------
+  return (
+    <div className="pi-ngd-container">
+      <div className="pi-ngd-header">
+        <button className="pi-entrega-btn-volver" onClick={volverALista}>
+          <FaArrowLeft /> Cambiar de evento
+        </button>
+        <h1>{eventoSeleccionado.nombre}</h1>
+        <p>Resumen de tus puestos y ventas en este evento.</p>
+        <div className="pi-ngd-rango">
+          <SelectorRango valor={rango} onCambio={setRango} />
         </div>
-        {errorData
-          ? <EstadoError onReintentar={recargarDashboard} />
-          : <EstadoCarga filas={5} />}
       </div>
-    );
-  }
 
-  // ==============================================================
-  // RENDER: 1. VISTA DASHBOARD GENERAL
-  // ==============================================================
-  if (vistaActual === 'GENERAL') {
-    const maxIngresoGeneral = Math.max(...data.ventasPorPuesto.map(p => p.ingresos), 1);
+      {error ? (
+        <EstadoError onReintentar={recargar} />
+      ) : cargando || !data ? (
+        <EstadoCarga filas={8} />
+      ) : data.resumen.puestos === 0 ? (
+        <p className="pi-entrega-sin-eventos">No tienes puestos en este evento.</p>
+      ) : (
+        <>
+          {/* --- RESUMEN (§3.1) --- */}
+          <section className="pi-ngd-seccion">
+            <h3 className="pi-ngd-seccion-titulo">Resumen del evento</h3>
+            <div className="pi-ngd-grid">
+              <StatCard
+                icon={<FaDollarSign />}
+                tono="ok"
+                valor={fmtBs(data.resumen.ingresoTotal)}
+                label="Ventas del evento"
+                extra={data.resumen.anuladas?.cantidad > 0
+                  ? <span className="pi-ngd-nota">{data.resumen.anuladas.cantidad} anuladas ({fmtBs(data.resumen.anuladas.monto)})</span>
+                  : null}
+              />
+              <StatCard icon={<FaShoppingCart />} tono="total" valor={data.resumen.totalVentas} label="N.º de ventas" />
+              <StatCard icon={<FaReceipt />} valor={fmtBs(data.resumen.ticketPromedio)} label="Ticket promedio" />
+              <StatCard
+                icon={<FaWallet />}
+                tono="info"
+                valor={fmtBs(data.resumen.acreditadoBilletera)}
+                label="Acreditado a mi billetera"
+                extra={<span className="pi-ngd-nota">debe coincidir con ventas</span>}
+              />
+              <StatCard
+                icon={<FaWallet />}
+                valor={fmtBs(data.resumen.saldoBilletera)}
+                label="Saldo total en mi billetera"
+                extra={<span className="pi-ngd-nota">todos los eventos</span>}
+              />
+            </div>
+          </section>
 
-    return (
-      <div className="pi-dashboard-container animate-fade">
-        <div className="pi-dashboard-header">
-          <div>
-            <button className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={volverALista}>
-              <FaArrowLeft /> Cambiar de evento
-            </button>
-            <h1>{eventoSeleccionado.nombre}</h1>
-            <p>Resumen global de todos tus puestos y personal asignado.</p>
-          </div>
-        </div>
+          {/* --- VENTAS POR HORA (W1) --- */}
+          <section className="pi-ngd-seccion">
+            <h3 className="pi-ngd-seccion-titulo"><FaClock aria-hidden="true" /> Ventas por hora</h3>
+            <VentasPorHora data={data.ventasPorHora} animar={animar} />
+          </section>
 
-        <div className="pi-dashboard-kpi-grid">
-          <div className="kpi-card card-ingresos">
-            <div className="kpi-icon-wrapper"><FaDollarSign /></div>
-            <div className="kpi-info">
-              <span className="micro-etiqueta">Ingresos Totales</span>
-              <h3 className="numero-grande">Bs. {data.totalIngresos.toFixed(2)}</h3>
-            </div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper icon-ventas"><FaShoppingCart /></div>
-            <div className="kpi-info">
-              <span className="micro-etiqueta">Ventas Globales</span>
-              <h3 className="numero-grande">{data.totalVentas}</h3>
-            </div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper icon-puestos"><FaStore /></div>
-            <div className="kpi-info">
-              <span className="micro-etiqueta">Sucursales</span>
-              <h3 className="numero-grande">{data.puestosActivos}</h3>
-            </div>
-          </div>
-          
-          {/* TARJETA AYUDANTES CLICKABLE -> LLEVA A VISTA AYUDANTES */}
-          <div 
-            className="kpi-card kpi-clickable" 
-            onClick={() => setVistaActual('AYUDANTES')}
-            title="Ver lista de personal"
-          >
-            <div className="kpi-icon-wrapper icon-ayudantes"><FaUsers /></div>
-            <div className="kpi-info">
-              <span className="micro-etiqueta">Total Ayudantes (Ver Todo)</span>
-              <h3 className="numero-grande">{data.totalAyudantes}</h3>
-            </div>
-          </div>
-        </div>
-
-        <div className="pi-dashboard-charts-grid">
-          <div className="pi-dashboard-card chart-section">
-            <div className="card-header">
-              <h3><FaChartBar className="icon-title" /> Ingresos por Sucursal</h3>
-            </div>
-            <div className="css-bar-chart">
-              {data.ventasPorPuesto.map((puesto) => {
-                const alturaPorcentaje = cargarGrafico ? (puesto.ingresos / maxIngresoGeneral) * 100 : 0;
+          {/* --- TOP PRODUCTOS (W2) --- */}
+          <section className="pi-ngd-seccion">
+            <h3 className="pi-ngd-seccion-titulo"><FaTrophy aria-hidden="true" /> Top productos</h3>
+            <Tabla
+              columnas={['Producto', { texto: 'Unidades', align: 'center' }, 'Ingresos']}
+              datos={data.topProductos}
+              vacio="Todavía no hay ventas con productos."
+              renderFila={(p) => {
+                const max = data.topProductos[0]?.ingresos || 1;
                 return (
-                  <div key={puesto.id} className="bar-column">
-                    <span className="bar-value">Bs. {puesto.ingresos.toFixed(0)}</span>
-                    <div className="bar-track">
-                      <div className="bar-fill" style={{ height: `${alturaPorcentaje}%` }}></div>
-                    </div>
-                    <span className="bar-label">{puesto.nombre}</span>
-                  </div>
+                  <tr key={p.nombre}>
+                    <td>{p.nombre}</td>
+                    <td style={{ textAlign: 'center' }}>{p.unidades}</td>
+                    <td>
+                      <div className="pi-ngd-bar" aria-hidden="true">
+                        <div className="pi-ngd-bar-fill" style={{ width: `${Math.round((p.ingresos / max) * 100)}%` }} />
+                      </div>
+                      <span className="pi-ngd-bar-txt">{fmtBs(p.ingresos)}</span>
+                    </td>
+                  </tr>
                 );
-              })}
-            </div>
-          </div>
+              }}
+            />
+          </section>
 
-          <div className="pi-dashboard-card top-section">
-            <div className="card-header">
-              <h3><FaTrophy className="icon-title" color="var(--ambar-aviso)" /> Top Global</h3>
-            </div>
-            <div className="top-productos-list">
-              {data.topProductos.map((prod, index) => (
-                <div key={prod.id} className="top-producto-item">
-                  <div className="top-rank">
-                    {index === 0 ? <FaMedal color="#F59E0B" size={24} /> : 
-                     index === 1 ? <FaMedal color="#9CA3AF" size={24} /> : 
-                                   <FaMedal color="#B45309" size={24} />}
-                  </div>
-                  <div className="top-info">
-                    <span className="top-nombre">{prod.nombre}</span>
-                    <span className="top-ventas">{prod.ventas} vendidos</span>
-                  </div>
-                  <div className="top-ingreso">Bs. {prod.ingresos.toFixed(0)}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+          {/* --- POR PUESTO (W3) — solo si hay más de uno --- */}
+          {data.porPuesto.length > 1 && (
+            <section className="pi-ngd-seccion">
+              <h3 className="pi-ngd-seccion-titulo"><FaStore aria-hidden="true" /> Ventas por puesto</h3>
+              <Tabla
+                columnas={['Puesto', { texto: 'Ventas', align: 'center' }, 'Ingresos']}
+                datos={data.porPuesto}
+                vacio="Sin datos."
+                renderFila={(p) => (
+                  <tr key={p.id}>
+                    <td>{p.nombre}</td>
+                    <td style={{ textAlign: 'center' }}>{p.ventas}</td>
+                    <td>{fmtBs(p.ingresos)}</td>
+                  </tr>
+                )}
+              />
+            </section>
+          )}
 
-        {/* TARJETAS SUCURSALES -> LLEVA A VISTA SUCURSAL */}
-        <div className="pi-dashboard-card" style={{ background: 'transparent', border: 'none', boxShadow: 'none', padding: '0' }}>
-          <div className="card-header" style={{ marginBottom: '15px' }}>
-            <h3><FaStore className="icon-title" /> Mis Sucursales (Click para detalles)</h3>
-          </div>
-          <div className="pi-sucursales-grid">
-            {data.ventasPorPuesto.map(sucursal => (
-              <div 
-                key={sucursal.id} 
-                className="pi-sucursal-card" 
-                onClick={() => {
-                  setSucursalSeleccionada(sucursal);
-                  setVistaActual('SUCURSAL');
-                }}
+          {/* --- POR AYUDANTE (W4) --- */}
+          <section className="pi-ngd-seccion">
+            <h3 className="pi-ngd-seccion-titulo"><FaUsers aria-hidden="true" /> Ventas por ayudante</h3>
+            <Tabla
+              columnas={['Ayudante', { texto: 'Ventas', align: 'center' }, 'Ingresos', 'Ticket promedio']}
+              datos={data.porAyudante}
+              vacio="Todavía no hay ventas."
+              renderFila={(a) => (
+                <tr key={a.id}>
+                  <td>{a.nombre}</td>
+                  <td style={{ textAlign: 'center' }}>{a.ventas}</td>
+                  <td>{fmtBs(a.ingresos)}</td>
+                  <td>{fmtBs(a.ticketPromedio)}</td>
+                </tr>
+              )}
+            />
+          </section>
+
+          {/* --- ÚLTIMAS VENTAS (W5) --- */}
+          <section className="pi-ngd-seccion">
+            <h3 className="pi-ngd-seccion-titulo"><FaShoppingCart aria-hidden="true" /> Últimas ventas</h3>
+            <Tabla
+              columnas={['Hora', 'Puesto', 'Ayudante', { texto: 'N.º entrada', align: 'center' }, 'Monto', { texto: 'Ítems', align: 'center' }, { texto: 'Acciones', srOnly: true }]}
+              datos={data.ultimasVentas}
+              vacio="Todavía no hay ventas en este evento."
+              renderFila={(v) => (
+                <tr key={v.id} className={v.anulada ? 'pi-ngd-fila-anulada' : ''}>
+                  <td>{fmtHora(v.createdAt)}</td>
+                  <td>{v.puesto}</td>
+                  <td>{v.ayudante}</td>
+                  <td style={{ textAlign: 'center' }}>{v.entradaNumero ?? '—'}</td>
+                  <td>{fmtBs(v.monto)}</td>
+                  <td style={{ textAlign: 'center' }}>{v.items}</td>
+                  <td style={{ textAlign: 'right' }}>
+                    {v.anulada
+                      ? <span className="pi-ngd-badge-anulada">Anulada</span>
+                      : (
+                        <button type="button" className="pi-ngd-btn-anular" onClick={() => { setVentaAnular(v); setMotivoAnular(''); setErrAnular(''); }}>
+                          <FaBan aria-hidden="true" /> Anular
+                        </button>
+                      )}
+                  </td>
+                </tr>
+              )}
+            />
+          </section>
+        </>
+      )}
+
+      {ventaAnular && (
+        <Modal titulo="Anular venta" onCerrar={() => setVentaAnular(null)} tamano="sm">
+          <div className="pi-ngd-form-anular">
+            <p>
+              Vas a anular una venta de <strong>{fmtBs(ventaAnular.monto)}</strong> ({ventaAnular.puesto},
+              ayudante {ventaAnular.ayudante}). El saldo vuelve al comprador y se le descuenta a tu billetera.
+            </p>
+            <label htmlFor="ngd-motivo">Motivo</label>
+            <textarea
+              id="ngd-motivo"
+              rows={2}
+              placeholder="Ej: cobró 50 en vez de 5"
+              value={motivoAnular}
+              onChange={(e) => setMotivoAnular(e.target.value)}
+              autoFocus
+            />
+            {errAnular && <p className="pi-ngd-err">{errAnular}</p>}
+            <div className="pi-ngd-form-acciones">
+              <button type="button" className="pi-ngd-btn-sec" onClick={() => setVentaAnular(null)} disabled={anulando}>Cancelar</button>
+              <button
+                type="button"
+                className="pi-ngd-btn-anular pi-ngd-btn-anular--fuerte"
+                onClick={confirmarAnular}
+                disabled={anulando || motivoAnular.trim().length < 3}
               >
-                <div className="sucursal-card-header">
-                  <div className="suc-icon"><FaStore /></div>
-                  <h4>{sucursal.nombre}</h4>
-                </div>
-                <div className="sucursal-card-body">
-                  <div className="suc-stat">
-                    <span>Recaudado</span>
-                    <strong>Bs. {sucursal.ingresos.toFixed(2)}</strong>
-                  </div>
-                  <div className="suc-stat">
-                    <span>Ventas</span>
-                    <strong>{sucursal.ventas}</strong>
-                  </div>
-                  <div className="suc-stat">
-                    <span>Ayudantes</span>
-                    <strong>{sucursal.ayudantes} <FaUsers size={12} color="var(--gris-medio)"/></strong>
-                  </div>
-                </div>
-                <div className="sucursal-card-footer">
-                  <span>Ver rendimiento detallado →</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ==============================================================
-  // RENDER: 2. VISTA TABLA DE AYUDANTES (PANTALLA COMPLETA)
-  // ==============================================================
-  if (vistaActual === 'AYUDANTES') {
-    return (
-      <div className="pi-dashboard-container animate-fade">
-        <div className="pi-fullpage-card">
-          
-          <button className="pi-btn-back-clean" onClick={() => setVistaActual('GENERAL')}>
-            <FaArrowLeft /> Volver al dashboard
-          </button>
-          
-          <h1 className="pi-fullpage-title">Personal asignado</h1>
-          
-          <Buscador
-            valor={busquedaAyudantes}
-            onCambio={setBusquedaAyudantes}
-            placeholder="Buscar por nombre o sucursal…"
-          />
-
-          <Tabla
-            columnas={['Ayudante', 'Rol', 'Sucursales Asignadas']}
-            datos={data.listaAyudantes.filter((a) => {
-              const q = busquedaAyudantes.trim().toLowerCase();
-              if (!q) return true;
-              return `${a.nombre} ${(a.sucursales || []).join(' ')}`.toLowerCase().includes(q);
-            })}
-            vacio={busquedaAyudantes.trim() ? 'Ningún ayudante coincide con la búsqueda.' : 'Aún no hay ayudantes asignados.'}
-            renderFila={ayudante => (
-              <tr key={ayudante.id}>
-                <td>
-                  <div className="user-cell">
-                    <div className="user-avatar-small">{ayudante.avatar}</div>
-                    <strong>{ayudante.nombre}</strong>
-                  </div>
-                </td>
-                <td style={{ color: 'var(--texto-secundario)' }}>Ayudante</td>
-                <td>
-                  <div className="badge-sucursal-container">
-                    {ayudante.sucursales.map((suc, i) => (
-                      <span key={i} className="badge-sucursal">{suc}</span>
-                    ))}
-                  </div>
-                </td>
-              </tr>
-            )}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // ==============================================================
-  // RENDER: 3. VISTA SUCURSAL DETALLADA
-  // ==============================================================
-  if (vistaActual === 'SUCURSAL' && sucursalSeleccionada) {
-    const maxIngresoProducto = Math.max(...sucursalSeleccionada.productos.map(p => p.ingresos), 1);
-
-    return (
-      <div className="pi-dashboard-container animate-fade">
-        
-        <div className="pi-dashboard-header header-sucursal">
-          <div>
-            <button className="pi-btn-back-clean" onClick={() => setVistaActual('GENERAL')}>
-              <FaArrowLeft /> Volver al dashboard
-            </button>
-            <h1 style={{marginTop: '15px'}}>{sucursalSeleccionada.nombre}</h1>
-            <p>Desglose de productos y rendimiento específico de este puesto.</p>
-          </div>
-        </div>
-
-        <div className="pi-dashboard-kpi-grid">
-          <div className="kpi-card card-ingresos">
-            <div className="kpi-icon-wrapper"><FaDollarSign /></div>
-            <div className="kpi-info">
-              <span className="micro-etiqueta">Ingresos Sucursal</span>
-              <h3 className="numero-grande">Bs. {sucursalSeleccionada.ingresos.toFixed(2)}</h3>
+                <FaBan aria-hidden="true" /> Anular venta
+              </button>
             </div>
           </div>
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper icon-ventas"><FaShoppingCart /></div>
-            <div className="kpi-info">
-              <span className="micro-etiqueta">Ventas Sucursal</span>
-              <h3 className="numero-grande">{sucursalSeleccionada.ventas}</h3>
-            </div>
-          </div>
-          <div className="kpi-card">
-            <div className="kpi-icon-wrapper" style={{background: 'var(--indigo-profundo-suave)', color: 'var(--indigo-profundo)'}}><FaBoxOpen /></div>
-            <div className="kpi-info">
-              <span className="micro-etiqueta">Tipos de Productos</span>
-              <h3 className="numero-grande">{sucursalSeleccionada.productos.length}</h3>
-            </div>
-          </div>
-        </div>
+        </Modal>
+      )}
+    </div>
+  );
+}
 
-        <div className="pi-dashboard-card chart-section" style={{ marginBottom: '24px' }}>
-          <div className="card-header">
-            <h3><FaChartBar className="icon-title" /> Rendimiento por Producto (Ganancia)</h3>
-          </div>
-          <div className="css-bar-chart">
-            {sucursalSeleccionada.productos.map((prod) => {
-              const alturaPorcentaje = cargarGrafico ? (prod.ingresos / maxIngresoProducto) * 100 : 0;
-              return (
-                <div key={prod.id} className="bar-column">
-                  <span className="bar-value">Bs. {prod.ingresos.toFixed(0)}</span>
-                  <div className="bar-track">
-                    <div className="bar-fill" style={{ height: `${alturaPorcentaje}%` }}></div>
-                  </div>
-                  <span className="bar-label">{prod.nombre}</span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="pi-dashboard-card">
-          <div className="card-header">
-            <h3><FaShoppingCart className="icon-title" /> Desglose de Ventas</h3>
-          </div>
-          <Tabla
-            columnas={['Producto Vendido', { texto: 'Precio Unit.', align: 'center' }, { texto: 'Cantidad', align: 'center' }, { texto: 'Total Generado', align: 'right' }, { texto: 'Acciones', align: 'center' }]}
-            datos={sucursalSeleccionada.productos}
-            vacio="Este puesto todavía no tiene productos."
-            renderFila={prod => (
-              <tr key={prod.id}>
-                <td className="fila-nombre">
-                  <FaBoxOpen style={{ color: 'var(--gris-medio)', marginRight: '8px' }}/>
-                  {prod.nombre}
-                </td>
-                <td style={{ textAlign: 'center', color: 'var(--texto-secundario)' }}>
-                  Bs. {prod.precio.toFixed(2)}
-                </td>
-                <td style={{ textAlign: 'center' }}>
-                  <span className="badge-ayudante">{prod.ventas} un.</span>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <span className="badge-ingreso">Bs. {prod.ingresos.toFixed(2)}</span>
-                </td>
-                <td style={{ textAlign: 'center' }}>
-                  {/* LLEVA A VISTA HISTORIAL PRODUCTO */}
-                  <button
-                    className="btn-ver-detalles"
-                    onClick={() => {
-                      setProductoSeleccionado(prod);
-                      setVistaActual('PRODUCTO');
-                    }}
-                  >
-                    <FaEye /> Detalles
-                  </button>
-                </td>
-              </tr>
-            )}
-          />
-        </div>
-      </div>
-    );
+// Bar chart CSS: solo muestra el rango de horas con actividad para no apretar 24 barras.
+function VentasPorHora({ data, animar }) {
+  const conVentas = data.filter((h) => h.ventas > 0);
+  if (conVentas.length === 0) {
+    return <p className="pi-ngd-nota">Todavía no hay ventas registradas.</p>;
   }
+  const desde = conVentas[0].hora;
+  const hasta = conVentas[conVentas.length - 1].hora;
+  const rango = data.slice(desde, hasta + 1);
+  const max = Math.max(...rango.map((h) => h.ingresos), 1);
 
-  // ==============================================================
-  // RENDER: 4. VISTA HISTORIAL DEL PRODUCTO (PANTALLA COMPLETA)
-  // ==============================================================
-  if (vistaActual === 'PRODUCTO' && productoSeleccionado) {
-    return (
-      <div className="pi-dashboard-container animate-fade">
-        <div className="pi-fullpage-card">
-          
-          <button className="pi-btn-back-clean" onClick={() => setVistaActual('SUCURSAL')}>
-            <FaArrowLeft /> Volver a {sucursalSeleccionada.nombre}
-          </button>
-          
-          <h1 className="pi-fullpage-title">Historial: {productoSeleccionado.nombre}</h1>
-          
-          <Buscador
-            valor={busquedaHistProd}
-            onCambio={setBusquedaHistProd}
-            placeholder="Buscar por vendedor o ID de venta…"
-          />
-
-          <Tabla
-            columnas={['ID Venta', 'Vendedor', 'Hora', { texto: 'Precio Pagado', align: 'right' }]}
-            datos={(() => {
-              const q = busquedaHistProd.trim().toLowerCase();
-              return !q
-                ? (productoSeleccionado.historial || [])
-                : (productoSeleccionado.historial || []).filter((v) =>
-                    `${v.vendedor || ''} ${v.idVenta || ''}`.toLowerCase().includes(q),
-                  );
-            })()}
-            vacio={busquedaHistProd.trim() ? 'No hay ventas que coincidan con la búsqueda.' : 'No hay registro de ventas recientes para este producto.'}
-            renderFila={venta => (
-              <tr key={venta.idVenta}>
-                <td style={{fontWeight: '700', color: 'var(--texto-principal)'}}>
-                  <FaTag style={{color: 'var(--borde-medio)', marginRight: '6px'}}/>
-                  {venta.idVenta}
-                </td>
-                <td>
-                  <div className="user-cell">
-                    <FaUserTie style={{color: 'var(--gris-medio)'}}/>
-                    {venta.vendedor}
-                  </div>
-                </td>
-                <td style={{color: 'var(--texto-secundario)'}}>
-                  <FaRegClock style={{marginRight: '5px'}}/> {venta.hora}
-                </td>
-                <td style={{textAlign: 'right'}}>
-                  <span className="badge-ingreso">Bs. {venta.precio.toFixed(2)}</span>
-                </td>
-              </tr>
-            )}
-          />
+  return (
+    <div className="pi-ngd-chart">
+      {rango.map((h) => (
+        <div key={h.hora} className="pi-ngd-bar-col">
+          <span className="pi-ngd-bar-val">{h.ventas || ''}</span>
+          <div className="pi-ngd-bar-track">
+            <div
+              className="pi-ngd-bar-grow"
+              style={{ height: animar ? `${(h.ingresos / max) * 100}%` : 0 }}
+              title={`${fmtHoraNum(h.hora)} — ${fmtBs(h.ingresos)} · ${h.ventas} ventas`}
+            />
+          </div>
+          <span className="pi-ngd-bar-lbl">{fmtHoraNum(h.hora)}</span>
         </div>
-      </div>
-    );
-  }
-
-  return null;
+      ))}
+    </div>
+  );
 }
