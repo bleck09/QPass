@@ -91,7 +91,8 @@
 .pi-layout-nav-content {
   display: flex; align-items: center; gap: 16px;
   padding: 16px 20px;
-  color: var(--text-secondary);
+  /* El sidebar siempre es azul-noche, no sigue el tema: texto claro fijo */
+  color: rgba(255, 255, 255, 0.72);
   position: relative;
   z-index: 2;
   white-space: nowrap;

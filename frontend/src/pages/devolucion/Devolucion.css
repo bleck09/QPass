@@ -51,6 +51,7 @@
 /* --- PANEL DE ESCANEO --- */
 .pi-dev-escanear-panel {
   background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   padding: 60px 32px;
   display: flex;

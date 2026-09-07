@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
@@ -145,6 +145,52 @@ export default function Admin({
 
   const vistaActual = enReportes ? 'incidencias' : vistaDetalle;
   const mostrarSelectorEventos = !eventoSeleccionado && !enReportes && !enSolicitudes;
+
+  // --- Botón "atrás" del navegador dentro del panel del evento ---
+  // Las sub-vistas (Detalle de Participantes, Recargadores, ítem abierto, …) son
+  // estado interno del componente, no rutas: sin esto, "atrás" salta fuera de
+  // /admin (a la última página real: el menú lateral, Reportes, etc.). Apilamos
+  // una entrada de historial por cada sub-nivel abierto y la consumimos en
+  // popstate, de modo que "atrás" recorra ítem -> lista -> dashboard -> salir.
+  const nivelesHistorialRef = useRef(0);   // entradas apiladas aún vivas
+  const ignorarPopRef = useRef(0);          // popstates que disparamos nosotros y no hay que procesar
+  const navRef = useRef({});
+  navRef.current = { vistaDetalle, itemSeleccionado, enReportes, enSolicitudes };
+
+  const apilarNivel = () => {
+    if (embebido) return;
+    nivelesHistorialRef.current += 1;
+    window.history.pushState({ qpAdminNivel: true }, '');
+  };
+
+  useEffect(() => {
+    if (embebido) return undefined;
+    const alRetroceder = () => {
+      if (ignorarPopRef.current > 0) { ignorarPopRef.current -= 1; return; }
+      const s = navRef.current;
+      if (s.itemSeleccionado != null) {
+        setItemSeleccionado(null);
+        nivelesHistorialRef.current = Math.max(0, nivelesHistorialRef.current - 1);
+      } else if (s.vistaDetalle != null && !s.enReportes && !s.enSolicitudes) {
+        setVistaDetalle(null);
+        setFiltroEntradas(null);
+        setBusqueda('');
+        nivelesHistorialRef.current = Math.max(0, nivelesHistorialRef.current - 1);
+      }
+    };
+    window.addEventListener('popstate', alRetroceder);
+    return () => window.removeEventListener('popstate', alRetroceder);
+  }, [embebido]);
+
+  // Desapila (sin re-procesar) las entradas que agregamos, para que tras volver
+  // por la UI el botón "atrás" del navegador no quede con pasos muertos.
+  const desapilarNiveles = (cuantos = nivelesHistorialRef.current) => {
+    const n = Math.min(cuantos, nivelesHistorialRef.current);
+    if (n <= 0) return;
+    nivelesHistorialRef.current -= n;
+    ignorarPopRef.current += 1;
+    window.history.go(-n);
+  };
   const eventosSelectorFiltrados = useMemo(
     () => filtrarEventos(eventosDisponibles, busquedaEvento, filtroEvento),
     [eventosDisponibles, busquedaEvento, filtroEvento],
@@ -508,6 +554,13 @@ export default function Admin({
       api.compras.listar({ eventoId }).then(setSolicitudes);
       setSolicitudAbierta(null);
     }
+    apilarNivel();
+  };
+
+  // Abrir el detalle de una persona/negocio dentro de una vista (otro sub-nivel).
+  const abrirItem = (id) => {
+    setItemSeleccionado(id);
+    apilarNivel();
   };
 
   const volver = () => {
@@ -516,7 +569,8 @@ export default function Admin({
     setVistaDetalle(null);
     setFiltroEntradas(null);
     // Si se entró directo por /admin/reportes o /admin/solicitudes, "volver" regresa al dashboard real.
-    if (enReportes || enSolicitudes) navigate('/admin');
+    if (enReportes || enSolicitudes) { navigate('/admin'); return; }
+    desapilarNiveles();
   };
 
   const seleccionarEvento = (id) => {
@@ -532,7 +586,10 @@ export default function Admin({
 
   const volverAlEvento = () => navigate('/admin/eventos', { state: { eventoId: eventoIdDesdeState } });
 
-  const volverALaLista = () => setItemSeleccionado(null);
+  const volverALaLista = () => {
+    setItemSeleccionado(null);
+    desapilarNiveles(1);
+  };
 
   // Ruta de migas del panel: reemplaza los dos botones "Cambiar de evento" +
   // "Volver al dashboard" apilados por una sola línea Eventos › Evento › Vista › Ítem.
@@ -834,7 +891,7 @@ export default function Admin({
                     <td>{r.nombre}</td>
                     <td className="pi-dash-monto-celda"><FaCoins color="var(--verde-recarga-texto)" /> {r.totalRecargado} pts</td>
                     <td>
-                      <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(r.id)}>
+                      <button type="button" className="pi-dash-btn-ver" onClick={() => abrirItem(r.id)}>
                         <FaExchangeAlt /> Ver recargas
                       </button>
                     </td>
@@ -884,7 +941,7 @@ export default function Admin({
                     <td>{d.nombre}</td>
                     <td className="pi-dash-monto-celda"><FaBoxOpen color="var(--ambar-aviso-texto)" /> {d.totalDevuelto} pts</td>
                     <td>
-                      <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(d.id)}>
+                      <button type="button" className="pi-dash-btn-ver" onClick={() => abrirItem(d.id)}>
                         <FaExchangeAlt /> Ver devoluciones
                       </button>
                     </td>
@@ -940,7 +997,7 @@ export default function Admin({
                     <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {n.ventasTotal} pts</td>
                     <td>{n.ayudantes}</td>
                     <td>
-                      <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(n.id)}>
+                      <button type="button" className="pi-dash-btn-ver" onClick={() => abrirItem(n.id)}>
                         <FaExchangeAlt /> Ver ventas
                       </button>
                     </td>

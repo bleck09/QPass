@@ -255,6 +255,14 @@
     --accent:       #38C7E6;
     --accent-hover: #5AD3EC;
 
+    /* Acentos de marca usados directo por CSS de componentes (S-C6b):
+       en oscuro el índigo navy se pierde sobre superficies oscuras.
+       Se aclara a un índigo medio legible como texto/ícono (AA sobre
+       --bg-surface) y aún válido como fondo de botón con texto claro. */
+    --indigo-profundo:       #6E80C8;
+    --indigo-profundo-hover:  #8291D2;
+    --indigo-profundo-suave: rgba(110, 128, 200, 0.16);
+
     --ok:     #34D399;  --ok-text:     #34D399;  --ok-bg:     rgba(0, 196, 140, 0.15);
     --warn:   #FBBF24;  --warn-text:   #FBBF24;  --warn-bg:   rgba(255, 176, 32, 0.15);
     --danger: #F87171;  --danger-text: #F87171;  --danger-bg: rgba(229, 72, 77, 0.16);
@@ -291,6 +299,14 @@
   --action-hover: #5A6FB8;
   --accent:       #38C7E6;
   --accent-hover: #5AD3EC;
+
+  /* Acentos de marca usados directo por CSS de componentes (S-C6b):
+     en oscuro el índigo navy se pierde sobre superficies oscuras.
+     Se aclara a un índigo medio legible como texto/ícono (AA sobre
+     --bg-surface) y aún válido como fondo de botón con texto claro. */
+  --indigo-profundo:       #6E80C8;
+  --indigo-profundo-hover:  #8291D2;
+  --indigo-profundo-suave: rgba(110, 128, 200, 0.16);
 
   --ok:     #34D399;  --ok-text:     #34D399;  --ok-bg:     rgba(0, 196, 140, 0.15);
   --warn:   #FBBF24;  --warn-text:   #FBBF24;  --warn-bg:   rgba(255, 176, 32, 0.15);
