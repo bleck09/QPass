@@ -47,6 +47,53 @@
   background-color: var(--indigo-profundo-hover);
 }
 
+.pi-ges-header-acciones {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pi-ges-btn-solicitudes {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
+  padding: 11px 16px;
+  border-radius: var(--radius-md);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.pi-ges-btn-solicitudes:hover {
+  border-color: var(--warn);
+}
+
+.pi-ges-solicitudes-contador {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--warn);
+  color: var(--text-on-vivid);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.pi-ges-modal-vacio {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 24px 0;
+}
+
 /* --- BUSCADOR --- */
 .pi-ges-buscador {
   display: flex;
@@ -71,9 +118,9 @@
 /* --- GRID DE EVENTOS --- */
 .pi-ges-eventos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, 240px);
+  grid-template-columns: repeat(auto-fill, minmax(300px, 340px));
   justify-content: start;
-  gap: 16px;
+  gap: 20px;
 }
 
 .pi-ges-evento-card {
@@ -243,32 +290,6 @@
   font-size: var(--text-base);
   color: var(--text-primary);
   margin: 0 0 16px 0;
-}
-
-.pi-ges-tabla-wrapper {
-  overflow-x: auto;
-}
-
-.pi-ges-tabla {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.pi-ges-tabla th {
-  text-align: left;
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.pi-ges-tabla td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
 }
 
 .pi-ges-badge {
@@ -616,43 +637,6 @@
   font-size: var(--text-xs);
   color: var(--text-secondary);
   margin: 0 0 12px 0;
-}
-
-.pi-ges-asignar-filtros {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.pi-ges-asignar-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.pi-ges-chip {
-  border: 1px solid var(--border-strong);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  padding: 6px 12px;
-  border-radius: var(--radius-full);
-  cursor: pointer;
-  transition: all 0.15s;
-}
-
-.pi-ges-chip:hover {
-  border-color: var(--indigo-profundo);
-  color: var(--indigo-profundo);
-}
-
-.pi-ges-chip.activo {
-  background: var(--indigo-profundo);
-  border-color: var(--indigo-profundo);
-  color: var(--text-on-accent);
 }
 
 .pi-ges-asignar-lista {

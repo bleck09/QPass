@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -286,50 +287,36 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
       {!errorPuestos && !cargandoPuestos && vistaActiva === 'tabla' && (
         <div className="pi-mapa-tabla-vista">
           <div className="pi-mapa-card no-margin">
-            <div className="table-wrapper">
-              <table className="pi-mapa-table">
-                <thead>
-                  <tr>
-                    <th scope="col">Elemento</th>
-                    <th scope="col">Categoría</th>
-                    <th scope="col">Tamaño (AnxAl)</th>
-                    <th scope="col">Estado</th>
-                    <th scope="col" style={{ textAlign: 'center' }}>Acciones</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {puestos.length === 0 ? (
-                    <tr><td colSpan="5" className="tabla-vacia">No hay elementos registrados.</td></tr>
-                  ) : (
-                    puestos.map((puesto) => (
-                      <tr key={puesto.id} style={{ opacity: puesto.estadoActivo ? 1 : 0.5 }}>
-                        <td>
-                          <div className="item-info-mapa">
-                            {puesto.logo ? (
-                              <img width="40" height="40" src={puesto.logo} alt="img" className="img-miniatura" />
-                            ) : (
-                              <div className="no-img-miniatura"><FaStore /></div>
-                            )}
-                            <span className="fila-nombre">{puesto.nombre}</span>
-                          </div>
-                        </td>
-                        <td>{puesto.categoria}</td>
-                        <td style={{ color: 'var(--texto-secundario)'}}>{Math.round(puesto.ancho)}px × {Math.round(puesto.alto)}px</td>
-                        <td>
-                          {puesto.estadoActivo ? <span className="badge-visible">Visible</span> : <span className="badge-oculto">Oculto</span>}
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <button type="button" className="btn-icon-editar" onClick={() => editarPuesto(puesto)}><FaEdit /></button>
-                          <button type="button" className={puesto.estadoActivo ? 'btn-icon-ocultar' : 'btn-icon-visible'} onClick={() => toggleEstadoPuesto(puesto.id)}>
-                            {puesto.estadoActivo ? <FaEyeSlash title="Ocultar"/> : <FaCheck title="Mostrar"/>}
-                          </button>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <Tabla
+              columnas={['Elemento', 'Categoría', 'Tamaño (AnxAl)', 'Estado', { texto: 'Acciones', align: 'center' }]}
+              datos={puestos}
+              vacio="No hay elementos registrados."
+              renderFila={puesto => (
+                <tr key={puesto.id} style={{ opacity: puesto.estadoActivo ? 1 : 0.5 }}>
+                  <td>
+                    <div className="item-info-mapa">
+                      {puesto.logo ? (
+                        <img width="40" height="40" src={puesto.logo} alt="img" className="img-miniatura" />
+                      ) : (
+                        <div className="no-img-miniatura"><FaStore /></div>
+                      )}
+                      <span className="fila-nombre">{puesto.nombre}</span>
+                    </div>
+                  </td>
+                  <td>{puesto.categoria}</td>
+                  <td style={{ color: 'var(--texto-secundario)'}}>{Math.round(puesto.ancho)}px × {Math.round(puesto.alto)}px</td>
+                  <td>
+                    {puesto.estadoActivo ? <span className="badge-visible">Visible</span> : <span className="badge-oculto">Oculto</span>}
+                  </td>
+                  <td style={{ textAlign: 'center' }}>
+                    <button type="button" className="btn-icon-editar" onClick={() => editarPuesto(puesto)}><FaEdit /></button>
+                    <button type="button" className={puesto.estadoActivo ? 'btn-icon-ocultar' : 'btn-icon-visible'} onClick={() => toggleEstadoPuesto(puesto.id)}>
+                      {puesto.estadoActivo ? <FaEyeSlash title="Ocultar"/> : <FaCheck title="Mostrar"/>}
+                    </button>
+                  </td>
+                </tr>
+              )}
+            />
           </div>
         </div>
       )}

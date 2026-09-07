@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import StatCard from '../../components/StatCard.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -222,50 +223,30 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
         ) : cargandoCategorias ? (
           <EstadoCarga filas={4} />
         ) : (
-        <div className="pi-adtick-table-wrapper">
-          <table className="pi-adtick-table">
-            <thead>
-              <tr>
-                <th scope="col">Categoría</th>
-                <th scope="col">Descripción</th>
-                <th scope="col">Cupo</th>
-                <th scope="col">Vendidas</th>
-                <th scope="col">Reservadas</th>
-                <th scope="col">Disponibles</th>
-                <th scope="col">Precio</th>
-                <th scope="col" style={{ textAlign: 'center' }}>Acción</th>
+        <Tabla
+          columnas={['Categoría', 'Descripción', 'Cupo', 'Vendidas', 'Reservadas', 'Disponibles', 'Precio', { texto: 'Acción', align: 'center' }]}
+          datos={categorias}
+          vacio="Aún no hay categorías de ticket para este evento."
+          renderFila={cat => {
+            const disp = cat.disponibles ?? (cat.cantidad - (cat.cantidadVendida || 0));
+            return (
+              <tr key={cat.id}>
+                <td><span className="pi-adtick-badge-nombre">{cat.nombre}</span></td>
+                <td><span className="celda-secundaria">{cat.descripcion || '—'}</span></td>
+                <td>{cat.cantidad}</td>
+                <td>{cat.vendidas ?? 0}</td>
+                <td>{cat.reservadas ?? 0}</td>
+                <td className={disp <= 0 ? 'pi-adtick-agotado' : undefined}>{disp}</td>
+                <td className="pi-adtick-precio-celda">{cat.precio > 0 ? `Bs. ${cat.precio}` : 'Gratis'}</td>
+                <td style={{ textAlign: 'center' }}>
+                  <button type="button" className="pi-adtick-btn-delete" onClick={() => eliminarCategoria(cat.id)} title="Eliminar categoría">
+                    <FaTrash />
+                  </button>
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {categorias.map(cat => {
-                const disp = cat.disponibles ?? (cat.cantidad - (cat.cantidadVendida || 0));
-                return (
-                <tr key={cat.id}>
-                  <td><span className="pi-adtick-badge-nombre">{cat.nombre}</span></td>
-                  <td><span className="celda-secundaria">{cat.descripcion || '—'}</span></td>
-                  <td>{cat.cantidad}</td>
-                  <td>{cat.vendidas ?? 0}</td>
-                  <td>{cat.reservadas ?? 0}</td>
-                  <td className={disp <= 0 ? 'pi-adtick-agotado' : undefined}>{disp}</td>
-                  <td className="pi-adtick-precio-celda">{cat.precio > 0 ? `Bs. ${cat.precio}` : 'Gratis'}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button type="button" className="pi-adtick-btn-delete" onClick={() => eliminarCategoria(cat.id)} title="Eliminar categoría">
-                      <FaTrash />
-                    </button>
-                  </td>
-                </tr>
-                );
-              })}
-              {categorias.length === 0 && (
-                <tr>
-                  <td colSpan="8" className="pi-adtick-empty">
-                    Aún no hay categorías de ticket para este evento.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+            );
+          }}
+        />
         )}
       </div>
 

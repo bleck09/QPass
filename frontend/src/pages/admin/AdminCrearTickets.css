@@ -170,32 +170,6 @@
 }
 
 /* --- TABLA --- */
-.pi-adtick-table-wrapper {
-  overflow-x: auto;
-}
-
-.pi-adtick-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.pi-adtick-table th {
-  text-align: left;
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.pi-adtick-table td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-}
-
 .pi-adtick-badge-nombre {
   display: inline-block;
   padding: 4px 12px;
@@ -240,8 +214,3 @@
   color: var(--text-on-accent);
 }
 
-.pi-adtick-empty {
-  text-align: center;
-  padding: 32px !important;
-  color: var(--text-secondary);
-}

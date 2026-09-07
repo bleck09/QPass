@@ -3,14 +3,18 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import {
-  FaMapMarkerAlt, FaSearch, FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
+  FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
   FaUsers, FaHourglassHalf, FaExclamationTriangle,
   FaIdCard, FaTicketAlt, FaCalendarAlt, FaHashtag, FaUserCircle
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
+import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import { useApi } from '../../utils/useApi.js';
@@ -37,6 +41,10 @@ export default function GestionEntrega() {
   const [eventoIdDetalle, setEventoIdDetalle] = useState(null);
   const [participantes, setParticipantes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
+  const [filtroEntrega, setFiltroEntrega] = useState('todos');
+  // Buscador de la pantalla de selección de evento (antes de entrar a uno)
+  const [busquedaEvento, setBusquedaEvento] = useState('');
+  const [filtroEvento, setFiltroEvento] = useState('todos');
 
   const [participanteVinculando, setParticipanteVinculando] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
@@ -64,6 +72,7 @@ export default function GestionEntrega() {
     setEventoIdDetalle(ev.id);
     refrescarEvento(ev.id);
     setBusqueda('');
+    setFiltroEntrega('todos');
   };
 
   const volverALista = () => {
@@ -73,8 +82,20 @@ export default function GestionEntrega() {
 
   const participantesFiltrados = useMemo(() => {
     const termino = busqueda.toLowerCase();
-    return participantes.filter(p => p.nombre.toLowerCase().includes(termino));
-  }, [participantes, busqueda]);
+    return participantes.filter(p => {
+      const coincideBusqueda = p.nombre.toLowerCase().includes(termino);
+      const coincideFiltro =
+        filtroEntrega === 'todos' ||
+        (filtroEntrega === 'entregado' && p.codigoQrVinculado) ||
+        (filtroEntrega === 'pendiente' && !p.codigoQrVinculado);
+      return coincideBusqueda && coincideFiltro;
+    });
+  }, [participantes, busqueda, filtroEntrega]);
+
+  const eventosFiltrados = useMemo(
+    () => filtrarEventos(eventos, busquedaEvento, filtroEvento),
+    [eventos, busquedaEvento, filtroEvento],
+  );
 
   const stats = useMemo(() => {
     const total = participantes.length;
@@ -187,58 +208,49 @@ export default function GestionEntrega() {
             <StatCard icon={<FaHourglassHalf />} tono="warn" valor={stats.faltan} label="Falta Entregar" />
           </div>
 
-          <div className="pi-entrega-buscador">
-            <FaSearch />
-            <input
-              type="text"
-              placeholder="Buscar participante por nombre..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
+          <Buscador
+            valor={busqueda}
+            onCambio={setBusqueda}
+            placeholder="Buscar participante por nombre…"
+            filtros={[
+              { valor: 'todos', texto: 'Todos' },
+              { valor: 'entregado', texto: 'Con manilla' },
+              { valor: 'pendiente', texto: 'Sin manilla' },
+            ]}
+            filtroActivo={filtroEntrega}
+            onFiltro={setFiltroEntrega}
+            etiquetaFiltros="Filtrar participantes por entrega"
+          />
 
-          <div className="pi-entrega-tabla-wrapper">
-            <table className="pi-entrega-tabla">
-              <thead>
-                <tr>
-                  <th scope="col">Participante</th>
-                  <th scope="col">Tipo de Entrada</th>
-                  <th scope="col">Correo</th>
-                  <th scope="col">Vínculo QR</th>
-                  <th scope="col"><span className="sr-only">Acciones</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {participantesFiltrados.map(p => (
-                  <tr key={p.id}>
-                    <td>
-                      <div className="pi-entrega-fila-persona">
-                        {p.foto && <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-entrega-mini-avatar" />}
-                        <span>{p.nombre}</span>
-                      </div>
-                    </td>
-                    <td>{p.categoriaTicket?.nombre || '—'}</td>
-                    <td>{p.correo}</td>
-                    <td>
-                      {p.codigoQrVinculado
-                        ? <span className="pi-entrega-badge pi-entrega-badge-ok"><FaCheckCircle /> {p.codigoQrVinculado.codigo}</span>
-                        : <span className="pi-entrega-badge pi-entrega-badge-pend">Sin vincular</span>}
-                    </td>
-                    <td>
-                      <button className="pi-entrega-btn-vincular" onClick={() => abrirVincular(p)}>
-                        <FaLink /> {p.codigoQrVinculado ? 'Cambiar' : 'Vincular'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {participantesFiltrados.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="pi-entrega-sin-resultados">No se encontraron participantes.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+
+          <Tabla
+            card
+            columnas={['Participante', 'Tipo de Entrada', 'Correo', 'Vínculo QR', { texto: 'Acciones', srOnly: true }]}
+            datos={participantesFiltrados}
+            vacio="No se encontraron participantes."
+            renderFila={p => (
+              <tr key={p.id}>
+                <td>
+                  <div className="pi-entrega-fila-persona">
+                    {p.foto && <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-entrega-mini-avatar" />}
+                    <span>{p.nombre}</span>
+                  </div>
+                </td>
+                <td>{p.categoriaTicket?.nombre || '—'}</td>
+                <td>{p.correo}</td>
+                <td>
+                  {p.codigoQrVinculado
+                    ? <span className="pi-entrega-badge pi-entrega-badge-ok"><FaCheckCircle /> {p.codigoQrVinculado.codigo}</span>
+                    : <span className="pi-entrega-badge pi-entrega-badge-pend">Sin vincular</span>}
+                </td>
+                <td>
+                  <button className="pi-entrega-btn-vincular" onClick={() => abrirVincular(p)}>
+                    <FaLink /> {p.codigoQrVinculado ? 'Cambiar' : 'Vincular'}
+                  </button>
+                </td>
+              </tr>
+            )}
+          />
         </>
       ) : (
         <>
@@ -254,22 +266,30 @@ export default function GestionEntrega() {
           ) : eventos.length === 0 ? (
             <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
           ) : (
-          <div className="pi-entrega-eventos-grid">
-            {eventos.map(ev => (
-              <button
-                key={ev.id}
-                className="pi-entrega-evento-card"
-                onClick={() => abrirEvento(ev)}
-                disabled={estadoEvento(ev) === 'archivado'}
-              >
-                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
-                <div className="pi-entrega-evento-info">
-                  <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <>
+            <Buscador
+              valor={busquedaEvento}
+              onCambio={setBusquedaEvento}
+              placeholder="Buscar evento por nombre o lugar…"
+              etiqueta="Buscar evento"
+              filtros={FILTROS_ESTADO_EVENTO}
+              filtroActivo={filtroEvento}
+              onFiltro={setFiltroEvento}
+              etiquetaFiltros="Filtrar eventos por estado"
+            />
+            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+              {ev => (
+                <EventoCard
+                  key={ev.id}
+                  evento={ev}
+                  onClick={() => abrirEvento(ev)}
+                  disabled={estadoEvento(ev) === 'archivado'}
+                  badges={<BadgeEstadoEvento evento={ev} />}
+                  cta="Gestionar entrega"
+                />
+              )}
+            </GrillaEventos>
+          </>
           )}
         </>
       )}

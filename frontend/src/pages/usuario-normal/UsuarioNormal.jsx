@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -761,51 +762,38 @@ export default function UsuarioNormal() {
 
           <div className="pi-usr-card mt-20">
             <h3><FaHistory color="var(--indigo-profundo)" /> Mis Transacciones (Compras y Recargas)</h3>
-            <div className="pi-usr-tabla-wrapper">
-              <table className="pi-usr-tabla">
-                <thead>
-                  <tr>
-                    <th scope="col">Movimiento</th>
-                    <th scope="col">Lugar / Detalle</th>
-                    <th scope="col">Monto</th>
-                    <th scope="col">Fecha / Hora</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {historial.length === 0 ? (
-                    <tr><td colSpan="4" style={{textAlign:'center', padding:'30px', color:'var(--gris-medio)'}}>Aún no tienes movimientos registrados.</td></tr>
-                  ) : (
-                    historial.map(item => (
-                      <tr key={item.id}>
-                        <td>
-                          <span className="pi-usr-tipo-celda">
-                            {item.tipo === 'recarga' && <><FaCoins color="var(--verde-recarga-texto)" /> Recarga de Saldo</>}
-                            {item.tipo === 'consumo' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
-                            {item.tipo === 'devolucion' && <><FaTicketAlt color="var(--coral-compra)" /> Devolución</>}
-                            {item.tipo === 'ajuste' && <><FaCoins color="var(--verde-recarga-texto)" /> Ajuste</>}
-                          </span>
-                        </td>
-                        <td>
-                          {item.tipo === 'consumo' && item.venta ? (
-                            <span className="pi-usr-detalle-consumo">
-                              <strong>{item.venta.puesto?.nombre}</strong>
-                              {' — '}
-                              {item.venta.items.map(i => `${i.cantidad}x ${i.nombreProducto}`).join(', ')}
-                            </span>
-                          ) : (
-                            item.nota || '—'
-                          )}
-                        </td>
-                        <td className={item.tipo === 'recarga' || item.tipo === 'ajuste' ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
-                          {item.tipo === 'recarga' || item.tipo === 'ajuste' ? '+' : '-'}{Number(item.monto)} pts
-                        </td>
-                        <td style={{color: 'var(--texto-secundario)', fontSize: '13px'}}>{new Date(item.createdAt).toLocaleString('es-BO')}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <Tabla
+              columnas={['Movimiento', 'Lugar / Detalle', 'Monto', 'Fecha / Hora']}
+              datos={historial}
+              vacio="Aún no tienes movimientos registrados."
+              renderFila={item => (
+                <tr key={item.id}>
+                  <td>
+                    <span className="pi-usr-tipo-celda">
+                      {item.tipo === 'recarga' && <><FaCoins color="var(--verde-recarga-texto)" /> Recarga de Saldo</>}
+                      {item.tipo === 'consumo' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
+                      {item.tipo === 'devolucion' && <><FaTicketAlt color="var(--coral-compra)" /> Devolución</>}
+                      {item.tipo === 'ajuste' && <><FaCoins color="var(--verde-recarga-texto)" /> Ajuste</>}
+                    </span>
+                  </td>
+                  <td>
+                    {item.tipo === 'consumo' && item.venta ? (
+                      <span className="pi-usr-detalle-consumo">
+                        <strong>{item.venta.puesto?.nombre}</strong>
+                        {' — '}
+                        {item.venta.items.map(i => `${i.cantidad}x ${i.nombreProducto}`).join(', ')}
+                      </span>
+                    ) : (
+                      item.nota || '—'
+                    )}
+                  </td>
+                  <td className={item.tipo === 'recarga' || item.tipo === 'ajuste' ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
+                    {item.tipo === 'recarga' || item.tipo === 'ajuste' ? '+' : '-'}{Number(item.monto)} pts
+                  </td>
+                  <td style={{color: 'var(--texto-secundario)', fontSize: '13px'}}>{new Date(item.createdAt).toLocaleString('es-BO')}</td>
+                </tr>
+              )}
+            />
           </div>
         </div>
       )}

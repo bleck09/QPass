@@ -1,0 +1,161 @@
+/* =========================================================
+   EventoCard — tarjeta de evento unificada
+   Superficie oscura por diseño (imagen + scrim): el texto
+   siempre va claro, funciona igual en claro y oscuro.
+========================================================= */
+
+.qp-evento-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 100%;
+  min-height: 320px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  isolation: isolate;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: #fff;
+  background-color: var(--n-900);
+  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.qp-evento-card:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 38px -12px rgba(10, 14, 39, 0.55);
+}
+
+.qp-evento-card:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.qp-evento-card:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Capa de imagen: propia para poder hacerle zoom en hover */
+.qp-evento-card__img {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-color: var(--n-900);
+  background-size: cover;
+  background-position: center;
+  transition: transform 0.45s ease;
+}
+
+.qp-evento-card:hover:not(:disabled) .qp-evento-card__img {
+  transform: scale(1.09);
+}
+
+/* Scrim: más oscuro para que el título y los chips se lean siempre */
+.qp-evento-card__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(
+    to top,
+    rgba(6, 9, 24, 0.97) 0%,
+    rgba(6, 9, 24, 0.88) 34%,
+    rgba(6, 9, 24, 0.60) 62%,
+    rgba(6, 9, 24, 0.42) 100%
+  );
+}
+
+.qp-evento-card__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: auto;
+  padding: 14px;
+}
+
+.qp-evento-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.qp-evento-card__body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+}
+
+.qp-evento-card__title {
+  font-size: var(--text-xl);
+  font-weight: 800;
+  line-height: 1.2;
+  text-wrap: balance;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.55);
+}
+
+.qp-evento-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.qp-evento-card__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: var(--radius-full);
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.qp-evento-card__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 10px 18px;
+  border-radius: var(--radius-md);
+  background: var(--n-950);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: #fff;
+  transition: background 0.2s ease;
+}
+
+.qp-evento-card:hover:not(:disabled) .qp-evento-card__cta {
+  background: var(--action);
+}
+
+/* Badges de estado que se pasan por props: legibles sobre el scrim */
+.qp-evento-card__badges .pi-badge-estado-evento {
+  display: inline-flex;
+  vertical-align: middle;
+  font-size: var(--text-xs);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-evento-card,
+  .qp-evento-card__cta,
+  .qp-evento-card__img {
+    transition: none;
+  }
+  .qp-evento-card:hover:not(:disabled) {
+    transform: none;
+  }
+  .qp-evento-card:hover:not(:disabled) .qp-evento-card__img {
+    transform: none;
+  }
+}

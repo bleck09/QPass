@@ -1,15 +1,19 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import Tabla from '../../components/Tabla.jsx';
+import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import {
   FaStore, FaDollarSign, FaUsers, FaShoppingCart,
   FaChartBar, FaTrophy, FaMedal, FaArrowLeft, FaBoxOpen, FaEye,
-  FaUserTie, FaSearch, FaRegClock, FaTag, FaMapMarkerAlt
+  FaUserTie, FaRegClock, FaTag
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { formatearFecha } from '../../utils/eventos.js';
 import './UsuNegoDasboar.css';
 import '../supervisor/GestionEntrega.css';
 
@@ -92,6 +96,13 @@ export default function UsuNegoDasboar() {
     recargar: recargarEventos,
   } = useApi(cargarEventos, { inicial: [] });
 
+  const [busquedaEvento, setBusquedaEvento] = useState('');
+  const [filtroEvento, setFiltroEvento] = useState('todos');
+  const eventosFiltrados = useMemo(
+    () => filtrarEventos(eventos, busquedaEvento, filtroEvento),
+    [eventos, busquedaEvento, filtroEvento],
+  );
+
   const cargarDashboard = useCallback(
     () => construirDashboard(eventoId, sesion.id),
     [eventoId, sesion.id],
@@ -110,6 +121,8 @@ export default function UsuNegoDasboar() {
   // Datos temporales de la vista seleccionada
   const [sucursalSeleccionada, setSucursalSeleccionada] = useState(null);
   const [productoSeleccionado, setProductoSeleccionado] = useState(null);
+  const [busquedaAyudantes, setBusquedaAyudantes] = useState('');
+  const [busquedaHistProd, setBusquedaHistProd] = useState('');
 
   const volverALista = () => setEventoSeleccionado(null);
 
@@ -141,17 +154,28 @@ export default function UsuNegoDasboar() {
         ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
-          <div className="pi-entrega-eventos-grid">
-            {eventos.map(ev => (
-              <button key={ev.id} className="pi-entrega-evento-card" onClick={() => setEventoSeleccionado(ev)}>
-                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
-                <div className="pi-entrega-evento-info">
-                  <strong>{ev.nombre}</strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <>
+            <Buscador
+              valor={busquedaEvento}
+              onCambio={setBusquedaEvento}
+              placeholder="Buscar evento por nombre o lugar…"
+              etiqueta="Buscar evento"
+              filtros={FILTROS_ESTADO_EVENTO}
+              filtroActivo={filtroEvento}
+              onFiltro={setFiltroEvento}
+              etiquetaFiltros="Filtrar eventos por estado"
+            />
+            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+              {ev => (
+                <EventoCard
+                  key={ev.id}
+                  evento={ev}
+                  onClick={() => setEventoSeleccionado(ev)}
+                  cta="Ver dashboard"
+                />
+              )}
+            </GrillaEventos>
+          </>
         )}
       </div>
     );
@@ -333,42 +357,39 @@ export default function UsuNegoDasboar() {
           
           <h1 className="pi-fullpage-title">Personal asignado</h1>
           
-          <div className="pi-search-bar-dummy">
-            <FaSearch className="search-icon" />
-            <input type="text" placeholder="Buscar por nombre o sucursal..." />
-          </div>
+          <Buscador
+            valor={busquedaAyudantes}
+            onCambio={setBusquedaAyudantes}
+            placeholder="Buscar por nombre o sucursal…"
+          />
 
-          <div className="pi-dashboard-table-wrapper">
-            <table className="pi-dashboard-table clean-table">
-              <thead>
-                <tr>
-                  <th scope="col">Ayudante</th>
-                  <th scope="col">Rol</th>
-                  <th scope="col">Sucursales Asignadas</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.listaAyudantes.map(ayudante => (
-                  <tr key={ayudante.id}>
-                    <td>
-                      <div className="user-cell">
-                        <div className="user-avatar-small">{ayudante.avatar}</div>
-                        <strong>{ayudante.nombre}</strong>
-                      </div>
-                    </td>
-                    <td style={{ color: 'var(--texto-secundario)' }}>Ayudante</td>
-                    <td>
-                      <div className="badge-sucursal-container">
-                        {ayudante.sucursales.map((suc, i) => (
-                          <span key={i} className="badge-sucursal">{suc}</span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Tabla
+            columnas={['Ayudante', 'Rol', 'Sucursales Asignadas']}
+            datos={data.listaAyudantes.filter((a) => {
+              const q = busquedaAyudantes.trim().toLowerCase();
+              if (!q) return true;
+              return `${a.nombre} ${(a.sucursales || []).join(' ')}`.toLowerCase().includes(q);
+            })}
+            vacio={busquedaAyudantes.trim() ? 'Ningún ayudante coincide con la búsqueda.' : 'Aún no hay ayudantes asignados.'}
+            renderFila={ayudante => (
+              <tr key={ayudante.id}>
+                <td>
+                  <div className="user-cell">
+                    <div className="user-avatar-small">{ayudante.avatar}</div>
+                    <strong>{ayudante.nombre}</strong>
+                  </div>
+                </td>
+                <td style={{ color: 'var(--texto-secundario)' }}>Ayudante</td>
+                <td>
+                  <div className="badge-sucursal-container">
+                    {ayudante.sucursales.map((suc, i) => (
+                      <span key={i} className="badge-sucursal">{suc}</span>
+                    ))}
+                  </div>
+                </td>
+              </tr>
+            )}
+          />
         </div>
       </div>
     );
@@ -441,50 +462,40 @@ export default function UsuNegoDasboar() {
           <div className="card-header">
             <h3><FaShoppingCart className="icon-title" /> Desglose de Ventas</h3>
           </div>
-          <div className="pi-dashboard-table-wrapper">
-            <table className="pi-dashboard-table">
-              <thead>
-                <tr>
-                  <th scope="col">Producto Vendido</th>
-                  <th scope="col" style={{ textAlign: 'center' }}>Precio Unit.</th>
-                  <th scope="col" style={{ textAlign: 'center' }}>Cantidad</th>
-                  <th scope="col" style={{ textAlign: 'right' }}>Total Generado</th>
-                  <th scope="col" style={{ textAlign: 'center' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {sucursalSeleccionada.productos.map(prod => (
-                  <tr key={prod.id}>
-                    <td className="fila-nombre">
-                      <FaBoxOpen style={{ color: 'var(--gris-medio)', marginRight: '8px' }}/>
-                      {prod.nombre}
-                    </td>
-                    <td style={{ textAlign: 'center', color: 'var(--texto-secundario)' }}>
-                      Bs. {prod.precio.toFixed(2)}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      <span className="badge-ayudante">{prod.ventas} un.</span>
-                    </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <span className="badge-ingreso">Bs. {prod.ingresos.toFixed(2)}</span>
-                    </td>
-                    <td style={{ textAlign: 'center' }}>
-                      {/* LLEVA A VISTA HISTORIAL PRODUCTO */}
-                      <button 
-                        className="btn-ver-detalles" 
-                        onClick={() => {
-                          setProductoSeleccionado(prod);
-                          setVistaActual('PRODUCTO');
-                        }}
-                      >
-                        <FaEye /> Detalles
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Tabla
+            columnas={['Producto Vendido', { texto: 'Precio Unit.', align: 'center' }, { texto: 'Cantidad', align: 'center' }, { texto: 'Total Generado', align: 'right' }, { texto: 'Acciones', align: 'center' }]}
+            datos={sucursalSeleccionada.productos}
+            vacio="Este puesto todavía no tiene productos."
+            renderFila={prod => (
+              <tr key={prod.id}>
+                <td className="fila-nombre">
+                  <FaBoxOpen style={{ color: 'var(--gris-medio)', marginRight: '8px' }}/>
+                  {prod.nombre}
+                </td>
+                <td style={{ textAlign: 'center', color: 'var(--texto-secundario)' }}>
+                  Bs. {prod.precio.toFixed(2)}
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <span className="badge-ayudante">{prod.ventas} un.</span>
+                </td>
+                <td style={{ textAlign: 'right' }}>
+                  <span className="badge-ingreso">Bs. {prod.ingresos.toFixed(2)}</span>
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  {/* LLEVA A VISTA HISTORIAL PRODUCTO */}
+                  <button
+                    className="btn-ver-detalles"
+                    onClick={() => {
+                      setProductoSeleccionado(prod);
+                      setVistaActual('PRODUCTO');
+                    }}
+                  >
+                    <FaEye /> Detalles
+                  </button>
+                </td>
+              </tr>
+            )}
+          />
         </div>
       </div>
     );
@@ -504,52 +515,44 @@ export default function UsuNegoDasboar() {
           
           <h1 className="pi-fullpage-title">Historial: {productoSeleccionado.nombre}</h1>
           
-          <div className="pi-search-bar-dummy">
-            <FaSearch className="search-icon" />
-            <input type="text" placeholder="Buscar por vendedor o ID de venta..." />
-          </div>
+          <Buscador
+            valor={busquedaHistProd}
+            onCambio={setBusquedaHistProd}
+            placeholder="Buscar por vendedor o ID de venta…"
+          />
 
-          <div className="pi-dashboard-table-wrapper">
-            {productoSeleccionado.historial && productoSeleccionado.historial.length > 0 ? (
-              <table className="pi-dashboard-table clean-table">
-                <thead>
-                  <tr>
-                    <th scope="col">ID Venta</th>
-                    <th scope="col">Vendedor</th>
-                    <th scope="col">Hora</th>
-                    <th scope="col" style={{textAlign: 'right'}}>Precio Pagado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productoSeleccionado.historial.map(venta => (
-                    <tr key={venta.idVenta}>
-                      <td style={{fontWeight: '700', color: 'var(--texto-principal)'}}>
-                        <FaTag style={{color: 'var(--borde-medio)', marginRight: '6px'}}/>
-                        {venta.idVenta}
-                      </td>
-                      <td>
-                        <div className="user-cell">
-                          <FaUserTie style={{color: 'var(--gris-medio)'}}/>
-                          {venta.vendedor}
-                        </div>
-                      </td>
-                      <td style={{color: 'var(--texto-secundario)'}}>
-                        <FaRegClock style={{marginRight: '5px'}}/> {venta.hora}
-                      </td>
-                      <td style={{textAlign: 'right'}}>
-                        <span className="badge-ingreso">Bs. {venta.precio.toFixed(2)}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div style={{textAlign: 'center', padding: '40px', color: 'var(--texto-secundario)'}}>
-                <FaShoppingCart size={40} style={{opacity: 0.2, marginBottom: '15px'}}/>
-                <p>No hay registro de ventas recientes para este producto.</p>
-              </div>
+          <Tabla
+            columnas={['ID Venta', 'Vendedor', 'Hora', { texto: 'Precio Pagado', align: 'right' }]}
+            datos={(() => {
+              const q = busquedaHistProd.trim().toLowerCase();
+              return !q
+                ? (productoSeleccionado.historial || [])
+                : (productoSeleccionado.historial || []).filter((v) =>
+                    `${v.vendedor || ''} ${v.idVenta || ''}`.toLowerCase().includes(q),
+                  );
+            })()}
+            vacio={busquedaHistProd.trim() ? 'No hay ventas que coincidan con la búsqueda.' : 'No hay registro de ventas recientes para este producto.'}
+            renderFila={venta => (
+              <tr key={venta.idVenta}>
+                <td style={{fontWeight: '700', color: 'var(--texto-principal)'}}>
+                  <FaTag style={{color: 'var(--borde-medio)', marginRight: '6px'}}/>
+                  {venta.idVenta}
+                </td>
+                <td>
+                  <div className="user-cell">
+                    <FaUserTie style={{color: 'var(--gris-medio)'}}/>
+                    {venta.vendedor}
+                  </div>
+                </td>
+                <td style={{color: 'var(--texto-secundario)'}}>
+                  <FaRegClock style={{marginRight: '5px'}}/> {venta.hora}
+                </td>
+                <td style={{textAlign: 'right'}}>
+                  <span className="badge-ingreso">Bs. {venta.precio.toFixed(2)}</span>
+                </td>
+              </tr>
             )}
-          </div>
+          />
         </div>
       </div>
     );

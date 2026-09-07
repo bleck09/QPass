@@ -44,6 +44,35 @@ export function estadoEvento(evento) {
   return 'proximo';
 }
 
+// Filtros de estado para el <Buscador> de selección de evento (mismo set en todos los roles).
+export const FILTROS_ESTADO_EVENTO = [
+  { valor: 'todos', texto: 'Todos' },
+  { valor: 'activos', texto: 'Activos' },
+  { valor: 'en_curso', texto: 'En curso' },
+  { valor: 'finalizados', texto: 'Finalizados' },
+];
+
+// Filtra una lista de eventos por texto (nombre / lugar) y por estado operativo.
+//   activos      -> proximo | en_curso
+//   en_curso     -> en_curso
+//   finalizados  -> finalizado | archivado
+export function filtrarEventos(eventos, busqueda = '', filtro = 'todos') {
+  const q = busqueda.trim().toLowerCase();
+  return (eventos || []).filter((ev) => {
+    const est = estadoEvento(ev);
+    const coincideFiltro =
+      filtro === 'todos' ||
+      (filtro === 'activos' && (est === 'en_curso' || est === 'proximo')) ||
+      (filtro === 'en_curso' && est === 'en_curso') ||
+      (filtro === 'finalizados' && (est === 'finalizado' || est === 'archivado'));
+    const coincideBusqueda =
+      !q ||
+      ev.nombre.toLowerCase().includes(q) ||
+      (ev.lugar || '').toLowerCase().includes(q);
+    return coincideFiltro && coincideBusqueda;
+  });
+}
+
 // Evento.imagen es opcional — Admin puede crear un evento sin subir ninguna. Sin esto, cualquier
 // <img>/backgroundImage con evento.imagen vacío se ve rota/en blanco.
 export const IMAGEN_EVENTO_PLACEHOLDER = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';

@@ -1,12 +1,14 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaStore, FaUserTie, FaEnvelope, FaLock, FaPlus,
-  FaTrash, FaSearch, FaTimes, FaUserShield, FaUsersCog
+  FaTrash, FaUserShield, FaUsersCog
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
@@ -64,11 +66,14 @@ export default function AdCreaUsuarioNegocio() {
     setUsuarios(prev => prev.filter(u => u.id !== id));
   };
 
-  // Conteo por rol para las pestañas de filtro.
-  const conteoPorRol = useMemo(() => {
+  // Opciones del filtro por rol, con su conteo (para las pastillas del <Buscador>).
+  const filtrosRol = useMemo(() => {
     const m = {};
     usuarios.forEach(u => { m[u.rol] = (m[u.rol] || 0) + 1; });
-    return m;
+    return [
+      { valor: 'Todos', texto: 'Todos', conteo: usuarios.length },
+      ...ROLES.map(rol => ({ valor: rol, texto: ROLE_LABELS[rol] || rol, conteo: m[rol] || 0 })),
+    ];
   }, [usuarios]);
 
   // Filtrado: rol + texto (nombre / correo).
@@ -111,49 +116,21 @@ export default function AdCreaUsuarioNegocio() {
 
       </div>
 
-      {/* Buscador destacado */}
-      <div className="pi-adnegocio-buscador-destacado">
-        <FaSearch className="bd-icon" aria-hidden="true" />
-        <input
-          type="search"
-          aria-label="Buscar usuario por nombre o correo"
-          placeholder="Buscar usuario por nombre o correo…"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-        />
-        {searchTerm && (
-          <button type="button" className="bd-clear" onClick={() => setSearchTerm('')} aria-label="Limpiar búsqueda">
-            <FaTimes aria-hidden="true" />
+      <Buscador
+        valor={searchTerm}
+        onCambio={setSearchTerm}
+        placeholder="Buscar usuario por nombre o correo…"
+        etiqueta="Buscar usuario por nombre o correo"
+        filtros={filtrosRol}
+        filtroActivo={filtroRol}
+        onFiltro={setFiltroRol}
+        etiquetaFiltros="Filtrar por rol"
+        acciones={
+          <button type="button" className="pi-adnegocio-btn-add" onClick={() => setShowModal(true)}>
+            <FaPlus /> Nuevo Usuario
           </button>
-        )}
-      </div>
-
-      <div className="pi-adnegocio-action-bar">
-        {/* Pestañas de Filtro por Rol (con conteo) */}
-        <div className="pi-adnegocio-tabs" role="group" aria-label="Filtrar por rol">
-          <button type="button"
-            className={`tab-btn ${filtroRol === 'Todos' ? 'active' : ''}`}
-            aria-pressed={filtroRol === 'Todos'}
-            onClick={() => setFiltroRol('Todos')}
-          >
-            Todos <span className="tab-count">{usuarios.length}</span>
-          </button>
-          {ROLES.map(rol => (
-            <button type="button"
-              key={rol}
-              className={`tab-btn ${filtroRol === rol ? 'active' : ''}`}
-              aria-pressed={filtroRol === rol}
-              onClick={() => setFiltroRol(rol)}
-            >
-              {ROLE_LABELS[rol] || rol} <span className="tab-count">{conteoPorRol[rol] || 0}</span>
-            </button>
-          ))}
-        </div>
-
-        <button type="button" className="pi-adnegocio-btn-add" onClick={() => setShowModal(true)}>
-          <FaPlus /> Nuevo Usuario
-        </button>
-      </div>
+        }
+      />
 
       {hayFiltro && (
         <p className="pi-adnegocio-resultados">
@@ -169,68 +146,51 @@ export default function AdCreaUsuarioNegocio() {
         <EstadoCarga filas={5} />
       ) : (
       <div className="pi-adnegocio-card pi-adnegocio-list-section">
-        <div className="pi-adnegocio-table-wrapper">
-          <table className="pi-adnegocio-table">
-            <thead>
-              <tr>
-                <th scope="col">Usuario</th>
-                <th scope="col">Contacto</th>
-                <th scope="col">Rol / Tipo</th>
-                <th scope="col">CI / Celular</th>
-                <th scope="col" style={{ textAlign: 'center' }}>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {usuariosFiltrados.map((user) => (
-                <tr key={user.id}>
-                  <td>
-                    <div className="pi-adnegocio-item-info">
-                      {user.foto ? (
-                        <img width="40" height="40" src={user.foto} alt="Perfil" className="pi-adnegocio-img" />
-                      ) : (
-                        <div className="pi-adnegocio-no-img">
-                          {user.rol === 'UsuarioNegocio' ? <FaStore /> : <FaUserTie />}
-                        </div>
-                      )}
-                      <span className="fila-nombre">
-                        {user.nombre}
-                      </span>
+        <Tabla
+          columnas={['Usuario', 'Contacto', 'Rol / Tipo', 'CI / Celular', { texto: 'Acción', align: 'center' }]}
+          datos={usuariosFiltrados}
+          vacio="No se encontraron usuarios en esta categoría o búsqueda."
+          renderFila={user => (
+            <tr key={user.id}>
+              <td>
+                <div className="pi-adnegocio-item-info">
+                  {user.foto ? (
+                    <img width="40" height="40" src={user.foto} alt="Perfil" className="pi-adnegocio-img" />
+                  ) : (
+                    <div className="pi-adnegocio-no-img">
+                      {user.rol === 'UsuarioNegocio' ? <FaStore /> : <FaUserTie />}
                     </div>
-                  </td>
-                  <td>
-                    <span className="celda-normal">{user.email}</span>
-                  </td>
-                  <td>
-                    <span className={`pi-adnegocio-badge ${getBadgeColor(user.rol)}`}>
-                      {user.rol}
-                    </span>
-                  </td>
-                  <td>
-                    <span className="celda-secundaria">
-                      {user.ci || user.celular || '-'}
-                    </span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button type="button" 
-                      className="pi-adnegocio-btn-delete"
-                      onClick={() => eliminarUsuario(user.id)}
-                      title="Eliminar Cuenta"
-                    >
-                      <FaTrash />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {usuariosFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan="5" className="pi-adnegocio-empty">
-                    No se encontraron usuarios en esta categoría o búsqueda.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                  )}
+                  <span className="fila-nombre">
+                    {user.nombre}
+                  </span>
+                </div>
+              </td>
+              <td>
+                <span className="celda-normal">{user.email}</span>
+              </td>
+              <td>
+                <span className={`pi-adnegocio-badge ${getBadgeColor(user.rol)}`}>
+                  {user.rol}
+                </span>
+              </td>
+              <td>
+                <span className="celda-secundaria">
+                  {user.ci || user.celular || '-'}
+                </span>
+              </td>
+              <td style={{ textAlign: 'center' }}>
+                <button type="button"
+                  className="pi-adnegocio-btn-delete"
+                  onClick={() => eliminarUsuario(user.id)}
+                  title="Eliminar Cuenta"
+                >
+                  <FaTrash />
+                </button>
+              </td>
+            </tr>
+          )}
+        />
       </div>
       )}
 

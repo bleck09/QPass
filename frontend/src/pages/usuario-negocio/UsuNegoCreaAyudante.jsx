@@ -1,11 +1,13 @@
 import { useCallback, useState, useMemo } from 'react';
 import Modal from '../../components/Modal.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaPlus, FaTrash, FaTimes, FaImage, FaUsers, FaUpload, FaCheckSquare,
-  FaUserTie, FaEnvelope, FaLock, FaSearch, FaSave, FaSquare, FaStore,
+  FaUserTie, FaEnvelope, FaLock, FaSave, FaSquare, FaStore,
   FaMapMarkerAlt
 } from 'react-icons/fa';
 import api from '../../api/index.js';
@@ -149,15 +151,11 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
       </div>
 
       <div className="pi-ayudante-action-bar">
-        <div className="pi-ayudante-search">
-          <FaSearch className="search-icon" />
-          <input
-            type="text"
-            placeholder="Buscar por nombre o email..."
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-          />
-        </div>
+        <Buscador
+          valor={busqueda}
+          onCambio={setBusqueda}
+          placeholder="Buscar por nombre o email…"
+        />
         <button type="button" className="btn-primario" onClick={abrirModalParaCrear} disabled={puestos.length === 0}>
           <FaPlus /> Crear Nuevo Ayudante
         </button>
@@ -172,64 +170,49 @@ export default function UsuNegoCreaAyudante({ puestos, onCambio }) {
         <EstadoCarga filas={4} />
       ) : (
       <div className="pi-ayudante-card">
-        <div className="pi-ayudante-table-wrapper">
-          <table className="clean-table">
-            <thead>
-              <tr>
-                <th scope="col">Ayudante</th>
-                <th scope="col">Puestos Asignados</th>
-                <th scope="col" style={{ textAlign: 'center' }}>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {ayudantesFiltrados.map(ayudante => (
-                <tr key={ayudante.id}>
-                  <td>
-                    <div className="item-info">
-                      {ayudante.foto ? (
-                        <img width="48" height="48" src={ayudante.foto} alt={ayudante.nombre} className="item-img" />
-                      ) : (
-                        <div className="item-no-img"><FaUserTie /></div>
-                      )}
-                      <div>
-                        <div className="fila-nombre">{ayudante.nombre}</div>
-                        <div className="celda-normal">{ayudante.email}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="badge-sucursal-container">
-                      {ayudante.asignaciones.length > 0 ? (
-                        ayudante.asignaciones.map(a => (
-                          <span key={a.id} className="badge-puesto">{a.puestoNombre}</span>
-                        ))
-                      ) : (
-                        <span className="badge-sin-puesto">Sin asignar</span>
-                      )}
-                    </div>
-                  </td>
-                  <td>
-                    <div className="action-buttons">
-                      <button type="button" className="btn-asignar" onClick={() => abrirAsignarPuestos(ayudante)} aria-label={`Asignar puestos a ${ayudante.nombre}`}>
-                        <FaMapMarkerAlt />
-                      </button>
-                      <button type="button" className="btn-eliminar" onClick={() => eliminarAyudante(ayudante)} aria-label={`Quitar a ${ayudante.nombre} de mis puestos`}>
-                        <FaTrash />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {ayudantesFiltrados.length === 0 && (
-                <tr>
-                  <td colSpan="3" className="tabla-vacia">
-                    {busqueda ? 'No se encontraron ayudantes.' : 'Aún no has creado ayudantes.'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Tabla
+          columnas={['Ayudante', 'Puestos Asignados', { texto: 'Acciones', align: 'center' }]}
+          datos={ayudantesFiltrados}
+          vacio={busqueda ? 'No se encontraron ayudantes.' : 'Aún no has creado ayudantes.'}
+          renderFila={ayudante => (
+            <tr key={ayudante.id}>
+              <td>
+                <div className="item-info">
+                  {ayudante.foto ? (
+                    <img width="48" height="48" src={ayudante.foto} alt={ayudante.nombre} className="item-img" />
+                  ) : (
+                    <div className="item-no-img"><FaUserTie /></div>
+                  )}
+                  <div>
+                    <div className="fila-nombre">{ayudante.nombre}</div>
+                    <div className="celda-normal">{ayudante.email}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div className="badge-sucursal-container">
+                  {ayudante.asignaciones.length > 0 ? (
+                    ayudante.asignaciones.map(a => (
+                      <span key={a.id} className="badge-puesto">{a.puestoNombre}</span>
+                    ))
+                  ) : (
+                    <span className="badge-sin-puesto">Sin asignar</span>
+                  )}
+                </div>
+              </td>
+              <td>
+                <div className="action-buttons">
+                  <button type="button" className="btn-asignar" onClick={() => abrirAsignarPuestos(ayudante)} aria-label={`Asignar puestos a ${ayudante.nombre}`}>
+                    <FaMapMarkerAlt />
+                  </button>
+                  <button type="button" className="btn-eliminar" onClick={() => eliminarAyudante(ayudante)} aria-label={`Quitar a ${ayudante.nombre} de mis puestos`}>
+                    <FaTrash />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          )}
+        />
       </div>
       )}
 

@@ -3,17 +3,21 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaTimes, FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle,
-  FaMoneyBillWave, FaUser, FaBuilding, FaHistory, FaCamera, FaRedo, FaMapMarkerAlt, FaArrowLeft
+  FaMoneyBillWave, FaUser, FaBuilding, FaHistory, FaCamera, FaRedo, FaArrowLeft
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirFotoCapturada } from '../../utils/imagenes.js';
-import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
+import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
@@ -50,6 +54,8 @@ export default function Devolucion() {
   const { eventos, negocios } = datosIniciales;
 
   const [eventoDetalle, setEventoDetalle] = useState(null);
+  const [busquedaEvento, setBusquedaEvento] = useState('');
+  const [filtroEvento, setFiltroEvento] = useState('todos');
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
 
@@ -76,6 +82,20 @@ export default function Devolucion() {
     () => retiros.reduce((suma, item) => suma + Number(item.monto), 0),
     [retiros]
   );
+
+  const eventosFiltrados = useMemo(
+    () => filtrarEventos(eventos, busquedaEvento, filtroEvento),
+    [eventos, busquedaEvento, filtroEvento],
+  );
+
+  const [busquedaHist, setBusquedaHist] = useState('');
+  const retirosFiltrados = useMemo(() => {
+    const q = busquedaHist.trim().toLowerCase();
+    if (!q) return retiros;
+    return retiros.filter((item) =>
+      `${item.entrada?.nombre || ''} ${item.entrada?.documento || ''}`.toLowerCase().includes(q),
+    );
+  }, [retiros, busquedaHist]);
 
   const excedeSaldo = tarjetaQR && Number(monto) > tarjetaQR.saldoDisponible;
 
@@ -163,22 +183,30 @@ export default function Devolucion() {
         ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
-          <div className="pi-entrega-eventos-grid">
-            {eventos.map(ev => (
-              <button
-                key={ev.id}
-                className="pi-entrega-evento-card"
-                onClick={() => abrirEvento(ev)}
-                disabled={estadoEvento(ev) === 'archivado'}
-              >
-                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
-                <div className="pi-entrega-evento-info">
-                  <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <>
+            <Buscador
+              valor={busquedaEvento}
+              onCambio={setBusquedaEvento}
+              placeholder="Buscar evento por nombre o lugar…"
+              etiqueta="Buscar evento"
+              filtros={FILTROS_ESTADO_EVENTO}
+              filtroActivo={filtroEvento}
+              onFiltro={setFiltroEvento}
+              etiquetaFiltros="Filtrar eventos por estado"
+            />
+            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+              {ev => (
+                <EventoCard
+                  key={ev.id}
+                  evento={ev}
+                  onClick={() => abrirEvento(ev)}
+                  disabled={estadoEvento(ev) === 'archivado'}
+                  badges={<BadgeEstadoEvento evento={ev} />}
+                  cta="Abrir devoluciones"
+                />
+              )}
+            </GrillaEventos>
+          </>
         )}
       </div>
     );
@@ -258,56 +286,45 @@ export default function Devolucion() {
             <StatCard valor={`${totalRetiradoHoy} pts`} label="Total devuelto" />
           </div>
 
-          <div className="pi-dev-tabla-wrapper">
-            <table className="pi-dev-tabla">
-              <thead>
-                <tr>
-                  <th scope="col">Beneficiario</th>
-                  <th scope="col">Documento</th>
-                  <th scope="col">Tipo</th>
-                  <th scope="col">Carnet</th>
-                  <th scope="col">Monto</th>
-                  <th scope="col">Saldo Resultante</th>
-                  <th scope="col">Fecha</th>
-                  <th scope="col">Hora</th>
-                </tr>
-              </thead>
-              <tbody>
-                {retiros.map(item => (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="pi-dev-fila-persona">
-                        {item.entrada?.foto && <img width="34" height="34" src={item.entrada.foto} alt={item.entrada.nombre} className="pi-dev-mini-avatar" />}
-                        <span>{item.entrada?.nombre || '—'}</span>
-                      </div>
-                    </td>
-                    <td>{item.entrada?.documento || '—'}</td>
-                    <td>
-                      <span className="pi-dev-badge-tipo normal">
-                        <FaUser /> Normal
-                      </span>
-                    </td>
-                    <td>
-                      {item.fotoCarnetUrl
-                        ? <img width="40" height="40" src={item.fotoCarnetUrl} alt={`Carnet de ${item.entrada?.nombre}`} className="pi-dev-mini-carnet" />
-                        : <span className="pi-dev-sin-carnet">—</span>}
-                    </td>
-                    <td className="pi-dev-monto-celda">-{Number(item.monto)} pts</td>
-                    <td>{Number(item.saldoResultante)} pts</td>
-                    <td>{new Date(item.createdAt).toLocaleDateString('es-BO')}</td>
-                    <td>{new Date(item.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
-                  </tr>
-                ))}
-                {retiros.length === 0 && (
-                  <tr>
-                    <td colSpan={8} className="pi-dev-sin-resultados">
-                      Aún no has procesado ninguna devolución para este evento.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Buscador
+            valor={busquedaHist}
+            onCambio={setBusquedaHist}
+            placeholder="Buscar por nombre o documento…"
+          />
+
+          <Tabla
+            card
+            columnas={['Beneficiario', 'Documento', 'Tipo', 'Carnet', 'Monto', 'Saldo Resultante', 'Fecha', 'Hora']}
+            datos={retirosFiltrados}
+            vacio={busquedaHist.trim()
+              ? 'No hay devoluciones que coincidan con la búsqueda.'
+              : 'Aún no has procesado ninguna devolución para este evento.'}
+            renderFila={item => (
+              <tr key={item.id}>
+                <td>
+                  <div className="pi-dev-fila-persona">
+                    {item.entrada?.foto && <img width="34" height="34" src={item.entrada.foto} alt={item.entrada.nombre} className="pi-dev-mini-avatar" />}
+                    <span>{item.entrada?.nombre || '—'}</span>
+                  </div>
+                </td>
+                <td>{item.entrada?.documento || '—'}</td>
+                <td>
+                  <span className="pi-dev-badge-tipo normal">
+                    <FaUser /> Normal
+                  </span>
+                </td>
+                <td>
+                  {item.fotoCarnetUrl
+                    ? <img width="40" height="40" src={item.fotoCarnetUrl} alt={`Carnet de ${item.entrada?.nombre}`} className="pi-dev-mini-carnet" />
+                    : <span className="pi-dev-sin-carnet">—</span>}
+                </td>
+                <td className="pi-dev-monto-celda">-{Number(item.monto)} pts</td>
+                <td>{Number(item.saldoResultante)} pts</td>
+                <td>{new Date(item.createdAt).toLocaleDateString('es-BO')}</td>
+                <td>{new Date(item.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
+              </tr>
+            )}
+          />
         </div>
       )}
 

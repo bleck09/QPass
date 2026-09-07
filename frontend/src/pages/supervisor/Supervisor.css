@@ -45,10 +45,6 @@
 .pi-sup-filtros button { border: none; background: transparent; padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
 .pi-sup-filtros button.activo { background-color: var(--bg-surface); color: var(--indigo-profundo); box-shadow: 0 2px 5px rgba(10, 14, 39,0.05); }
 
-.pi-sup-tabla-wrapper { overflow-x: auto; }
-.pi-sup-tabla { width: 100%; border-collapse: collapse; }
-.pi-sup-tabla th { text-align: left; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); padding: 16px 16px; border-bottom: 1px solid var(--border); }
-.pi-sup-tabla td { padding: 16px 16px; border-bottom: 1px solid var(--border); font-size: var(--text-sm); color: var(--text-primary); vertical-align: middle;}
 .pi-sup-fila-persona { display: flex; align-items: center; gap: 12px; font-weight: 600; }
 .pi-sup-mini-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 2px solid var(--bg-page); }
 .col-historial { font-size: var(--text-xs) !important; color: var(--text-secondary) !important; font-style: italic; }

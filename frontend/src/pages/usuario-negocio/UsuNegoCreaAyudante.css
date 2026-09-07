@@ -22,13 +22,7 @@
 .btn-primario { background-color: var(--indigo-profundo); color: var(--text-on-accent); border: none; padding: 8px 20px; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; white-space: nowrap; }
 .btn-primario:hover { background-color: var(--indigo-profundo-hover); }
 
-/* --- TABLA LIMPIA --- */
 .pi-ayudante-card { background: var(--bg-surface); border-radius: var(--radius-lg); padding: 24px; box-shadow: 0 4px 6px -1px rgba(10, 14, 39, 0.05); border: 1px solid var(--border); }
-.pi-ayudante-table-wrapper { overflow-x: auto; width: 100%; }
-.clean-table { width: 100%; border-collapse: collapse; }
-.clean-table th { padding: 12px 12px 16px 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-secondary); }
-.clean-table td { padding: 16px 12px; border-bottom: 1px solid var(--border); text-align: left; font-size: var(--text-sm); font-weight: 400; color: var(--text-primary); vertical-align: middle; }
-.clean-table tbody tr:hover { background-color: var(--bg-page); }
 
 .item-info { display: flex; align-items: center; gap: 12px; }
 .item-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 1px solid var(--border); }

@@ -1,13 +1,18 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import Tabla from '../../components/Tabla.jsx';
+import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation } from 'react-router-dom';
 import {
   FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign,
   FaImage, FaListUl, FaUsers, FaBoxOpen, FaUpload, FaUserTie, FaHamburger,
-  FaUserFriends, FaMapMarkerAlt, FaArrowLeft
+  FaUserFriends, FaArrowLeft
 } from 'react-icons/fa';
 import './UsuarioNegocio.css';
 import '../supervisor/GestionEntrega.css';
@@ -15,7 +20,6 @@ import UsuNegoCreaAyudante from './UsuNegoCreaAyudante';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
-import { formatearFecha } from '../../utils/eventos.js';
 
 const initialStateFormPuesto = { nombre: '', descripcion: '', logo: '' };
 const initialStateFormProducto = { nombre: '', precio: '', imagen: '' };
@@ -40,6 +44,8 @@ export default function UsuarioNegocio() {
 
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const eventoId = eventoSeleccionado?.id || '';
+  const [busquedaEvento, setBusquedaEvento] = useState('');
+  const [filtroEvento, setFiltroEvento] = useState('todos');
 
   // Cargas con estados cargando/error/reintentar (Manual 8.9): eventos asignados
   // y puestos del evento. setPuestos (alias de setData) conserva las
@@ -66,6 +72,11 @@ export default function UsuarioNegocio() {
     error: errorPuestos,
     recargar: recargarPuestos,
   } = useApi(cargarPuestos, { inicial: [], activo: !!eventoId });
+
+  const eventosFiltrados = useMemo(
+    () => filtrarEventos(eventos, busquedaEvento, filtroEvento),
+    [eventos, busquedaEvento, filtroEvento],
+  );
 
   const [showModalPuesto, setShowModalPuesto] = useState(false);
   const [showModalCatalogo, setShowModalCatalogo] = useState(false);
@@ -178,17 +189,28 @@ export default function UsuarioNegocio() {
         ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
-          <div className="pi-entrega-eventos-grid">
-            {eventos.map(ev => (
-              <button key={ev.id} className="pi-entrega-evento-card" onClick={() => setEventoSeleccionado(ev)}>
-                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
-                <div className="pi-entrega-evento-info">
-                  <strong>{ev.nombre}</strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <>
+            <Buscador
+              valor={busquedaEvento}
+              onCambio={setBusquedaEvento}
+              placeholder="Buscar evento por nombre o lugar…"
+              etiqueta="Buscar evento"
+              filtros={FILTROS_ESTADO_EVENTO}
+              filtroActivo={filtroEvento}
+              onFiltro={setFiltroEvento}
+              etiquetaFiltros="Filtrar eventos por estado"
+            />
+            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+              {ev => (
+                <EventoCard
+                  key={ev.id}
+                  evento={ev}
+                  onClick={() => setEventoSeleccionado(ev)}
+                  cta="Abrir negocio"
+                />
+              )}
+            </GrillaEventos>
+          </>
         )}
       </div>
     );
@@ -242,59 +264,44 @@ export default function UsuarioNegocio() {
       {activeTab === 'puestos' && !errorPuestos && cargandoPuestos && <EstadoCarga filas={4} />}
       {activeTab === 'puestos' && !errorPuestos && !cargandoPuestos && (
       <div className="pi-unegocio-card">
-        <div className="pi-unegocio-table-wrapper">
-          <table className="pi-unegocio-table">
-            <thead>
-              <tr>
-                <th scope="col">Detalles del Puesto</th>
-                <th scope="col">Catálogo</th>
-                <th scope="col" style={{ textAlign: 'center' }}>Ayudantes</th>
-              </tr>
-            </thead>
-            <tbody>
-              {puestos.map(puesto => (
-                <tr key={puesto.id}>
-                  <td>
-                    <div className="item-info">
-                      {puesto.logo ? (
-                        <img width="48" height="48" src={puesto.logo} alt="Logo" className="item-img" />
-                      ) : (
-                        <div className="item-no-img"><FaStore /></div>
-                      )}
-                      <div>
-                        <div className="fila-nombre">{puesto.nombre}</div>
-                        <div className="celda-secundaria">{puesto.descripcion}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <div className="info-catalogo">
-                      <span className="badge-info">{puesto.productos.length} Productos</span>
-                      <button type="button" className="btn-secundario-sm" onClick={() => abrirCatalogo(puesto)}>
-                        <FaListUl /> Ver Catálogo
-                      </button>
-                    </div>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <div className="info-catalogo" style={{ alignItems: 'center' }}>
-                      <span className="badge-ayudantes">{puesto.ayudantes.length} Asignados</span>
-                      <button type="button" className="btn-secundario-sm" onClick={() => abrirModalAyudantesPuesto(puesto)}>
-                        <FaUsers /> Ver Equipo
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {puestos.length === 0 && (
-                <tr>
-                  <td colSpan="4" className="tabla-vacia">
-                    Aún no has creado ningún puesto. ¡Empieza creando uno!
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <Tabla
+          columnas={['Detalles del Puesto', 'Catálogo', { texto: 'Ayudantes', align: 'center' }]}
+          datos={puestos}
+          vacio="Aún no has creado ningún puesto. ¡Empieza creando uno!"
+          renderFila={puesto => (
+            <tr key={puesto.id}>
+              <td>
+                <div className="item-info">
+                  {puesto.logo ? (
+                    <img width="48" height="48" src={puesto.logo} alt="Logo" className="item-img" />
+                  ) : (
+                    <div className="item-no-img"><FaStore /></div>
+                  )}
+                  <div>
+                    <div className="fila-nombre">{puesto.nombre}</div>
+                    <div className="celda-secundaria">{puesto.descripcion}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div className="info-catalogo">
+                  <span className="badge-info">{puesto.productos.length} Productos</span>
+                  <button type="button" className="btn-secundario-sm" onClick={() => abrirCatalogo(puesto)}>
+                    <FaListUl /> Ver Catálogo
+                  </button>
+                </div>
+              </td>
+              <td style={{ textAlign: 'center' }}>
+                <div className="info-catalogo" style={{ alignItems: 'center' }}>
+                  <span className="badge-ayudantes">{puesto.ayudantes.length} Asignados</span>
+                  <button type="button" className="btn-secundario-sm" onClick={() => abrirModalAyudantesPuesto(puesto)}>
+                    <FaUsers /> Ver Equipo
+                  </button>
+                </div>
+              </td>
+            </tr>
+          )}
+        />
       </div>
       )}
 
@@ -411,46 +418,34 @@ export default function UsuarioNegocio() {
               </div>
 
               <div className="pi-unegocio-card no-margin">
-                <div className="pi-unegocio-table-wrapper">
-                  <table className="pi-unegocio-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Producto</th>
-                        <th scope="col">Precio</th>
-                        <th scope="col" style={{ textAlign: 'center' }}>Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {puestoSeleccionado.productos.map(producto => (
-                        <tr key={producto.id}>
-                          <td>
-                            <div className="item-info">
-                              {producto.imagen ? (
-                                <img width="48" height="48" src={producto.imagen} alt="Prod" className="item-img img-cuadrada" />
-                              ) : (
-                                <div className="item-no-img img-cuadrada"><FaHamburger /></div>
-                              )}
-                              <span className="fila-nombre">{producto.nombre}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="badge-precio">Bs. {Number(producto.precio).toFixed(2)}</span>
-                          </td>
-                          <td style={{ textAlign: 'center' }}>
-                            <button type="button" className="btn-eliminar" onClick={() => eliminarProducto(producto.id)} title="Eliminar producto">
-                              <FaTrash />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {puestoSeleccionado.productos.length === 0 && (
-                        <tr>
-                          <td colSpan="3" className="tabla-vacia">No hay productos en el menú de este puesto.</td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                <Tabla
+                  columnas={['Producto', 'Precio', { texto: 'Acción', align: 'center' }]}
+                  datos={puestoSeleccionado.productos}
+                  porPagina={8}
+                  vacio="No hay productos en el menú de este puesto."
+                  renderFila={producto => (
+                    <tr key={producto.id}>
+                      <td>
+                        <div className="item-info">
+                          {producto.imagen ? (
+                            <img width="48" height="48" src={producto.imagen} alt="Prod" className="item-img img-cuadrada" />
+                          ) : (
+                            <div className="item-no-img img-cuadrada"><FaHamburger /></div>
+                          )}
+                          <span className="fila-nombre">{producto.nombre}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="badge-precio">Bs. {Number(producto.precio).toFixed(2)}</span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button type="button" className="btn-eliminar" onClick={() => eliminarProducto(producto.id)} title="Eliminar producto">
+                          <FaTrash />
+                        </button>
+                      </td>
+                    </tr>
+                  )}
+                />
               </div>
 
             </div>
@@ -467,45 +462,32 @@ export default function UsuarioNegocio() {
         >
             <div className="modal-body bg-gris">
               <div className="pi-unegocio-card no-margin">
-                <div className="pi-unegocio-table-wrapper">
-                  <table className="pi-unegocio-table">
-                    <thead>
-                      <tr>
-                        <th scope="col">Nombre del Ayudante</th>
-                        <th scope="col">Turno</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {puestoSeleccionado.ayudantes.map(asignacion => (
-                        <tr key={asignacion.id}>
-                          <td>
-                            <div className="item-info">
-                              {asignacion.ayudante.foto ? (
-                                <img width="48" height="48" src={asignacion.ayudante.foto} alt="Ayudante" className="item-img" style={{borderRadius: '50%', width: '40px', height: '40px'}} />
-                              ) : (
-                                <div className="item-no-img" style={{borderRadius: '50%', width: '40px', height: '40px'}}><FaUserTie /></div>
-                              )}
-                              <div>
-                                <div className="fila-nombre">{asignacion.ayudante.nombre}</div>
-                                <div className="celda-secundaria">{asignacion.ayudante.email}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className="badge-info">{asignacion.turno}</span>
-                          </td>
-                        </tr>
-                      ))}
-                      {puestoSeleccionado.ayudantes.length === 0 && (
-                        <tr>
-                          <td colSpan="2" className="tabla-vacia">
-                            Aún no hay ayudantes asignados a esta sucursal.
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
+                <Tabla
+                  columnas={['Nombre del Ayudante', 'Turno']}
+                  datos={puestoSeleccionado.ayudantes}
+                  porPagina={8}
+                  vacio="Aún no hay ayudantes asignados a esta sucursal."
+                  renderFila={asignacion => (
+                    <tr key={asignacion.id}>
+                      <td>
+                        <div className="item-info">
+                          {asignacion.ayudante.foto ? (
+                            <img width="48" height="48" src={asignacion.ayudante.foto} alt="Ayudante" className="item-img" style={{borderRadius: '50%', width: '40px', height: '40px'}} />
+                          ) : (
+                            <div className="item-no-img" style={{borderRadius: '50%', width: '40px', height: '40px'}}><FaUserTie /></div>
+                          )}
+                          <div>
+                            <div className="fila-nombre">{asignacion.ayudante.nombre}</div>
+                            <div className="celda-secundaria">{asignacion.ayudante.email}</div>
+                          </div>
+                        </div>
+                      </td>
+                      <td>
+                        <span className="badge-info">{asignacion.turno}</span>
+                      </td>
+                    </tr>
+                  )}
+                />
               </div>
               <div className="modal-actions" style={{ marginTop: '1rem' }}>
                 <button type="button" className="btn-primario" onClick={() => {

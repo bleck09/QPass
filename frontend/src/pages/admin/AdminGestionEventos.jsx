@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation } from 'react-router-dom';
 import {
-  FaSearch, FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
+  FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode,
   FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen,
   FaRegCircle, FaRocket, FaEyeSlash
@@ -85,6 +89,7 @@ export default function AdminGestionEventos() {
     setPestana('asignados');
   };
   const [modalEventoAbierto, setModalEventoAbierto] = useState(false);
+  const [modalSolicitudesAbierto, setModalSolicitudesAbierto] = useState(false);
   const [editandoId, setEditandoId] = useState(null); // null = crear; id = editar
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
@@ -469,34 +474,27 @@ export default function AdminGestionEventos() {
           <section className="pi-ges-seccion">
             <h3 className="pi-ges-seccion-titulo"><FaUsers /> Usuarios asignados</h3>
 
-            <div className="pi-ges-tabla-wrapper">
-              <table className="pi-ges-tabla">
-                <thead>
-                  <tr><th scope="col">Usuario</th><th scope="col">Correo</th><th scope="col">Rol en el evento</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
-                </thead>
-                <tbody>
-                  {asignacionesDelEvento.map(a => {
-                    const usuario = usuarios.find(u => u.id === a.usuarioId);
-                    if (!usuario) return null;
-                    return (
-                      <tr key={a.id}>
-                        <td>{usuario.nombre}</td>
-                        <td>{usuario.email}</td>
-                        <td><span className="pi-ges-badge">{ROLE_LABELS[a.rol] || a.rol}</span></td>
-                        <td>
-                          <button type="button" className="pi-ges-btn-quitar" onClick={() => handleQuitarAsignacion(a.id)} title="Quitar del evento">
-                            <FaTrash />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                  {asignacionesDelEvento.length === 0 && (
-                    <tr><td colSpan={4} className="pi-ges-sin-resultados">Aún no hay usuarios asignados a este evento.</td></tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <Tabla
+              columnas={['Usuario', 'Correo', 'Rol en el evento', { texto: 'Acciones', srOnly: true }]}
+              datos={asignacionesDelEvento}
+              vacio="Aún no hay usuarios asignados a este evento."
+              renderFila={a => {
+                const usuario = usuarios.find(u => u.id === a.usuarioId);
+                if (!usuario) return null;
+                return (
+                  <tr key={a.id}>
+                    <td>{usuario.nombre}</td>
+                    <td>{usuario.email}</td>
+                    <td><span className="pi-ges-badge">{ROLE_LABELS[a.rol] || a.rol}</span></td>
+                    <td>
+                      <button type="button" className="pi-ges-btn-quitar" onClick={() => handleQuitarAsignacion(a.id)} title="Quitar del evento">
+                        <FaTrash />
+                      </button>
+                    </td>
+                  </tr>
+                );
+              }}
+            />
 
             <div className="pi-ges-asignar-panel">
               <h4 className="pi-ges-asignar-titulo"><FaUserPlus /> Asignar usuario al evento</h4>
@@ -504,36 +502,18 @@ export default function AdminGestionEventos() {
                 El rol en el evento es el mismo rol de la cuenta. Elegí a la persona.
               </p>
 
-              <div className="pi-ges-asignar-filtros">
-                <div className="pi-ges-buscador">
-                  <FaSearch />
-                  <input
-                    type="text"
-                    placeholder="Buscar por nombre o correo..."
-                    value={busquedaUsuario}
-                    onChange={(e) => setBusquedaUsuario(e.target.value)}
-                  />
-                </div>
-                <div className="pi-ges-asignar-chips">
-                  <button
-                    type="button"
-                    className={`pi-ges-chip${!filtroRolAsignar ? ' activo' : ''}`}
-                    onClick={() => setFiltroRolAsignar('')}
-                  >
-                    Todos
-                  </button>
-                  {ROLES_ASIGNABLES.map(rol => (
-                    <button
-                      key={rol}
-                      type="button"
-                      className={`pi-ges-chip${filtroRolAsignar === rol ? ' activo' : ''}`}
-                      onClick={() => setFiltroRolAsignar(f => (f === rol ? '' : rol))}
-                    >
-                      {ROLE_LABELS[rol] || rol}
-                    </button>
-                  ))}
-                </div>
-              </div>
+              <Buscador
+                valor={busquedaUsuario}
+                onCambio={setBusquedaUsuario}
+                placeholder="Buscar por nombre o correo…"
+                etiquetaFiltros="Filtrar por rol"
+                filtroActivo={filtroRolAsignar}
+                onFiltro={(v) => setFiltroRolAsignar(f => (f === v ? '' : v))}
+                filtros={[
+                  { valor: '', texto: 'Todos' },
+                  ...ROLES_ASIGNABLES.map(rol => ({ valor: rol, texto: ROLE_LABELS[rol] || rol })),
+                ]}
+              />
 
               <ul className="pi-ges-asignar-lista">
                 {usuariosAsignables.map(u => (
@@ -569,72 +549,52 @@ export default function AdminGestionEventos() {
               <h1>Gestión de eventos</h1>
               <p>Crea eventos y asigna usuarios con su rol para cada uno.</p>
             </div>
-            <button type="button" className="pi-ges-btn-crear" onClick={abrirCrearEvento}>
-              <FaPlus /> Crear Evento
-            </button>
+            <div className="pi-ges-header-acciones">
+              {solicitudes.length > 0 && (
+                <button
+                  type="button"
+                  className="pi-ges-btn-solicitudes"
+                  onClick={() => setModalSolicitudesAbierto(true)}
+                >
+                  <FaFileAlt /> Solicitudes de clientes
+                  <span className="pi-ges-solicitudes-contador">{solicitudes.length}</span>
+                </button>
+              )}
+              <button type="button" className="pi-ges-btn-crear" onClick={abrirCrearEvento}>
+                <FaPlus /> Crear Evento
+              </button>
+            </div>
           </div>
 
-          {solicitudes.length > 0 && (
-            <section className="pi-ges-seccion">
-              <h3 className="pi-ges-seccion-titulo"><FaFileAlt /> Solicitudes de Clientes pendientes</h3>
-              <div className="pi-ges-tabla-wrapper">
-                <table className="pi-ges-tabla">
-                  <thead>
-                    <tr><th scope="col">Evento propuesto</th><th scope="col">Cliente</th><th scope="col">Lugar</th><th scope="col">Fecha</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
-                  </thead>
-                  <tbody>
-                    {solicitudes.map(s => (
-                      <tr key={s.id}>
-                        <td>{s.nombreEvento}</td>
-                        <td>{s.cliente?.nombre} ({s.cliente?.email})</td>
-                        <td>{s.lugar}</td>
-                        <td>{formatearFecha(s.fecha)}</td>
-                        <td style={{ display: 'flex', gap: '8px' }}>
-                          <button type="button" className="pi-ges-btn-asignar" onClick={() => aprobarSolicitud(s)}>
-                            <FaCheckCircle /> Aprobar
-                          </button>
-                          <button type="button" className="pi-ges-btn-quitar" onClick={() => rechazarSolicitud(s)} title="Rechazar">
-                            <FaBan />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          )}
+          <Buscador
+            valor={busqueda}
+            onCambio={setBusqueda}
+            placeholder="Buscar evento por nombre o lugar…"
+          />
 
-          <div className="pi-ges-buscador">
-            <FaSearch />
-            <input
-              type="text"
-              placeholder="Buscar evento por nombre o lugar..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
-
-          <div className="pi-ges-eventos-grid">
-            {eventosFiltrados.map(ev => (
-              <button type="button" key={ev.id} className="pi-ges-evento-card" onClick={() => abrirDetalle(ev.id)}>
-                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-ges-evento-imagen" />
-                <div className="pi-ges-evento-info">
-                  <strong>
-                    {ev.nombre} <BadgeEstadoEvento evento={ev} />{' '}
+          <GrillaEventos
+            eventos={eventosFiltrados}
+            gridClassName="pi-ges-eventos-grid"
+            vacio="No se encontraron eventos."
+          >
+            {ev => (
+              <EventoCard
+                key={ev.id}
+                evento={ev}
+                onClick={() => abrirDetalle(ev.id)}
+                cta="Gestionar"
+                badges={
+                  <>
+                    <BadgeEstadoEvento evento={ev} />
                     <span className={`pi-ges-badge-publicacion ${ev.publicadoEn ? 'publicado' : 'borrador'}`}>
                       {ev.publicadoEn ? <><FaCheckCircle /> Publicado</> : <><FaEyeSlash /> Borrador</>}
                     </span>
-                  </strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-                  <span className="pi-ges-evento-usuarios"><FaUsers /> {contarAsignados(ev.id)} usuarios asignados</span>
-                </div>
-              </button>
-            ))}
-            {eventosFiltrados.length === 0 && (
-              <p className="pi-ges-sin-resultados">No se encontraron eventos.</p>
+                  </>
+                }
+                meta={<><FaUsers /> {contarAsignados(ev.id)} usuarios asignados</>}
+              />
             )}
-          </div>
+          </GrillaEventos>
         </>
       )}
 
@@ -725,6 +685,40 @@ export default function AdminGestionEventos() {
                   </button>
                 </div>
               </form>
+        </Modal>
+      )}
+
+      {modalSolicitudesAbierto && (
+        <Modal
+          titulo={<><FaFileAlt aria-hidden="true" /> Solicitudes de clientes pendientes</>}
+          onCerrar={() => setModalSolicitudesAbierto(false)}
+          tamano="lg"
+        >
+          {solicitudes.length === 0 ? (
+            <p className="pi-ges-modal-vacio">No hay solicitudes pendientes.</p>
+          ) : (
+            <Tabla
+              columnas={['Evento propuesto', 'Cliente', 'Lugar', 'Fecha', { texto: 'Acciones', srOnly: true }]}
+              datos={solicitudes}
+              porPagina={8}
+              renderFila={s => (
+                <tr key={s.id}>
+                  <td>{s.nombreEvento}</td>
+                  <td>{s.cliente?.nombre} ({s.cliente?.email})</td>
+                  <td>{s.lugar}</td>
+                  <td>{formatearFecha(s.fecha)}</td>
+                  <td style={{ display: 'flex', gap: '8px' }}>
+                    <button type="button" className="pi-ges-btn-asignar" onClick={() => aprobarSolicitud(s)}>
+                      <FaCheckCircle /> Aprobar
+                    </button>
+                    <button type="button" className="pi-ges-btn-quitar" onClick={() => rechazarSolicitud(s)} title="Rechazar">
+                      <FaBan />
+                    </button>
+                  </td>
+                </tr>
+              )}
+            />
+          )}
         </Modal>
       )}
 

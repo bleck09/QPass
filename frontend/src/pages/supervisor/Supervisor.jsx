@@ -3,13 +3,17 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaUsers, FaCheckCircle, FaQrcode, FaTimes,
-  FaSearch, FaIdCard, FaTicketAlt,  FaUserCheck, FaExclamationTriangle,
+  FaIdCard, FaTicketAlt,  FaUserCheck, FaExclamationTriangle,
   FaSignOutAlt, FaCamera, FaHistory, FaSignInAlt, FaUserSecret, FaSyncAlt,
-  FaMapMarkerAlt, FaArrowLeft, FaCalendarAlt
+  FaArrowLeft, FaCalendarAlt
 } from 'react-icons/fa';
 
 // Debe coincidir con MARGEN_INGRESO_ANTICIPADO_HORAS del backend
@@ -18,7 +22,7 @@ const MARGEN_INGRESO_ANTICIPADO_HORAS = 3;
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirFotoCapturada } from '../../utils/imagenes.js';
-import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
+import { formatearFecha, estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
@@ -55,6 +59,9 @@ export default function Supervisor() {
 
   const [filtro, setFiltro] = useState('todos');
   const [busqueda, setBusqueda] = useState('');
+  // Buscador de la pantalla de selección de evento (antes de entrar a uno)
+  const [busquedaEvento, setBusquedaEvento] = useState('');
+  const [filtroEvento, setFiltroEvento] = useState('todos');
   const [alertaToggle, setAlertaToggle] = useState(''); // Mensaje de error interno del modal
   // Al registrar un movimiento: un "flash" de confirmación de ~1 s ({ tipo, nombre }) y
   // después se vuelve a mostrar la tarjeta del asistente ya actualizada (como un reescaneo),
@@ -83,6 +90,11 @@ export default function Supervisor() {
     const pctAdentro = total ? Math.round((adentro / total) * 1000) / 10 : 0;
     return { total, adentro, afuera, pendientes, pctAdentro };
   }, [participantes]);
+
+  const eventosFiltrados = useMemo(
+    () => filtrarEventos(eventos, busquedaEvento, filtroEvento),
+    [eventos, busquedaEvento, filtroEvento],
+  );
 
   const listaFiltrada = useMemo(() => {
     return participantes.filter(p => {
@@ -243,22 +255,30 @@ export default function Supervisor() {
         ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
-          <div className="pi-entrega-eventos-grid">
-            {eventos.map(ev => (
-              <button
-                key={ev.id}
-                className="pi-entrega-evento-card"
-                onClick={() => abrirEvento(ev)}
-                disabled={estadoEvento(ev) === 'archivado'}
-              >
-                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
-                <div className="pi-entrega-evento-info">
-                  <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <>
+            <Buscador
+              valor={busquedaEvento}
+              onCambio={setBusquedaEvento}
+              placeholder="Buscar evento por nombre o lugar…"
+              etiqueta="Buscar evento"
+              filtros={FILTROS_ESTADO_EVENTO}
+              filtroActivo={filtroEvento}
+              onFiltro={setFiltroEvento}
+              etiquetaFiltros="Filtrar eventos por estado"
+            />
+            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+              {ev => (
+                <EventoCard
+                  key={ev.id}
+                  evento={ev}
+                  onClick={() => abrirEvento(ev)}
+                  disabled={estadoEvento(ev) === 'archivado'}
+                  badges={<BadgeEstadoEvento evento={ev} />}
+                  cta="Abrir control"
+                />
+              )}
+            </GrillaEventos>
+          </>
         )}
       </div>
     );
@@ -306,62 +326,50 @@ export default function Supervisor() {
         <div className="pi-sup-lista-header">
           <h3>Auditoría de Asistentes</h3>
           <div className="pi-sup-lista-controles">
-            <div className="pi-sup-buscador">
-              <FaSearch aria-hidden="true" />
-              <input
-                type="search"
-                aria-label="Buscar asistente por nombre o CI"
-                placeholder="Buscar por nombre o CI..."
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-              />
-            </div>
-            <div className="pi-sup-filtros" role="group" aria-label="Filtrar asistentes">
-              <button type="button" className={filtro === 'todos' ? 'activo' : ''} aria-pressed={filtro === 'todos'} onClick={() => setFiltro('todos')}>Todos</button>
-              <button type="button" className={filtro === 'ingresado' ? 'activo' : ''} aria-pressed={filtro === 'ingresado'} onClick={() => setFiltro('ingresado')}>Adentro</button>
-              <button type="button" className={filtro === 'salio' ? 'activo' : ''} aria-pressed={filtro === 'salio'} onClick={() => setFiltro('salio')}>Afuera</button>
-              <button type="button" className={filtro === 'pendiente' ? 'activo' : ''} aria-pressed={filtro === 'pendiente'} onClick={() => setFiltro('pendiente')}>Pendientes</button>
-            </div>
+            <Buscador
+              valor={busqueda}
+              onCambio={setBusqueda}
+              placeholder="Buscar por nombre o CI…"
+              etiqueta="Buscar asistente por nombre o CI"
+              filtros={[
+                { valor: 'todos', texto: 'Todos' },
+                { valor: 'ingresado', texto: 'Adentro' },
+                { valor: 'salio', texto: 'Afuera' },
+                { valor: 'pendiente', texto: 'Pendientes' },
+              ]}
+              filtroActivo={filtro}
+              onFiltro={setFiltro}
+              etiquetaFiltros="Filtrar asistentes"
+            />
           </div>
         </div>
 
-        <div className="pi-sup-tabla-wrapper">
-          <table className="pi-sup-tabla">
-            <thead>
-              <tr>
-                <th scope="col">Participante</th>
-                <th scope="col">Documento</th>
-                <th scope="col">Entrada</th>
-                <th scope="col">Ingresos</th>
-                <th scope="col">Salidas</th>
-                <th scope="col">Estado Actual</th>
-              </tr>
-            </thead>
-            <tbody>
-              {listaFiltrada.map(p => {
-                return (
-                  <tr key={p.id}>
-                    <td>
-                      <div className="pi-sup-fila-persona">
-                        {p.foto && <img width="40" height="40" src={p.foto} alt={p.nombre} className="pi-sup-mini-avatar" />}
-                        <span>{p.nombre}</span>
-                      </div>
-                    </td>
-                    <td>{p.documento || '—'}</td>
-                    <td>{p.categoriaTicket?.nombre || '—'}</td>
-                    <td>{p.vecesIngreso}</td>
-                    <td>{p.vecesSalida}</td>
-                    <td>
-                      {p.estadoIngreso === 'ingresado' && <span className="pi-sup-badge pi-sup-badge-ok">Adentro</span>}
-                      {p.estadoIngreso === 'salio' && <span className="pi-sup-badge pi-sup-badge-out">Salió</span>}
-                      {p.estadoIngreso === 'pendiente' && <span className="pi-sup-badge pi-sup-badge-pend">Pendiente</span>}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <Tabla
+          columnas={['Participante', 'Documento', 'Entrada', 'Ingresos', 'Salidas', 'Estado Actual']}
+          datos={listaFiltrada}
+          vacio={busqueda.trim() || filtro !== 'todos'
+            ? 'Ningún asistente coincide con la búsqueda.'
+            : 'Todavía no hay asistentes en este evento.'}
+          renderFila={p => (
+            <tr key={p.id}>
+              <td>
+                <div className="pi-sup-fila-persona">
+                  {p.foto && <img width="40" height="40" src={p.foto} alt={p.nombre} className="pi-sup-mini-avatar" />}
+                  <span>{p.nombre}</span>
+                </div>
+              </td>
+              <td>{p.documento || '—'}</td>
+              <td>{p.categoriaTicket?.nombre || '—'}</td>
+              <td>{p.vecesIngreso}</td>
+              <td>{p.vecesSalida}</td>
+              <td>
+                {p.estadoIngreso === 'ingresado' && <span className="pi-sup-badge pi-sup-badge-ok">Adentro</span>}
+                {p.estadoIngreso === 'salio' && <span className="pi-sup-badge pi-sup-badge-out">Salió</span>}
+                {p.estadoIngreso === 'pendiente' && <span className="pi-sup-badge pi-sup-badge-pend">Pendiente</span>}
+              </td>
+            </tr>
+          )}
+        />
       </div>
 
       {/* --- MODAL: ESCÁNER DE QR (cámara real) --- */}

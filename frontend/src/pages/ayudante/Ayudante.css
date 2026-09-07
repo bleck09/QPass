@@ -404,36 +404,6 @@
 }
 
 /* --- HISTORIAL --- */
-.pi-ayu-tabla-wrapper {
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  overflow-x: auto;
-  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
-}
-
-.pi-ayu-tabla {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.pi-ayu-tabla th {
-  text-align: left;
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.pi-ayu-tabla td {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-}
-
 .pi-ayu-fila-persona {
   display: flex;
   align-items: center;
@@ -461,12 +431,6 @@
 .pi-ayu-monto-celda {
   font-weight: 700;
   color: var(--coral-compra);
-}
-
-.pi-ayu-sin-resultados {
-  text-align: center;
-  color: var(--text-secondary);
-  padding: 32px 0 !important;
 }
 
 /* --- MODAL / TARJETA GRANDE AL ESCANEAR --- */

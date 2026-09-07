@@ -1,0 +1,75 @@
+/* Buscador + filtros (components/Buscador.jsx). Solo tokens de Nivel 2. */
+
+.qp-buscador {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* --- Caja de búsqueda --- */
+.qp-buscador__box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 200px;
+  max-width: 340px;
+  padding: 0 14px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
+}
+.qp-buscador__box:focus-within {
+  border-color: var(--focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 26%, transparent);
+}
+.qp-buscador__icon {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+.qp-buscador__box input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  padding: 9px 0;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  outline: none;
+}
+.qp-buscador__box input::placeholder { color: var(--text-muted); }
+/* la X nativa del type=search se reemplaza por la propia */
+.qp-buscador__box input::-webkit-search-cancel-button { display: none; }
+
+.qp-buscador__clear {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+}
+.qp-buscador__clear:hover { color: var(--text-primary); }
+
+/* Las pastillas de filtro viven en components/Filtros.jsx (.qp-filtros). */
+
+/* --- Slot de acciones a la derecha (ej. botón "Nuevo …") --- */
+.qp-buscador__acciones {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}

@@ -2,6 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
@@ -62,6 +64,15 @@ export default function Ayudante() {
     () => ventas.reduce((suma, v) => suma + Number(v.montoTotal), 0),
     [ventas]
   );
+
+  const [busquedaVentas, setBusquedaVentas] = useState('');
+  const ventasFiltradas = useMemo(() => {
+    const q = busquedaVentas.trim().toLowerCase();
+    if (!q) return ventas;
+    return ventas.filter((v) =>
+      `${v.entrada?.nombre || ''} ${v.entrada?.documento || ''}`.toLowerCase().includes(q),
+    );
+  }, [ventas, busquedaVentas]);
 
   const saldoInsuficiente = tarjetaQR && totalCarrito > Number(tarjetaQR.saldo);
 
@@ -321,51 +332,41 @@ export default function Ayudante() {
       {/* --- PESTAÑA: HISTORIAL --- */}
       {pestana === 'historial' && (
         <div className="pi-ayu-historial">
-          <div className="pi-ayu-tabla-wrapper">
-            <table className="pi-ayu-tabla">
-              <thead>
-                <tr>
-                  <th scope="col">Cliente</th>
-                  <th scope="col">Documento</th>
-                  <th scope="col">Productos</th>
-                  <th scope="col">Total</th>
-                  <th scope="col">Fecha</th>
-                  <th scope="col">Hora</th>
+          <Buscador
+            valor={busquedaVentas}
+            onCambio={setBusquedaVentas}
+            placeholder="Buscar por cliente o documento…"
+          />
+          <Tabla
+            card
+            columnas={['Cliente', 'Documento', 'Productos', 'Total', 'Fecha', 'Hora']}
+            datos={ventasFiltradas}
+            vacio={busquedaVentas.trim()
+              ? 'No hay ventas que coincidan con la búsqueda.'
+              : 'Aún no has realizado ninguna venta.'}
+            renderFila={venta => {
+              const cantidadItems = venta.items.reduce((s, i) => s + i.cantidad, 0);
+              return (
+                <tr key={venta.id}>
+                  <td>
+                    <div className="pi-ayu-fila-persona">
+                      {venta.entrada?.foto && <img width="34" height="34" src={venta.entrada.foto} alt={venta.entrada.nombre} className="pi-ayu-mini-avatar" />}
+                      <span>{venta.entrada?.nombre || '—'}</span>
+                    </div>
+                  </td>
+                  <td>{venta.entrada?.documento || '—'}</td>
+                  <td>
+                    <span className="pi-ayu-badge-items">
+                      {cantidadItems} {cantidadItems === 1 ? 'producto' : 'productos'}
+                    </span>
+                  </td>
+                  <td className="pi-ayu-monto-celda">-{Number(venta.montoTotal)} pts</td>
+                  <td>{new Date(venta.createdAt).toLocaleDateString('es-BO')}</td>
+                  <td>{new Date(venta.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {ventas.map(venta => {
-                  const cantidadItems = venta.items.reduce((s, i) => s + i.cantidad, 0);
-                  return (
-                    <tr key={venta.id}>
-                      <td>
-                        <div className="pi-ayu-fila-persona">
-                          {venta.entrada?.foto && <img width="34" height="34" src={venta.entrada.foto} alt={venta.entrada.nombre} className="pi-ayu-mini-avatar" />}
-                          <span>{venta.entrada?.nombre || '—'}</span>
-                        </div>
-                      </td>
-                      <td>{venta.entrada?.documento || '—'}</td>
-                      <td>
-                        <span className="pi-ayu-badge-items">
-                          {cantidadItems} {cantidadItems === 1 ? 'producto' : 'productos'}
-                        </span>
-                      </td>
-                      <td className="pi-ayu-monto-celda">-{Number(venta.montoTotal)} pts</td>
-                      <td>{new Date(venta.createdAt).toLocaleDateString('es-BO')}</td>
-                      <td>{new Date(venta.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
-                    </tr>
-                  );
-                })}
-                {ventas.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="pi-ayu-sin-resultados">
-                      Aún no has realizado ninguna venta.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+              );
+            }}
+          />
         </div>
       )}
 

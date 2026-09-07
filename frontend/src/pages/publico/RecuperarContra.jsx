@@ -1,19 +1,19 @@
 import { useState, useRef } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useNavigate } from 'react-router-dom';
-import { 
-  MdEmail, MdLock, MdArrowBack, MdVisibility, MdVisibilityOff 
+import {
+  MdEmail, MdLock, MdArrowBack, MdVisibility, MdVisibilityOff
 } from 'react-icons/md';
 import { FaShieldAlt, FaEnvelopeOpenText, FaKey } from 'react-icons/fa';
 import api from '../../api/index.js';
+import './auth.css';
 import './RecuperarContra.css';
 
 export default function RecuperarContra() {
   useTituloPagina('Recuperar contraseña');
   const navigate = useNavigate();
 
-  // --- PASOS DEL FLUJO ---
-  // 1: Ingresar Correo | 2: Código OTP | 3: Nueva Contraseña
+  // --- PASOS DEL FLUJO ---  1: Correo | 2: Código OTP | 3: Nueva contraseña
   const [step, setStep] = useState(1);
 
   // --- ESTADOS DE DATOS ---
@@ -21,8 +21,8 @@ export default function RecuperarContra() {
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  // No hay servicio de correo: el backend devuelve el código en la respuesta para poder
-  // probar el flujo. En producción esto no existiría y el código llegaría solo por correo.
+  // No hay servicio de correo: el backend devuelve el código en la respuesta para
+  // poder probar el flujo. En producción llegaría solo por correo.
   const [codigoDemo, setCodigoDemo] = useState('');
 
   // --- ESTADOS DE UI ---
@@ -31,26 +31,14 @@ export default function RecuperarContra() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  // Mantener colores globales
-  const [theme] = useState(() => {
-    const dataGuardada = localStorage.getItem('pi_landing_config');
-    return dataGuardada ? JSON.parse(dataGuardada) : {
-      colorPrimario: '#00B4D8', colorFondo: '#0b1120', colorBoton: '#FFFFFF'
-    };
-  });
-
-  // ==========================================
-  // PASO 1: ENVIAR CORREO
-  // ==========================================
+  // PASO 1: enviar correo
   const handlePedirCodigo = async (e) => {
     e.preventDefault();
     setError('');
-
     if (!email) {
       setError('Por favor, ingresa tu correo electrónico.');
       return;
     }
-
     try {
       const { codigoDemo: codigo } = await api.auth.recuperarSolicitar(email);
       setCodigoDemo(codigo);
@@ -61,20 +49,14 @@ export default function RecuperarContra() {
     }
   };
 
-  // ==========================================
-  // PASO 2: VERIFICAR OTP (Lógica heredada de Registro)
-  // ==========================================
+  // PASO 2: verificar OTP
   const handleOtpChange = (index, value) => {
-    const soloNumeros = value.replace(/\D/g, ''); 
+    const soloNumeros = value.replace(/\D/g, '');
     if (!soloNumeros && value !== '') return;
-
     const newOtp = [...otp];
     newOtp[index] = soloNumeros;
     setOtp(newOtp);
-
-    if (soloNumeros && index < 5) {
-      inputRefs.current[index + 1].focus();
-    }
+    if (soloNumeros && index < 5) inputRefs.current[index + 1].focus();
   };
 
   const handleOtpKeyDown = (index, e) => {
@@ -86,14 +68,11 @@ export default function RecuperarContra() {
   const handleVerificarCodigo = async (e) => {
     e.preventDefault();
     setError('');
-
     const codigoIngresado = otp.join('');
-
     if (codigoIngresado.length < 6) {
       setError('Debes ingresar los 6 dígitos del código.');
       return;
     }
-
     try {
       await api.auth.recuperarVerificar(email, codigoIngresado);
       setStep(3);
@@ -115,13 +94,10 @@ export default function RecuperarContra() {
     }
   };
 
-  // ==========================================
-  // PASO 3: CAMBIAR CONTRASEÑA
-  // ==========================================
+  // PASO 3: cambiar contraseña
   const handleRestablecerContra = async (e) => {
     e.preventDefault();
     setError('');
-
     if (!password || !confirmPassword) {
       setError('Completa ambos campos de contraseña.');
       return;
@@ -134,70 +110,50 @@ export default function RecuperarContra() {
       setError('Las contraseñas no coinciden.');
       return;
     }
-
     try {
       await api.auth.recuperarRestablecer(email, otp.join(''), password);
-      setSuccess('¡Contraseña actualizada con éxito! Redirigiendo al login...');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2500);
+      setSuccess('¡Contraseña actualizada! Redirigiendo al login…');
+      setTimeout(() => navigate('/login'), 2500);
     } catch (err) {
       setError(err.message);
     }
   };
 
-  const estiloDinamico = {
-    '--color-primario': theme.colorPrimario,
-    '--color-fondo': theme.colorFondo,
-    '--color-boton': theme.colorBoton
-  };
-
   return (
-    <div className="pi-recover-wrapper" style={estiloDinamico}>
-      
-      {/* Luces de fondo */}
-      <div className="bg-glow glow-top-left"></div>
-      <div className="bg-glow glow-bottom-right"></div>
+    <div className="pi-auth">
+      {step === 1 ? (
+        <button type="button" className="pi-auth__back" onClick={() => navigate('/login')}>
+          <MdArrowBack size={18} aria-hidden="true" /> Volver al login
+        </button>
+      ) : step === 2 ? (
+        <button type="button" className="pi-auth__back" onClick={() => { setStep(1); setError(''); }}>
+          <MdArrowBack size={18} aria-hidden="true" /> Cambiar correo
+        </button>
+      ) : (
+        <button type="button" className="pi-auth__back" onClick={() => navigate('/login')}>
+          <MdArrowBack size={18} aria-hidden="true" /> Cancelar recuperación
+        </button>
+      )}
 
-      <div className="pi-recover-top-bar">
-        {step === 1 ? (
-          <button className="pi-recover-btn-back" onClick={() => navigate('/login')}>
-            <MdArrowBack size={20} /> Volver al Login
-          </button>
-        ) : step === 2 ? (
-          <button className="pi-recover-btn-back" onClick={() => { setStep(1); setError(''); }}>
-            <MdArrowBack size={20} /> Cambiar correo
-          </button>
-        ) : (
-          <button className="pi-recover-btn-back" onClick={() => navigate('/login')}>
-            <MdArrowBack size={20} /> Cancelar recuperación
-          </button>
-        )}
-      </div>
+      <div className="pi-auth__card">
+        <div className="pi-auth__panel">
+        {/* Landmark principal de la pantalla (Manual 11) */}
+        <main className="pi-auth__body" id="contenido">
 
-      {/* Landmark principal de la pantalla (Manual 11) */}
-      <main className="pi-recover-content" id="contenido">
-        <div className="pi-recover-card glass-panel">
-          
-          {/* =====================================
-              PASO 1: PEDIR CORREO
-          ===================================== */}
+          {/* ===== PASO 1: pedir correo ===== */}
           {step === 1 && (
-            <div className="animate-fade pi-recover-step">
-              <div className="recover-icon-wrapper">
-                <FaShieldAlt size={40} />
-              </div>
-              {/* h1 del paso activo (solo se muestra un paso a la vez) */}
-              <h1 className="pi-recover-title">Recuperar contraseña</h1>
-              <p className="pi-recover-subtitle">
-                Ingresa el correo electrónico asociado a tu cuenta. Te enviaremos un código de seguridad para verificar tu identidad.
+            <div className="animate-fade pi-auth__step">
+              <div className="pi-auth__step-icon"><FaShieldAlt size={34} aria-hidden="true" /></div>
+              <h1 className="pi-auth__title">Recuperar contraseña</h1>
+              <p className="pi-auth__subtitle">
+                Ingresá el correo asociado a tu cuenta. Te enviaremos un código de seguridad para verificar tu identidad.
               </p>
 
-              <form onSubmit={handlePedirCodigo} className="pi-recover-form">
-                <div className="pi-recover-input-group">
+              <form onSubmit={handlePedirCodigo} className="pi-auth__form">
+                <div className="pi-auth__field">
                   <label htmlFor="rec-email">Correo electrónico registrado</label>
-                  <div className="pi-recover-input-wrapper">
-                    <span className="pi-recover-icon" aria-hidden="true"><MdEmail size={20} /></span>
+                  <div className="pi-auth__control">
+                    <span className="pi-auth__icon" aria-hidden="true"><MdEmail size={18} /></span>
                     <input
                       id="rec-email"
                       type="email"
@@ -211,33 +167,29 @@ export default function RecuperarContra() {
                   </div>
                 </div>
 
-                {error && <p className="pi-recover-error" role="alert">{error}</p>}
-                {success && <p className="pi-recover-success" role="status">{success}</p>}
+                {error && <p className="pi-auth__error" role="alert">{error}</p>}
+                {success && <p className="pi-auth__success" role="status">{success}</p>}
 
-                <button type="submit" className="pi-recover-btn-submit">Enviar código →</button>
+                <button type="submit" className="pi-auth__submit">Enviar código</button>
               </form>
             </div>
           )}
 
-          {/* =====================================
-              PASO 2: VERIFICAR CÓDIGO (OTP)
-          ===================================== */}
+          {/* ===== PASO 2: verificar OTP ===== */}
           {step === 2 && (
-            <div className="animate-fade pi-recover-step">
-              <div className="recover-icon-wrapper">
-                <FaEnvelopeOpenText size={40} />
-              </div>
-              <h1 className="pi-recover-title">Código de seguridad</h1>
-              <p className="pi-recover-subtitle">
-                Generamos un código de 6 dígitos para <strong>{email}</strong>. Ingrésalo a continuación para continuar.
+            <div className="animate-fade pi-auth__step">
+              <div className="pi-auth__step-icon"><FaEnvelopeOpenText size={34} aria-hidden="true" /></div>
+              <h1 className="pi-auth__title">Código de seguridad</h1>
+              <p className="pi-auth__subtitle">
+                Generamos un código de 6 dígitos para <strong>{email}</strong>. Ingresálo abajo para continuar.
               </p>
               {codigoDemo && (
-                <p className="pi-recover-subtitle" style={{ fontWeight: 'bold' }}>
-                  Modo desarrollo (sin envío de correo real): tu código es <strong>{codigoDemo}</strong>
+                <p className="pi-auth__subtitle">
+                  Modo desarrollo (sin correo real): tu código es <strong>{codigoDemo}</strong>
                 </p>
               )}
 
-              <form onSubmit={handleVerificarCodigo} className="pi-recover-form">
+              <form onSubmit={handleVerificarCodigo} className="pi-auth__form">
                 <fieldset className="otp-inputs-container" style={{ border: 0, padding: 0, margin: 0 }}>
                   <legend className="sr-only">Código de seguridad de 6 dígitos</legend>
                   {otp.map((digit, index) => (
@@ -258,10 +210,10 @@ export default function RecuperarContra() {
                   ))}
                 </fieldset>
 
-                {error && <p className="pi-recover-error" role="alert">{error}</p>}
-                {success && <p className="pi-recover-success" role="status">{success}</p>}
+                {error && <p className="pi-auth__error" role="alert">{error}</p>}
+                {success && <p className="pi-auth__success" role="status">{success}</p>}
 
-                <button type="submit" className="pi-recover-btn-submit" style={{marginTop: '20px'}}>
+                <button type="submit" className="pi-auth__submit" style={{ marginTop: '20px' }}>
                   Verificar código
                 </button>
               </form>
@@ -269,28 +221,23 @@ export default function RecuperarContra() {
             </div>
           )}
 
-          {/* =====================================
-              PASO 3: NUEVA CONTRASEÑA
-          ===================================== */}
+          {/* ===== PASO 3: nueva contraseña ===== */}
           {step === 3 && (
-            <div className="animate-fade pi-recover-step">
-              <div className="recover-icon-wrapper">
-                <FaKey size={40} />
-              </div>
-              <h1 className="pi-recover-title">Crear nueva contraseña</h1>
-              <p className="pi-recover-subtitle">
-                Identidad verificada. Por favor, escribe una contraseña segura que no hayas usado antes.
+            <div className="animate-fade pi-auth__step">
+              <div className="pi-auth__step-icon"><FaKey size={34} aria-hidden="true" /></div>
+              <h1 className="pi-auth__title">Crear nueva contraseña</h1>
+              <p className="pi-auth__subtitle">
+                Identidad verificada. Escribí una contraseña segura que no hayas usado antes.
               </p>
 
-              <form onSubmit={handleRestablecerContra} className="pi-recover-form">
-                
-                <div className="pi-recover-input-group">
+              <form onSubmit={handleRestablecerContra} className="pi-auth__form">
+                <div className="pi-auth__field">
                   <label htmlFor="rec-password">Nueva contraseña</label>
-                  <div className="pi-recover-input-wrapper">
-                    <span className="pi-recover-icon" aria-hidden="true"><MdLock size={20} /></span>
+                  <div className="pi-auth__control">
+                    <span className="pi-auth__icon" aria-hidden="true"><MdLock size={18} /></span>
                     <input
                       id="rec-password"
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
@@ -300,42 +247,50 @@ export default function RecuperarContra() {
                     />
                     <button
                       type="button"
-                      className="pi-recover-eye-btn"
+                      className="pi-auth__ghost-btn"
                       onClick={() => setShowPassword(!showPassword)}
                       aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                       aria-pressed={showPassword}
                     >
-                      {showPassword ? <MdVisibilityOff size={20} aria-hidden="true" /> : <MdVisibility size={20} aria-hidden="true" />}
+                      {showPassword ? <MdVisibilityOff size={18} aria-hidden="true" /> : <MdVisibility size={18} aria-hidden="true" />}
                     </button>
                   </div>
                 </div>
 
-                <div className="pi-recover-input-group">
+                <div className="pi-auth__field">
                   <label htmlFor="rec-password-2">Confirmar nueva contraseña</label>
-                  <div className="pi-recover-input-wrapper">
-                    <span className="pi-recover-icon" aria-hidden="true"><MdLock size={20} /></span>
+                  <div className="pi-auth__control">
+                    <span className="pi-auth__icon" aria-hidden="true"><MdLock size={18} /></span>
                     <input
                       id="rec-password-2"
-                      type={showPassword ? "text" : "password"}
+                      type={showPassword ? 'text' : 'password'}
                       autoComplete="new-password"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repite tu contraseña"
+                      placeholder="Repetí tu contraseña"
                       required
                     />
                   </div>
                 </div>
 
-                {error && <p className="pi-recover-error" role="alert">{error}</p>}
-                {success && <p className="pi-recover-success" role="status">{success}</p>}
+                {error && <p className="pi-auth__error" role="alert">{error}</p>}
+                {success && <p className="pi-auth__success" role="status">{success}</p>}
 
-                <button type="submit" className="pi-recover-btn-submit">Restablecer contraseña</button>
+                <button type="submit" className="pi-auth__submit">Restablecer contraseña</button>
               </form>
             </div>
           )}
 
+        </main>
+      </div>
+
+      <aside className="pi-auth__aside" aria-hidden="true">
+        <div className="pi-auth__tagline">
+          <p className="pi-auth__eyebrow">QPass</p>
+          <h2>Recuperá el acceso a tu cuenta</h2>
         </div>
-      </main>
-    </div>
+      </aside>
+      </div>
+  </div>
   );
 }

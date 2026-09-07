@@ -1,0 +1,64 @@
+/* =========================================================
+   Paginador — controles « / » (tablas y grillas)
+========================================================= */
+
+.qp-paginador {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 14px 0 4px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.qp-paginador__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.qp-paginador__btn:hover:not(:disabled) {
+  border-color: var(--action);
+  background: var(--bg-hover);
+}
+
+.qp-paginador__btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.qp-paginador__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.qp-paginador__info {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.qp-paginador__total {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+@media (max-width: 480px) {
+  .qp-paginador__total {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-paginador__btn {
+    transition: none;
+  }
+}

@@ -160,29 +160,6 @@
 
 .no-margin { padding: 0; }
 
-.table-wrapper { overflow-x: auto; }
-.pi-mapa-table { width: 100%; border-collapse: collapse; }
-
-.pi-mapa-table th {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  text-align: left;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--text-secondary);
-}
-
-.pi-mapa-table td {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  vertical-align: middle;
-}
-
-.pi-mapa-table tbody tr:hover { background-color: var(--bg-page); }
-
 .item-info-mapa {
   display: flex;
   align-items: center;

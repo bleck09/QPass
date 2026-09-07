@@ -2,6 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import Filtros from '../../components/Filtros.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
@@ -9,12 +14,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
   FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends, FaUsers,
-  FaArrowLeft, FaSearch, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
-  FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt, FaMapMarkerAlt,
+  FaArrowLeft, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
+  FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt,
   FaKey
 } from 'react-icons/fa';
 import api from '../../api/index.js';
-import { formatearFecha } from '../../utils/eventos.js';
+import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import './Admin.css';
 
 const ETIQUETA_CAMPO_ENTRADA = { nombre: 'Nombre completo', correo: 'Correo electrónico', celular: 'Celular' };
@@ -121,6 +126,8 @@ export default function Admin({
   const reportesGlobal = enReportes && !eventoIdFijo && !location.state?.eventoId;
 
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
+  const [busquedaEvento, setBusquedaEvento] = useState('');
+  const [filtroEvento, setFiltroEvento] = useState('todos');
   const [eventoId, setEventoId] = useState(eventoIdDesdeState);
   // En modo solo lectura (ej. Cliente) también se salta la selección si ya tiene un evento
   // asignado, para que vea su proyecto directamente en vez de una pantalla vacía.
@@ -132,6 +139,10 @@ export default function Admin({
 
   const vistaActual = enReportes ? 'incidencias' : vistaDetalle;
   const mostrarSelectorEventos = !eventoSeleccionado && !enReportes && !enSolicitudes;
+  const eventosSelectorFiltrados = useMemo(
+    () => filtrarEventos(eventosDisponibles, busquedaEvento, filtroEvento),
+    [eventosDisponibles, busquedaEvento, filtroEvento],
+  );
 
   useEffect(() => {
     if (embebido || reportesGlobal) return; // evento fijo/no aplica: no hace falta la lista
@@ -514,22 +525,34 @@ export default function Admin({
 
       {mostrarSelectorEventos ? (
         <section className="pi-dash-seccion">
-          <div className="pi-dash-eventos-grid">
-            {eventosDisponibles.map(ev => (
-              <button type="button" key={ev.id} className="pi-dash-evento-card" onClick={() => seleccionarEvento(ev.id)}>
-                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-dash-evento-imagen" />
-                <div className="pi-dash-evento-info">
-                  <strong>{ev.nombre}</strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-                </div>
-              </button>
-            ))}
-            {eventosDisponibles.length === 0 && (
-              <p className="pi-dash-sin-resultados">
-                {soloLectura ? 'Todavía no tienes eventos asignados.' : 'No hay eventos disponibles.'}
-              </p>
-            )}
-          </div>
+          {eventosDisponibles.length === 0 ? (
+            <p className="pi-dash-sin-resultados">
+              {soloLectura ? 'Todavía no tienes eventos asignados.' : 'No hay eventos disponibles.'}
+            </p>
+          ) : (
+            <>
+              <Buscador
+                valor={busquedaEvento}
+                onCambio={setBusquedaEvento}
+                placeholder="Buscar evento por nombre o lugar…"
+                etiqueta="Buscar evento"
+                filtros={FILTROS_ESTADO_EVENTO}
+                filtroActivo={filtroEvento}
+                onFiltro={setFiltroEvento}
+                etiquetaFiltros="Filtrar eventos por estado"
+              />
+              <GrillaEventos eventos={eventosSelectorFiltrados} gridClassName="pi-dash-eventos-grid">
+                {ev => (
+                    <EventoCard
+                      key={ev.id}
+                      evento={ev}
+                      onClick={() => seleccionarEvento(ev.id)}
+                      cta="Ver panel"
+                    />
+                )}
+              </GrillaEventos>
+            </>
+          )}
         </section>
       ) : errorDash ? (
         <section className="pi-dash-seccion">
@@ -650,53 +673,37 @@ export default function Admin({
           <button type="button" className="pi-dash-btn-volver" onClick={volver}><FaArrowLeft aria-hidden="true" /> Volver al dashboard</button>
           <h3 className="pi-dash-seccion-titulo">{tituloEntradasFiltro}</h3>
 
-          <div className="pi-dash-buscador">
-            <FaSearch aria-hidden="true" />
-            <input
-              type="search"
-              aria-label="Buscar por nombre o documento"
-              placeholder="Buscar por nombre o documento..."
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-            />
-          </div>
+          <Buscador
+            valor={busqueda}
+            onCambio={setBusqueda}
+            placeholder="Buscar por nombre o documento…"
+            etiqueta="Buscar por nombre o documento"
+          />
 
-          <div className="pi-dash-tabla-wrapper">
-            <table className="pi-dash-tabla">
-              <thead>
-                <tr>
-                  <th scope="col">Participante</th>
-                  <th scope="col">Documento</th>
-                  <th scope="col">Entrada</th>
-                  <th scope="col">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {entradasFiltradas.map(p => (
-                  <tr key={p.id}>
-                    <td>
-                      <div className="pi-dash-fila-persona">
-                        {p.foto && <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-dash-mini-avatar" />}
-                        <span>{p.nombre}</span>
-                      </div>
-                    </td>
-                    <td>{p.documento || '—'}</td>
-                    <td>{p.categoriaTicket?.nombre || '—'}</td>
-                    <td>
-                      {p.estadoIngreso === 'salio'
-                        ? <span className="pi-dash-badge pi-dash-badge-salio"><FaSignOutAlt /> Salió</span>
-                        : p.estadoIngreso === 'ingresado'
-                        ? <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Ingresó</span>
-                        : <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> Pendiente</span>}
-                    </td>
-                  </tr>
-                ))}
-                {entradasFiltradas.length === 0 && (
-                  <tr><td colSpan={4} className="pi-dash-sin-resultados">No se encontraron participantes.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Tabla
+            columnas={['Participante', 'Documento', 'Entrada', 'Estado']}
+            datos={entradasFiltradas}
+            vacio="No se encontraron participantes."
+            renderFila={p => (
+              <tr key={p.id}>
+                <td>
+                  <div className="pi-dash-fila-persona">
+                    {p.foto && <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-dash-mini-avatar" />}
+                    <span>{p.nombre}</span>
+                  </div>
+                </td>
+                <td>{p.documento || '—'}</td>
+                <td>{p.categoriaTicket?.nombre || '—'}</td>
+                <td>
+                  {p.estadoIngreso === 'salio'
+                    ? <span className="pi-dash-badge pi-dash-badge-salio"><FaSignOutAlt /> Salió</span>
+                    : p.estadoIngreso === 'ingresado'
+                    ? <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Ingresó</span>
+                    : <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> Pendiente</span>}
+                </td>
+              </tr>
+            )}
+          />
         </section>
       )}
 
@@ -710,20 +717,18 @@ export default function Admin({
                 <h3 className="pi-dash-seccion-titulo">{recargadorAbierto.nombre}</h3>
                 <span className="pi-dash-detalle-total">Total recargado: <strong>{recargadorAbierto.totalRecargado} pts</strong></span>
               </div>
-              <div className="pi-dash-tabla-wrapper">
-                <table className="pi-dash-tabla">
-                  <thead><tr><th scope="col">Hora</th><th scope="col">Participante</th><th scope="col">Monto</th></tr></thead>
-                  <tbody>
-                    {recargadorAbierto.recargas.map((t, i) => (
-                      <tr key={i}>
-                        <td>{t.hora}</td>
-                        <td>{t.participante}</td>
-                        <td className="pi-dash-monto-celda"><FaCoins color="var(--verde-recarga-texto)" /> {t.monto} pts</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Tabla
+                columnas={['Hora', 'Participante', 'Monto']}
+                datos={recargadorAbierto.recargas}
+                vacio="Este recargador no tiene recargas."
+                renderFila={(t, i) => (
+                  <tr key={i}>
+                    <td>{t.hora}</td>
+                    <td>{t.participante}</td>
+                    <td className="pi-dash-monto-celda"><FaCoins color="var(--verde-recarga-texto)" /> {t.monto} pts</td>
+                  </tr>
+                )}
+              />
             </>
           ) : (
             <>
@@ -733,29 +738,22 @@ export default function Admin({
               <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Recargadores</h4>
               <Podio lista={recargadoresOrdenados} valorKey="totalRecargado" unidad="pts" />
 
-              <div className="pi-dash-tabla-wrapper">
-                <table className="pi-dash-tabla">
-                  <thead>
-                    <tr><th scope="col">Recargador</th><th scope="col">Total Recargado</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
-                  </thead>
-                  <tbody>
-                    {recargadoresOrdenados.length === 0 && (
-                      <tr><td colSpan={3} className="pi-dash-sin-resultados">Aún no hay recargas en este evento.</td></tr>
-                    )}
-                    {recargadoresOrdenados.map(r => (
-                      <tr key={r.id}>
-                        <td>{r.nombre}</td>
-                        <td className="pi-dash-monto-celda"><FaCoins color="var(--verde-recarga-texto)" /> {r.totalRecargado} pts</td>
-                        <td>
-                          <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(r.id)}>
-                            <FaExchangeAlt /> Ver recargas
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Tabla
+                columnas={['Recargador', 'Total Recargado', { texto: 'Acciones', srOnly: true }]}
+                datos={recargadoresOrdenados}
+                vacio="Aún no hay recargas en este evento."
+                renderFila={r => (
+                  <tr key={r.id}>
+                    <td>{r.nombre}</td>
+                    <td className="pi-dash-monto-celda"><FaCoins color="var(--verde-recarga-texto)" /> {r.totalRecargado} pts</td>
+                    <td>
+                      <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(r.id)}>
+                        <FaExchangeAlt /> Ver recargas
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              />
             </>
           )}
         </section>
@@ -771,20 +769,18 @@ export default function Admin({
                 <h3 className="pi-dash-seccion-titulo">{devolucionAbierta.nombre}</h3>
                 <span className="pi-dash-detalle-total">Total devuelto: <strong>{devolucionAbierta.totalDevuelto} pts</strong></span>
               </div>
-              <div className="pi-dash-tabla-wrapper">
-                <table className="pi-dash-tabla">
-                  <thead><tr><th scope="col">Hora</th><th scope="col">Participante</th><th scope="col">Monto</th></tr></thead>
-                  <tbody>
-                    {devolucionAbierta.retiros.map((t, i) => (
-                      <tr key={i}>
-                        <td>{t.hora}</td>
-                        <td>{t.participante}</td>
-                        <td className="pi-dash-monto-celda"><FaBoxOpen color="var(--ambar-aviso-texto)" /> {t.monto} pts</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Tabla
+                columnas={['Hora', 'Participante', 'Monto']}
+                datos={devolucionAbierta.retiros}
+                vacio="Este encargado no tiene devoluciones."
+                renderFila={(t, i) => (
+                  <tr key={i}>
+                    <td>{t.hora}</td>
+                    <td>{t.participante}</td>
+                    <td className="pi-dash-monto-celda"><FaBoxOpen color="var(--ambar-aviso-texto)" /> {t.monto} pts</td>
+                  </tr>
+                )}
+              />
             </>
           ) : (
             <>
@@ -794,29 +790,22 @@ export default function Admin({
               <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Devoluciones</h4>
               <Podio lista={devolucionesOrdenadas} valorKey="totalDevuelto" unidad="pts" />
 
-              <div className="pi-dash-tabla-wrapper">
-                <table className="pi-dash-tabla">
-                  <thead>
-                    <tr><th scope="col">Encargado</th><th scope="col">Total Devuelto</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
-                  </thead>
-                  <tbody>
-                    {devolucionesOrdenadas.length === 0 && (
-                      <tr><td colSpan={3} className="pi-dash-sin-resultados">Aún no hay devoluciones en este evento.</td></tr>
-                    )}
-                    {devolucionesOrdenadas.map(d => (
-                      <tr key={d.id}>
-                        <td>{d.nombre}</td>
-                        <td className="pi-dash-monto-celda"><FaBoxOpen color="var(--ambar-aviso-texto)" /> {d.totalDevuelto} pts</td>
-                        <td>
-                          <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(d.id)}>
-                            <FaExchangeAlt /> Ver devoluciones
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Tabla
+                columnas={['Encargado', 'Total Devuelto', { texto: 'Acciones', srOnly: true }]}
+                datos={devolucionesOrdenadas}
+                vacio="Aún no hay devoluciones en este evento."
+                renderFila={d => (
+                  <tr key={d.id}>
+                    <td>{d.nombre}</td>
+                    <td className="pi-dash-monto-celda"><FaBoxOpen color="var(--ambar-aviso-texto)" /> {d.totalDevuelto} pts</td>
+                    <td>
+                      <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(d.id)}>
+                        <FaExchangeAlt /> Ver devoluciones
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              />
             </>
           )}
         </section>
@@ -832,20 +821,18 @@ export default function Admin({
                 <h3 className="pi-dash-seccion-titulo">{negocioAbierto.nombre}</h3>
                 <span className="pi-dash-detalle-total">Ventas totales: <strong>{negocioAbierto.ventasTotal} pts</strong> · {negocioAbierto.ayudantes} ayudante(s)</span>
               </div>
-              <div className="pi-dash-tabla-wrapper">
-                <table className="pi-dash-tabla">
-                  <thead><tr><th scope="col">Hora</th><th scope="col">Cliente</th><th scope="col">Monto</th></tr></thead>
-                  <tbody>
-                    {negocioAbierto.ventas.map((t, i) => (
-                      <tr key={i}>
-                        <td>{t.hora}</td>
-                        <td>{t.cliente}</td>
-                        <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {t.monto} pts</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Tabla
+                columnas={['Hora', 'Cliente', 'Monto']}
+                datos={negocioAbierto.ventas}
+                vacio="Este negocio no tiene ventas."
+                renderFila={(t, i) => (
+                  <tr key={i}>
+                    <td>{t.hora}</td>
+                    <td>{t.cliente}</td>
+                    <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {t.monto} pts</td>
+                  </tr>
+                )}
+              />
             </>
           ) : (
             <>
@@ -860,47 +847,36 @@ export default function Admin({
               <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Negocios por Ventas</h4>
               <Podio lista={negociosOrdenados} valorKey="ventasTotal" unidad="pts" />
 
-              <div className="pi-dash-tabla-wrapper">
-                <table className="pi-dash-tabla">
-                  <thead>
-                    <tr><th scope="col">Negocio</th><th scope="col">Ventas Totales</th><th scope="col">Ayudantes Asignados</th><th scope="col"><span className="sr-only">Acciones</span></th></tr>
-                  </thead>
-                  <tbody>
-                    {negociosOrdenados.length === 0 && (
-                      <tr><td colSpan={4} className="pi-dash-sin-resultados">Aún no hay ventas de negocios en este evento.</td></tr>
-                    )}
-                    {negociosOrdenados.map(n => (
-                      <tr key={n.id}>
-                        <td>{n.nombre}</td>
-                        <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {n.ventasTotal} pts</td>
-                        <td>{n.ayudantes}</td>
-                        <td>
-                          <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(n.id)}>
-                            <FaExchangeAlt /> Ver ventas
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Tabla
+                columnas={['Negocio', 'Ventas Totales', 'Ayudantes Asignados', { texto: 'Acciones', srOnly: true }]}
+                datos={negociosOrdenados}
+                vacio="Aún no hay ventas de negocios en este evento."
+                renderFila={n => (
+                  <tr key={n.id}>
+                    <td>{n.nombre}</td>
+                    <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {n.ventasTotal} pts</td>
+                    <td>{n.ayudantes}</td>
+                    <td>
+                      <button type="button" className="pi-dash-btn-ver" onClick={() => setItemSeleccionado(n.id)}>
+                        <FaExchangeAlt /> Ver ventas
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              />
 
               <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado"><FaTrophy color="var(--cian-digital)" /> Top Clientes por Consumo</h4>
-              <div className="pi-dash-tabla-wrapper">
-                <table className="pi-dash-tabla">
-                  <thead>
-                    <tr><th scope="col">Cliente</th><th scope="col">Consumo Total</th></tr>
-                  </thead>
-                  <tbody>
-                    {topClientesOrdenados.map((c, i) => (
-                      <tr key={i}>
-                        <td>{c.nombre}</td>
-                        <td className="pi-dash-monto-celda">{c.monto} pts</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <Tabla
+                columnas={['Cliente', 'Consumo Total']}
+                datos={topClientesOrdenados}
+                vacio="Aún no hay consumo de clientes en este evento."
+                renderFila={(c, i) => (
+                  <tr key={i}>
+                    <td>{c.nombre}</td>
+                    <td className="pi-dash-monto-celda">{c.monto} pts</td>
+                  </tr>
+                )}
+              />
             </>
           )}
         </section>
@@ -916,24 +892,17 @@ export default function Admin({
             <strong> {statsEntradas.ingresaron}</strong> persona(s) ya ingresaron a este evento.
           </p>
 
-          <div className="pi-dash-tabla-wrapper">
-            <table className="pi-dash-tabla">
-              <thead>
-                <tr><th scope="col">Nombre</th><th scope="col">Correo</th></tr>
-              </thead>
-              <tbody>
-                {datos.supervisores.map(s => (
-                  <tr key={s.id}>
-                    <td>{s.nombre}</td>
-                    <td>{s.email}</td>
-                  </tr>
-                ))}
-                {datos.supervisores.length === 0 && (
-                  <tr><td colSpan={2} className="pi-dash-sin-resultados">No hay supervisores asignados a este evento.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Tabla
+            columnas={['Nombre', 'Correo']}
+            datos={datos.supervisores}
+            vacio="No hay supervisores asignados a este evento."
+            renderFila={s => (
+              <tr key={s.id}>
+                <td>{s.nombre}</td>
+                <td>{s.email}</td>
+              </tr>
+            )}
+          />
         </section>
       )}
 
@@ -951,23 +920,15 @@ export default function Admin({
             (por ejemplo, cuántos puntos acreditar) para cerrarlo.
           </p>
 
-          <div className="pi-dash-tabla-wrapper">
-            <table className="pi-dash-tabla">
-              <thead>
-                <tr>
-                  {reportesGlobal && <th scope="col">Evento</th>}
-                  <th scope="col">Participante</th>
-                  <th scope="col">Documento</th>
-                  <th scope="col">Se le dio</th>
-                  <th scope="col">Dijo que quería</th>
-                  <th scope="col">Qué pasó</th>
-                  <th scope="col">Recargador</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col"><span className="sr-only">Acciones</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {incidencias.map(inc => (
+          <Tabla
+            columnas={[
+              reportesGlobal && 'Evento',
+              'Participante', 'Documento', 'Se le dio', 'Dijo que quería', 'Qué pasó', 'Recargador', 'Estado',
+              { texto: 'Acciones', srOnly: true },
+            ].filter(Boolean)}
+            datos={incidencias}
+            vacio="No hay incidencias de recarga reportadas."
+            renderFila={inc => (
                   <tr key={inc.id}>
                     {reportesGlobal && <td>{inc.evento?.nombre || '—'}</td>}
                     <td>
@@ -1012,15 +973,8 @@ export default function Admin({
                       )}
                     </td>
                   </tr>
-                ))}
-                {incidencias.length === 0 && (
-                  <tr>
-                    <td colSpan={reportesGlobal ? 9 : 8} className="pi-dash-sin-resultados">No hay incidencias de recarga reportadas.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+            )}
+          />
 
           <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado">
             <FaTicketAlt color="var(--ambar-aviso-texto)" /> Reportes de Datos de Entradas
@@ -1029,22 +983,15 @@ export default function Admin({
             Reportes de Usuario Normal sobre nombre, correo o celular mal puestos en una entrada ya aprobada.
             Corrige el dato para cerrar el reporte.
           </p>
-          <div className="pi-dash-tabla-wrapper">
-            <table className="pi-dash-tabla">
-              <thead>
-                <tr>
-                  {reportesGlobal && <th scope="col">Evento</th>}
-                  <th scope="col">Comprador</th>
-                  <th scope="col">Persona</th>
-                  <th scope="col">Dato reportado</th>
-                  <th scope="col">Valor actual</th>
-                  <th scope="col">Descripción</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col"><span className="sr-only">Acciones</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {reportesEntradas.map(rep => (
+          <Tabla
+            columnas={[
+              reportesGlobal && 'Evento',
+              'Comprador', 'Persona', 'Dato reportado', 'Valor actual', 'Descripción', 'Estado',
+              { texto: 'Acciones', srOnly: true },
+            ].filter(Boolean)}
+            datos={reportesEntradas}
+            vacio="No hay reportes de datos incorrectos."
+            renderFila={rep => (
                   <tr key={rep.id}>
                     {reportesGlobal && <td>{rep.evento?.nombre || '—'}</td>}
                     <td>{rep.entrada.compra?.comprador.nombre || '—'}</td>
@@ -1079,15 +1026,8 @@ export default function Admin({
                       )}
                     </td>
                   </tr>
-                ))}
-                {reportesEntradas.length === 0 && (
-                  <tr>
-                    <td colSpan={reportesGlobal ? 8 : 7} className="pi-dash-sin-resultados">No hay reportes de datos incorrectos.</td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+            )}
+          />
         </section>
       )}
 
@@ -1108,51 +1048,23 @@ export default function Admin({
             <StatCard icon={<FaExclamationTriangle />} tono="warn" valor={reportesEntradasPendientes.length} label="Reportes de datos pendientes" />
           </div>
 
-          <div className="pi-dash-chips" role="group" aria-label="Filtrar solicitudes por estado">
-            <button
-              type="button"
-              className={`pi-dash-chip${filtroSolicitudes === 'pendiente' ? ' pi-dash-chip-pend-activo' : ''}`}
-              onClick={() => setFiltroSolicitudes('pendiente')}
-            >
-              <FaHourglassHalf /> Pendientes ({solicitudes.filter(c => c.estado === 'pendiente').length})
-            </button>
-            <button
-              type="button"
-              className={`pi-dash-chip${filtroSolicitudes === 'confirmado' ? ' pi-dash-chip-ok-activo' : ''}`}
-              onClick={() => setFiltroSolicitudes('confirmado')}
-            >
-              <FaCheckCircle /> Aprobados ({solicitudes.filter(c => c.estado === 'confirmado').length})
-            </button>
-            <button
-              type="button"
-              className={`pi-dash-chip${filtroSolicitudes === 'rechazado' ? ' pi-dash-chip-activo' : ''}`}
-              onClick={() => setFiltroSolicitudes('rechazado')}
-            >
-              <FaExclamationTriangle /> Rechazados ({solicitudes.filter(c => c.estado === 'rechazado').length})
-            </button>
-            <button
-              type="button"
-              className={`pi-dash-chip${filtroSolicitudes === 'todos' ? ' pi-dash-chip-activo' : ''}`}
-              onClick={() => setFiltroSolicitudes('todos')}
-            >
-              Todos ({solicitudes.length})
-            </button>
-          </div>
+          <Filtros
+            etiqueta="Filtrar solicitudes por estado"
+            activo={filtroSolicitudes}
+            onCambio={setFiltroSolicitudes}
+            opciones={[
+              { valor: 'pendiente', texto: <><FaHourglassHalf /> Pendientes</>, conteo: solicitudes.filter(c => c.estado === 'pendiente').length },
+              { valor: 'confirmado', texto: <><FaCheckCircle /> Aprobados</>, conteo: solicitudes.filter(c => c.estado === 'confirmado').length },
+              { valor: 'rechazado', texto: <><FaExclamationTriangle /> Rechazados</>, conteo: solicitudes.filter(c => c.estado === 'rechazado').length },
+              { valor: 'todos', texto: 'Todos', conteo: solicitudes.length },
+            ]}
+          />
 
-          <div className="pi-dash-tabla-wrapper">
-            <table className="pi-dash-tabla">
-              <thead>
-                <tr>
-                  <th scope="col">Comprador</th>
-                  <th scope="col">Entradas</th>
-                  <th scope="col">Total</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col">Fecha</th>
-                  <th scope="col"><span className="sr-only">Acciones</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {solicitudesFiltradas.map(compra => (
+          <Tabla
+            columnas={['Comprador', 'Entradas', 'Total', 'Estado', 'Fecha', { texto: 'Acciones', srOnly: true }]}
+            datos={solicitudesFiltradas}
+            vacio={solicitudes.length === 0 ? 'No hay solicitudes de compra registradas.' : 'No hay solicitudes con este estado.'}
+            renderFila={compra => (
                   <tr key={compra.id}>
                     <td>
                       <div className="fila-nombre">{compra.comprador.nombre}</div>
@@ -1188,17 +1100,8 @@ export default function Admin({
                       </div>
                     </td>
                   </tr>
-                ))}
-                {solicitudesFiltradas.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="pi-dash-sin-resultados">
-                      {solicitudes.length === 0 ? 'No hay solicitudes de compra registradas.' : 'No hay solicitudes con este estado.'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+            )}
+          />
 
         </section>
       )}
@@ -1214,16 +1117,14 @@ export default function Admin({
             <p className="pi-dash-incidencias-nota">
               No hay envío de correo automático — comparte esta contraseña temporal a mano con cada invitado. Solo se muestra esta vez.
             </p>
-            <div className="pi-dash-tabla-wrapper">
-              <table className="pi-dash-tabla">
-                <thead><tr><th scope="col">N.º entrada</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Contraseña</th></tr></thead>
-                <tbody>
-                  {passwordsAMostrar.map((p, i) => (
-                    <tr key={i}><td>{p.numero ?? '—'}</td><td>{p.nombre}</td><td>{p.correo}</td><td><strong>{p.password}</strong></td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <Tabla
+              columnas={['N.º entrada', 'Nombre', 'Correo', 'Contraseña']}
+              datos={passwordsAMostrar}
+              porPagina={0}
+              renderFila={(p, i) => (
+                <tr key={i}><td>{p.numero ?? '—'}</td><td>{p.nombre}</td><td>{p.correo}</td><td><strong>{p.password}</strong></td></tr>
+              )}
+            />
         </Modal>
       )}
 
@@ -1269,31 +1170,29 @@ export default function Admin({
             )}
 
             <p style={{ fontWeight: 700, margin: '20px 0 10px' }}>Entradas de este lote</p>
-            <div className="pi-dash-tabla-wrapper">
-              <table className="pi-dash-tabla">
-                <thead>
-                  <tr><th scope="col">Persona</th><th scope="col">Nombre</th><th scope="col">Correo</th><th scope="col">Celular</th><th scope="col">Categoría</th><th scope="col">Precio</th></tr>
-                </thead>
-                <tbody>
-                  {compraAbierta.entradas.map((ent, i) => (
-                    <tr key={ent.id}>
-                      <td>{ent.isTitular ? 'Titular' : `Invitado ${i + 1}`}</td>
-                      <td>{ent.nombre}</td>
-                      <td>{ent.correo}</td>
-                      <td>{ent.celular || '—'}</td>
-                      <td>{ent.categoriaTicket?.nombre || '—'}</td>
-                      <td className="pi-dash-monto-celda">
-                        {ent.categoriaTicket ? `Bs. ${ent.categoriaTicket.precio}` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                  <tr>
-                    <td colSpan={5} style={{ textAlign: 'right', fontWeight: 700 }}>Total</td>
-                    <td className="pi-dash-monto-celda">Bs. {compraAbierta.montoTotal}</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <Tabla
+              columnas={['Persona', 'Nombre', 'Correo', 'Celular', 'Categoría', 'Precio']}
+              datos={compraAbierta.entradas}
+              porPagina={0}
+              renderFila={(ent, i) => (
+                <tr key={ent.id}>
+                  <td>{ent.isTitular ? 'Titular' : `Invitado ${i + 1}`}</td>
+                  <td>{ent.nombre}</td>
+                  <td>{ent.correo}</td>
+                  <td>{ent.celular || '—'}</td>
+                  <td>{ent.categoriaTicket?.nombre || '—'}</td>
+                  <td className="pi-dash-monto-celda">
+                    {ent.categoriaTicket ? `Bs. ${ent.categoriaTicket.precio}` : '—'}
+                  </td>
+                </tr>
+              )}
+              pie={(
+                <tr>
+                  <td colSpan={5} style={{ textAlign: 'right', fontWeight: 700 }}>Total</td>
+                  <td className="pi-dash-monto-celda">Bs. {compraAbierta.montoTotal}</td>
+                </tr>
+              )}
+            />
 
             {!soloLectura && compraAbierta.estado === 'pendiente' && (
               <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>

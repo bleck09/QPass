@@ -4,15 +4,19 @@ import { useModal } from '../../utils/useModal.js';
 import { useApi } from '../../utils/useApi.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import Tabla from '../../components/Tabla.jsx';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaHistory, FaTimes, FaIdCard, FaCoins, FaCheckCircle, FaWallet,
-  FaExclamationTriangle, FaClipboardList, FaMapMarkerAlt, FaArrowLeft
+  FaExclamationTriangle, FaClipboardList, FaArrowLeft
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { formatearFecha, estadoEvento } from '../../utils/eventos.js';
+import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import './Recargador.css';
@@ -43,6 +47,8 @@ export default function Recargador() {
   } = useApi(cargarEventos, { inicial: [] });
 
   const [eventoDetalle, setEventoDetalle] = useState(null);
+  const [busquedaEvento, setBusquedaEvento] = useState('');
+  const [filtroEvento, setFiltroEvento] = useState('todos');
   const [tarjetaQR, setTarjetaQR] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
   const [buscando, setBuscando] = useState(false);
@@ -87,6 +93,20 @@ export default function Recargador() {
     () => historial.reduce((suma, item) => suma + Number(item.monto), 0),
     [historial]
   );
+
+  const eventosFiltrados = useMemo(
+    () => filtrarEventos(eventos, busquedaEvento, filtroEvento),
+    [eventos, busquedaEvento, filtroEvento],
+  );
+
+  const [busquedaHist, setBusquedaHist] = useState('');
+  const historialFiltrado = useMemo(() => {
+    const q = busquedaHist.trim().toLowerCase();
+    if (!q) return historial;
+    return historial.filter((item) =>
+      `${item.entrada?.nombre || ''} ${item.entrada?.documento || ''}`.toLowerCase().includes(q),
+    );
+  }, [historial, busquedaHist]);
 
   const iniciarEscaneo = () => {
     setErrorEscaneo('');
@@ -194,22 +214,30 @@ export default function Recargador() {
         ) : eventos.length === 0 ? (
           <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
         ) : (
-          <div className="pi-entrega-eventos-grid">
-            {eventos.map(ev => (
-              <button
-                key={ev.id}
-                className="pi-entrega-evento-card"
-                onClick={() => abrirEvento(ev)}
-                disabled={estadoEvento(ev) === 'archivado'}
-              >
-                <img src={ev.imagen} alt={ev.nombre} width="320" height="120" loading="lazy" className="pi-entrega-evento-imagen" />
-                <div className="pi-entrega-evento-info">
-                  <strong>{ev.nombre} <BadgeEstadoEvento evento={ev} /></strong>
-                  <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
-                </div>
-              </button>
-            ))}
-          </div>
+          <>
+            <Buscador
+              valor={busquedaEvento}
+              onCambio={setBusquedaEvento}
+              placeholder="Buscar evento por nombre o lugar…"
+              etiqueta="Buscar evento"
+              filtros={FILTROS_ESTADO_EVENTO}
+              filtroActivo={filtroEvento}
+              onFiltro={setFiltroEvento}
+              etiquetaFiltros="Filtrar eventos por estado"
+            />
+            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+              {ev => (
+                <EventoCard
+                  key={ev.id}
+                  evento={ev}
+                  onClick={() => abrirEvento(ev)}
+                  disabled={estadoEvento(ev) === 'archivado'}
+                  badges={<BadgeEstadoEvento evento={ev} />}
+                  cta="Abrir recargas"
+                />
+              )}
+            </GrillaEventos>
+          </>
         )}
       </div>
     );
@@ -284,56 +312,46 @@ export default function Recargador() {
             <StatCard valor={sesion.nombre} label="Recargador" />
           </div>
 
-          <div className="pi-rec-tabla-wrapper">
-            <table className="pi-rec-tabla">
-              <thead>
-                <tr>
-                  <th scope="col">Participante</th>
-                  <th scope="col">Documento</th>
-                  <th scope="col">Monto</th>
-                  <th scope="col">Saldo Resultante</th>
-                  <th scope="col">Fecha</th>
-                  <th scope="col">Hora</th>
-                  <th scope="col"><span className="sr-only">Acciones</span></th>
-                </tr>
-              </thead>
-              <tbody>
-                {historial.map(item => (
-                  <tr key={item.id}>
-                    <td>
-                      <div className="pi-rec-fila-persona">
-                        {item.entrada?.foto && <img width="34" height="34" src={item.entrada.foto} alt={item.entrada.nombre} className="pi-rec-mini-avatar" />}
-                        <span>{item.entrada?.nombre || '—'}</span>
-                      </div>
-                    </td>
-                    <td>{item.entrada?.documento || '—'}</td>
-                    <td className="pi-rec-monto-celda">+{Number(item.monto)} pts</td>
-                    <td>{Number(item.saldoResultante)} pts</td>
-                    <td>{new Date(item.createdAt).toLocaleDateString('es-BO')}</td>
-                    <td>{new Date(item.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
-                    <td>
-                      {historialReportados.includes(item.id) ? (
-                        <span className="pi-rec-badge pi-rec-badge-pend">
-                          <FaExclamationTriangle /> Reportado
-                        </span>
-                      ) : (
-                        <button type="button" className="pi-rec-btn-reportar-fila" onClick={() => abrirReporteHistorial(item)}>
-                          <FaExclamationTriangle /> Reportar
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-                {historial.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="pi-rec-sin-resultados">
-                      Aún no has realizado ninguna recarga en esta sesión.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Buscador
+            valor={busquedaHist}
+            onCambio={setBusquedaHist}
+            placeholder="Buscar por nombre o documento…"
+          />
+
+          <Tabla
+            card
+            columnas={['Participante', 'Documento', 'Monto', 'Saldo Resultante', 'Fecha', 'Hora', { texto: 'Acciones', srOnly: true }]}
+            datos={historialFiltrado}
+            vacio={busquedaHist.trim()
+              ? 'No hay recargas que coincidan con la búsqueda.'
+              : 'Aún no has realizado ninguna recarga en esta sesión.'}
+            renderFila={item => (
+              <tr key={item.id}>
+                <td>
+                  <div className="pi-rec-fila-persona">
+                    {item.entrada?.foto && <img width="34" height="34" src={item.entrada.foto} alt={item.entrada.nombre} className="pi-rec-mini-avatar" />}
+                    <span>{item.entrada?.nombre || '—'}</span>
+                  </div>
+                </td>
+                <td>{item.entrada?.documento || '—'}</td>
+                <td className="pi-rec-monto-celda">+{Number(item.monto)} pts</td>
+                <td>{Number(item.saldoResultante)} pts</td>
+                <td>{new Date(item.createdAt).toLocaleDateString('es-BO')}</td>
+                <td>{new Date(item.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
+                <td>
+                  {historialReportados.includes(item.id) ? (
+                    <span className="pi-rec-badge pi-rec-badge-pend">
+                      <FaExclamationTriangle /> Reportado
+                    </span>
+                  ) : (
+                    <button type="button" className="pi-rec-btn-reportar-fila" onClick={() => abrirReporteHistorial(item)}>
+                      <FaExclamationTriangle /> Reportar
+                    </button>
+                  )}
+                </td>
+              </tr>
+            )}
+          />
         </div>
       )}
 
@@ -344,50 +362,32 @@ export default function Recargador() {
             Reportes de recargas con algún problema (el participante pidió más de lo que se le pudo dar, etc.).
             Quedan pendientes hasta que Admin las revise y decida qué hacer.
           </p>
-          <div className="pi-rec-tabla-wrapper">
-            <table className="pi-rec-tabla">
-              <thead>
-                <tr>
-                  <th scope="col">Participante</th>
-                  <th scope="col">Documento</th>
-                  <th scope="col">Se le dio</th>
-                  <th scope="col">Dijo que quería</th>
-                  <th scope="col">Qué pasó</th>
-                  <th scope="col">Estado</th>
-                  <th scope="col">Fecha</th>
-                </tr>
-              </thead>
-              <tbody>
-                {incidencias.map(inc => (
-                  <tr key={inc.id}>
-                    <td>
-                      <div className="pi-rec-fila-persona">
-                        {inc.entrada.foto && <img width="34" height="34" src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-rec-mini-avatar" />}
-                        <span>{inc.entrada.nombre}</span>
-                      </div>
-                    </td>
-                    <td>{inc.entrada.documento || '—'}</td>
-                    <td>{Number(inc.montoEntregado)} pts</td>
-                    <td>{inc.montoSolicitado != null ? `${Number(inc.montoSolicitado)} pts` : '—'}</td>
-                    <td>{inc.nota || '—'}</td>
-                    <td>
-                      {inc.estado === 'pendiente'
-                        ? <span className="pi-rec-badge pi-rec-badge-pend"><FaExclamationTriangle /> Pendiente</span>
-                        : <span className="pi-rec-badge pi-rec-badge-ok"><FaCheckCircle /> Resuelta</span>}
-                    </td>
-                    <td>{new Date(inc.createdAt).toLocaleDateString('es-BO')}</td>
-                  </tr>
-                ))}
-                {incidencias.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="pi-rec-sin-resultados">
-                      No has reportado ninguna incidencia de recarga.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <Tabla
+            card
+            columnas={['Participante', 'Documento', 'Se le dio', 'Dijo que quería', 'Qué pasó', 'Estado', 'Fecha']}
+            datos={incidencias}
+            vacio="No has reportado ninguna incidencia de recarga."
+            renderFila={inc => (
+              <tr key={inc.id}>
+                <td>
+                  <div className="pi-rec-fila-persona">
+                    {inc.entrada.foto && <img width="34" height="34" src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-rec-mini-avatar" />}
+                    <span>{inc.entrada.nombre}</span>
+                  </div>
+                </td>
+                <td>{inc.entrada.documento || '—'}</td>
+                <td>{Number(inc.montoEntregado)} pts</td>
+                <td>{inc.montoSolicitado != null ? `${Number(inc.montoSolicitado)} pts` : '—'}</td>
+                <td>{inc.nota || '—'}</td>
+                <td>
+                  {inc.estado === 'pendiente'
+                    ? <span className="pi-rec-badge pi-rec-badge-pend"><FaExclamationTriangle /> Pendiente</span>
+                    : <span className="pi-rec-badge pi-rec-badge-ok"><FaCheckCircle /> Resuelta</span>}
+                </td>
+                <td>{new Date(inc.createdAt).toLocaleDateString('es-BO')}</td>
+              </tr>
+            )}
+          />
         </div>
       )}
 

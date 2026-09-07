@@ -1,344 +1,64 @@
 /* =======================================================
-   MÓDULO: LOGIN (MODO DARK / GLASSMORPHISM)
+   LOGIN — estilos propios de la página.
+   El shell (split screen, panel, foto, campos) vive en auth.css.
 ======================================================= */
 
-.pi-login-wrapper {
-  min-height: 100vh;
-  width: 100%;
-  background-color: var(--color-fondo, #0b1120);
+/* Fila "Recordarme" + "¿Olvidaste tu contraseña?" */
+.pi-login-options {
   display: flex;
-  flex-direction: column;
-  position: relative;
-  overflow: hidden;
-  font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  color: #fff;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
 }
-
-/* --- EFECTOS DE LUCES (GLOW) --- */
-.bg-glow {
-  position: absolute;
-  width: 600px;
-  height: 600px;
-  background: var(--color-primario, #00B4D8);
-  filter: blur(150px);
-  border-radius: 50%;
-  opacity: 0.2;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.glow-top-left { top: -200px; left: -200px; }
-.glow-bottom-right { bottom: -200px; right: -200px; background: #6366f1; /* Tono morado sutil */ }
-
-/* Todo el contenido por encima del glow */
-.pi-login-top-bar, .pi-login-content {
-  position: relative;
-  z-index: 10;
-}
-
-/* --- BARRA SUPERIOR --- */
-.pi-login-top-bar {
-  padding: 20px 5%;
-}
-
-.pi-login-btn-back {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
-  color: #fff;
+.pi-login-checkbox {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  border-radius: var(--radius-xl);
-  cursor: pointer;
-  font-weight: 600;
-  font-size: var(--text-sm);
-  transition: all 0.3s;
-}
-
-.pi-login-btn-back:hover {
-  background: rgba(255,255,255,0.1);
-  border-color: #fff;
-}
-
-/* --- CONTENEDOR CENTRAL --- */
-.pi-login-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-
-/* --- EFECTO CRISTAL (GLASSMORPHISM) --- */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.6); /* Azul oscuro muy transparente */
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 25px 50px -12px rgba(10, 14, 39, 0.5);
-}
-
-.pi-login-card {
-  width: 100%;
-  max-width: 420px;
-  padding: 40px;
-  border-radius: var(--radius-xl);
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.pi-login-title {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  margin: 0 0 8px 0;
-  color: #ffffff;
-}
-
-.pi-login-subtitle {
-  font-size: var(--text-sm);
-  color: #94A3B8;
-  margin: 0 0 32px 0;
-  line-height: 1.5;
-}
-
-/* --- FORMULARIO --- */
-.pi-login-form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  text-align: left;
-}
-
-.pi-login-input-group label {
-  font-size: var(--text-xs);
-  font-weight: 700;
-  color: #cbd5e1;
-  margin-bottom: 8px;
-  display: block;
-  letter-spacing: 1px;
-}
-
-.pi-login-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.pi-login-icon {
-  position: absolute;
-  left: 14px;
-  color: #64748b;
-  display: flex;
-  align-items: center;
-  transition: color 0.3s;
-}
-
-.pi-login-input-wrapper input {
-  width: 100%;
-  /* Padding derecho ampliado para dejar sitio al botón del ojo */
-  padding: 16px 44px 16px 44px; 
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-lg);
-  color: #fff;
-  font-size: var(--text-base);
-  outline: none;
-  transition: all 0.3s;
-}
-
-.pi-login-input-wrapper input::placeholder {
-  color: #475569;
-}
-
-.pi-login-input-wrapper input:focus {
-  border-color: var(--color-primario, #00B4D8);
-  box-shadow: 0 0 0 3px rgba(0, 180, 216, 0.2);
-  background: rgba(0, 0, 0, 0.4);
-}
-
-.pi-login-input-wrapper input:focus + .pi-login-icon {
-  color: var(--color-primario, #00B4D8);
-}
-
-/* --- BOTÓN PARA VER/OCULTAR CONTRASEÑA --- */
-.pi-login-eye-btn {
-  position: absolute;
-  right: 14px; /* Pegado a la derecha */
-  background: transparent;
-  border: none;
-  color: #64748b; /* Mismo color inactivo que el candado */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  padding: 0;
-  outline: none;
-  transition: color 0.3s;
-}
-
-/* Al pasar el mouse cambia al color principal (Cian) */
-.pi-login-eye-btn:hover {
-  color: var(--color-primario, #00B4D8);
-}
-
-/* Al hacer click (active) o si el input tiene focus, podemos mantenerlo brillando si lo deseas */
-.pi-login-eye-btn:active {
-  transform: scale(0.9); /* Pequeña animación al hacer clic */
-}
-
-/* --- OPCIONES DE LOGIN --- */
-.pi-login-options {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: var(--text-xs);
-}
-
-.pi-login-checkbox {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #cbd5e1;
+  color: var(--text-secondary);
   cursor: pointer;
 }
+.pi-login-checkbox input { accent-color: var(--accent); }
 
-.pi-login-forgot {
-  color: var(--color-primario, #00B4D8);
-  text-decoration: none;
-  font-weight: 600;
-  transition: color 0.3s;
-}
-
-.pi-login-forgot:hover {
-  color: #fff;
-}
-
-.pi-login-error {
-  color: #fca5a5;
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  padding: 8px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  text-align: center;
-  font-weight: 600;
-}
-
-/* --- BOTONES --- */
-.pi-login-btn-enter {
-  width: 100%;
-  padding: 16px;
-  background-color: var(--color-primario, #00B4D8);
-  color: #fff;
-  border: none;
-  border-radius: var(--radius-lg);
-  font-size: var(--text-base);
-  font-weight: 800;
-  cursor: pointer;
-  letter-spacing: 1px;
-  box-shadow: 0 4px 15px rgba(0, 180, 216, 0.3);
-  transition: all 0.3s;
-}
-
-.pi-login-btn-enter:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 180, 216, 0.5);
-}
-
+/* Separador "o" */
 .pi-login-divider {
   display: flex;
   align-items: center;
-  text-align: center;
-  color: #64748b;
+  gap: var(--space-3);
+  margin: var(--space-1) 0;
   font-size: var(--text-xs);
-  margin: 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
 }
-
 .pi-login-divider::before,
 .pi-login-divider::after {
   content: '';
   flex: 1;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border);
 }
 
-.pi-login-divider span {
-  padding: 0 8px;
-}
-
+/* Botón secundario "Registrarme" */
 .pi-login-btn-register {
-  width: 100%;
-  padding: 16px;
-  background: transparent;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: var(--radius-lg);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
-  align-items: center;
-  transition: all 0.3s;
-}
-
-.pi-login-btn-register:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: #fff;
-}
-
-/* --- MODO DESARROLLADOR (DEV ACCORDION) --- */
-.pi-login-dev-accordion {
   width: 100%;
-  max-width: 420px;
-}
-
-.pi-login-dev-btn {
-  width: 100%;
-  padding: 16px 20px;
-  border-radius: var(--radius-lg);
-  color: #fff;
-  border: none;
+  padding: 12px 24px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
   cursor: pointer;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: background 0.3s;
+  transition:
+    background var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out);
 }
-
-.pi-login-dev-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-}
-
-.pi-login-dev-content {
-  margin-top: 8px;
-  padding: 20px;
-  border-radius: var(--radius-lg);
-}
-
-.pi-login-dev-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-xs);
-}
-
-.pi-login-dev-table th, 
-.pi-login-dev-table td {
-  padding: 8px;
-  text-align: left;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.pi-login-dev-table th {
-  color: #cbd5e1;
-  font-weight: 700;
-}
-
-.pi-login-dev-table td {
-  color: #94a3b8;
-}
-
-.pi-login-dev-table tbody tr:last-child td {
-  border-bottom: none;
+.pi-login-btn-register:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-secondary);
 }
