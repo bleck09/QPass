@@ -35,6 +35,13 @@ export class PuestosController {
     );
   }
 
+  /** Todos mis puestos (de todos mis eventos). */
+  @Get('mios')
+  @Roles('UsuarioNegocio')
+  mios(@UsuarioActual('id') negocioId: number) {
+    return this.puestosService.mios(negocioId);
+  }
+
   @Post()
   @Roles('UsuarioNegocio', 'Admin')
   crear(@Body() dto: CrearPuestoDto, @UsuarioActual() actor: UsuarioJwt) {
@@ -44,7 +51,11 @@ export class PuestosController {
   @Patch(':id')
   @Roles('UsuarioNegocio', 'Admin')
   @HttpCode(HttpStatus.OK)
-  actualizar(@Param('id') id: string, @Body() dto: ActualizarPuestoDto) {
-    return this.puestosService.actualizar(id, dto);
+  actualizar(
+    @Param('id') id: string,
+    @Body() dto: ActualizarPuestoDto,
+    @UsuarioActual() actor: UsuarioJwt,
+  ) {
+    return this.puestosService.actualizar(id, dto, actor);
   }
 }

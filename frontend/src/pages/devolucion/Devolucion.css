@@ -553,3 +553,17 @@
   color: inherit; font: inherit; font-weight: 700;
   text-decoration: underline; cursor: pointer;
 }
+
+/* Aviso en la tarjeta de retiro de un negocio (§seguridad) */
+.pi-dev-negocio-aviso {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin: 12px 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: var(--ambar-aviso-suave, rgba(255, 193, 7, 0.12));
+  color: var(--ambar-aviso-texto, #8a6d00);
+  font-size: 12.5px;
+  line-height: 1.45;
+}

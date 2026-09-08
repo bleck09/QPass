@@ -172,4 +172,69 @@ FASE 3 — CADUCIDAD + TÉRMINOS   [IMPLEMENTADA — falta `npx prisma migrate d
   PENDIENTE OPERATIVO: `cd backend && npx prisma migrate dev`
     (aplica 20260908180000_caducidad_terminos).
 
+--------------------------------------------------------------------------------
+EXTRA — RETIRO REAL DE GANANCIAS DEL USUARIO NEGOCIO   [IMPLEMENTADO — falta migrar]
+--------------------------------------------------------------------------------
+  Antes: en Devoluciones el negocio se elegía con un botón "Simular selección de
+  Negocio" (al azar de una lista). Ahora el negocio tiene su propio QR por evento.
+
+  Migración 20260908210000_codigo_retiro_negocio (--create-only):
+  [x] modelo CodigoRetiroNegocio { id, eventoId, negocioId, codigo @unique,
+      @@unique([eventoId, negocioId]) } — token de identificación del negocio
+      para el retiro (NO es una manilla). Backfill: uno por cada Asignacion
+      rol=UsuarioNegocio ya existente.
+  [x] Transaccion.fotoRostroUrl String? — foto de la CARA de quien cobra;
+      obligatoria en el retiro de un negocio (por si le roban el QR).
+  [x] módulo src/modules/codigos-retiro-negocio/:
+      GET /mio?eventoId= (@Roles UsuarioNegocio) -> get-or-create del código del
+        actor para ese evento (valida que tenga Asignacion rol=UsuarioNegocio).
+      GET /buscar/:codigo (@Roles Devolucion, Admin) -> { negocioId, negocioNombre,
+        eventoNombre, saldo (de BilleteraEvento), expiraEn }.
+  [x] asignaciones.service.asignar(): si rol=UsuarioNegocio, asegura el código
+      (fire-and-forget).
+  [x] transacciones.service.devolver(): + fotoRostroUrl (se guarda). El resto ya
+      soportaba el retiro de negocio (usuarioId=negocioId, entradaId undefined,
+      candado de caja + expiraEn).
+  [x] Frontend:
+      - api.codigosRetiroNegocio { mio, buscar }.
+      - UsuNegoDasboar: sección "Código de retiro" con el QR (generado local) +
+        el saldo disponible + aviso de que van a pedir carnet y foto de la cara.
+      - Devolucion: se quitó "Simular selección de Negocio" y la carga de la
+        lista de negocios. Un solo "Escanear Código QR" que prueba manilla y, si
+        no, código de retiro de negocio. Card DISTINTA para negocio (sin foto de
+        manilla, muestra "Ganancias del evento «X»") + captura obligatoria de
+        foto del carnet Y foto de la cara.
+  [x] nest build OK · vite build OK · eslint sin errores nuevos.
+
+  PENDIENTE OPERATIVO: `cd backend && npx prisma migrate dev`
+    (aplica 20260908210000_codigo_retiro_negocio + fotoRostroUrl).
+
+--------------------------------------------------------------------------------
+EXTRA — GESTIÓN DEL PERSONAL DEL NEGOCIO (ayudantes + puestos)   [IMPLEMENTADO]
+--------------------------------------------------------------------------------
+  Sin migración. El bug: un ayudante sacado de todos los puestos desaparecía de
+  la UI aunque seguía en la base (Usuario.negocioAsignadoId).
+
+  [x] GET /puesto-ayudantes/mis-ayudantes (@Roles UsuarioNegocio) — TODOS los
+      ayudantes del negocio (por negocioAsignadoId), con o sin puesto.
+  [x] GET /puestos/mios (@Roles UsuarioNegocio) — todos mis puestos de todos los
+      eventos (con evento.nombre), para el modal "asignar a puestos".
+  [x] PATCH /puesto-ayudantes/ayudante/:id — editar nombre/foto (guard: el
+      ayudante es de mi negocio).
+  [x] POST /puesto-ayudantes/ayudante/:id/reset-password — nueva contraseña
+      temporal + debeCompletarPerfil=true.
+  [x] POST /puesto-ayudantes/ayudante/:id/desvincular — borra sus PuestoAyudante
+      del negocio + negocioAsignadoId=null. El historial de ventas NO se toca.
+  [x] puestos.service.actualizar: SE AGREGÓ el chequeo de dueño (antes un negocio
+      podía editar el puesto de otro).
+  [x] Frontend:
+      - Nueva página standalone src/pages/usuario-negocio/MisAyudantes.jsx
+        (ruta /usuarionegocio/ayudantes; menú "Mis Ayudantes"). Ya NO depende del
+        selector de evento. Lista global + crear/editar/reset-pass/asignar a
+        puestos (agrupados por evento)/desvincular. Se borró UsuNegoCreaAyudante.jsx.
+      - UsuarioNegocio.jsx: se quitó la pestaña "Mis Ayudantes" embebida; queda
+        solo "Mis Puestos". Botón "Editar" por puesto (nombre/desc/logo) reusando
+        el form. Se quitó la columna "Turno" del modal de equipo por puesto
+        (PuestoAyudante.turno queda en la BD con su default, no se usa).
+
 ================================================================================

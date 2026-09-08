@@ -1,0 +1,17 @@
+/* Grupos de puestos por evento en los modales de "Mis ayudantes". */
+.pi-ma-grupo {
+  margin-bottom: 12px;
+}
+.pi-ma-grupo-titulo {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+.badge-puesto em {
+  font-style: normal;
+  opacity: 0.7;
+}

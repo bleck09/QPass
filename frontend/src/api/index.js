@@ -73,6 +73,11 @@ export const billeterasEvento = {
   porEvento: (eventoId) => apiGet(`/billeteras-evento${qs({ eventoId })}`),
 };
 
+export const codigosRetiroNegocio = {
+  mio: (eventoId) => apiGet(`/codigos-retiro-negocio/mio${qs({ eventoId })}`),
+  buscar: (codigo) => apiGet(`/codigos-retiro-negocio/buscar/${encodeURIComponent(codigo)}`),
+};
+
 export const categoriasTicket = {
   listar: (eventoId) => apiGet(`/categorias-ticket${qs({ eventoId })}`),
   crear: (datos) => apiPost('/categorias-ticket', datos),
@@ -129,6 +134,7 @@ export const reportesEntrada = {
 
 export const puestos = {
   listar: (params) => apiGet(`/puestos${qs(params)}`),
+  mios: () => apiGet('/puestos/mios'),
   crear: (datos) => apiPost('/puestos', datos),
   actualizar: (id, datos) => apiPatch(`/puestos/${id}`, datos),
 };
@@ -142,8 +148,12 @@ export const productos = {
 
 export const puestoAyudantes = {
   listar: (params) => apiGet(`/puesto-ayudantes${qs(params)}`),
+  misAyudantes: () => apiGet('/puesto-ayudantes/mis-ayudantes'),
   asignar: (datos) => apiPost('/puesto-ayudantes', datos),
   quitar: (id) => apiDelete(`/puesto-ayudantes/${id}`),
+  editarAyudante: (id, datos) => apiPatch(`/puesto-ayudantes/ayudante/${id}`, datos),
+  resetPassword: (id, datos) => apiPost(`/puesto-ayudantes/ayudante/${id}/reset-password`, datos),
+  desvincular: (id) => apiPost(`/puesto-ayudantes/ayudante/${id}/desvincular`),
 };
 
 export const ventas = {
@@ -200,7 +210,7 @@ export const dashboard = {
 };
 
 const api = {
-  auth, usuarios, eventos, asignaciones, diasEvento, billeterasEvento, categoriasTicket, compras, entradas,
+  auth, usuarios, eventos, asignaciones, diasEvento, billeterasEvento, codigosRetiroNegocio, categoriasTicket, compras, entradas,
   codigosQr, transacciones, incidencias, reportesEntrada, puestos, productos,
   puestoAyudantes, ventas, landingConfig, solicitudesEvento, cortesCaja,
   auditoria, dashboard,

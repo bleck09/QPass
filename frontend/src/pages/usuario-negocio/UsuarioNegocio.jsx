@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
@@ -8,15 +9,13 @@ import Tabla from '../../components/Tabla.jsx';
 import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
-import { useLocation } from 'react-router-dom';
 import {
   FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign,
   FaImage, FaListUl, FaUsers, FaBoxOpen, FaUpload, FaUserTie, FaHamburger,
-  FaUserFriends, FaArrowLeft, FaCheckCircle, FaBan
+  FaArrowLeft, FaCheckCircle, FaBan, FaPen
 } from 'react-icons/fa';
 import './UsuarioNegocio.css';
 import '../supervisor/GestionEntrega.css';
-import UsuNegoCreaAyudante from './UsuNegoCreaAyudante';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
@@ -27,21 +26,8 @@ const CATEGORIAS_PRODUCTO = ['Bebida', 'Comida', 'Postre', 'Snack', 'Otro'];
 
 export default function UsuarioNegocio() {
   useTituloPagina('Mi negocio');
-  const location = useLocation();
   const sesion = leerSesion();
-
-  // /usuarionegocio/ayudantes entra directo a la pestaña "Mis Ayudantes" (accesible también
-  // desde el menú lateral como "Crear ayudante").
-  const [activeTab, setActiveTab] = useState(location.pathname.endsWith('/ayudantes') ? 'ayudantes' : 'puestos'); // 'puestos' o 'ayudantes'
-
-  // Si se navega entre /usuarionegocio y /usuarionegocio/ayudantes sin que el componente
-  // se vuelva a montar, esto ajusta la pestaña para que siga reflejando la URL actual
-  // (ajuste durante el render, no en un efecto, para no disparar un render extra).
-  const [ultimaRutaSincronizada, setUltimaRutaSincronizada] = useState(location.pathname);
-  if (location.pathname !== ultimaRutaSincronizada) {
-    setUltimaRutaSincronizada(location.pathname);
-    setActiveTab(location.pathname.endsWith('/ayudantes') ? 'ayudantes' : 'puestos');
-  }
+  const navigate = useNavigate();
 
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const eventoId = eventoSeleccionado?.id || '';
@@ -80,6 +66,7 @@ export default function UsuarioNegocio() {
   );
 
   const [showModalPuesto, setShowModalPuesto] = useState(false);
+  const [puestoEditandoId, setPuestoEditandoId] = useState(null); // null = crear
   const [showModalCatalogo, setShowModalCatalogo] = useState(false);
   const [showModalAyudantesPuesto, setShowModalAyudantesPuesto] = useState(false); // New modal for managing ayudantes per puesto
   const [puestoSeleccionado, setPuestoSeleccionado] = useState(null);
@@ -109,13 +96,31 @@ export default function UsuarioNegocio() {
 
   const quitarImagen = () => setFormPuesto({ ...formPuesto, logo: '' });
 
-  const crearPuesto = async (e) => {
-    e.preventDefault();
-    await api.puestos.crear({
-      eventoId, nombre: formPuesto.nombre, descripcion: formPuesto.descripcion, logo: formPuesto.logo || null,
+  const abrirEditarPuesto = (puesto) => {
+    setPuestoEditandoId(puesto.id);
+    setFormPuesto({
+      nombre: puesto.nombre || '',
+      descripcion: puesto.descripcion || '',
+      logo: puesto.logo || '',
     });
+    setShowModalPuesto(true);
+  };
+
+  const guardarPuesto = async (e) => {
+    e.preventDefault();
+    const datos = {
+      nombre: formPuesto.nombre,
+      descripcion: formPuesto.descripcion,
+      logo: formPuesto.logo || null,
+    };
+    if (puestoEditandoId) {
+      await api.puestos.actualizar(puestoEditandoId, datos);
+    } else {
+      await api.puestos.crear({ eventoId, ...datos });
+    }
     recargarPuestos();
-    setFormPuesto({ nombre: '', descripcion: '', logo: '' });
+    setFormPuesto(initialStateFormPuesto);
+    setPuestoEditandoId(null);
     setShowModalPuesto(false);
   };
 
@@ -239,11 +244,7 @@ export default function UsuarioNegocio() {
             <FaArrowLeft /> Cambiar de evento
           </button>
           <h1>{eventoSeleccionado.nombre}</h1>
-          <p>
-            {activeTab === 'puestos'
-              ? 'Crea sucursales, administra sus menús y revisa su personal asignado.'
-              : 'Gestiona a todo el personal que trabaja en tus puestos.'}
-          </p>
+          <p>Crea puestos, administra sus menús y revisa su personal asignado.</p>
         </div>
 
         <div className="pi-unegocio-kpi">
@@ -256,29 +257,18 @@ export default function UsuarioNegocio() {
       </div>
 
       <div className="pi-unegocio-action-bar">
-        {/* TABS para cambiar entre Puestos y Ayudantes */}
-        <div className="pi-unegocio-tabs">
-          <button type="button" className={activeTab === 'puestos' ? 'activo' : ''} aria-current={activeTab === 'puestos' ? 'page' : undefined} onClick={() => setActiveTab('puestos')}>
-            <FaStore aria-hidden="true" /> Mis Puestos
-          </button>
-          <button type="button" className={activeTab === 'ayudantes' ? 'activo' : ''} aria-current={activeTab === 'ayudantes' ? 'page' : undefined} onClick={() => setActiveTab('ayudantes')}>
-            <FaUserFriends aria-hidden="true" /> Mis Ayudantes
-          </button>
-        </div>
-
-        {activeTab === 'puestos' && (
-          <button type="button" className="btn-primario" onClick={() => setShowModalPuesto(true)}>
-            <FaPlus /> Crear Nuevo Puesto
-          </button>
-        )}
+        <h2 className="pi-unegocio-subtitulo"><FaStore aria-hidden="true" /> Mis Puestos</h2>
+        <button type="button" className="btn-primario" onClick={() => { setPuestoEditandoId(null); setFormPuesto(initialStateFormPuesto); setShowModalPuesto(true); }}>
+          <FaPlus /> Crear Nuevo Puesto
+        </button>
       </div>
 
-      {activeTab === 'puestos' && errorPuestos && <EstadoError onReintentar={recargarPuestos} />}
-      {activeTab === 'puestos' && !errorPuestos && cargandoPuestos && <EstadoCarga filas={4} />}
-      {activeTab === 'puestos' && !errorPuestos && !cargandoPuestos && (
+      {errorPuestos && <EstadoError onReintentar={recargarPuestos} />}
+      {!errorPuestos && cargandoPuestos && <EstadoCarga filas={4} />}
+      {!errorPuestos && !cargandoPuestos && (
       <div className="pi-unegocio-card">
         <Tabla
-          columnas={['Detalles del Puesto', 'Catálogo', { texto: 'Ayudantes', align: 'center' }]}
+          columnas={['Detalles del Puesto', 'Catálogo', { texto: 'Ayudantes', align: 'center' }, { texto: 'Acciones', align: 'center' }]}
           datos={puestos}
           vacio="Aún no has creado ningún puesto. ¡Empieza creando uno!"
           renderFila={puesto => (
@@ -312,26 +302,27 @@ export default function UsuarioNegocio() {
                   </button>
                 </div>
               </td>
+              <td style={{ textAlign: 'center' }}>
+                <button type="button" className="btn-secundario-sm" onClick={() => abrirEditarPuesto(puesto)}>
+                  <FaPen /> Editar
+                </button>
+              </td>
             </tr>
           )}
         />
       </div>
       )}
 
-      {activeTab === 'ayudantes' && (
-        <UsuNegoCreaAyudante puestos={puestos} onCambio={recargarPuestos} />
-      )}
-
       {/* =========================================
-          MODAL 1: CREAR NUEVO PUESTO
+          MODAL 1: CREAR / EDITAR PUESTO
       ========================================= */}
       {showModalPuesto && (
         <Modal
-          titulo={<><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Puesto</>}
-          onCerrar={() => setShowModalPuesto(false)}
+          titulo={<><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> {puestoEditandoId ? 'Editar Puesto' : 'Registrar Puesto'}</>}
+          onCerrar={() => { setShowModalPuesto(false); setPuestoEditandoId(null); }}
         >
             <div className="modal-body">
-              <form onSubmit={crearPuesto} className="formulario">
+              <form onSubmit={guardarPuesto} className="formulario">
                 <div className="input-group">
                   <label htmlFor="neg-puesto-nombre">Nombre del puesto</label>
                   <input id="neg-puesto-nombre" type="text" name="nombre" value={formPuesto.nombre} onChange={handlePuestoChange} placeholder="Ej: Pollos Doña María" required />
@@ -357,8 +348,8 @@ export default function UsuarioNegocio() {
                   )}
                 </div>
                 <div className="modal-actions">
-                  <button type="button" className="btn-cancelar" onClick={() => setShowModalPuesto(false)}>Cancelar</button>
-                  <button type="submit" className="btn-primario">Guardar Puesto</button>
+                  <button type="button" className="btn-cancelar" onClick={() => { setShowModalPuesto(false); setPuestoEditandoId(null); }}>Cancelar</button>
+                  <button type="submit" className="btn-primario">{puestoEditandoId ? 'Guardar cambios' : 'Guardar Puesto'}</button>
                 </div>
               </form>
             </div>
@@ -523,10 +514,10 @@ export default function UsuarioNegocio() {
             <div className="modal-body bg-gris">
               <div className="pi-unegocio-card no-margin">
                 <Tabla
-                  columnas={['Nombre del Ayudante', 'Turno']}
+                  columnas={['Nombre del Ayudante', 'Correo']}
                   datos={puestoSeleccionado.ayudantes}
                   porPagina={8}
-                  vacio="Aún no hay ayudantes asignados a esta sucursal."
+                  vacio="Aún no hay ayudantes asignados a este puesto."
                   renderFila={asignacion => (
                     <tr key={asignacion.id}>
                       <td>
@@ -538,22 +529,16 @@ export default function UsuarioNegocio() {
                           )}
                           <div>
                             <div className="fila-nombre">{asignacion.ayudante.nombre}</div>
-                            <div className="celda-secundaria">{asignacion.ayudante.email}</div>
                           </div>
                         </div>
                       </td>
-                      <td>
-                        <span className="badge-info">{asignacion.turno}</span>
-                      </td>
+                      <td><span className="celda-secundaria">{asignacion.ayudante.email}</span></td>
                     </tr>
                   )}
                 />
               </div>
               <div className="modal-actions" style={{ marginTop: '1rem' }}>
-                <button type="button" className="btn-primario" onClick={() => {
-                  setShowModalAyudantesPuesto(false);
-                  setActiveTab('ayudantes');
-                }}>
+                <button type="button" className="btn-primario" onClick={() => navigate('/usuarionegocio/ayudantes')}>
                   Ir a Mis Ayudantes
                 </button>
               </div>

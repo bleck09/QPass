@@ -30,6 +30,12 @@ export class DevolucionDto {
   @IsString({ message: 'La foto del carnet de quien retira es obligatoria' })
   fotoCarnetUrl: string;
 
+  // Foto de la cara de quien cobra. El frontend la exige en el retiro de un
+  // negocio (por si le roban el QR).
+  @IsOptional()
+  @IsString()
+  fotoRostroUrl?: string;
+
   @Type(() => Number)
   @IsNumber()
   @IsPositive({ message: 'Monto inválido' })

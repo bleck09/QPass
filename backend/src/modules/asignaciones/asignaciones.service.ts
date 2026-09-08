@@ -9,8 +9,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, Rol } from '@prisma/client';
+import { Logger } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
+import { CodigosRetiroNegocioService } from '../codigos-retiro-negocio/codigos-retiro-negocio.service';
 import { CrearAsignacionDto } from './dto/crear-asignacion.dto';
 
 // Roles que SÍ trabajan un evento concreto (los demás no se asignan).
@@ -24,9 +26,12 @@ const ROLES_ASIGNABLES: Rol[] = [
 
 @Injectable()
 export class AsignacionesService {
+  private readonly logger = new Logger('AsignacionesService');
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventoPolicy: EventoPolicy,
+    private readonly codigosRetiroNegocio: CodigosRetiroNegocioService,
   ) {}
 
   async listar(eventoId?: string, usuarioId?: number, rol?: Rol) {
@@ -63,7 +68,7 @@ export class AsignacionesService {
       );
     }
 
-    return this.prisma.asignacion.upsert({
+    const asignacion = await this.prisma.asignacion.upsert({
       where: {
         eventoId_usuarioId: { eventoId: dto.eventoId, usuarioId: dto.usuarioId },
       },
@@ -74,10 +79,41 @@ export class AsignacionesService {
         rol: usuario.rol,
       },
     });
+
+    // Asignar a alguien como Cliente = es el organizador del evento. Se refleja
+    // en Evento.clienteId (lo que mira el dashboard del cliente, §5.1); la
+    // Asignacion sola no alcanza.
+    if (usuario.rol === 'Cliente' && evento.clienteId !== dto.usuarioId) {
+      await this.prisma.evento.update({
+        where: { id: dto.eventoId },
+        data: { clienteId: dto.usuarioId },
+      });
+    }
+
+    // Un Usuario Negocio necesita su código de retiro para el evento; se crea
+    // acá (fire-and-forget: si falla, no rompe la asignación).
+    if (usuario.rol === 'UsuarioNegocio') {
+      this.codigosRetiroNegocio
+        .asegurar(dto.eventoId, dto.usuarioId)
+        .catch((e) =>
+          this.logger.warn(`No se pudo crear el código de retiro: ${e}`),
+        );
+    }
+
+    return asignacion;
   }
 
   async quitar(id: string) {
     await this.eventoPolicy.porAsignacion(id);
+    const asignacion = await this.prisma.asignacion.findUnique({ where: { id } });
     await this.prisma.asignacion.delete({ where: { id } });
+
+    // Si se quita al Cliente organizador, se desvincula del evento.
+    if (asignacion?.rol === 'Cliente') {
+      await this.prisma.evento.updateMany({
+        where: { id: asignacion.eventoId, clienteId: asignacion.usuarioId },
+        data: { clienteId: null },
+      });
+    }
   }
 }

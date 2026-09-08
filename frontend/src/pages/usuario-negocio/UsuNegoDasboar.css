@@ -234,3 +234,27 @@
 .pi-ngd-rango {
   margin-top: 10px;
 }
+
+/* --- Código de retiro del negocio --- */
+.pi-ngd-retiro-cuerpo {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.pi-ngd-retiro-cuerpo > div { flex: 1; min-width: 240px; }
+.pi-ngd-retiro-cuerpo p { margin: 0 0 8px; font-size: 13.5px; color: var(--text-secondary); line-height: 1.5; }
+.pi-ngd-retiro-qr {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px;
+  background: #fff;
+}
+.pi-ngd-retiro-qr-cargando { width: 180px; height: 180px; background: var(--bg-muted, #eee); }
+.pi-ngd-retiro-codigo {
+  font-family: ui-monospace, Menlo, Consolas, monospace;
+  font-size: 18px !important;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: var(--text-primary) !important;
+}

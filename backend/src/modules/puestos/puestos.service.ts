@@ -3,7 +3,12 @@
  * Puesto/stand de un Usuario Negocio dentro de un evento.
  * ========================================================================= */
 
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
@@ -25,6 +30,20 @@ export class PuestosService {
     });
   }
 
+  /** Todos MIS puestos, de todos los eventos (para gestionar ayudantes). */
+  async mios(negocioId: number) {
+    return this.prisma.puesto.findMany({
+      where: { negocioId },
+      select: {
+        id: true,
+        nombre: true,
+        eventoId: true,
+        evento: { select: { id: true, nombre: true, fecha: true } },
+      },
+      orderBy: [{ evento: { fecha: 'desc' } }, { nombre: 'asc' }],
+    });
+  }
+
   async crear(dto: CrearPuestoDto, actor: UsuarioJwt) {
     await this.eventoPolicy.porEvento(dto.eventoId);
     const negocioId =
@@ -40,8 +59,13 @@ export class PuestosService {
     });
   }
 
-  async actualizar(id: string, dto: ActualizarPuestoDto) {
+  async actualizar(id: string, dto: ActualizarPuestoDto, actor: UsuarioJwt) {
     await this.eventoPolicy.porPuesto(id);
+    const puesto = await this.prisma.puesto.findUnique({ where: { id } });
+    if (!puesto) throw new NotFoundException('Puesto no encontrado');
+    if (actor.rol === 'UsuarioNegocio' && puesto.negocioId !== actor.id) {
+      throw new ForbiddenException('Ese puesto no es tuyo');
+    }
     return this.prisma.puesto.update({
       where: { id },
       data: {

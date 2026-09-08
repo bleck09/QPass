@@ -25,7 +25,6 @@ import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
 import './Devolucion.css';
 import '../supervisor/GestionEntrega.css';
-import { ROLES } from '../../constants/roles.js';
 
 // §5.11 — motivos tipados del retiro (deben coincidir con el enum del backend).
 const MOTIVOS_DEVOLUCION = [
@@ -44,27 +43,17 @@ export default function Devolucion() {
     ? 'caja'
     : location.pathname.endsWith('/historial') ? 'historial' : 'escanear';
 
-  // Carga primaria (eventos asignados + negocios) con cargando/error/reintentar (Manual 8.9).
-  const cargarInicial = useCallback(async () => {
-    const [eventos, negociosRaw] = await Promise.all([
-      api.eventos.misAsignados(sesion.id, sesion.rol),
-      api.usuarios.listar({ rol: ROLES.USUARIO_NEGOCIO }),
-    ]);
-    return {
-      eventos,
-      // El saldo del negocio es POR EVENTO: se resuelve al abrir el evento.
-      negocios: negociosRaw.map(n => ({
-        ...n, tipo: 'Negocio', usuarioId: n.id, saldoDisponible: 0,
-      })),
-    };
-  }, [sesion.id, sesion.rol]);
+  // Carga primaria: eventos asignados.
+  const cargarInicial = useCallback(
+    () => api.eventos.misAsignados(sesion.id, sesion.rol),
+    [sesion.id, sesion.rol],
+  );
   const {
-    data: datosIniciales,
+    data: eventos,
     cargando: cargandoInicial,
     error: errorInicial,
     recargar: recargarInicial,
-  } = useApi(cargarInicial, { inicial: { eventos: [], negocios: [] } });
-  const { eventos, negocios } = datosIniciales;
+  } = useApi(cargarInicial, { inicial: [] });
 
   const [eventoDetalle, setEventoDetalle] = useState(null);
   const [busquedaEvento, setBusquedaEvento] = useState('');
@@ -79,10 +68,11 @@ export default function Devolucion() {
   const [notaDevol, setNotaDevol] = useState('');
   const [fotoCarnet, setFotoCarnet] = useState(null);
   const [capturandoFotoCarnet, setCapturandoFotoCarnet] = useState(false);
+  // Foto de la cara de quien cobra — obligatoria en el retiro de un negocio.
+  const [fotoRostro, setFotoRostro] = useState(null);
+  const [capturandoFotoRostro, setCapturandoFotoRostro] = useState(false);
   const [retiroExitoso, setRetiroExitoso] = useState(null);
   const [retiros, setRetiros] = useState([]);
-  // Billeteras de ESTE evento (por usuarioId) — para el retiro de saldo de negocios.
-  const [saldosEvento, setSaldosEvento] = useState({});
 
   // §5.2 — no se pueden registrar devoluciones sin una caja de arqueo abierta.
   const cargarCaja = useCallback(
@@ -97,9 +87,6 @@ export default function Devolucion() {
     api.transacciones.listar({ eventoId: ev.id, tipo: 'devolucion' }).then(lista =>
       setRetiros(lista.filter(t => t.operador.id === sesion.id))
     );
-    api.billeterasEvento.porEvento(ev.id)
-      .then(lista => setSaldosEvento(Object.fromEntries(lista.map(b => [b.usuarioId, Number(b.saldo)]))))
-      .catch(() => setSaldosEvento({}));
   };
 
   const volverALista = () => setEventoDetalle(null);
@@ -130,39 +117,49 @@ export default function Devolucion() {
     setEscaneando(true);
   };
 
+  // Un mismo escaneo sirve para la manilla de un asistente o el código de retiro
+  // de un negocio: se prueba primero como entrada, y si no, como código de negocio.
   const handleCodigoDetectado = async (codigo) => {
     setEscaneando(false);
     setBuscando(true);
-    try {
-      const entrada = await api.entradas.buscarPorCodigo(codigo);
-      if (!entrada.usuarioId) {
-        setErrorEscaneo('Este participante no tiene una cuenta con billetera — no se le puede hacer un retiro.');
-        return;
-      }
+    setErrorEscaneo('');
+    const limpiarForm = () => {
       setMonto('');
       setFotoCarnet(null);
+      setFotoRostro(null);
       setRetiroExitoso(null);
-      setTarjetaQR({ ...entrada, tipo: 'Normal', saldoDisponible: Number(entrada.usuario?.saldo ?? 0) });
-    } catch (err) {
-      setErrorEscaneo(err.message);
+    };
+    try {
+      let entrada = null;
+      try {
+        entrada = await api.entradas.buscarPorCodigo(codigo);
+      } catch {
+        entrada = null; // no es una manilla
+      }
+      if (entrada) {
+        if (!entrada.usuarioId) {
+          setErrorEscaneo('Este participante no tiene una cuenta con billetera — no se le puede hacer un retiro.');
+          return;
+        }
+        limpiarForm();
+        setTarjetaQR({ ...entrada, tipo: 'Normal', saldoDisponible: Number(entrada.usuario?.saldo ?? 0) });
+        return;
+      }
+      // ¿Código de retiro de negocio?
+      const neg = await api.codigosRetiroNegocio.buscar(codigo);
+      limpiarForm();
+      setTarjetaQR({
+        tipo: 'Negocio',
+        usuarioId: neg.negocioId,
+        nombre: neg.negocioNombre,
+        eventoNombre: neg.eventoNombre,
+        saldoDisponible: neg.saldo,
+      });
+    } catch {
+      setErrorEscaneo('Código no reconocido: no es una manilla ni un código de retiro de negocio.');
     } finally {
       setBuscando(false);
     }
-  };
-
-  // Los Usuario Negocio todavía no tienen un código QR propio en la base (CodigoQr solo se
-  // vincula a Entrada), así que por ahora esta parte sigue simulada: se elige uno al azar de
-  // la lista ya cargada en vez de escanearlo. El monto y la foto de carnet sí se guardan de
-  // verdad al confirmar el retiro.
-  const handleSimularSeleccionNegocio = () => {
-    if (negocios.length === 0) return;
-    setErrorEscaneo('');
-    setMonto('');
-    setFotoCarnet(null);
-    setRetiroExitoso(null);
-    const negocio = negocios[Math.floor(Math.random() * negocios.length)];
-    // Saldo del negocio EN ESTE EVENTO (no el global).
-    setTarjetaQR({ ...negocio, saldoDisponible: saldosEvento[negocio.id] ?? 0 });
   };
 
   const cerrarTarjeta = () => {
@@ -172,6 +169,8 @@ export default function Devolucion() {
     setNotaDevol('');
     setFotoCarnet(null);
     setCapturandoFotoCarnet(false);
+    setFotoRostro(null);
+    setCapturandoFotoRostro(false);
     setRetiroExitoso(null);
   };
 
@@ -179,25 +178,27 @@ export default function Devolucion() {
   // El escáner usa <Modal>, que ya trae ese comportamiento.
   const refTarjeta = useModal(!!tarjetaQR, cerrarTarjeta);
 
+  const esNegocio = tarjetaQR?.tipo === 'Negocio';
+
   const confirmarRetiro = async () => {
     const valor = Number(monto);
     if (!tarjetaQR || !valor || valor <= 0 || valor > tarjetaQR.saldoDisponible || !fotoCarnet) return;
+    if (esNegocio && !fotoRostro) return; // foto de la cara obligatoria para negocios
 
     await api.transacciones.devolucion({
       usuarioId: tarjetaQR.usuarioId,
       entradaId: tarjetaQR.tipo === 'Normal' ? tarjetaQR.id : undefined,
       monto: valor,
       fotoCarnetUrl: fotoCarnet,
+      fotoRostroUrl: fotoRostro || undefined,
       eventoId: eventoDetalle.id,
       motivoDevolucion: motivoDevol,
       nota: motivoDevol === 'otro' && notaDevol.trim() ? notaDevol.trim() : undefined,
     });
 
-    if (tarjetaQR.tipo === 'Normal') {
-      api.transacciones.listar({ eventoId: eventoDetalle.id, tipo: 'devolucion' }).then(lista =>
-        setRetiros(lista.filter(t => t.operador.id === sesion.id))
-      );
-    }
+    api.transacciones.listar({ eventoId: eventoDetalle.id, tipo: 'devolucion' }).then(lista =>
+      setRetiros(lista.filter(t => t.operador.id === sesion.id))
+    );
 
     setRetiroExitoso({ monto: valor, saldo: tarjetaQR.saldoDisponible - valor });
   };
@@ -299,8 +300,11 @@ export default function Devolucion() {
             </p>
           )}
           <FaQrcode size={70} color="var(--cian-digital)" />
-          <h3>Escanea el código QR del participante</h3>
-          <p>Apunta la cámara a la manilla del participante para cargar sus datos y procesar el retiro.</p>
+          <h3>Escaneá el código QR</h3>
+          <p>
+            Sirve para la <strong>manilla de un asistente</strong> o para el
+            <strong> código de retiro de un negocio</strong> (el que ve en su dashboard).
+          </p>
           <button
             type="button"
             className="pi-dev-btn-escanear"
@@ -314,14 +318,6 @@ export default function Devolucion() {
               <FaExclamationTriangle /> {errorEscaneo}
             </p>
           )}
-
-          <p style={{ marginTop: '24px' }}>
-            Los Usuario Negocio todavía no tienen un código QR propio para escanear — mientras
-            se implementa eso, elegí uno al azar de la lista para probar ese flujo.
-          </p>
-          <button type="button" className="pi-dev-btn-escanear" onClick={handleSimularSeleccionNegocio} disabled={negocios.length === 0 || !cajaAbierta}>
-            <FaBuilding /> Simular selección de Negocio
-          </button>
         </div>
       )}
 
@@ -415,33 +411,42 @@ export default function Devolucion() {
             ) : (
               <>
                 <div className="pi-dev-tarjeta-estado">
-                  <FaCheckCircle /> Código QR Válido
+                  <FaCheckCircle /> {esNegocio ? 'Código de negocio válido' : 'Código QR Válido'}
                 </div>
 
-                {(tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
+                {!esNegocio && (tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
                   <img width="140" height="140" src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-dev-tarjeta-foto" />
                 )}
                 <h2 className="pi-dev-tarjeta-nombre">{tarjetaQR.nombre}</h2>
-                <span className={`pi-dev-badge-tipo ${tarjetaQR.tipo === 'Negocio' ? 'negocio' : 'normal'}`}>
-                  {tarjetaQR.tipo === 'Negocio' ? <FaBuilding /> : <FaUser />} Usuario {tarjetaQR.tipo}
+                <span className={`pi-dev-badge-tipo ${esNegocio ? 'negocio' : 'normal'}`}>
+                  {esNegocio ? <FaBuilding /> : <FaUser />} Usuario {tarjetaQR.tipo}
                 </span>
 
                 <div className="pi-dev-tarjeta-datos">
                   <div className="pi-dev-tarjeta-dato">
-                    <FaIdCard />
+                    {esNegocio ? <FaBuilding /> : <FaIdCard />}
                     <div>
-                      <span className="label">Documento</span>
-                      <span className="valor">{tarjetaQR.documento || tarjetaQR.ci || '—'}</span>
+                      <span className="label">{esNegocio ? 'Ganancias del evento' : 'Documento'}</span>
+                      <span className="valor">
+                        {esNegocio ? (tarjetaQR.eventoNombre || eventoDetalle.nombre) : (tarjetaQR.documento || tarjetaQR.ci || '—')}
+                      </span>
                     </div>
                   </div>
                   <div className="pi-dev-tarjeta-dato">
                     <FaWallet />
                     <div>
-                      <span className="label">Saldo Disponible</span>
+                      <span className="label">{esNegocio ? 'Disponible para retirar' : 'Saldo Disponible'}</span>
                       <span className="valor">{tarjetaQR.saldoDisponible} pts</span>
                     </div>
                   </div>
                 </div>
+
+                {esNegocio && (
+                  <p className="pi-dev-negocio-aviso">
+                    <FaExclamationTriangle aria-hidden="true" /> Retiro de un negocio: se exige
+                    foto del carnet <strong>y</strong> foto de la cara de quien cobra.
+                  </p>
+                )}
 
                 <div className="pi-dev-form-monto">
                   <label htmlFor="dev-monto"><FaMoneyBillWave aria-hidden="true" /> Monto a retirar (puntos)</label>
@@ -520,12 +525,42 @@ export default function Devolucion() {
                   )}
                 </div>
 
+                {esNegocio && (
+                  <div className="pi-dev-form-carnet">
+                    <p className="pi-dev-form-carnet-titulo"><FaUser aria-hidden="true" /> Foto de la cara de quien cobra</p>
+                    {capturandoFotoRostro ? (
+                      <CapturarFoto
+                        onCapturada={async (foto) => {
+                          setCapturandoFotoRostro(false);
+                          try {
+                            setFotoRostro(await subirFotoCapturada(foto, 'carnets'));
+                          } catch (err) {
+                            setErrorEscaneo(err.message);
+                          }
+                        }}
+                        onCancelar={() => setCapturandoFotoRostro(false)}
+                      />
+                    ) : fotoRostro ? (
+                      <div className="pi-dev-carnet-preview">
+                        <img width="200" height="150" src={fotoRostro} alt="Cara de quien cobra" />
+                        <button type="button" className="pi-dev-btn-retomar" onClick={() => setCapturandoFotoRostro(true)}>
+                          <FaRedo /> Tomar otra
+                        </button>
+                      </div>
+                    ) : (
+                      <button type="button" className="pi-dev-btn-tomar-foto" onClick={() => setCapturandoFotoRostro(true)}>
+                        <FaCamera /> Tomar foto de la cara
+                      </button>
+                    )}
+                  </div>
+                )}
+
                 <div className="pi-dev-tarjeta-acciones">
                   <button type="button" className="pi-dev-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
                   <button
                     className="pi-dev-btn-confirmar"
                     onClick={confirmarRetiro}
-                    disabled={!monto || Number(monto) <= 0 || excedeSaldo || !fotoCarnet}
+                    disabled={!monto || Number(monto) <= 0 || excedeSaldo || !fotoCarnet || (esNegocio && !fotoRostro)}
                   >
                     <FaCheckCircle /> Confirmar Retiro
                   </button>

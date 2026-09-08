@@ -52,7 +52,7 @@ const menuConfig = {
   [ROLES.USUARIO_NEGOCIO]: [
     { titulo: 'Dashboard de Negocio', ruta: '/UsuNegoDasboar', icono: <FaChartPie />  },
     { titulo: 'Mi Negocio', ruta: '/usuarionegocio', icono: <FaFileInvoiceDollar /> },
-    { titulo: 'Crear ayudante', ruta: '/usuarionegocio/ayudantes', icono:<FaWallet /> }
+    { titulo: 'Mis Ayudantes', ruta: '/usuarionegocio/ayudantes', icono:<FaUsers /> }
   ],
   [ROLES.AYUDANTE]: [
     { titulo: 'Vender / Cobrar', ruta: '/ayudante', icono: <FaCashRegister /> }

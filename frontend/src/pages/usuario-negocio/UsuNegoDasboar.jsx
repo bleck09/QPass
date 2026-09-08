@@ -17,6 +17,7 @@ import Modal from '../../components/Modal.jsx';
 import SelectorRango from '../../components/SelectorRango.jsx';
 import { rangoDe } from '../../utils/rangoFechas.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { generarDataUrlQr } from '../../utils/qrPdf';
 import './UsuNegoDasboar.css';
 import '../supervisor/GestionEntrega.css';
 
@@ -43,6 +44,19 @@ function ChipVar({ par }) {
       {plano ? '=' : pct >= 0 ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
     </span>
   );
+}
+
+// QR del código de retiro, renderizado localmente.
+function QrRetiro({ codigo }) {
+  const [url, setUrl] = useState(null);
+  useEffect(() => {
+    let vivo = true;
+    generarDataUrlQr({ codigo, ancho: 180, alto: 180 }).then((u) => { if (vivo) setUrl(u); });
+    return () => { vivo = false; };
+  }, [codigo]);
+  return url
+    ? <img src={url} alt={codigo} width={180} height={180} className="pi-ngd-retiro-qr" />
+    : <div className="pi-ngd-retiro-qr pi-ngd-retiro-qr-cargando" />;
 }
 
 export default function UsuNegoDasboar() {
@@ -83,6 +97,13 @@ export default function UsuNegoDasboar() {
     error,
     recargar,
   } = useApi(cargarDash, { inicial: null, activo: !!eventoId });
+
+  // Código de retiro: se presenta en Devoluciones para cobrar las ganancias del evento.
+  const cargarCodigoRetiro = useCallback(
+    () => api.codigosRetiroNegocio.mio(eventoId),
+    [eventoId],
+  );
+  const { data: codigoRetiro } = useApi(cargarCodigoRetiro, { inicial: null, activo: !!eventoId });
 
   // Anima las barras: cada vez que cambia el evento, vuelven a crecer desde 0.
   const [animar, setAnimar] = useState(false);
@@ -229,6 +250,32 @@ export default function UsuNegoDasboar() {
               />
             </div>
           </section>
+
+          {/* --- CÓDIGO DE RETIRO --- */}
+          {codigoRetiro?.codigo && (
+            <section className="pi-ngd-seccion pi-ngd-retiro">
+              <h3 className="pi-ngd-seccion-titulo"><FaWallet aria-hidden="true" /> Código de retiro</h3>
+              <div className="pi-ngd-retiro-cuerpo">
+                <QrRetiro codigo={codigoRetiro.codigo} />
+                <div>
+                  <p className="pi-ngd-retiro-codigo">{codigoRetiro.codigo}</p>
+                  {data.resumen.saldoBilletera > 0 ? (
+                    <p>
+                      Presentá este código en el puesto de <strong>Devoluciones</strong> para
+                      retirar tus ganancias de este evento
+                      {' '}(<strong>{fmtBs(data.resumen.saldoBilletera)}</strong> disponibles).
+                    </p>
+                  ) : (
+                    <p>Todavía no tenés saldo para retirar en este evento.</p>
+                  )}
+                  <p className="pi-ngd-nota">
+                    En Devoluciones te van a pedir tu carnet y una foto de tu cara: nadie más
+                    puede cobrar con este código.
+                  </p>
+                </div>
+              </div>
+            </section>
+          )}
 
           {/* --- VENTAS POR HORA (W1) --- */}
           <section className="pi-ngd-seccion">

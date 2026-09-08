@@ -47,6 +47,7 @@ export class TransaccionesController {
       entradaId: dto.entradaId,
       monto: dto.monto,
       fotoCarnetUrl: dto.fotoCarnetUrl,
+      fotoRostroUrl: dto.fotoRostroUrl,
       eventoId: dto.eventoId,
       operador: { id: actor.id, rol: actor.rol },
       motivoDevolucion: dto.motivoDevolucion,

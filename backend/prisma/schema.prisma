@@ -163,6 +163,7 @@ model Usuario {
   ventasAnuladas         Venta[]               @relation("VentaAnuladaPor")
   auditorias             RegistroAuditoria[]   @relation("ActorAuditoria")
   billeterasEvento       BilleteraEvento[]
+  codigosRetiroNegocio   CodigoRetiroNegocio[] @relation("CodigoRetiroNegocio")
 
   @@map("usuarios")
 }
@@ -281,9 +282,29 @@ model Evento {
   cortesCaja        CorteCaja[]
   dias              DiaEvento[]
   billeterasEvento  BilleteraEvento[]
+  codigosRetiroNegocio CodigoRetiroNegocio[]
 
   @@index([clienteId])
   @@map("eventos")
+}
+
+// Código QR que un Usuario Negocio presenta en Devoluciones para retirar sus
+// ganancias del evento (el saldo de su BilleteraEvento). Uno por (evento,
+// negocio); se auto-crea al asignar el negocio al evento. No es una manilla
+// (CodigoQr), es un token de identificación del negocio para el retiro.
+model CodigoRetiroNegocio {
+  id        String   @id @default(cuid())
+  eventoId  String
+  negocioId Int
+  codigo    String   @unique
+  createdAt DateTime @default(now())
+
+  evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  negocio Usuario @relation("CodigoRetiroNegocio", fields: [negocioId], references: [id])
+
+  @@unique([eventoId, negocioId])
+  @@index([negocioId])
+  @@map("codigos_retiro_negocio")
 }
 
 // Billetera cashless de un usuario PARA UN EVENTO (spec: el saldo recargado en un
@@ -630,7 +651,8 @@ model Transaccion {
   // y en recargas hechas por Admin (correcciones, fuera de turno).
   corteCajaId String?
 
-  fotoCarnetUrl    String?           // exigida en retiros (Devolucion)
+  fotoCarnetUrl    String?           // exigida en retiros (Devolucion): foto del carnet de quien cobra
+  fotoRostroUrl    String?           // foto de la cara de quien cobra — obligatoria en el retiro de un negocio
   motivoDevolucion MotivoDevolucion? // §5.11 — solo en filas tipo=devolucion
   nota             String?
 

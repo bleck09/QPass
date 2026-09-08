@@ -193,6 +193,7 @@ export class TransaccionesService {
     entradaId?: string;
     monto: number;
     fotoCarnetUrl: string;
+    fotoRostroUrl?: string;
     eventoId: string;
     operador: { id: number; rol: string };
     motivoDevolucion?: MotivoDevolucion;
@@ -246,6 +247,7 @@ export class TransaccionesService {
           monto: params.monto,
           saldoResultante: saldoPost,
           fotoCarnetUrl: params.fotoCarnetUrl,
+          fotoRostroUrl: params.fotoRostroUrl,
           motivoDevolucion: params.motivoDevolucion,
           nota: params.nota,
           usuarioId: params.usuarioId,

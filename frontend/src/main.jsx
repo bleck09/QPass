@@ -28,6 +28,7 @@ import GestionEntrega from './pages/supervisor/GestionEntrega.jsx'
 import Devolucion from './pages/devolucion/Devolucion.jsx'
 import UsuarioNormal from './pages/usuario-normal/UsuarioNormal.jsx'
 import UsuarioNegocio from './pages/usuario-negocio/UsuarioNegocio.jsx'
+import MisAyudantes from './pages/usuario-negocio/MisAyudantes.jsx'
 import Ayudante from './pages/ayudante/Ayudante.jsx'
 import Perfil from './pages/perfil/Perfil.jsx'
 import Registrar from './pages/publico/Registrar.jsx'
@@ -158,7 +159,7 @@ const router = createBrowserRouter([
   },
   {
     path: "/usuarionegocio/ayudantes",
-    element: <MenuLateral><UsuarioNegocio /></MenuLateral>,
+    element: <MenuLateral><MisAyudantes /></MenuLateral>,
   },
   {
     path: "/UsuNegoDasboar",
