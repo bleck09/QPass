@@ -61,6 +61,18 @@ export const asignaciones = {
   quitar: (id) => apiDelete(`/asignaciones/${id}`),
 };
 
+export const diasEvento = {
+  listar: (eventoId) => apiGet(`/dias-evento${qs({ eventoId })}`),
+  crear: (datos) => apiPost('/dias-evento', datos),
+  actualizar: (id, datos) => apiPatch(`/dias-evento/${id}`, datos),
+  eliminar: (id) => apiDelete(`/dias-evento/${id}`),
+};
+
+export const billeterasEvento = {
+  mias: () => apiGet('/billeteras-evento/mias'),
+  porEvento: (eventoId) => apiGet(`/billeteras-evento${qs({ eventoId })}`),
+};
+
 export const categoriasTicket = {
   listar: (eventoId) => apiGet(`/categorias-ticket${qs({ eventoId })}`),
   crear: (datos) => apiPost('/categorias-ticket', datos),
@@ -124,6 +136,7 @@ export const puestos = {
 export const productos = {
   listar: (puestoId) => apiGet(`/productos${qs({ puestoId })}`),
   crear: (datos) => apiPost('/productos', datos),
+  actualizar: (id, datos) => apiPatch(`/productos/${id}`, datos),
   eliminar: (id) => apiDelete(`/productos/${id}`),
 };
 
@@ -187,7 +200,7 @@ export const dashboard = {
 };
 
 const api = {
-  auth, usuarios, eventos, asignaciones, categoriasTicket, compras, entradas,
+  auth, usuarios, eventos, asignaciones, diasEvento, billeterasEvento, categoriasTicket, compras, entradas,
   codigosQr, transacciones, incidencias, reportesEntrada, puestos, productos,
   puestoAyudantes, ventas, landingConfig, solicitudesEvento, cortesCaja,
   auditoria, dashboard,

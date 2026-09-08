@@ -46,6 +46,8 @@ export class TransaccionesController {
       fotoCarnetUrl: dto.fotoCarnetUrl,
       eventoId: dto.eventoId,
       operadorId,
+      motivoDevolucion: dto.motivoDevolucion,
+      nota: dto.nota,
     });
   }
 }

@@ -6,6 +6,7 @@ import {
   HttpCode,
   HttpStatus,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { Publico } from '../../common/decorators/publico.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ProductosService } from './productos.service';
 import { CrearProductoDto } from './dto/crear-producto.dto';
+import { ActualizarProductoDto } from './dto/actualizar-producto.dto';
 
 @Controller('productos')
 export class ProductosController {
@@ -28,6 +30,12 @@ export class ProductosController {
   @Roles('UsuarioNegocio', 'Admin')
   crear(@Body() dto: CrearProductoDto) {
     return this.productosService.crear(dto);
+  }
+
+  @Patch(':id')
+  @Roles('UsuarioNegocio', 'Admin')
+  actualizar(@Param('id') id: string, @Body() dto: ActualizarProductoDto) {
+    return this.productosService.actualizar(id, dto);
   }
 
   @Delete(':id')

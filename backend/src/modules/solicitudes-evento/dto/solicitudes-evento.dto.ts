@@ -1,5 +1,13 @@
 import { PartialType } from '@nestjs/mapped-types';
-import { Allow, IsDateString, IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  Allow,
+  IsDateString,
+  IsInt,
+  IsOptional,
+  IsPositive,
+  IsString,
+} from 'class-validator';
 import { Prisma } from '@prisma/client';
 
 export class CrearSolicitudEventoDto {
@@ -18,6 +26,13 @@ export class CrearSolicitudEventoDto {
 
   @IsString()
   descripcion: string;
+
+  // §5.11 — cuánta gente estima el cliente; al aprobar pasa al aforo de la jornada 1.
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsPositive()
+  aforoEstimado?: number;
 
   @IsString()
   colorPrimario: string;

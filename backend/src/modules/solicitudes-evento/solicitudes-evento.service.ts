@@ -58,6 +58,7 @@ export class SolicitudesEventoService {
         nombreEvento: dto.nombreEvento,
         lugar: dto.lugar,
         descripcion: dto.descripcion,
+        aforoEstimado: dto.aforoEstimado ?? null,
         fecha: new Date(dto.fecha),
         fechaFin: aFechaCon(dto.fechaFin, dto.fecha),
         colorPrimario: dto.colorPrimario,
@@ -95,6 +96,7 @@ export class SolicitudesEventoService {
         nombreEvento: dto.nombreEvento,
         lugar: dto.lugar,
         descripcion: dto.descripcion,
+        aforoEstimado: dto.aforoEstimado,
         colorPrimario: dto.colorPrimario,
         colorBoton: dto.colorBoton,
         colorFondo: dto.colorFondo,
@@ -138,6 +140,16 @@ export class SolicitudesEventoService {
           imagen: solicitud.imagenPortada,
           creadoPorId: adminId,
           clienteId: solicitud.clienteId, // en sync con la Asignacion rol=Cliente de abajo
+        },
+      });
+      // Jornada 1 (= rango completo). El aforo estimado del cliente arranca acá.
+      await tx.diaEvento.create({
+        data: {
+          eventoId: nuevoEvento.id,
+          inicio: solicitud.fecha,
+          fin: solicitud.fechaFin,
+          orden: 1,
+          aforoMaximo: solicitud.aforoEstimado,
         },
       });
       await tx.landingConfig.create({

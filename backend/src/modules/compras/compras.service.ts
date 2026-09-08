@@ -47,6 +47,9 @@ export class ComprasService {
         `Máximo ${MAX_ENTRADAS_POR_COMPRA} entradas por compra`,
       );
     }
+    if (!dto.aceptoTerminos) {
+      throw new BadRequestException('Debes aceptar los términos y condiciones');
+    }
 
     const evento = await this.prisma.evento.findUnique({
       where: { id: dto.eventoId },
@@ -112,6 +115,8 @@ export class ComprasService {
     }
     const precioDe = (categoriaTicketId: string) =>
       categorias.find((c) => c.id === categoriaTicketId)?.precio ?? 0;
+    const diaDe = (categoriaTicketId: string) =>
+      categorias.find((c) => c.id === categoriaTicketId)?.diaEventoId ?? null;
     const montoTotal = dto.entradas.reduce(
       (suma, e) => suma + Number(precioDe(e.categoriaTicketId)),
       0,
@@ -148,9 +153,12 @@ export class ComprasService {
           montoTotal,
           comprobanteUrl: dto.comprobanteUrl,
           comprobanteNombreArchivo: dto.comprobanteNombreArchivo,
+          terminosAceptadosEn: new Date(),
+          versionTerminos: dto.versionTerminos,
           entradas: {
             create: dto.entradas.map((e) => ({
               eventoId: dto.eventoId,
+              diaEventoId: diaDe(e.categoriaTicketId),
               categoriaTicketId: e.categoriaTicketId,
               isTitular: !!e.isTitular,
               nombre: e.nombre,

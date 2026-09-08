@@ -27,6 +27,14 @@ import './Devolucion.css';
 import '../supervisor/GestionEntrega.css';
 import { ROLES } from '../../constants/roles.js';
 
+// §5.11 — motivos tipados del retiro (deben coincidir con el enum del backend).
+const MOTIVOS_DEVOLUCION = [
+  ['retiro_efectivo', 'Retiro en efectivo'],
+  ['saldo_no_usado', 'Saldo no usado'],
+  ['error_recarga', 'Error de recarga'],
+  ['otro', 'Otro (detallar)'],
+];
+
 export default function Devolucion() {
   useTituloPagina('Devoluciones');
   const sesion = leerSesion();
@@ -44,8 +52,9 @@ export default function Devolucion() {
     ]);
     return {
       eventos,
+      // El saldo del negocio es POR EVENTO: se resuelve al abrir el evento.
       negocios: negociosRaw.map(n => ({
-        ...n, tipo: 'Negocio', usuarioId: n.id, saldoDisponible: Number(n.saldo),
+        ...n, tipo: 'Negocio', usuarioId: n.id, saldoDisponible: 0,
       })),
     };
   }, [sesion.id, sesion.rol]);
@@ -66,18 +75,23 @@ export default function Devolucion() {
   const [buscando, setBuscando] = useState(false);
   const [errorEscaneo, setErrorEscaneo] = useState('');
   const [monto, setMonto] = useState('');
+  const [motivoDevol, setMotivoDevol] = useState('retiro_efectivo');
+  const [notaDevol, setNotaDevol] = useState('');
   const [fotoCarnet, setFotoCarnet] = useState(null);
   const [capturandoFotoCarnet, setCapturandoFotoCarnet] = useState(false);
   const [retiroExitoso, setRetiroExitoso] = useState(null);
   const [retiros, setRetiros] = useState([]);
+  // Billeteras de ESTE evento (por usuarioId) — para el retiro de saldo de negocios.
+  const [saldosEvento, setSaldosEvento] = useState({});
 
   const abrirEvento = (ev) => {
     setEventoDetalle(ev);
-    // Solo cubre retiros hechos contra la billetera de una Entrada de este evento
-    // (los retiros de saldo de Usuario Negocio no están ligados a un evento en el backend).
     api.transacciones.listar({ eventoId: ev.id, tipo: 'devolucion' }).then(lista =>
       setRetiros(lista.filter(t => t.operador.id === sesion.id))
     );
+    api.billeterasEvento.porEvento(ev.id)
+      .then(lista => setSaldosEvento(Object.fromEntries(lista.map(b => [b.usuarioId, Number(b.saldo)]))))
+      .catch(() => setSaldosEvento({}));
   };
 
   const volverALista = () => setEventoDetalle(null);
@@ -138,12 +152,16 @@ export default function Devolucion() {
     setMonto('');
     setFotoCarnet(null);
     setRetiroExitoso(null);
-    setTarjetaQR(negocios[Math.floor(Math.random() * negocios.length)]);
+    const negocio = negocios[Math.floor(Math.random() * negocios.length)];
+    // Saldo del negocio EN ESTE EVENTO (no el global).
+    setTarjetaQR({ ...negocio, saldoDisponible: saldosEvento[negocio.id] ?? 0 });
   };
 
   const cerrarTarjeta = () => {
     setTarjetaQR(null);
     setMonto('');
+    setMotivoDevol('retiro_efectivo');
+    setNotaDevol('');
     setFotoCarnet(null);
     setCapturandoFotoCarnet(false);
     setRetiroExitoso(null);
@@ -163,6 +181,8 @@ export default function Devolucion() {
       monto: valor,
       fotoCarnetUrl: fotoCarnet,
       eventoId: eventoDetalle.id,
+      motivoDevolucion: motivoDevol,
+      nota: motivoDevol === 'otro' && notaDevol.trim() ? notaDevol.trim() : undefined,
     });
 
     if (tarjetaQR.tipo === 'Normal') {
@@ -425,6 +445,26 @@ export default function Devolucion() {
                     <div className="pi-dev-alerta-error">
                       <FaExclamationTriangle /> Saldo insuficiente: el máximo disponible es {tarjetaQR.saldoDisponible} pts.
                     </div>
+                  )}
+
+                  <label htmlFor="dev-motivo" className="pi-dev-motivo-label">Motivo del retiro</label>
+                  <select
+                    id="dev-motivo"
+                    className="pi-dev-motivo-select"
+                    value={motivoDevol}
+                    onChange={(e) => setMotivoDevol(e.target.value)}
+                  >
+                    {MOTIVOS_DEVOLUCION.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+                  </select>
+                  {motivoDevol === 'otro' && (
+                    <input
+                      type="text"
+                      className="pi-dev-motivo-nota"
+                      placeholder="Detalle del motivo"
+                      value={notaDevol}
+                      onChange={(e) => setNotaDevol(e.target.value)}
+                      maxLength={140}
+                    />
                   )}
                 </div>
 

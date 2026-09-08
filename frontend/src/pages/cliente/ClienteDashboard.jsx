@@ -4,6 +4,7 @@ import {
   FaUsers, FaShoppingBag, FaStore, FaCheck, FaTimes, FaBullhorn, FaFilePdf, FaLock,
 } from 'react-icons/fa';
 import { exportarInformeCierre } from '../../utils/informeCierrePdf.js';
+import GraficoAforo from './GraficosCliente.jsx';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useApi } from '../../utils/useApi.js';
 import api from '../../api/index.js';
@@ -20,6 +21,8 @@ import '../supervisor/GestionEntrega.css';
 
 const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })}`;
 const fmtPct = (frac) => `${(Number(frac || 0) * 100).toFixed(1)}%`;
+const fmtHora = (h) => `${String(h).padStart(2, '0')}:00`;
+const fmtFechaCorta = (iso) => (iso ? new Date(iso).toLocaleDateString('es-BO', { day: 'numeric', month: 'short' }) : '—');
 
 function textoDias(dias) {
   if (dias > 1) return `Faltan ${dias} días`;
@@ -195,6 +198,23 @@ export default function ClienteDashboard() {
                   </tr>
                 )}
               />
+
+              {data.venta.proyeccion && (
+                <p className="pi-cld-proyeccion">
+                  {data.venta.proyeccion.seAgotaAntes ? (
+                    <>
+                      A este ritmo (<strong>{Math.round(data.venta.proyeccion.ritmoDiario)}</strong> entradas/día)
+                      las localidades se <strong>agotan alrededor del {fmtFechaCorta(data.venta.proyeccion.agotaEn)}</strong>,
+                      antes del evento.
+                    </>
+                  ) : (
+                    <>
+                      A este ritmo (<strong>{Math.round(data.venta.proyeccion.ritmoDiario)}</strong> entradas/día)
+                      <strong> no se llega a agotar</strong> antes del evento.
+                    </>
+                  )}
+                </p>
+              )}
             </section>
           )}
 
@@ -229,6 +249,23 @@ export default function ClienteDashboard() {
                 <StatCard icon={<FaCoins />} valor={fmtBs(data.venta.recaudado)} label="Recaudado por entradas" />
               </div>
 
+              <GraficoAforo
+                aforoPorHora={data.operacion.aforoPorHora}
+                cronograma={data.operacion.cronograma}
+                aforoMaximo={data.operacion.aforoMaximo}
+              />
+
+              {(data.operacion.horaPicoIngreso != null || data.operacion.horaPicoConsumo != null) && (
+                <div className="pi-cld-chips">
+                  {data.operacion.horaPicoIngreso != null && (
+                    <span className="pi-cld-chip"><FaUsers aria-hidden="true" /> Hora pico de ingreso: {fmtHora(data.operacion.horaPicoIngreso)}</span>
+                  )}
+                  {data.operacion.horaPicoConsumo != null && (
+                    <span className="pi-cld-chip"><FaShoppingBag aria-hidden="true" /> Hora pico de consumo: {fmtHora(data.operacion.horaPicoConsumo)}</span>
+                  )}
+                </div>
+              )}
+
               <h4 className="pi-cld-subtitulo"><FaStore aria-hidden="true" /> Top puestos por ventas</h4>
               <Tabla
                 columnas={['Puesto', { texto: 'Ventas', align: 'center' }, 'Ingresos']}
@@ -242,6 +279,24 @@ export default function ClienteDashboard() {
                   </tr>
                 )}
               />
+
+              {data.operacion.topProductos?.length > 0 && (
+                <>
+                  <h4 className="pi-cld-subtitulo"><FaShoppingBag aria-hidden="true" /> Productos más vendidos</h4>
+                  <Tabla
+                    columnas={['Producto', { texto: 'Unidades', align: 'center' }, 'Ingresos']}
+                    datos={data.operacion.topProductos}
+                    vacio="Sin ventas de productos."
+                    renderFila={(p) => (
+                      <tr key={p.nombre}>
+                        <td>{p.nombre}</td>
+                        <td style={{ textAlign: 'center' }}>{p.unidades}</td>
+                        <td>{fmtBs(p.ingresos)}</td>
+                      </tr>
+                    )}
+                  />
+                </>
+              )}
             </section>
           )}
         </>

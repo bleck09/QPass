@@ -9,7 +9,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
-import { rangoFechas } from '../../common/utils/fechas.utils';
+import { rangoFechas, rangoAnterior } from '../../common/utils/fechas.utils';
 
 // Offset fijo Bolivia (UTC-4) para agrupar por hora.
 const OFFSET_BOLIVIA_H = 4;
@@ -32,7 +32,7 @@ export class DashboardNegocioService {
     const rango = rangoFechas(desde, hasta, null);
     const enRango = rango ? { createdAt: rango } : {};
 
-    const [puestos, ventas, acreditado, usuario] = await Promise.all([
+    const [puestos, ventas, acreditado, billetera] = await Promise.all([
       this.prisma.puesto.findMany({
         where: { negocioId, eventoId },
         select: { id: true, nombre: true },
@@ -54,6 +54,7 @@ export class DashboardNegocioService {
               nombreProducto: true,
               cantidad: true,
               precioUnitario: true,
+              producto: { select: { categoria: true } },
             },
           },
         },
@@ -69,8 +70,8 @@ export class DashboardNegocioService {
           ...enRango,
         },
       }),
-      this.prisma.usuario.findUnique({
-        where: { id: negocioId },
+      this.prisma.billeteraEvento.findUnique({
+        where: { usuarioId_eventoId: { usuarioId: negocioId, eventoId } },
         select: { saldo: true },
       }),
     ]);
@@ -82,6 +83,44 @@ export class DashboardNegocioService {
 
     const ingresoTotal = ventasNetas.reduce((s, v) => s + Number(v.montoTotal), 0);
     const totalVentas = ventasNetas.length;
+
+    // Spec §3 W6 — comparación con el mismo periodo anterior. Solo con un rango
+    // acotado (sin ?desde=&hasta= la ventana es "todo el evento" y no hay
+    // periodo anterior con sentido).
+    let comparativa: {
+      ingresoTotal: { actual: number; anterior: number; variacion: number | null };
+      totalVentas: { actual: number; anterior: number };
+      ticketPromedio: { actual: number; anterior: number };
+    } | null = null;
+    if (rango) {
+      const prev = rangoAnterior(rango);
+      const ventasPrev = await this.prisma.venta.findMany({
+        where: {
+          puesto: { negocioId, eventoId },
+          anuladaEn: null,
+          createdAt: { gte: prev.gte, lte: prev.lte },
+        },
+        select: { montoTotal: true },
+      });
+      const ingresoPrev = ventasPrev.reduce(
+        (s, v) => s + Number(v.montoTotal),
+        0,
+      );
+      const ticketActual = totalVentas ? ingresoTotal / totalVentas : 0;
+      comparativa = {
+        ingresoTotal: {
+          actual: ingresoTotal,
+          anterior: ingresoPrev,
+          variacion:
+            ingresoPrev === 0 ? null : (ingresoTotal - ingresoPrev) / ingresoPrev,
+        },
+        totalVentas: { actual: totalVentas, anterior: ventasPrev.length },
+        ticketPromedio: {
+          actual: ticketActual,
+          anterior: ventasPrev.length ? ingresoPrev / ventasPrev.length : 0,
+        },
+      };
+    }
 
     const sumaTipo = (tipo: string) =>
       Number(acreditado.find((t) => t.tipo === tipo)?._sum.monto ?? 0);
@@ -97,6 +136,11 @@ export class DashboardNegocioService {
     const productos = new Map<
       string,
       { nombre: string; unidades: number; ingresos: number }
+    >();
+    // §5.11 — ventas agrupadas por categoría de producto (bebida/comida/...).
+    const porCategoria = new Map<
+      string,
+      { categoria: string; unidades: number; ingresos: number }
     >();
     // W3 — por puesto.
     const porPuestoMap = new Map<
@@ -151,20 +195,35 @@ export class DashboardNegocioService {
       ayudanteFila.ventas += 1;
 
       for (const it of v.items) {
+        const linea = it.cantidad * Number(it.precioUnitario);
         const prev = productos.get(it.nombreProducto) ?? {
           nombre: it.nombreProducto,
           unidades: 0,
           ingresos: 0,
         };
         prev.unidades += it.cantidad;
-        prev.ingresos += it.cantidad * Number(it.precioUnitario);
+        prev.ingresos += linea;
         productos.set(it.nombreProducto, prev);
+
+        const cat = it.producto?.categoria || 'Sin categoría';
+        const pc = porCategoria.get(cat) ?? {
+          categoria: cat,
+          unidades: 0,
+          ingresos: 0,
+        };
+        pc.unidades += it.cantidad;
+        pc.ingresos += linea;
+        porCategoria.set(cat, pc);
       }
     }
 
     const topProductos = [...productos.values()]
       .sort((a, b) => b.ingresos - a.ingresos)
       .slice(0, 10);
+
+    const ventasPorCategoria = [...porCategoria.values()].sort(
+      (a, b) => b.ingresos - a.ingresos,
+    );
 
     const porPuesto = [...porPuestoMap.values()].sort(
       (a, b) => b.ingresos - a.ingresos,
@@ -194,15 +253,17 @@ export class DashboardNegocioService {
         totalVentas,
         ticketPromedio: totalVentas ? ingresoTotal / totalVentas : 0,
         acreditadoBilletera,
-        saldoBilletera: Number(usuario?.saldo ?? 0),
+        saldoBilletera: Number(billetera?.saldo ?? 0),
         puestos: puestos.length,
         anuladas: {
           cantidad: ventasAnuladas.length,
           monto: ventasAnuladas.reduce((s, v) => s + Number(v.montoTotal), 0),
         },
+        comparativa,
       },
       ventasPorHora: porHora,
       topProductos,
+      ventasPorCategoria,
       porPuesto,
       porAyudante,
       ultimasVentas,

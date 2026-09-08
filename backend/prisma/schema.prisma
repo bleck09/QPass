@@ -87,6 +87,16 @@ enum CampoReportado {
   celular
 }
 
+// §5.11 — motivo de una devolución (retiro de saldo). Antes era texto libre en
+// Transaccion.nota; el enum permite agrupar y reportar. `otro` deja el detalle
+// en `nota`.
+enum MotivoDevolucion {
+  retiro_efectivo
+  saldo_no_usado
+  error_recarga
+  otro
+}
+
 // Cuentas de roles operativos (Recargador, Supervisor, Devolucion) las crea Admin directamente
 // y la contraseña se manda al correo de la persona. creadoPorId audita quién creó la cuenta.
 model Usuario {
@@ -110,9 +120,8 @@ model Usuario {
   // Se pone en false solo (UsuariosService.reevaluarCompletarPerfil) una vez que
   // YA tiene ci Y ya cambió la contraseña alguna vez (CambioPassword origen=self).
   debeCompletarPerfil Boolean @default(false)
-  saldo            Decimal  @default(0) @db.Decimal(10, 2) // cache; billetera PERSONAL, compartida
-                                                            // entre todos los eventos. Fuente de
-                                                            // verdad: Transaccion.usuarioId
+  // El saldo cashless ya NO es global: vive en BilleteraEvento, una fila por
+  // (usuario, evento). El que se recarga en un evento solo sirve en ese evento.
   primerLoginEn    DateTime? // se setea en el primer login exitoso. Antes de esto, el correo
                               // (=email de esta cuenta) todavía se puede corregir vía
                               // ReporteEntrada; después queda bloqueado (ver ReporteEntrada).
@@ -153,6 +162,7 @@ model Usuario {
   cortesCajaCerrados     CorteCaja[]           @relation("CorteCajaCerradoPor")
   ventasAnuladas         Venta[]               @relation("VentaAnuladaPor")
   auditorias             RegistroAuditoria[]   @relation("ActorAuditoria")
+  billeterasEvento       BilleteraEvento[]
 
   @@map("usuarios")
 }
@@ -210,7 +220,16 @@ model Evento {
   id          String       @id @default(cuid())
   nombre      String
   lugar       String
-  coordenadas String?      // "lat, lng" en texto libre por ahora (sin selector de mapa)
+  // Pin del recinto. `coordenadas` ("lat, lng") lo sigue produciendo el
+  // MapaSelector del front y es la fuente del marcador. latitud/longitud (§5.11)
+  // son la versión numérica derivada, para cálculos geográficos futuros; se
+  // llenan en eventos.service parseando `coordenadas`.
+  coordenadas String?
+  latitud     Float?
+  longitud    Float?
+  // §5.5 — el aforo legal es POR JORNADA (una fiesta nocturna cruza medianoche y
+  // un festival tiene varias noches). Ver DiaEvento.aforoMaximo. `fecha`/`fechaFin`
+  // quedan como el sobre del evento y se resincronizan al min/max de las jornadas.
   fecha       DateTime
   fechaFin    DateTime
   imagen      String?
@@ -232,6 +251,10 @@ model Evento {
   qrPrefijo   String?      // 3 letras que van al inicio de cada CodigoQr.codigo generado
   qrAncho     Float?       // ancho de impresión de la manilla/QR (config del lote generado)
   qrAlto      Float?       // alto de impresión de la manilla/QR
+  // Días tras fechaFin en que el asistente todavía puede retirar su saldo cashless
+  // (BilleteraEvento). Pasado el plazo la Devolución lo bloquea; el saldo queda
+  // como dato ("saldo caducado no reclamado" en el dashboard admin).
+  diasParaRetiro Int       @default(30)
   creadoPorId Int
   // Cliente organizador. Se llena al aprobar una SolicitudEvento (= SolicitudEvento.clienteId)
   // o a mano cuando Admin crea el evento directo. NULL en eventos directos sin cliente.
@@ -256,9 +279,57 @@ model Evento {
   solicitudOrigen   SolicitudEvento?
   resumen           ResumenEvento?
   cortesCaja        CorteCaja[]
+  dias              DiaEvento[]
+  billeterasEvento  BilleteraEvento[]
 
   @@index([clienteId])
   @@map("eventos")
+}
+
+// Billetera cashless de un usuario PARA UN EVENTO (spec: el saldo recargado en un
+// evento solo sirve en ese evento). Reemplaza al viejo Usuario.saldo global. La
+// fuente de verdad sigue siendo el ledger (Transaccion filtrada por
+// usuarioId + eventoId); esta fila es el saldo vivo, actualizado en la misma
+// transacción que cada movimiento (ver TransaccionesService).
+model BilleteraEvento {
+  id        String    @id @default(cuid())
+  usuarioId Int
+  eventoId  String
+  saldo     Decimal   @default(0) @db.Decimal(10, 2)
+  expiraEn  DateTime? // Fase 3: fin de la última jornada + Evento.diasParaRetiro
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, eventoId])
+  @@index([eventoId])
+  @@map("billeteras_evento")
+}
+
+// Una "jornada" del evento: bloque con inicio/fin propios (una fiesta nocturna
+// va de 20:00 a 02:00 cruzando medianoche; un festival tiene varias). Todo lo
+// que hoy colgaba del evento entero cuelga de acá: categoría de ticket, entrada,
+// manilla (CodigoQr) y aforo. Un evento de una sola noche tiene 1 DiaEvento
+// (se auto-crea con el evento).
+model DiaEvento {
+  id          String   @id @default(cuid())
+  eventoId    String
+  nombre      String?  // "Noche de apertura" — opcional; la UI muestra "Día N" si es null
+  inicio      DateTime
+  fin         DateTime
+  orden       Int
+  aforoMaximo Int?     // §5.5 — capacidad legal de ESTA jornada
+  createdAt   DateTime @default(now())
+
+  evento     Evento            @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  categorias CategoriaTicket[]
+  entradas   Entrada[]
+  codigosQr  CodigoQr[]
+
+  @@index([eventoId, orden])
+  @@map("dias_evento")
 }
 
 // Arqueo de caja de un operador con efectivo, por evento (§5.2). Se abre al
@@ -339,6 +410,7 @@ model SolicitudEvento {
   fecha             DateTime
   fechaFin          DateTime
   descripcion       String
+  aforoEstimado     Int?                  // §5.11 — asistentes que el cliente estima; al aprobar pasa a Evento.aforoMaximo
   colorPrimario     String
   colorBoton        String
   colorFondo        String
@@ -373,6 +445,7 @@ model SolicitudEvento {
 model CategoriaTicket {
   id              String   @id @default(cuid())
   eventoId        String
+  diaEventoId     String   // toda categoría pertenece a una jornada (ver DiaEvento)
   nombre          String
   descripcion     String?
   cantidad        Int
@@ -380,10 +453,12 @@ model CategoriaTicket {
   precio          Decimal  @db.Decimal(10, 2)
   createdAt       DateTime @default(now())
 
-  evento   Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  entradas Entrada[]
+  evento    Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  diaEvento DiaEvento @relation(fields: [diaEventoId], references: [id], onDelete: Cascade)
+  entradas  Entrada[]
 
   @@index([eventoId])
+  @@index([diaEventoId])
   @@map("categorias_ticket")
 }
 
@@ -402,6 +477,9 @@ model Compra {
   motivoRechazo            String?
   resueltoPorId            Int?
   resueltoEn                DateTime?
+  // §T&C — el comprador aceptó los términos al crear la compra.
+  terminosAceptadosEn      DateTime?
+  versionTerminos          String?
   createdAt                DateTime        @default(now())
 
   evento    Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
@@ -422,6 +500,7 @@ model Compra {
 model Entrada {
   id                String        @id @default(cuid())
   eventoId          String
+  diaEventoId       String?       // jornada de esta entrada (hereda de la categoría). Nullable por robustez.
   compraId          String?
   categoriaTicketId String?
   usuarioId         Int?          // el titular YA lo trae desde el inicio (=compradorId, ya tiene
@@ -443,6 +522,7 @@ model Entrada {
   createdAt DateTime @default(now())
 
   evento          Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  diaEvento       DiaEvento?       @relation(fields: [diaEventoId], references: [id], onDelete: SetNull)
   compra          Compra?          @relation(fields: [compraId], references: [id], onDelete: SetNull)
   categoriaTicket CategoriaTicket? @relation(fields: [categoriaTicketId], references: [id])
   usuario         Usuario?         @relation("TitularCuenta", fields: [usuarioId], references: [id])
@@ -456,6 +536,7 @@ model Entrada {
 
   @@unique([eventoId, numero])
   @@index([eventoId, estadoIngreso])
+  @@index([diaEventoId, estadoIngreso]) // aforo por jornada
   @@index([usuarioId]) // "mis entradas" del invitado: se buscan por Entrada.usuarioId
   @@map("entradas")
 }
@@ -490,11 +571,12 @@ model RegistroIngreso {
 // entradaId ya NO es único: puede haber varias filas históricas para una misma Entrada (las
 // anuladas + la activa). Regla de la app: a lo sumo UNA fila con anulado=false por entradaId.
 model CodigoQr {
-  id         String   @id @default(cuid())
-  eventoId   String
-  numero     Int
-  codigo     String   @unique
-  generadoEn DateTime @default(now())
+  id          String   @id @default(cuid())
+  eventoId    String
+  diaEventoId String?  // el pool de manillas se genera por jornada. Nullable por robustez.
+  numero      Int
+  codigo      String   @unique
+  generadoEn  DateTime @default(now())
 
   entradaId        String?
   asignadoPorId    Int?
@@ -504,14 +586,16 @@ model CodigoQr {
   anuladoPorId     Int?
   anuladoEn        DateTime?
 
-  evento      Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  entrada     Entrada? @relation(fields: [entradaId], references: [id])
-  asignadoPor Usuario? @relation("SupervisorQueAsigna", fields: [asignadoPorId], references: [id])
-  anuladoPor  Usuario? @relation("SupervisorQueAnula", fields: [anuladoPorId], references: [id])
+  evento      Evento     @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  diaEvento   DiaEvento? @relation(fields: [diaEventoId], references: [id], onDelete: SetNull)
+  entrada     Entrada?   @relation(fields: [entradaId], references: [id])
+  asignadoPor Usuario?   @relation("SupervisorQueAsigna", fields: [asignadoPorId], references: [id])
+  anuladoPor  Usuario?   @relation("SupervisorQueAnula", fields: [anuladoPorId], references: [id])
 
   @@unique([eventoId, numero])
   @@index([entradaId])
   @@index([eventoId, anulado])
+  @@index([eventoId, diaEventoId])
   @@map("codigos_qr")
 }
 
@@ -538,8 +622,9 @@ model Transaccion {
   ventaId    String? // set en las dos filas (consumo + venta) que genera una Venta
   operadorId Int     // quién la ejecutó: Recargador, Ayudante o Devolucion
 
-  fotoCarnetUrl String? // exigida en retiros (Devolucion)
-  nota          String?
+  fotoCarnetUrl    String?           // exigida en retiros (Devolucion)
+  motivoDevolucion MotivoDevolucion? // §5.11 — solo en filas tipo=devolucion
+  nota             String?
 
   createdAt DateTime @default(now())
 
@@ -645,12 +730,20 @@ model Producto {
   nombre    String
   precio    Decimal  @db.Decimal(10, 2)
   imagen    String?
+  // §5.4 — estado e inventario. `activo=false` => no se puede vender (habilita
+  // "productos agotados" sin borrar el Producto, que tiene FK desde VentaItem).
+  // `stock` null => sin control de inventario; si es un número, cada venta lo
+  // decrementa (guardado) y una anulación lo restituye.
+  activo    Boolean  @default(true)
+  stock     Int?
+  categoria String?  // §5.11 — "bebida" | "comida" | ... para agrupar ventas
   createdAt DateTime @default(now())
 
   puesto     Puesto      @relation(fields: [puestoId], references: [id], onDelete: Cascade)
   ventaItems VentaItem[]
 
   @@index([puestoId])
+  @@index([puestoId, activo])
   @@map("productos")
 }
 

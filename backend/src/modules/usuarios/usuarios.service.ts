@@ -2,7 +2,8 @@
  * src/modules/usuarios/usuarios.service.ts
  *
  * Reglas de negocio de Usuario (perfil, cambio de contraseña, auditoría).
- * NO toca Usuario.saldo — de eso se encarga TransaccionesService (C7).
+ * El saldo cashless NO vive acá: está en BilleteraEvento (por evento), lo
+ * escribe TransaccionesService (C7).
  * ========================================================================= */
 
 import {
@@ -33,7 +34,6 @@ const SELECT_PUBLICO = {
   biografia: true,
   fechaNacimiento: true,
   createdAt: true,
-  saldo: true,
   negocioAsignadoId: true,
   debeCompletarPerfil: true,
 } satisfies Prisma.UsuarioSelect;

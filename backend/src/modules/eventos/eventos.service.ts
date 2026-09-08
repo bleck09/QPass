@@ -81,22 +81,51 @@ export class EventosService {
     return evento;
   }
 
+  /**
+   * "lat, lng" (lo que produce el MapaSelector del front) -> { latitud, longitud }
+   * numéricos (§5.11). Devuelve `{}` si el texto no es un par de números; así el
+   * spread no pisa nada cuando `coordenadas` no cambia en un PATCH.
+   */
+  private coordsANumeros(coordenadas?: string | null): {
+    latitud?: number;
+    longitud?: number;
+  } {
+    if (coordenadas == null) return {};
+    const m = String(coordenadas).match(
+      /^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/,
+    );
+    if (!m) return { latitud: undefined, longitud: undefined };
+    return { latitud: Number(m[1]), longitud: Number(m[2]) };
+  }
+
   /** Crea un evento directo (sin pasar por SolicitudEvento). */
   async crear(dto: CrearEventoDto, creadoPorId: number) {
-    return this.prisma.evento.create({
-      data: {
-        nombre: dto.nombre,
-        lugar: dto.lugar,
-        coordenadas: dto.coordenadas,
-        imagen: dto.imagen,
-        qrPrefijo: dto.qrPrefijo,
-        fecha: new Date(dto.fecha),
-        fechaFin: aFechaCon(dto.fechaFin, dto.fecha),
-        qrAncho: dto.qrAncho,
-        qrAlto: dto.qrAlto,
-        clienteId: dto.clienteId ?? null,
-        creadoPorId,
-      },
+    const fecha = new Date(dto.fecha);
+    const fechaFin = aFechaCon(dto.fechaFin, dto.fecha);
+    return this.prisma.$transaction(async (tx) => {
+      const evento = await tx.evento.create({
+        data: {
+          nombre: dto.nombre,
+          lugar: dto.lugar,
+          coordenadas: dto.coordenadas,
+          ...this.coordsANumeros(dto.coordenadas),
+          imagen: dto.imagen,
+          qrPrefijo: dto.qrPrefijo,
+          fecha,
+          fechaFin,
+          qrAncho: dto.qrAncho,
+          qrAlto: dto.qrAlto,
+          clienteId: dto.clienteId ?? null,
+          diasParaRetiro: dto.diasParaRetiro ?? undefined,
+          creadoPorId,
+        },
+      });
+      // Toda categoría / entrada / manilla cuelga de una jornada: el evento
+      // nace con una (= su rango completo). Multi-día se agrega después.
+      await tx.diaEvento.create({
+        data: { eventoId: evento.id, inicio: fecha, fin: fechaFin, orden: 1 },
+      });
+      return evento;
     });
   }
 
@@ -114,6 +143,7 @@ export class EventosService {
         nombre: dto.nombre,
         lugar: dto.lugar,
         coordenadas: dto.coordenadas,
+        ...this.coordsANumeros(dto.coordenadas),
         imagen: dto.imagen,
         estado: dto.estado,
         qrPrefijo: dto.qrPrefijo,
@@ -122,6 +152,7 @@ export class EventosService {
         qrAncho: dto.qrAncho,
         qrAlto: dto.qrAlto,
         clienteId: dto.clienteId,
+        diasParaRetiro: dto.diasParaRetiro,
       },
     });
     await this.auditoria.registrar(null, {

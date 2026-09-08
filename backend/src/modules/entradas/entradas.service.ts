@@ -3,7 +3,10 @@
  *
  * Cada boleto/persona dentro de una Compra + su historial de control de acceso
  * (RegistroIngreso) y la pulsera/QR físico vinculado. El saldo NO vive acá:
- * vive en Usuario.saldo (dueño vía Entrada.usuarioId).
+ * vive en BilleteraEvento (por usuarioId + eventoId). Las pantallas de escaneo
+ * lo necesitan, así que se adjunta a `usuario.saldo` en un segundo paso
+ * (adjuntarSaldoEvento) — Prisma no puede filtrar la billetera por el evento de
+ * la entrada dentro de un include estático.
  * ========================================================================= */
 
 import {
@@ -20,10 +23,10 @@ const CODIGO_ACTIVO = {
   codigosQr: { where: { anulado: false }, take: 1 },
 } satisfies Prisma.EntradaInclude;
 
-// El saldo vive en Usuario; se incluye así para que las pantallas de escaneo
-// lo muestren sin una segunda llamada.
+// El titular de la entrada. El saldo se adjunta después (adjuntarSaldoEvento),
+// porque vive en BilleteraEvento keyed por (usuarioId, eventoId de la entrada).
 const CON_SALDO = {
-  usuario: { select: { id: true, saldo: true, foto: true } },
+  usuario: { select: { id: true, foto: true } },
 } satisfies Prisma.EntradaInclude;
 
 // Una compra pendiente o rechazada no es un asistente real todavía.
@@ -44,6 +47,41 @@ export class EntradasService {
     private readonly eventoPolicy: EventoPolicy,
   ) {}
 
+  /**
+   * Rellena `entrada.usuario.saldo` con el saldo de la BilleteraEvento de
+   * (usuario, evento de la entrada). Muta las entradas en sitio (misma forma que
+   * antes traía CON_SALDO) para no tocar el frontend de escaneo.
+   */
+  private async adjuntarSaldoEvento(
+    entradas: Array<{
+      eventoId: string;
+      usuario?: { id: number; saldo?: unknown } | null;
+    }>,
+  ): Promise<void> {
+    const pares = new Map<string, { usuarioId: number; eventoId: string }>();
+    for (const e of entradas) {
+      if (e.usuario?.id) {
+        pares.set(`${e.usuario.id}|${e.eventoId}`, {
+          usuarioId: e.usuario.id,
+          eventoId: e.eventoId,
+        });
+      }
+    }
+    if (pares.size === 0) return;
+    const filas = await this.prisma.billeteraEvento.findMany({
+      where: { OR: [...pares.values()] },
+      select: { usuarioId: true, eventoId: true, saldo: true },
+    });
+    const saldoDe = new Map(
+      filas.map((f) => [`${f.usuarioId}|${f.eventoId}`, Number(f.saldo)]),
+    );
+    for (const e of entradas) {
+      if (e.usuario?.id) {
+        e.usuario.saldo = saldoDe.get(`${e.usuario.id}|${e.eventoId}`) ?? 0;
+      }
+    }
+  }
+
   async listar(eventoId?: string, estadoIngreso?: string) {
     if (!eventoId) throw new BadRequestException('eventoId es requerido');
     const entradas = await this.prisma.entrada.findMany({
@@ -59,6 +97,7 @@ export class EntradasService {
         registrosIngreso: { select: { tipo: true } },
       },
     });
+    await this.adjuntarSaldoEvento(entradas);
     return entradas.map(({ codigosQr, registrosIngreso, ...e }) => ({
       ...e,
       codigoQrVinculado: codigosQr[0] || null,
@@ -115,6 +154,7 @@ export class EntradasService {
         'Código no vinculado a ninguna entrada activa',
       );
     }
+    await this.adjuntarSaldoEvento([codigoQr.entrada]);
     const { compra, ...entrada } = codigoQr.entrada;
     return {
       ...entrada,
@@ -128,6 +168,7 @@ export class EntradasService {
       include: { categoriaTicket: true, ...CODIGO_ACTIVO, ...CON_SALDO },
     });
     if (!entrada) throw new NotFoundException('Entrada no encontrada');
+    await this.adjuntarSaldoEvento([entrada]);
     const { codigosQr, ...resto } = entrada;
     return { ...resto, codigoQrVinculado: codigosQr[0] || null };
   }
@@ -162,6 +203,16 @@ export class EntradasService {
     if (!codigoQr) throw new NotFoundException('Código no encontrado');
     if (codigoQr.entradaId) {
       throw new ConflictException('Ese código ya está vinculado a otra entrada');
+    }
+    // La manilla y la entrada tienen que ser de la misma jornada.
+    if (
+      entradaActual.diaEventoId &&
+      codigoQr.diaEventoId &&
+      entradaActual.diaEventoId !== codigoQr.diaEventoId
+    ) {
+      throw new ConflictException(
+        'Esa manilla es de otra jornada del evento',
+      );
     }
 
     const anteriorActivo = await this.prisma.codigoQr.findFirst({
@@ -228,26 +279,34 @@ export class EntradasService {
         evento: {
           select: { nombre: true, fecha: true, fechaFin: true, estado: true },
         },
+        diaEvento: { select: { nombre: true, inicio: true, fin: true } },
       },
     });
     if (!entradaActual) throw new NotFoundException('Entrada no encontrada');
 
     if (tipo === 'ingreso') {
-      const { evento } = entradaActual;
+      const { evento, diaEvento } = entradaActual;
       const ahora = new Date();
+      // La ventana de ingreso es la de la JORNADA de la entrada (una fiesta va
+      // de 20:00 a 02:00). Si la entrada no tiene jornada (legacy), se usa el
+      // rango del evento como antes.
+      const desde = diaEvento?.inicio ?? evento.fecha;
+      const hasta = diaEvento?.fin ?? evento.fechaFin;
+      const rotulo = diaEvento?.nombre
+        ? `"${evento.nombre}" (${diaEvento.nombre})`
+        : `"${evento.nombre}"`;
       const aperturaPuerta = new Date(
-        evento.fecha.getTime() -
-          MARGEN_INGRESO_ANTICIPADO_HORAS * 60 * 60 * 1000,
+        desde.getTime() - MARGEN_INGRESO_ANTICIPADO_HORAS * 60 * 60 * 1000,
       );
-      if (evento.estado === 'finalizado' || ahora > evento.fechaFin) {
+      if (evento.estado === 'finalizado' || ahora > hasta) {
         throw new ConflictException(
-          `"${evento.nombre}" ya finalizó — no se registran más ingresos`,
+          `${rotulo} ya cerró — no se registran más ingresos`,
         );
       }
       if (ahora < aperturaPuerta) {
         throw new ConflictException(
-          `Todavía no es horario de ingreso para "${evento.nombre}": se habilita ` +
-            `${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio del evento`,
+          `Todavía no es horario de ingreso para ${rotulo}: se habilita ` +
+            `${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio`,
         );
       }
     }
@@ -286,6 +345,7 @@ export class EntradasService {
         include: { categoriaTicket: true, ...CODIGO_ACTIVO, ...CON_SALDO },
       }),
     ]);
+    await this.adjuntarSaldoEvento([entrada]);
     const { codigosQr, ...resto } = entrada;
     return { ...resto, codigoQrVinculado: codigosQr[0] || null };
   }

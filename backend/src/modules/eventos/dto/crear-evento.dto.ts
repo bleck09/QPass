@@ -1,9 +1,11 @@
 import { Type } from 'class-transformer';
 import {
   IsDateString,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -54,4 +56,11 @@ export class CrearEventoDto {
   @Type(() => Number)
   @IsNumber()
   clienteId?: number;
+
+  // Días tras el cierre en que se puede retirar el saldo cashless (default 30).
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  diasParaRetiro?: number;
 }

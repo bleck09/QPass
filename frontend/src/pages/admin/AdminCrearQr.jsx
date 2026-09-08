@@ -7,7 +7,7 @@ import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaCalendarAlt, FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
+  FaCalendarAlt, FaCalendarDay, FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
   FaEye, FaTimes, FaChevronLeft, FaChevronRight, FaLink, FaBan
 } from 'react-icons/fa';
 import BotonVolver from '../../components/BotonVolver.jsx';
@@ -62,6 +62,15 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
     error: errorCodigos,
     recargar: recargarCodigos,
   } = useApi(cargarCodigos, { inicial: [], activo: !!eventoId });
+
+  // Jornadas del evento: el pool de manillas se genera por jornada.
+  const cargarJornadas = useCallback(() => api.diasEvento.listar(eventoId), [eventoId]);
+  const { data: jornadas } = useApi(cargarJornadas, { inicial: [], activo: !!eventoId });
+  const [diaElegido, setDiaElegido] = useState('');
+  const nombreJornada = (j, i) => j?.nombre || `Día ${j?.orden ?? i + 1}`;
+  // Jornada efectiva: la elegida a mano, o la primera por defecto (sin efecto).
+  const diaEventoId =
+    (jornadas.some(j => j.id === diaElegido) && diaElegido) || jornadas[0]?.id || '';
 
   const [cantidad, setCantidad] = useState('50');
   const [prefijo, setPrefijo] = useState('QP');
@@ -121,6 +130,7 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
     else if (n > 2000) errs.cantidad = 'El máximo por tanda es 2000.';
 
     if (!prefijo.trim()) errs.prefijo = 'Escribí un prefijo de 1 a 3 letras.';
+    if (!diaEventoId) errs.jornada = 'Elegí la jornada para este lote.';
 
     const a = Number(anchoCm);
     if (!String(anchoCm).trim()) errs.ancho = 'Indicá el ancho del QR.';
@@ -133,7 +143,7 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
     setErrores(errs);
     if (Object.keys(errs).length > 0) return;
 
-    await api.codigosQr.generar({ eventoId, cantidad: n, prefijo });
+    await api.codigosQr.generar({ eventoId, diaEventoId, cantidad: n, prefijo });
     await recargarCodigos();
     setPagina(0);
     setMostrarImagenes(false);
@@ -211,6 +221,25 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
       <div className="pi-adqr-card">
         <h3 className="pi-adqr-subtitulo">Generar nuevos códigos</h3>
         <form onSubmit={handleGenerar} className="pi-adqr-form" noValidate>
+          {jornadas.length > 1 && (
+            <div className="pi-adqr-input-group">
+              <label htmlFor="qr-jornada">Jornada</label>
+              <div className="pi-adqr-input-wrapper">
+                <FaCalendarDay className="pi-adqr-input-icon" aria-hidden="true" />
+                <select
+                  id="qr-jornada"
+                  value={diaEventoId}
+                  onChange={(e) => { setDiaElegido(e.target.value); limpiarError('jornada'); }}
+                  aria-invalid={!!errores.jornada}
+                >
+                  {jornadas.map((j, i) => (
+                    <option key={j.id} value={j.id}>{nombreJornada(j, i)}</option>
+                  ))}
+                </select>
+              </div>
+              {errores.jornada && <p className="pi-adqr-error">{errores.jornada}</p>}
+            </div>
+          )}
           <div className="pi-adqr-input-group">
             <label htmlFor="qr-cantidad">Cantidad a generar</label>
             <div className="pi-adqr-input-wrapper">

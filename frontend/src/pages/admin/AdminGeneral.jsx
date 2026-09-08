@@ -47,6 +47,27 @@ const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFract
 const fmtPct = (frac) => `${(Number(frac || 0) * 100).toFixed(1)}%`;
 const fmtFecha = (iso) => new Date(iso).toLocaleDateString('es-BO');
 
+// Chip "▲ 12.3% vs. periodo anterior" para las comparaciones §1.2 #1.
+// `variacion` puede venir null (base 0 -> no hay % con sentido).
+function ChipVariacion({ variacion, anteriorTexto, invertirColor = false }) {
+  if (variacion == null) {
+    return <span className="pi-adg-antiguedad">sin base del periodo anterior</span>;
+  }
+  const pct = variacion * 100;
+  const plano = Math.abs(pct) < 0.05;
+  const sube = pct >= 0;
+  const bueno = invertirColor ? !sube : sube;
+  return (
+    <span
+      className="pi-adg-antiguedad"
+      style={{ color: plano ? 'var(--text-muted)' : bueno ? 'var(--ok)' : 'var(--danger)' }}
+    >
+      {plano ? '=' : sube ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% vs. periodo anterior
+      {anteriorTexto ? ` (${anteriorTexto})` : ''}
+    </span>
+  );
+}
+
 // segundos -> "3 h 20 min" / "45 min" / "2 d 4 h" / "—"
 function fmtDuracion(seg) {
   if (seg == null) return '—';
@@ -207,6 +228,14 @@ export default function AdminGeneral() {
                 tono="ok"
                 valor={fmtBs(data.kpis.recaudadoEntradas)}
                 label="Recaudado por entradas"
+                extra={
+                  data.kpis.comparativa && (
+                    <ChipVariacion
+                      variacion={data.kpis.comparativa.recaudadoEntradas.variacion}
+                      anteriorTexto={fmtBs(data.kpis.comparativa.recaudadoEntradas.anterior)}
+                    />
+                  )
+                }
               />
               <StatCard
                 icon={<FaLayerGroup />}
@@ -226,6 +255,12 @@ export default function AdminGeneral() {
                 label="Saldo cashless en circulación (pasivo, no es ganancia)"
               />
               <StatCard
+                icon={<FaWallet />}
+                tono={data.kpis.saldoCaducadoNoReclamado > 0 ? 'warn' : 'neutral'}
+                valor={fmtPts(data.kpis.saldoCaducadoNoReclamado)}
+                label="Saldo caducado sin reclamar (venció el plazo de retiro)"
+              />
+              <StatCard
                 icon={<FaTimesCircle />}
                 tono={
                   data.kpis.tasaRechazoComprobantes > 0.2
@@ -237,9 +272,24 @@ export default function AdminGeneral() {
                 valor={fmtPct(data.kpis.tasaRechazoComprobantes)}
                 label="Rechazo de comprobantes"
                 extra={
-                  <span className="pi-adg-antiguedad">
-                    {data.kpis.comprobantes.confirmadas} ok · {data.kpis.comprobantes.rechazadas} rech
-                  </span>
+                  <>
+                    <span className="pi-adg-antiguedad">
+                      {data.kpis.comprobantes.confirmadas} ok · {data.kpis.comprobantes.rechazadas} rech
+                    </span>
+                    {data.kpis.comparativa && (
+                      <ChipVariacion
+                        variacion={
+                          data.kpis.comparativa.tasaRechazoComprobantes.anterior === 0
+                            ? null
+                            : (data.kpis.comparativa.tasaRechazoComprobantes.actual -
+                                data.kpis.comparativa.tasaRechazoComprobantes.anterior) /
+                              data.kpis.comparativa.tasaRechazoComprobantes.anterior
+                        }
+                        anteriorTexto={`antes ${fmtPct(data.kpis.comparativa.tasaRechazoComprobantes.anterior)}`}
+                        invertirColor
+                      />
+                    )}
+                  </>
                 }
               />
               <StatCard

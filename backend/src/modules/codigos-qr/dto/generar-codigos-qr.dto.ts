@@ -5,6 +5,10 @@ export class GenerarCodigosQrDto {
   @IsString()
   eventoId: string;
 
+  // Jornada para la que se genera este lote de manillas (ver DiaEvento).
+  @IsString()
+  diaEventoId: string;
+
   @Type(() => Number)
   @IsInt()
   @Min(1)

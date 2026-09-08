@@ -637,3 +637,29 @@
     height: 44px; /* Ajuste para móviles */
   }
 }
+/* --- Catálogo: estado / stock / categoría de producto (§5.4) --- */
+.pi-unegocio-prod-inactivo td { opacity: 0.55; }
+.pi-unegocio-nota { color: var(--text-muted); font-size: 12px; }
+.pi-unegocio-stock-input {
+  width: 68px;
+  padding: 4px 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  text-align: center;
+}
+.pi-unegocio-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--bg-surface);
+}
+.pi-unegocio-toggle.activo { color: var(--ok); border-color: var(--ok); }
+.pi-unegocio-toggle.inactivo { color: var(--danger); border-color: var(--danger); }

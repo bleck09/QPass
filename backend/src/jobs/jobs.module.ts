@@ -10,6 +10,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { FinalizarEventosCron } from './cron/finalizar-eventos.cron';
 import { ReconciliacionSaldoCron } from './cron/reconciliacion-saldo.cron';
 import { LimpiarIdempotenciaCron } from './cron/limpiar-idempotencia.cron';
+import { CaducidadBilleteraCron } from './cron/caducidad-billetera.cron';
 
 @Module({
   imports: [ScheduleModule.forRoot()],
@@ -17,6 +18,7 @@ import { LimpiarIdempotenciaCron } from './cron/limpiar-idempotencia.cron';
     FinalizarEventosCron,
     ReconciliacionSaldoCron,
     LimpiarIdempotenciaCron,
+    CaducidadBilleteraCron,
   ],
 })
 export class JobsModule {}

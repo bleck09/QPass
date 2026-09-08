@@ -170,3 +170,64 @@
   background: linear-gradient(90deg, var(--cian-digital), var(--indigo-profundo));
   transition: width 0.5s ease;
 }
+
+/* --- Bloque E: gráfico de aforo + proyección --- */
+.pi-cld-grafico {
+  margin-top: 18px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px;
+}
+.pi-cld-grafico-cab {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+.pi-cld-grafico-titulo {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.pi-cld-grafico-toggle {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.pi-cld-grafico-body { width: 100%; height: 260px; }
+
+.pi-cld-proyeccion {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--indigo-profundo-suave, rgba(26, 43, 107, 0.08));
+  color: var(--text-primary);
+  font-size: 14px;
+}
+.pi-cld-proyeccion strong { color: var(--indigo-profundo); }
+
+.pi-cld-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0 4px;
+}
+.pi-cld-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-muted, rgba(0, 0, 0, 0.05));
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+}

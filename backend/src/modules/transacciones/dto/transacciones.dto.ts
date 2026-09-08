@@ -1,5 +1,13 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsNumber, IsOptional, IsPositive, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsInt,
+  IsNumber,
+  IsOptional,
+  IsPositive,
+  IsString,
+} from 'class-validator';
+import { MotivoDevolucion } from '@prisma/client';
 
 export class RecargaDto {
   @IsString()
@@ -30,4 +38,13 @@ export class DevolucionDto {
   @IsOptional()
   @IsString()
   entradaId?: string;
+
+  // §5.11 — motivo tipado del retiro. `otro` => detalle libre en `nota`.
+  @IsOptional()
+  @IsEnum(MotivoDevolucion)
+  motivoDevolucion?: MotivoDevolucion;
+
+  @IsOptional()
+  @IsString()
+  nota?: string;
 }

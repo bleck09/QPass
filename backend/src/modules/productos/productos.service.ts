@@ -7,6 +7,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { CrearProductoDto } from './dto/crear-producto.dto';
+import { ActualizarProductoDto } from './dto/actualizar-producto.dto';
 
 @Injectable()
 export class ProductosService {
@@ -28,6 +29,25 @@ export class ProductosService {
         nombre: dto.nombre,
         precio: dto.precio,
         imagen: dto.imagen,
+        activo: dto.activo ?? true,
+        stock: dto.stock ?? null,
+        categoria: dto.categoria ?? null,
+      },
+    });
+  }
+
+  /** Edita nombre/precio/imagen/activo/stock/categoría de un producto (§5.4). */
+  async actualizar(id: string, dto: ActualizarProductoDto) {
+    await this.eventoPolicy.porProducto(id);
+    return this.prisma.producto.update({
+      where: { id },
+      data: {
+        nombre: dto.nombre,
+        precio: dto.precio,
+        imagen: dto.imagen,
+        activo: dto.activo,
+        stock: dto.stock,
+        categoria: dto.categoria,
       },
     });
   }

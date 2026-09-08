@@ -14,7 +14,7 @@ import { subirImagenDeInput } from '../../utils/imagenes.js';
 import './Cliente.css';
 
 const SOLICITUD_VACIA = {
-  nombreEvento: '', lugar: '', fecha: '', fechaFin: '', descripcion: '',
+  nombreEvento: '', lugar: '', fecha: '', fechaFin: '', descripcion: '', aforoEstimado: '',
   colorPrimario: '#1A2B6B', colorBoton: '#FFFFFF', colorFondo: '#F5F7FB',
   colorTextoTitulo: '#0A0E27', colorTextoP: '#8A94A6',
   imagenPortada: '', mapaLugar: '',
@@ -57,7 +57,12 @@ export default function Cliente() {
 
   const abrirSolicitud = (s) => {
     setSolicitudId(s.id);
-    setSolicitud({ ...s, fecha: paraInputFecha(s.fecha), fechaFin: paraInputFecha(s.fechaFin) });
+    setSolicitud({
+      ...s,
+      fecha: paraInputFecha(s.fecha),
+      fechaFin: paraInputFecha(s.fechaFin),
+      aforoEstimado: s.aforoEstimado ?? '',
+    });
   };
 
   const nuevaSolicitud = () => {
@@ -102,7 +107,8 @@ export default function Cliente() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const { id, clienteId, estado, motivoRechazo, eventoId, resueltoPorId, resueltoEn, createdAt, updatedAt, ...datos } = solicitud;
+    const { id, clienteId, estado, motivoRechazo, eventoId, resueltoPorId, resueltoEn, createdAt, updatedAt, aforoEstimado, ...datos } = solicitud;
+    if (aforoEstimado !== '' && aforoEstimado != null) datos.aforoEstimado = Number(aforoEstimado);
 
     const guardada = solicitudId
       ? await api.solicitudesEvento.actualizar(solicitudId, datos)
@@ -249,6 +255,15 @@ export default function Cliente() {
                 id="sol-descripcion"
                 name="descripcion" value={solicitud.descripcion} onChange={handleChange} rows="3"
                 placeholder="Describe de qué trata el evento, qué encontrarán los invitados..." disabled={soloLectura} required
+              />
+            </div>
+
+            <div className="input-group">
+              <label htmlFor="sol-aforo">Asistentes estimados (opcional)</label>
+              <input
+                id="sol-aforo" type="number" min="1" step="1" name="aforoEstimado"
+                value={solicitud.aforoEstimado ?? ''} onChange={handleChange}
+                placeholder="¿cuánta gente esperas?" disabled={soloLectura}
               />
             </div>
           </div>

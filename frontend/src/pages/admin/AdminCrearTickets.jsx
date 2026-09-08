@@ -7,7 +7,7 @@ import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaCalendarAlt, FaTicketAlt, FaPlus, FaTrash, FaTags, FaAlignLeft,
+  FaCalendarAlt, FaCalendarDay, FaTicketAlt, FaPlus, FaTrash, FaTags, FaAlignLeft,
   FaBoxes, FaDollarSign, FaCoins, FaCheckCircle, FaHourglassHalf
 } from 'react-icons/fa';
 import BotonVolver from '../../components/BotonVolver.jsx';
@@ -38,7 +38,18 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
     recargar: recargarCategorias,
   } = useApi(cargarCategorias, { inicial: [], activo: !!eventoId });
 
-  const [formCategoria, setFormCategoria] = useState({ nombre: '', descripcion: '', cantidad: '', precio: '' });
+  // Jornadas del evento: toda categoría pertenece a una.
+  const cargarJornadas = useCallback(() => api.diasEvento.listar(eventoId), [eventoId]);
+  const { data: jornadas } = useApi(cargarJornadas, { inicial: [], activo: !!eventoId });
+
+  const [formCategoria, setFormCategoria] = useState({ nombre: '', descripcion: '', cantidad: '', precio: '', diaEventoId: '' });
+
+  const nombreJornada = (j, i) => j?.nombre || `Día ${j?.orden ?? i + 1}`;
+  // Jornada efectiva: la elegida a mano, o la primera por defecto (sin efecto).
+  const diaSel =
+    (jornadas.some(j => j.id === formCategoria.diaEventoId) && formCategoria.diaEventoId) ||
+    jornadas[0]?.id ||
+    '';
 
   useEffect(() => {
     if (embebido) return;
@@ -67,10 +78,11 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
 
   const agregarCategoria = async (e) => {
     e.preventDefault();
-    if (!formCategoria.nombre || !formCategoria.cantidad || formCategoria.precio === '') return;
+    if (!formCategoria.nombre || !formCategoria.cantidad || formCategoria.precio === '' || !diaSel) return;
 
     const nuevaCategoria = await api.categoriasTicket.crear({
       eventoId,
+      diaEventoId: diaSel,
       nombre: formCategoria.nombre,
       descripcion: formCategoria.descripcion,
       cantidad: Number(formCategoria.cantidad),
@@ -78,7 +90,7 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
     });
 
     setCategorias(prev => [...prev, nuevaCategoria]);
-    setFormCategoria({ nombre: '', descripcion: '', cantidad: '', precio: '' });
+    setFormCategoria(f => ({ nombre: '', descripcion: '', cantidad: '', precio: '', diaEventoId: f.diaEventoId }));
   };
 
   const eliminarCategoria = async (id) => {
@@ -138,6 +150,26 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
         <h3 className="pi-adtick-subtitulo">Añadir Categoría de Ticket</h3>
         <form onSubmit={agregarCategoria} className="pi-adtick-form">
           <div className="pi-adtick-form-grid">
+            {jornadas.length > 1 && (
+              <div className="pi-adtick-input-group">
+                <label htmlFor="tk-jornada">Jornada</label>
+                <div className="pi-adtick-input-wrapper">
+                  <FaCalendarDay className="pi-adtick-input-icon" />
+                  <select
+                    id="tk-jornada"
+                    name="diaEventoId"
+                    value={diaSel}
+                    onChange={handleChange}
+                    required
+                  >
+                    {jornadas.map((j, i) => (
+                      <option key={j.id} value={j.id}>{nombreJornada(j, i)}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             <div className="pi-adtick-input-group">
               <label htmlFor="tk-nombre">Nombre de la categoría</label>
               <div className="pi-adtick-input-wrapper">
@@ -224,7 +256,12 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
           <EstadoCarga filas={4} />
         ) : (
         <Tabla
-          columnas={['Categoría', 'Descripción', 'Cupo', 'Vendidas', 'Reservadas', 'Disponibles', 'Precio', { texto: 'Acción', align: 'center' }]}
+          columnas={[
+            'Categoría',
+            ...(jornadas.length > 1 ? ['Jornada'] : []),
+            'Descripción', 'Cupo', 'Vendidas', 'Reservadas', 'Disponibles', 'Precio',
+            { texto: 'Acción', align: 'center' },
+          ]}
           datos={categorias}
           vacio="Aún no hay categorías de ticket para este evento."
           renderFila={cat => {
@@ -232,6 +269,9 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
             return (
               <tr key={cat.id}>
                 <td><span className="pi-adtick-badge-nombre">{cat.nombre}</span></td>
+                {jornadas.length > 1 && (
+                  <td><span className="celda-secundaria">{cat.diaEvento?.nombre || `Día ${cat.diaEvento?.orden ?? '?'}`}</span></td>
+                )}
                 <td><span className="celda-secundaria">{cat.descripcion || '—'}</span></td>
                 <td>{cat.cantidad}</td>
                 <td>{cat.vendidas ?? 0}</td>

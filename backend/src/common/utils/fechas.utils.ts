@@ -72,3 +72,19 @@ export function rangoFechas(
   const gte = inicioDiaBolivia(d ?? new Date(lte.getTime() - 30 * 24 * 60 * 60 * 1000));
   return { gte, lte };
 }
+
+/**
+ * Ventana inmediatamente anterior de la MISMA duración que `rango`, para la
+ * comparación "vs periodo anterior" (spec §1.2 #1). Si `rango` cubre del 1 al 30,
+ * devuelve del 2 al 31 del mes previo (misma cantidad de milisegundos, pegada al
+ * inicio de `rango`).
+ */
+export function rangoAnterior(rango: { gte: Date; lte: Date }): {
+  gte: Date;
+  lte: Date;
+} {
+  const dur = rango.lte.getTime() - rango.gte.getTime();
+  const lte = new Date(rango.gte.getTime() - 1);
+  const gte = new Date(rango.gte.getTime() - 1 - dur);
+  return { gte, lte };
+}

@@ -31,7 +31,15 @@ export class CategoriasTicketService {
   async listar(eventoId?: string) {
     if (!eventoId) throw new BadRequestException('eventoId es requerido');
     const [categorias, confirmadas] = await Promise.all([
-      this.prisma.categoriaTicket.findMany({ where: { eventoId } }),
+      this.prisma.categoriaTicket.findMany({
+        where: { eventoId },
+        include: {
+          diaEvento: {
+            select: { id: true, nombre: true, orden: true, inicio: true },
+          },
+        },
+        orderBy: [{ diaEvento: { orden: 'asc' } }, { createdAt: 'asc' }],
+      }),
       this.prisma.entrada.groupBy({
         by: ['categoriaTicketId'],
         where: { eventoId, compra: { estado: 'confirmado' } },
@@ -54,9 +62,17 @@ export class CategoriasTicketService {
 
   async crear(dto: CrearCategoriaTicketDto) {
     await this.eventoPolicy.porEvento(dto.eventoId);
+    const dia = await this.prisma.diaEvento.findUnique({
+      where: { id: dto.diaEventoId },
+      select: { eventoId: true },
+    });
+    if (!dia || dia.eventoId !== dto.eventoId) {
+      throw new BadRequestException('La jornada no pertenece a este evento');
+    }
     return this.prisma.categoriaTicket.create({
       data: {
         eventoId: dto.eventoId,
+        diaEventoId: dto.diaEventoId,
         nombre: dto.nombre,
         descripcion: dto.descripcion,
         cantidad: dto.cantidad,

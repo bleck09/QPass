@@ -3,7 +3,7 @@ QPASS — DASHBOARDS: LO QUE FALTA
 Checklist para revisar y avanzar paso a paso.
 (El detalle de lo YA hecho está en Qpass-Dashboards-Especificacion.txt, al final,
  sección "REGISTRO DE IMPLEMENTACIÓN".)
-Última actualización: 2026-09-07 (post Bloques A parcial, B, C, D)
+Última actualización: 2026-09-07 (post comparativa §1.2#1 + Bloque E + Bloque I)
 Librería de gráficos: RECHARTS (recharts@^2.15.4, instalada).
 ================================================================================
 
@@ -35,8 +35,32 @@ RESUMEN DE ESTADO
       en el form de evento de Admin).
     - Bloque F (auditoría §5.8): RegistroAuditoria + AuditoriaService (@Global,
       fire-and-forget) en 15 escrituras + página /admin/auditoria.
+    - Comparativa "vs periodo anterior" (§1.2 #1): rangoAnterior() +
+      kpis.comparativa + línea punteada en recaudación diaria + chips de
+      variación en AdminGeneral y en el W6 del dashboard de Negocio.
+    - Bloque E (widgets del Cliente): aforo dentro del recinto por hora (E1),
+      cronograma superpuesto (E2), proyección de venta (E3), ranking de
+      productos + horas pico (E4), todo eso también en el PDF de cierre (E5).
+    - Bloque I (huecos §5): Producto.activo/stock/categoría (5.4) con descuento
+      de inventario en la venta y restitución al anular; Evento.aforoMaximo
+      (5.5) + alerta "al 95% del aforo"; débito del ledger en una sola
+      sentencia UPDATE...RETURNING (5.10); enum MotivoDevolucion (5.11);
+      Evento.latitud/longitud numéricos (5.11).
 
-  FALTA: lo de abajo.
+  FALTA:
+    - I3 (§5.6, EnvioCorreo): DIFERIDO hasta que exista SMTP real. Hoy
+      MailService es un stub que solo loguea (2 call sites); el log
+      registraría "enviado" para todo. Cuando se conecte el proveedor:
+      modelo EnvioCorreo { id, usuarioId?, destino, tipo, estado, error?,
+      createdAt } + escritura en mail.enviar() (try/catch) + KPI "correos
+      fallidos" en la bandeja del admin.
+    - Nada más del roadmap original. Lo que quede son mejoras nuevas.
+
+  ------------------------------------------------------------------------------
+  PENDIENTE OPERATIVO: correr en backend/  ->  npx prisma migrate dev
+  Aplica, en orden: 20260907180756_anular_venta,
+  20260907192956_registro_auditoria, 20260907210000_huecos_schema_v2.
+  (Las tres se crearon con --create-only.)
 
 
 ================================================================================
@@ -145,18 +169,20 @@ BLOQUE E — WIDGETS DIFERIDOS DEL CLIENTE   (sección 2)   Esfuerzo: M
 ================================================================================
 Piezas que se dejaron fuera del dashboard de cliente:
 
-  [ ] E1. Aforo dentro del recinto por hora (W4 "durante"): serie de
-          ingresos-menos-salidas acumulado por hora.
-          --> Necesita join RegistroIngreso -> entrada.eventoId, que NO tiene
-              índice. Antes: agregar `@@index([eventoId])` a Entrada o
-              denormalizar `eventoId` en RegistroIngreso (migración).
-  [ ] E2. Superposición del cronograma (W7): dibujar las franjas de
-          LandingConfig.cronograma sobre la curva de aforo/consumo.
-  [ ] E3. Proyección de venta (W1 "antes"): línea punteada "si sigue este ritmo
-          se agota el <fecha>". Cálculo simple sobre los últimos 7 días.
-  [ ] E4. Ranking final de productos y horas pico (W "después"): ya hay
-          topPuestos; falta topProductos del evento y hora pico de ingreso/consumo.
-  [ ] E5. Sumar E3/E4 al informe PDF de cierre.
+  [x] E1. Aforo dentro del recinto por hora: registroIngreso.findMany filtrando
+          por entrada.eventoId (los índices compuestos existentes cubren el
+          join — NO hizo falta migración), cubos por hora Bolivia, acumulado
+          ingreso +1 / salida -1 -> operacion.aforoPorHora [{ hora, dentro }].
+  [x] E2. Superposición del cronograma: se parsea landingConfig.cronograma
+          ("HH:MM" -> hora entera, se descarta lo no parseable) y se dibuja un
+          <ReferenceLine> por franja sobre la curva de aforo (GraficosCliente.jsx).
+  [x] E3. Proyección de venta: entradas confirmadas en los últimos 7 días / 7 =
+          ritmoDiario; venta.proyeccion { ritmoDiario, diasParaAgotar, agotaEn,
+          seAgotaAntes } (solo si el evento no empezó). Texto en ClienteDashboard.
+  [x] E4. operacion.topProductos (ventaItem del evento, ventas no anuladas) +
+          operacion.horaPicoIngreso / horaPicoConsumo.
+  [x] E5. informeCierrePdf.js: tabla "Productos más vendidos" + línea
+          "Hora pico de ingreso / consumo".
 
 
 ================================================================================
@@ -229,27 +255,32 @@ BLOQUE I — HUECOS MENORES DE SCHEMA   (§5.4, 5.5, 5.6, 5.10, 5.11)
 ================================================================================
 Independientes entre sí. Ninguno bloquea dashboards; son robustez.
 
-  [ ] I1. (§5.4) Producto: `activo Boolean @default(true)` (mínimo) y opcional
-          `stock Int?` con descuento al vender. Habilita "productos agotados".
-          Esfuerzo: M (migración + validación en ventas.service + UI de catálogo).
-  [ ] I2. (§5.5) Evento: `aforoMaximo Int?` (y pedirlo en SolicitudEvento).
-          Habilita alerta "estás al 95% del aforo" (tema de seguridad).
-          Esfuerzo: S-M.
-  [ ] I3. (§5.6) Modelo `EnvioCorreo { id, usuarioId?, destino, tipo, estado
-          (enviado/fallido), error?, createdAt }` + escribirlo en MailService.
-          KPI directo: "correos fallidos de este evento" en la bandeja del admin.
-          Esfuerzo: M.
-  [ ] I4. (§5.10) `SELECT ... FOR UPDATE` (o `UPDATE ... RETURNING`) sobre la
-          fila de Usuario dentro de las transacciones del ledger, para evitar
-          carreras en `saldoResultante`. Widget de control: "billeteras donde
-          Σ(transacciones) != usuarios.saldo" debería ser 0.
-          Esfuerzo: M (tocar transacciones.service con cuidado — es el ledger).
-  [ ] I5. (§5.11) Menores:
-          - SolicitudEvento: cantidad estimada de asistentes.
-          - Producto: categoría (bebida/comida) para agrupar ventas.
-          - Devolución: enum de motivo (hoy es texto libre `nota`).
-          - Evento.coordenadas: pasar a lat/lng numéricos separados.
-          Esfuerzo: S cada uno.
+  [x] I1. (§5.4) Producto += activo Boolean @default(true), stock Int?,
+          categoria String?. ventas.service: 409 si un ítem está inactivo;
+          decremento guardado de stock dentro de la tx de la venta; anular
+          restituye. productos.controller: PATCH :id. UI: catálogo de
+          UsuarioNegocio (toggle activo, input stock, datalist de categoría) +
+          "Ventas por categoría" en el dashboard de negocio.
+  [x] I2. (§5.5) Evento.aforoMaximo Int? + SolicitudEvento.aforoEstimado Int?
+          (al aprobar pasa a aforoMaximo). Alerta "aforo_al_limite" en
+          dashboard.service.alertas() (personasDentro / aforoMaximo >= 0.95) +
+          aforoMaximo/aforoRatio en vivo(). Campo en el form de AdminGestionEventos
+          y en el form de solicitud del Cliente.
+  [~] I3. (§5.6) EnvioCorreo — DIFERIDO (MailService sigue siendo stub). Ver
+          sección FALTA arriba.
+  [x] I4. (§5.10) transacciones.service.debitarConGuarda(tx, id, monto): una
+          sola sentencia UPDATE "usuarios" SET saldo = saldo - m
+          WHERE id = ? AND saldo >= m RETURNING saldo. Reemplaza el par
+          updateMany + findUniqueOrThrow en registrarVenta / devolver /
+          anularVenta. Los créditos ya eran atómicos (update {increment}).
+  [x] I5. (§5.11):
+          - SolicitudEvento.aforoEstimado (hecho junto con I2).
+          - Producto.categoria + agrupación "por categoría" en dashboard-negocio.
+          - enum MotivoDevolucion { retiro_efectivo saldo_no_usado error_recarga
+            otro } + Transaccion.motivoDevolucion + select en la UI de Devolución.
+          - Evento.latitud/longitud Float? — se parsean en eventos.service desde
+            dto.coordenadas (que ya viene del MapaSelector); backfill en la
+            migración. La UI del mapa NO cambió (el string sigue siendo el pin).
 
 
 ================================================================================

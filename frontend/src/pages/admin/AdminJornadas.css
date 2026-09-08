@@ -1,0 +1,108 @@
+.pi-jor-seccion {
+  padding: 4px 0;
+}
+.pi-jor-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 17px;
+  color: var(--text-primary);
+}
+.pi-jor-ayuda {
+  margin: 0 0 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  max-width: 60ch;
+}
+.pi-jor-acciones {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.pi-jor-btn-editar,
+.pi-jor-btn-borrar {
+  border: 1px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  border-radius: 8px;
+  padding: 6px 8px;
+  cursor: pointer;
+}
+.pi-jor-btn-borrar:hover { color: var(--danger); border-color: var(--danger); }
+.pi-jor-btn-editar:hover { color: var(--indigo-profundo); border-color: var(--indigo-profundo); }
+
+.pi-jor-error {
+  margin: 10px 0 0;
+  color: var(--danger);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pi-jor-form {
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-surface);
+}
+.pi-jor-form h4 {
+  margin: 0 0 12px;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+.pi-jor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+.pi-jor-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.pi-jor-grid label span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pi-jor-grid input {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-base, var(--bg-surface));
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 400;
+}
+.pi-jor-form-acciones {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+.pi-jor-btn-guardar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--indigo-profundo);
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pi-jor-btn-guardar:disabled { opacity: 0.6; cursor: default; }
+.pi-jor-btn-cancelar {
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}

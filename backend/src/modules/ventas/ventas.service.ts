@@ -71,6 +71,12 @@ export class VentasService {
         if (!producto) {
           throw new BadRequestException(`Producto ${i.productoId} no encontrado`);
         }
+        // §5.4 — no se vende un producto marcado como inactivo/agotado.
+        if (!producto.activo) {
+          throw new ConflictException(
+            `"${producto.nombre}" no está disponible`,
+          );
+        }
         return {
           productoId: i.productoId,
           nombreProducto: producto.nombre,
@@ -78,6 +84,22 @@ export class VentasService {
           cantidad: i.cantidad,
         };
       });
+
+      // §5.4 — descuento de inventario (solo productos con stock controlado).
+      // Guardado: si no alcanza, count = 0 y revierte todo el $transaction.
+      for (const l of lineas) {
+        const producto = productos.find((p) => p.id === l.productoId)!;
+        if (producto.stock == null) continue;
+        const bajado = await tx.producto.updateMany({
+          where: { id: l.productoId, stock: { gte: l.cantidad } },
+          data: { stock: { decrement: l.cantidad } },
+        });
+        if (bajado.count === 0) {
+          throw new ConflictException(
+            `Sin stock suficiente de "${producto.nombre}" (quedan ${producto.stock})`,
+          );
+        }
+      }
       const montoTotal = lineas.reduce(
         (suma, l) => suma + Number(l.precioUnitario) * l.cantidad,
         0,
@@ -117,7 +139,7 @@ export class VentasService {
   async anular(id: string, motivo: string, actor: UsuarioJwt) {
     const venta = await this.prisma.venta.findUnique({
       where: { id },
-      include: { puesto: true, entrada: true },
+      include: { puesto: true, entrada: true, items: true },
     });
     if (!venta) throw new NotFoundException('Venta no encontrada');
     if (venta.anuladaEn) {
@@ -154,6 +176,16 @@ export class VentasService {
           motivoAnulacion: motivo,
         },
       });
+
+      // §5.4 — devolver el inventario descontado al vender (solo productos que
+      // hoy siguen con stock controlado).
+      for (const it of venta.items) {
+        await tx.producto.updateMany({
+          where: { id: it.productoId, stock: { not: null } },
+          data: { stock: { increment: it.cantidad } },
+        });
+      }
+
       await this.auditoria.registrar(tx, {
         actorId: actor.id,
         entidad: 'venta',

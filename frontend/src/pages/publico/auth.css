@@ -7,7 +7,8 @@
    ============================================================================= */
 
 .pi-auth {
-  --pi-auth-foto: url('https://images.unsplash.com/photo-1524368535928-5b5e00ddc76b?fm=jpg&q=60&w=3000&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8OHx8Zm9uZG8lMjBkZSUyMGZpZXN0YXxlbnwwfHwwfHx8MA%3D%3D');
+  /* imagen local en src/assets (no URL remota) */
+  --pi-auth-foto: url('../../assets/fondologin.avif');
 
   position: relative;
   min-height: 100vh;
@@ -20,19 +21,23 @@
 }
 
 /* ---------- La tarjeta flotante ----------
-   Sin fondo propio: el panel tapa la izquierda con color sólido y la derecha
-   queda transparente, así se ve LA MISMA foto de .pi-auth (fija) sin corte
-   ni desalineación. El borde/sombra siguen enmarcando toda la tarjeta. */
+   Dos capas de fondo: papel blanco roto (fondoblanco.png) anclado a la
+   izquierda para el formulario, y la foto nítida a la derecha. El panel
+   del formulario va transparente encima del papel blanco. */
 .pi-auth__card {
   position: relative;
   width: 100%;
   max-width: 1280px;
   min-height: 560px;
   display: grid;
-  /* el panel (parte oscura) queda fijo; toda la anchura extra se la lleva la foto */
-  grid-template-columns: minmax(0, 460px) 1fr;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  /* el panel (formulario) queda fijo; toda la anchura extra se la lleva la foto */
+  grid-template-columns: minmax(0, 440px) 1fr;
+  /* capa 1: papel blanco roto anclado a la izquierda (el rasgado cae tras el form).
+     capa 2: la foto a plena nitidez, SIN difuminar. */
+  background:
+    url('../../assets/fondoblanco.png') left center / 78% 100% no-repeat,
+    var(--pi-auth-foto) center center / cover no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: var(--radius-xl);
   /* sombra marcada para que la tarjeta flote bien sobre la foto */
   box-shadow:
@@ -48,25 +53,11 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-6);
-  /* el panel se monta un poco sobre la foto; su borde derecho queda con un
-     "rasgado" fino e irregular (sutil, tipo papel deckle). */
-  margin-right: -22px;
   padding: clamp(24px, 4vw, 44px);
-  padding-right: calc(clamp(24px, 4vw, 44px) + 22px);
-  background: var(--bg-surface);
+  /* transparente: se apoya sobre la zona de papel blanco de la tarjeta.
+     El rasgado real lo aporta la imagen fondoblanco.png, no un clip-path. */
+  background: transparent;
   overflow-y: auto;
-  clip-path: polygon(
-    0 0, 100% 0,
-    98.5% 2%, 100% 4.5%, 97.6% 7%, 99.4% 9.5%, 98% 12%, 100% 14.5%,
-    97.2% 17%, 99.2% 19.5%, 98.4% 22%, 100% 24.5%, 97.8% 27%, 99% 29.5%,
-    98.2% 32%, 100% 34.5%, 97.4% 37%, 99.5% 39.5%, 98% 42%, 100% 44.5%,
-    97.6% 47%, 99.2% 49.5%, 98.4% 52%, 100% 54.5%, 97.2% 57%, 99% 59.5%,
-    98.2% 62%, 100% 64.5%, 97.8% 67%, 99.4% 69.5%, 98% 72%, 100% 74.5%,
-    97.4% 77%, 99.3% 79.5%, 98.4% 82%, 100% 84.5%, 97.6% 87%, 99.1% 89.5%,
-    98% 92%, 100% 94.5%, 97.8% 97%, 100% 100%,
-    0 100%
-  );
-  filter: drop-shadow(4px 0 10px color-mix(in srgb, var(--text-primary) 16%, transparent));
 }
 
 /* Arriba a la izquierda de la pantalla, sobre la foto de fondo. */
@@ -105,6 +96,19 @@
   justify-content: center;
   max-width: 460px;
 }
+
+/* ---------- El panel siempre va sobre papel blanco ----------
+   Colores claros fijos para que el formulario se lea en tema claro y oscuro. */
+.pi-auth__panel .pi-auth__subtitle,
+.pi-auth__panel .pi-auth__field label,
+.pi-auth__panel .pi-auth__label { color: #3a3f5a; }
+.pi-auth__panel .pi-auth__control {
+  background: #fff;
+  border-color: #d3d7e3;
+}
+.pi-auth__panel .pi-auth__control input,
+.pi-auth__panel .pi-auth__control select { color: #1b1f36; }
+.pi-auth__panel .pi-auth__control input::placeholder { color: #8b8fa3; }
 
 /* ---------- Progreso por pasos ---------- */
 .pi-auth__progress {
@@ -256,7 +260,8 @@
   display: flex;
   align-items: flex-end;
   padding: clamp(32px, 5vw, 56px);
-  padding-left: clamp(44px, 6vw, 72px);
+  /* corre el lema a la derecha para que no pise el papel roto */
+  padding-left: clamp(120px, 17vw, 260px);
   /* Imagen natural: SIN velo. Se ve la foto de .pi-auth tal cual por detrás.
      El lema se lee por su propia sombra de texto, sin oscurecer la imagen. */
   background: transparent;
@@ -362,13 +367,15 @@
     box-shadow: none;
   }
   .pi-auth__panel {
-    clip-path: none;
     order: 2;
+    /* apilado: el papel roto de la tarjeta no cubre bien -> fondo sólido */
+    background: var(--bg-surface);
   }
   .pi-auth__aside {
     order: 1;
     min-height: 160px;
     align-items: center;
+    padding-left: clamp(24px, 6vw, 44px);
   }
   .pi-auth__tagline h2 { font-size: var(--text-xl); }
   .pi-auth__body { max-width: none; }

@@ -13,6 +13,7 @@ import {
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
+import { VERSION_TERMINOS, TEXTO_TERMINOS } from '../../constants/terminos.js';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
@@ -107,6 +108,7 @@ export default function UsuarioNormal() {
 
   const [comprobante, setComprobante] = useState(null);
   const [errorForm, setErrorForm] = useState('');
+  const [aceptoTerminos, setAceptoTerminos] = useState(false);
   // Al hacer clic en "Pagar" se muestra primero el QR del negocio; solo después se habilita subir el comprobante.
   const [pagoIniciado, setPagoIniciado] = useState(false);
 
@@ -139,13 +141,18 @@ export default function UsuarioNormal() {
     return titular ? { ...titular, evento: compraDestacada.evento, compraId: compraDestacada.id } : null;
   }, [comprasConEvento]);
 
-  // --- ESTADO DE SALDO (billetera personal del usuario: la misma en cualquier evento) ---
+  // --- ESTADO DE SALDO (billetera POR EVENTO: el saldo recargado en un evento
+  //     solo sirve en ese evento) ---
   const [historial, setHistorial] = useState([]);
-  const [saldo, setSaldo] = useState(0);
+  const [billeteras, setBilleteras] = useState([]);
+  const saldoTotal = useMemo(
+    () => billeteras.reduce((s, b) => s + Number(b.saldo), 0),
+    [billeteras],
+  );
 
   useEffect(() => {
     if (!usuario?.id) return;
-    api.usuarios.obtener(usuario.id).then(u => setSaldo(Number(u.saldo)));
+    api.billeterasEvento.mias().then(setBilleteras).catch(() => setBilleteras([]));
     api.transacciones.listar({ usuarioId: usuario.id }).then(setHistorial);
   }, [usuario?.id]);
 
@@ -264,6 +271,7 @@ export default function UsuarioNormal() {
     setErrorForm('');
     if (entradasCart.length === 0) return setErrorForm('Agrega al menos una entrada antes de continuar.');
     if (!comprobante) return setErrorForm('Debes subir el comprobante de pago para continuar.');
+    if (!aceptoTerminos) return setErrorForm('Debes aceptar los términos y condiciones para continuar.');
 
     const invitadosIncompletos = entradasCart.some(ent => !ent.nombre.trim() || !ent.correo.trim() || (!ent.isTitular && !ent.celular.trim()));
     if (invitadosIncompletos) return setErrorForm('Completa el nombre, correo y celular de todas las personas asignadas.');
@@ -277,11 +285,14 @@ export default function UsuarioNormal() {
         entradas: entradasCart.map(({ isTitular, nombre, correo, celular, categoriaTicketId }) => ({ isTitular, nombre, correo, celular, categoriaTicketId })),
         comprobanteUrl: comprobante.previewUrl,
         comprobanteNombreArchivo: comprobante.nombreArchivo,
+        aceptoTerminos: true,
+        versionTerminos: VERSION_TERMINOS,
       });
       await recargarCompras();
 
       setEntradasCart([]);
       setComprobante(null);
+      setAceptoTerminos(false);
       setPagoIniciado(false);
 
       // La solicitud recién creada aparece como pendiente en Mis Entradas.
@@ -631,6 +642,9 @@ export default function UsuarioNormal() {
                         {cantidad > 0 && (
                           <span className="cat-card-badge" style={{ color: cat.color }}>{cantidad}</span>
                         )}
+                        {cat.diaEvento && (cat.diaEvento.nombre || cat.diaEvento.orden > 1) && (
+                          <span className="cat-card-jornada">{cat.diaEvento.nombre || `Día ${cat.diaEvento.orden}`}</span>
+                        )}
                         <span className="cat-card-nombre">{cat.nombre}</span>
                         <span className="cat-card-precio">Bs. {cat.precio}</span>
                         {agotada ? (
@@ -723,11 +737,36 @@ export default function UsuarioNormal() {
                 <input id="pi-usr-file" type="file" accept="image/*" onChange={handleComprobanteUpload} hidden />
               </div>
 
+              <div className="pi-usr-terminos">
+                <details>
+                  <summary>Términos y condiciones</summary>
+                  <pre className="pi-usr-terminos-texto">{TEXTO_TERMINOS}</pre>
+                </details>
+                <label className="pi-usr-terminos-check">
+                  <input
+                    type="checkbox"
+                    checked={aceptoTerminos}
+                    onChange={(e) => setAceptoTerminos(e.target.checked)}
+                  />
+                  <span>
+                    Acepto los términos y condiciones. Entiendo que el saldo cargado
+                    es solo para este evento y que tengo{' '}
+                    <strong>{eventoSeleccionado?.diasParaRetiro ?? 30} días</strong> tras
+                    el cierre para retirar lo que no consuma.
+                  </span>
+                </label>
+              </div>
+
               {errorForm && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorForm}</div>}
 
               <div className="pi-usr-modal-acciones">
                 <button type="button" className="btn-cerrar-secundario" onClick={() => setPagoIniciado(false)}>Cerrar</button>
-                <button type="button" className="pi-usr-btn-enviar" onClick={handleEnviarComprobante}>
+                <button
+                  type="button"
+                  className="pi-usr-btn-enviar"
+                  onClick={handleEnviarComprobante}
+                  disabled={!comprobante || !aceptoTerminos}
+                >
                   <FaCheckCircle /> Enviar Pago y Solicitar
                 </button>
               </div>
@@ -743,8 +782,8 @@ export default function UsuarioNormal() {
           <div className="pi-usr-saldo-stats">
             <div className="pi-usr-saldo-card">
               <FaWallet size={30} color="var(--indigo-profundo)" />
-              <span className="pi-usr-saldo-numero">{saldo} pts</span>
-              <span className="pi-usr-saldo-label">Saldo actual disponible</span>
+              <span className="pi-usr-saldo-numero">{saldoTotal} pts</span>
+              <span className="pi-usr-saldo-label">Saldo total (todos los eventos)</span>
             </div>
 
             <div className="pi-usr-saldo-card saldo-card-recargado">
@@ -758,6 +797,35 @@ export default function UsuarioNormal() {
               <span className="pi-usr-saldo-numero">{totalGastado} pts</span>
               <span className="pi-usr-saldo-label">Total gastado</span>
             </div>
+          </div>
+
+          <div className="pi-usr-card mt-20">
+            <h3><FaWallet color="var(--indigo-profundo)" /> Saldo por evento</h3>
+            <p className="texto-ayuda">
+              El saldo que recargás en un evento solo se puede usar en ese evento.
+            </p>
+            <Tabla
+              columnas={['Evento', 'Fecha', 'Retirar antes de', { texto: 'Saldo disponible', align: 'right' }]}
+              datos={billeteras}
+              vacio="Todavía no recargaste saldo en ningún evento."
+              renderFila={b => {
+                const vencido = b.expiraEn && new Date(b.expiraEn) < new Date();
+                return (
+                  <tr key={b.eventoId}>
+                    <td>{b.eventoNombre}</td>
+                    <td style={{ color: 'var(--texto-secundario)', fontSize: '13px' }}>
+                      {new Date(b.fecha).toLocaleDateString('es-BO')}
+                    </td>
+                    <td style={{ fontSize: '13px', color: vencido ? 'var(--rojo-error-texto)' : 'var(--texto-secundario)' }}>
+                      {b.expiraEn
+                        ? (vencido ? 'Plazo vencido' : new Date(b.expiraEn).toLocaleDateString('es-BO'))
+                        : '—'}
+                    </td>
+                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{Number(b.saldo)} pts</td>
+                  </tr>
+                );
+              }}
+            />
           </div>
 
           <div className="pi-usr-card mt-20">

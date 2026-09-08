@@ -7,6 +7,7 @@ import jsPDF from 'jspdf';
 const bs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })}`;
 const pct = (frac) => `${(Number(frac || 0) * 100).toFixed(1)} %`;
 const fecha = (iso) => (iso ? new Date(iso).toLocaleDateString('es-BO') : '—');
+const hora = (h) => (h == null ? '—' : `${String(h).padStart(2, '0')}:00`);
 
 export function exportarInformeCierre(nombreEvento, data) {
   const doc = new jsPDF({ unit: 'pt', format: 'a4' });
@@ -91,6 +92,9 @@ export function exportarInformeCierre(nombreEvento, data) {
   fila('Asistieron / confirmadas', `${o.asistieron ?? 0} / ${v.confirmadasTotal ?? 0}   (${pct(o.tasaAsistencia)})`);
   fila('Consumo total en el evento', bs(o.consumoTotal));
   fila('Consumo promedio por asistente', bs(o.consumoPromedio));
+  if (o.horaPicoIngreso != null || o.horaPicoConsumo != null) {
+    fila('Hora pico de ingreso / consumo', `${hora(o.horaPicoIngreso)}  /  ${hora(o.horaPicoConsumo)}`);
+  }
   y += 6;
   separador();
 
@@ -110,6 +114,16 @@ export function exportarInformeCierre(nombreEvento, data) {
     tabla(
       ['Puesto', 'Ventas', 'Ingresos'],
       o.topPuestos.map((p) => [p.nombre, p.ventas, bs(p.ingresos)]),
+      [0.56, 0.2, 0.24],
+    );
+  }
+
+  // --- Top productos (E4) ---
+  if ((o.topProductos || []).length) {
+    titulo('Productos más vendidos');
+    tabla(
+      ['Producto', 'Unidades', 'Ingresos'],
+      o.topProductos.slice(0, 10).map((p) => [p.nombre, p.unidades, bs(p.ingresos)]),
       [0.56, 0.2, 0.24],
     );
   }

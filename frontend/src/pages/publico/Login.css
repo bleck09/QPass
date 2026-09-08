@@ -3,6 +3,9 @@
    El shell (split screen, panel, foto, campos) vive en auth.css.
 ======================================================= */
 
+/* Nota: el fondo de pantalla, la tarjeta de papel roto y el lema en blanco
+   viven ahora en auth.css para compartirse con Registrar y Recuperar. */
+
 /* Fila "Recordarme" + "¿Olvidaste tu contraseña?" */
 .pi-login-options {
   display: flex;
@@ -16,7 +19,8 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-secondary);
+  /* el panel va siempre sobre papel blanco */
+  color: #3a3f5a;
   cursor: pointer;
 }
 .pi-login-checkbox input { accent-color: var(--accent); }
@@ -30,7 +34,7 @@
   font-size: var(--text-xs);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--text-muted);
+  color: #6b7086;
 }
 .pi-login-divider::before,
 .pi-login-divider::after {
@@ -46,10 +50,10 @@
   justify-content: center;
   width: 100%;
   padding: 12px 24px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid #c7cbd9;
   border-radius: var(--radius-full);
   background: transparent;
-  color: var(--text-primary);
+  color: #1b1f36;
   font: inherit;
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
@@ -59,6 +63,6 @@
     border-color var(--duration-fast) var(--ease-out);
 }
 .pi-login-btn-register:hover {
-  background: var(--bg-hover);
-  border-color: var(--text-secondary);
+  background: #f1f2f6;
+  border-color: #9aa0b4;
 }

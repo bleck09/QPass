@@ -24,6 +24,26 @@ const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFract
 const fmtHoraNum = (h) => `${String(h).padStart(2, '0')}:00`;
 const fmtHora = (iso) => new Date(iso).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
 
+// Chip "▲ 12.3% vs. periodo anterior" (W6, comparación §1.2 #1). `par` es
+// { actual, anterior, variacion? } del payload; sin `par` no renderiza nada.
+function ChipVar({ par }) {
+  if (!par) return null;
+  const varia = par.variacion != null
+    ? par.variacion
+    : par.anterior === 0 ? null : (par.actual - par.anterior) / par.anterior;
+  if (varia == null) return <span className="pi-ngd-nota">sin base del periodo anterior</span>;
+  const pct = varia * 100;
+  const plano = Math.abs(pct) < 0.05;
+  return (
+    <span
+      className="pi-ngd-nota"
+      style={{ color: plano ? 'var(--text-muted)' : pct >= 0 ? 'var(--ok)' : 'var(--danger)' }}
+    >
+      {plano ? '=' : pct >= 0 ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% vs. periodo anterior
+    </span>
+  );
+}
+
 export default function UsuNegoDasboar() {
   useTituloPagina('Dashboard de negocio');
   const sesion = leerSesion();
@@ -171,12 +191,28 @@ export default function UsuNegoDasboar() {
                 tono="ok"
                 valor={fmtBs(data.resumen.ingresoTotal)}
                 label="Ventas del evento"
-                extra={data.resumen.anuladas?.cantidad > 0
-                  ? <span className="pi-ngd-nota">{data.resumen.anuladas.cantidad} anuladas ({fmtBs(data.resumen.anuladas.monto)})</span>
-                  : null}
+                extra={
+                  <>
+                    {data.resumen.anuladas?.cantidad > 0 && (
+                      <span className="pi-ngd-nota">{data.resumen.anuladas.cantidad} anuladas ({fmtBs(data.resumen.anuladas.monto)})</span>
+                    )}
+                    <ChipVar par={data.resumen.comparativa?.ingresoTotal} />
+                  </>
+                }
               />
-              <StatCard icon={<FaShoppingCart />} tono="total" valor={data.resumen.totalVentas} label="N.º de ventas" />
-              <StatCard icon={<FaReceipt />} valor={fmtBs(data.resumen.ticketPromedio)} label="Ticket promedio" />
+              <StatCard
+                icon={<FaShoppingCart />}
+                tono="total"
+                valor={data.resumen.totalVentas}
+                label="N.º de ventas"
+                extra={<ChipVar par={data.resumen.comparativa?.totalVentas} />}
+              />
+              <StatCard
+                icon={<FaReceipt />}
+                valor={fmtBs(data.resumen.ticketPromedio)}
+                label="Ticket promedio"
+                extra={<ChipVar par={data.resumen.comparativa?.ticketPromedio} />}
+              />
               <StatCard
                 icon={<FaWallet />}
                 tono="info"
@@ -187,8 +223,8 @@ export default function UsuNegoDasboar() {
               <StatCard
                 icon={<FaWallet />}
                 valor={fmtBs(data.resumen.saldoBilletera)}
-                label="Saldo total en mi billetera"
-                extra={<span className="pi-ngd-nota">todos los eventos</span>}
+                label="Saldo en mi billetera de este evento"
+                extra={<span className="pi-ngd-nota">lo que aún no retiraste</span>}
               />
             </div>
           </section>
@@ -223,6 +259,26 @@ export default function UsuNegoDasboar() {
               }}
             />
           </section>
+
+          {/* --- POR CATEGORÍA DE PRODUCTO (§5.11) — solo si hay categorías cargadas --- */}
+          {(data.ventasPorCategoria?.length > 1 ||
+            (data.ventasPorCategoria?.length === 1 && data.ventasPorCategoria[0].categoria !== 'Sin categoría')) && (
+            <section className="pi-ngd-seccion">
+              <h3 className="pi-ngd-seccion-titulo"><FaTrophy aria-hidden="true" /> Ventas por categoría</h3>
+              <Tabla
+                columnas={['Categoría', { texto: 'Unidades', align: 'center' }, 'Ingresos']}
+                datos={data.ventasPorCategoria}
+                vacio="Sin datos."
+                renderFila={(c) => (
+                  <tr key={c.categoria}>
+                    <td>{c.categoria}</td>
+                    <td style={{ textAlign: 'center' }}>{c.unidades}</td>
+                    <td>{fmtBs(c.ingresos)}</td>
+                  </tr>
+                )}
+              />
+            </section>
+          )}
 
           {/* --- POR PUESTO (W3) — solo si hay más de uno --- */}
           {data.porPuesto.length > 1 && (

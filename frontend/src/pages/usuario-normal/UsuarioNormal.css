@@ -119,6 +119,16 @@
   min-width: 26px; height: 26px; padding: 0 8px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
   box-shadow: 0 2px 6px rgba(10, 14, 39,0.3);
 }
+.cat-card-jornada {
+  align-self: flex-start;
+  font-size: var(--text-xs, 11px);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.28);
+}
 .cat-card-nombre { font-size: var(--text-xl); font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.2); }
 .cat-card-precio { font-size: var(--text-base); color: rgba(255,255,255,0.9); font-weight: 700; }
 .cat-card-cta {
@@ -329,4 +339,42 @@
   .pi-usr-manilla-overlay { flex-direction: column; text-align: center; }
   .pi-usr-manilla-destacada .manilla-datos { justify-content: center; }
   .pi-usr-manilla-countdown { margin-left: 0; }
+}
+
+/* --- Términos y condiciones en el pago (§T&C) --- */
+.pi-usr-terminos {
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--borde, #e0e0e0);
+  border-radius: 10px;
+  background: var(--bg-muted, rgba(0, 0, 0, 0.03));
+}
+.pi-usr-terminos summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--indigo-profundo);
+}
+.pi-usr-terminos-texto {
+  white-space: pre-wrap;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--texto-secundario, #555);
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 10px 0 0;
+}
+.pi-usr-terminos-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 12px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+.pi-usr-terminos-check input {
+  margin-top: 2px;
+  flex-shrink: 0;
 }

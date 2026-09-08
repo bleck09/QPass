@@ -5,6 +5,10 @@ export class CrearCategoriaTicketDto {
   @IsString()
   eventoId: string;
 
+  // Jornada a la que pertenece esta categoría (ver DiaEvento).
+  @IsString()
+  diaEventoId: string;
+
   @IsString()
   nombre: string;
 

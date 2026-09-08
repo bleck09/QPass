@@ -525,3 +525,24 @@
 .pi-dev-exito .pi-dev-btn-confirmar {
   width: 100%;
 }
+
+/* --- Motivo tipado del retiro (§5.11) --- */
+.pi-dev-motivo-label {
+  display: block;
+  margin-top: 12px;
+  margin-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.pi-dev-motivo-select,
+.pi-dev-motivo-nota {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: 14px;
+}
+.pi-dev-motivo-nota { margin-top: 6px; }

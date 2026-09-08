@@ -45,6 +45,13 @@ export class CrearCompraDto {
   @IsOptional()
   @IsString()
   comprobanteNombreArchivo?: string;
+
+  // §T&C — el comprador declara que aceptó los términos (obligatorio).
+  @IsBoolean()
+  aceptoTerminos: boolean;
+
+  @IsString()
+  versionTerminos: string;
 }
 
 export class EntradaCorreccionDto {

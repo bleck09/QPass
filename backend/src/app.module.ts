@@ -26,6 +26,8 @@ import { UsuariosModule } from './modules/usuarios/usuarios.module';
 import { EventosModule } from './modules/eventos/eventos.module';
 import { AsignacionesModule } from './modules/asignaciones/asignaciones.module';
 import { SolicitudesEventoModule } from './modules/solicitudes-evento/solicitudes-evento.module';
+import { DiasEventoModule } from './modules/dias-evento/dias-evento.module';
+import { BilleterasEventoModule } from './modules/billeteras-evento/billeteras-evento.module';
 import { CategoriasTicketModule } from './modules/categorias-ticket/categorias-ticket.module';
 import { ComprasModule } from './modules/compras/compras.module';
 import { EntradasModule } from './modules/entradas/entradas.module';
@@ -56,6 +58,8 @@ import { CorteCajaModule } from './modules/corte-caja/corte-caja.module';
     EventosModule,
     AsignacionesModule,
     SolicitudesEventoModule,
+    DiasEventoModule,
+    BilleterasEventoModule,
     CategoriasTicketModule,
     ComprasModule,
     EntradasModule,

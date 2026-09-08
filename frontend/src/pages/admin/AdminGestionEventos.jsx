@@ -13,7 +13,7 @@ import {
   FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode,
   FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen,
-  FaRegCircle, FaRocket, FaEyeSlash
+  FaRegCircle, FaRocket, FaEyeSlash, FaCalendarAlt
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
@@ -23,6 +23,7 @@ import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import MapaSelector from '../../components/MapaSelector.jsx';
 import AdminCrearTickets from './AdminCrearTickets.jsx';
+import AdminJornadas from './AdminJornadas.jsx';
 import AdminCrearQr from './AdminCrearQr.jsx';
 import AdminConfigurarPagina from './AdminConfigurarPagina.jsx';
 import Mapa from './Mapa.jsx';
@@ -32,6 +33,7 @@ import './AdminGestionEventos.css';
 // Pestañas del detalle de evento (todo se ve acá mismo, sin cambiar de página).
 const PESTANAS = [
   { id: 'asignados', label: 'Usuarios asignados', icono: <FaUsers /> },
+  { id: 'jornadas', label: 'Jornadas', icono: <FaCalendarAlt /> },
   { id: 'tickets', label: 'Tickets del Evento', icono: <FaTicketAlt /> },
   { id: 'solicitudes', label: 'Solicitudes de Entradas', icono: <FaClipboardList /> },
   { id: 'reportes', label: 'Reportes', icono: <FaExclamationTriangle /> },
@@ -41,7 +43,7 @@ const PESTANAS = [
 ];
 
 const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
-const FORM_EVENTO_VACIO = { nombre: '', lugar: '', coordenadas: '', fecha: '', fechaFin: '', imagen: '', clienteId: '' };
+const FORM_EVENTO_VACIO = { nombre: '', lugar: '', coordenadas: '', fecha: '', fechaFin: '', imagen: '', clienteId: '', diasParaRetiro: '' };
 const MAX_IMAGEN_BYTES = 3 * 1024 * 1024; // 3 MB
 
 // ISO -> valor para <input type="datetime-local"> (YYYY-MM-DDTHH:mm, hora local).
@@ -128,6 +130,7 @@ export default function AdminGestionEventos() {
       fecha: isoADatetimeLocal(ev.fecha),
       fechaFin: isoADatetimeLocal(ev.fechaFin),
       clienteId: ev.clienteId != null ? String(ev.clienteId) : '',
+      diasParaRetiro: ev.diasParaRetiro != null ? String(ev.diasParaRetiro) : '',
     });
     setModalEventoAbierto(true);
   };
@@ -245,9 +248,13 @@ export default function AdminGestionEventos() {
     e.preventDefault();
     if (!formEvento.nombre.trim() || !formEvento.lugar.trim() || !formEvento.fecha || !formEvento.fechaFin) return;
 
-    // clienteId vacío -> se omite (el backend lo trata como opcional).
-    const { clienteId, ...resto } = formEvento;
-    const payload = clienteId ? { ...resto, clienteId: Number(clienteId) } : resto;
+    // clienteId / diasParaRetiro vacíos -> se omiten (el backend usa el default).
+    const { clienteId, diasParaRetiro, ...resto } = formEvento;
+    const payload = {
+      ...resto,
+      ...(clienteId ? { clienteId: Number(clienteId) } : {}),
+      ...(diasParaRetiro ? { diasParaRetiro: Number(diasParaRetiro) } : {}),
+    };
 
     if (editandoId) {
       const actualizado = await api.eventos.actualizar(editandoId, payload);
@@ -476,6 +483,7 @@ export default function AdminGestionEventos() {
             ))}
           </div>
 
+          {pestana === 'jornadas' && <AdminJornadas eventoId={eventoDetalle.id} soloLectura={!!eventoDetalle.archivadoEn} />}
           {pestana === 'tickets' && <AdminCrearTickets eventoId={eventoDetalle.id} embebido />}
           {pestana === 'solicitudes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="solicitudesEntradas" />}
           {pestana === 'reportes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="incidencias" />}
@@ -642,6 +650,14 @@ export default function AdminGestionEventos() {
                       <option key={c.id} value={c.id}>{c.nombre} ({c.email})</option>
                     ))}
                   </select>
+                </div>
+                <div className="pi-ges-input-group">
+                  <label htmlFor="ev-retiro">Días para retirar el saldo tras el cierre</label>
+                  <input
+                    id="ev-retiro" type="number" min="1" step="1" name="diasParaRetiro"
+                    value={formEvento.diasParaRetiro} onChange={handleChangeFormEvento}
+                    placeholder="30 (por defecto)"
+                  />
                 </div>
                 <div className="pi-ges-input-group">
                   <label>Ubicación en el mapa (opcional)</label>

@@ -10,6 +10,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   rangoFechas,
+  rangoAnterior,
   diasEntreBolivia,
 } from '../../common/utils/fechas.utils';
 
@@ -121,6 +122,7 @@ export class DashboardService {
       comprasPorEstado,
       comprasPendientes,
       tiempoAprob,
+      caducado,
     ] = await Promise.all([
       this.prisma.compra.aggregate({
         _sum: { montoTotal: true },
@@ -148,6 +150,12 @@ export class DashboardService {
             AND "createdAt" >= ${gte} AND "createdAt" <= ${lte}
         `,
       ),
+      // §T&C — saldo de billeteras cuyo plazo de retiro ya venció y que nadie
+      // reclamó. Global (no se acota al periodo).
+      this.prisma.billeteraEvento.aggregate({
+        _sum: { saldo: true },
+        where: { expiraEn: { lt: new Date() }, saldo: { gt: 0 } },
+      }),
     ]);
 
     const contarEstado = (
@@ -164,6 +172,52 @@ export class DashboardService {
     const confirmadas = contarEstado(comprasPorEstado, 'confirmado');
     const rechazadas = contarEstado(comprasPorEstado, 'rechazado');
     const resueltas = confirmadas + rechazadas;
+    const tasaRechazo = resueltas === 0 ? 0 : rechazadas / resueltas;
+
+    // Spec §1.2 #1 — comparación con el mismo periodo anterior. Solo si hay un
+    // rango acotado (con "todo" no hay "periodo anterior" con sentido).
+    let comparativa: {
+      recaudadoEntradas: {
+        actual: number;
+        anterior: number;
+        variacion: number | null;
+      };
+      tasaRechazoComprobantes: { actual: number; anterior: number };
+    } | null = null;
+    if (rango) {
+      const prev = rangoAnterior(rango);
+      const [recaudadoPrev, comprasPrev] = await Promise.all([
+        this.prisma.compra.aggregate({
+          _sum: { montoTotal: true },
+          where: {
+            estado: 'confirmado',
+            createdAt: { gte: prev.gte, lte: prev.lte },
+          },
+        }),
+        this.prisma.compra.groupBy({
+          by: ['estado'],
+          _count: { _all: true },
+          where: { createdAt: { gte: prev.gte, lte: prev.lte } },
+        }),
+      ]);
+      const recAnterior = Number(recaudadoPrev._sum.montoTotal ?? 0);
+      const recActual = Number(recaudado._sum.montoTotal ?? 0);
+      const rechPrev = contarEstado(comprasPrev, 'rechazado');
+      const resueltasPrev =
+        contarEstado(comprasPrev, 'confirmado') + rechPrev;
+      comparativa = {
+        recaudadoEntradas: {
+          actual: recActual,
+          anterior: recAnterior,
+          variacion:
+            recAnterior === 0 ? null : (recActual - recAnterior) / recAnterior,
+        },
+        tasaRechazoComprobantes: {
+          actual: tasaRechazo,
+          anterior: resueltasPrev === 0 ? 0 : rechPrev / resueltasPrev,
+        },
+      };
+    }
 
     return {
       recaudadoEntradas: Number(recaudado._sum.montoTotal ?? 0),
@@ -175,12 +229,14 @@ export class DashboardService {
         borradores,
       },
       saldoCashlessCirculacion,
-      tasaRechazoComprobantes: resueltas === 0 ? 0 : rechazadas / resueltas,
+      saldoCaducadoNoReclamado: Number(caducado._sum.saldo ?? 0),
+      tasaRechazoComprobantes: tasaRechazo,
       comprobantes: { pendientes: comprasPendientes, confirmadas, rechazadas },
       tiempoAprobacion: {
         medianaSegundos: tiempoAprob[0]?.p50 ?? null,
         p90Segundos: tiempoAprob[0]?.p90 ?? null,
       },
+      comparativa,
       rango: rango ? { desde: rango.gte, hasta: rango.lte } : null,
     };
   }
@@ -305,12 +361,15 @@ export class DashboardService {
       categorias,
       comprasViejas,
       txAgg,
+      jornadasConAforo,
+      dentroPorJornada,
     ] = await Promise.all([
       this.prisma.evento.findMany({
         where: { archivadoEn: null },
         select: {
           id: true,
           nombre: true,
+          fecha: true,
           fechaFin: true,
           publicadoEn: true,
           createdAt: true,
@@ -337,7 +396,30 @@ export class DashboardService {
         by: ['eventoId', 'tipo'],
         _sum: { monto: true },
       }),
+      // §5.5 — aforo por JORNADA: solo las que están en curso ahora.
+      this.prisma.diaEvento.findMany({
+        where: {
+          aforoMaximo: { not: null },
+          inicio: { lte: new Date(ahora) },
+          fin: { gte: new Date(ahora) },
+          evento: { archivadoEn: null },
+        },
+        select: {
+          id: true,
+          nombre: true,
+          aforoMaximo: true,
+          evento: { select: { id: true, nombre: true } },
+        },
+      }),
+      this.prisma.entrada.groupBy({
+        by: ['diaEventoId'],
+        where: { estadoIngreso: 'ingresado' },
+        _count: { _all: true },
+      }),
     ]);
+    const dentroJornada = new Map(
+      dentroPorJornada.map((d) => [d.diaEventoId, d._count._all]),
+    );
 
     const qrTotal = new Map(qrPorEvento.map((q) => [q.eventoId, q._count._all]));
     const qrAnulados = new Map(
@@ -372,6 +454,27 @@ export class DashboardService {
         nivel: 'alta',
         tipo: 'compras_sin_revisar',
         mensaje: `${comprasViejas} comprobante(s) llevan más de ${HORAS_COMPRA_PENDIENTE} h sin revisar.`,
+      });
+    }
+
+    // §5.5 — aforo por jornada en curso: si las personas dentro llegan al 95%
+    // de la capacidad de esa noche, es tema de seguridad.
+    for (const j of jornadasConAforo) {
+      const cap = j.aforoMaximo ?? 0;
+      if (cap <= 0) continue;
+      const adentro = dentroJornada.get(j.id) ?? 0;
+      const ratio = adentro / cap;
+      if (ratio < 0.95) continue;
+      const donde = j.nombre ? `${j.evento.nombre} · ${j.nombre}` : j.evento.nombre;
+      alertas.push({
+        eventoId: j.evento.id,
+        eventoNombre: j.evento.nombre,
+        nivel: ratio >= 1 ? 'alta' : 'media',
+        tipo: 'aforo_al_limite',
+        mensaje:
+          ratio >= 1
+            ? `"${donde}": ${adentro} personas dentro para un aforo de ${cap} — al o por encima del límite.`
+            : `"${donde}": ${adentro} personas dentro (${Math.round(ratio * 100)}% del aforo de ${cap}).`,
       });
     }
 
@@ -492,7 +595,18 @@ export class DashboardService {
         fecha: { lte: ahora },
         fechaFin: { gte: ahora },
       },
-      select: { id: true, nombre: true, fecha: true },
+      select: {
+        id: true,
+        nombre: true,
+        fecha: true,
+        // §5.5 — aforo de la jornada en curso (una fiesta va 20:00 -> 02:00).
+        dias: {
+          where: { inicio: { lte: ahora }, fin: { gte: ahora } },
+          select: { nombre: true, aforoMaximo: true },
+          orderBy: { orden: 'asc' },
+          take: 1,
+        },
+      },
       orderBy: { fecha: 'asc' },
     });
     if (eventos.length === 0) return { activo: false, eventos: [] };
@@ -574,10 +688,15 @@ export class DashboardService {
           .map(([id, total]) => ({ nombre: nombreOp.get(id) ?? `#${id}`, total }))
           .sort((a, b) => b.total - a.total);
 
+        const jornada = ev.dias[0];
+        const aforoMaximo = jornada?.aforoMaximo ?? null;
         return {
           id: ev.id,
           nombre: ev.nombre,
+          jornada: jornada?.nombre ?? null,
           personasDentro: dentro,
+          aforoMaximo,
+          aforoRatio: aforoMaximo ? dentro / aforoMaximo : null,
           ingresosSalidasPorMinuto: porMinuto,
           recargasConsumosPorHora: porHora,
           cuadreRecargadores,
@@ -641,20 +760,34 @@ export class DashboardService {
   /** W1 — recaudación por entradas por día (compras confirmadas). */
   async recaudacionDiaria(desde?: string, hasta?: string) {
     const rango = rangoFechas(desde, hasta)!;
-    const filas = await this.prisma.$queryRaw<
-      Array<{ dia: string; monto: number | null }>
-    >(Prisma.sql`
-      SELECT ${DashboardService.DIA_BOLIVIA} AS dia,
-             SUM("montoTotal")::float8 AS monto
-      FROM compras
-      WHERE estado = 'confirmado'
-        AND "createdAt" >= ${rango.gte} AND "createdAt" <= ${rango.lte}
-      GROUP BY 1 ORDER BY 1
-    `);
+    const prev = rangoAnterior(rango);
+    const traer = (gte: Date, lte: Date) =>
+      this.prisma.$queryRaw<Array<{ dia: string; monto: number | null }>>(
+        Prisma.sql`
+          SELECT ${DashboardService.DIA_BOLIVIA} AS dia,
+                 SUM("montoTotal")::float8 AS monto
+          FROM compras
+          WHERE estado = 'confirmado'
+            AND "createdAt" >= ${gte} AND "createdAt" <= ${lte}
+          GROUP BY 1 ORDER BY 1
+        `,
+      );
+    const [filas, filasPrev] = await Promise.all([
+      traer(rango.gte, rango.lte),
+      traer(prev.gte, prev.lte),
+    ]);
     const porDia = new Map(filas.map((f) => [f.dia, Number(f.monto ?? 0)]));
-    const puntos = diasEntreBolivia(rango.gte, rango.lte).map((dia) => ({
+    const porDiaPrev = new Map(
+      filasPrev.map((f) => [f.dia, Number(f.monto ?? 0)]),
+    );
+    // "Periodo anterior" alineado por posición de día (día 1 vs día 1, etc.),
+    // para que la línea punteada quede sobre la actual aunque el mes tenga
+    // distinta cantidad de días.
+    const diasPrev = diasEntreBolivia(prev.gte, prev.lte);
+    const puntos = diasEntreBolivia(rango.gte, rango.lte).map((dia, i) => ({
       dia,
       monto: porDia.get(dia) ?? 0,
+      montoPrev: porDiaPrev.get(diasPrev[i]) ?? 0,
     }));
     return { puntos, rango: { desde: rango.gte, hasta: rango.lte } };
   }

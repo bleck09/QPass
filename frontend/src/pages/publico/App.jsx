@@ -73,7 +73,12 @@ export default function App() {
       data: cfg ? { ...defaultLandingData, ...cfg } : defaultLandingData,
       precios: categorias.length > 0
         ? categorias.map(c => ({
-            id: c.id, tipo: c.nombre, precio: `${c.precio} Bs`, destacado: false,
+            id: c.id,
+            // Con varias jornadas, el nombre lleva la noche adelante ("Día 1 · VIP").
+            tipo: c.diaEvento && (c.diaEvento.nombre || c.diaEvento.orden > 1)
+              ? `${c.diaEvento.nombre || `Día ${c.diaEvento.orden}`} · ${c.nombre}`
+              : c.nombre,
+            precio: `${c.precio} Bs`, destacado: false,
             beneficios: [c.descripcion || 'Acceso al evento'],
             cantidad: c.cantidad, disponibles: c.disponibles,
           }))

@@ -12,7 +12,7 @@ import { useLocation } from 'react-router-dom';
 import {
   FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign,
   FaImage, FaListUl, FaUsers, FaBoxOpen, FaUpload, FaUserTie, FaHamburger,
-  FaUserFriends, FaArrowLeft
+  FaUserFriends, FaArrowLeft, FaCheckCircle, FaBan
 } from 'react-icons/fa';
 import './UsuarioNegocio.css';
 import '../supervisor/GestionEntrega.css';
@@ -22,7 +22,8 @@ import { leerSesion } from '../../api/client.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
 
 const initialStateFormPuesto = { nombre: '', descripcion: '', logo: '' };
-const initialStateFormProducto = { nombre: '', precio: '', imagen: '' };
+const initialStateFormProducto = { nombre: '', precio: '', imagen: '', stock: '', categoria: '' };
+const CATEGORIAS_PRODUCTO = ['Bebida', 'Comida', 'Postre', 'Snack', 'Otro'];
 
 export default function UsuarioNegocio() {
   useTituloPagina('Mi negocio');
@@ -158,12 +159,24 @@ export default function UsuarioNegocio() {
       nombre: formProducto.nombre,
       precio: parseFloat(formProducto.precio),
       imagen: formProducto.imagen || null,
+      stock: formProducto.stock === '' ? null : Number(formProducto.stock),
+      categoria: formProducto.categoria || null,
     });
 
     const productosActualizados = [...puestoSeleccionado.productos, nuevoProducto];
     setPuestos(prev => prev.map(p => p.id === puestoSeleccionado.id ? { ...p, productos: productosActualizados } : p));
     setPuestoSeleccionado({ ...puestoSeleccionado, productos: productosActualizados });
-    setFormProducto({ nombre: '', precio: '', imagen: '' });
+    setFormProducto(initialStateFormProducto);
+  };
+
+  // Edita en caliente activo/stock/categoría de un producto del catálogo (§5.4).
+  const cambiarProducto = async (idProducto, cambios) => {
+    const actualizado = await api.productos.actualizar(idProducto, cambios);
+    const productosActualizados = puestoSeleccionado.productos.map(prod =>
+      prod.id === idProducto ? { ...prod, ...actualizado } : prod,
+    );
+    setPuestos(prev => prev.map(p => p.id === puestoSeleccionado.id ? { ...p, productos: productosActualizados } : p));
+    setPuestoSeleccionado({ ...puestoSeleccionado, productos: productosActualizados });
   };
 
   const eliminarProducto = async (idProducto) => {
@@ -382,12 +395,33 @@ export default function UsuarioNegocio() {
                       <label>Precio (Bs.)</label>
                       <div className="input-monto-wrapper">
                         <FaDollarSign className="icon-monto" />
-                        <input 
-                          type="number" step="0.50" min="0" name="precio" 
-                          value={formProducto.precio} onChange={handleProductoChange} 
-                          placeholder="0.00" className="input-monto" required 
+                        <input
+                          type="number" step="0.50" min="0" name="precio"
+                          value={formProducto.precio} onChange={handleProductoChange}
+                          placeholder="0.00" className="input-monto" required
                         />
                       </div>
+                    </div>
+
+                    <div className="input-group">
+                      <label>Categoría (opcional)</label>
+                      <input
+                        type="text" name="categoria" list="cat-productos"
+                        value={formProducto.categoria} onChange={handleProductoChange}
+                        placeholder="Bebida, Comida…"
+                      />
+                      <datalist id="cat-productos">
+                        {CATEGORIAS_PRODUCTO.map(c => <option key={c} value={c} />)}
+                      </datalist>
+                    </div>
+
+                    <div className="input-group">
+                      <label>Stock inicial (opcional)</label>
+                      <input
+                        type="number" min="0" step="1" name="stock"
+                        value={formProducto.stock} onChange={handleProductoChange}
+                        placeholder="sin control de inventario"
+                      />
                     </div>
 
                     <div className="input-group">
@@ -419,12 +453,12 @@ export default function UsuarioNegocio() {
 
               <div className="pi-unegocio-card no-margin">
                 <Tabla
-                  columnas={['Producto', 'Precio', { texto: 'Acción', align: 'center' }]}
+                  columnas={['Producto', 'Categoría', 'Precio', { texto: 'Stock', align: 'center' }, { texto: 'Estado', align: 'center' }, { texto: 'Acción', align: 'center' }]}
                   datos={puestoSeleccionado.productos}
                   porPagina={8}
                   vacio="No hay productos en el menú de este puesto."
                   renderFila={producto => (
-                    <tr key={producto.id}>
+                    <tr key={producto.id} className={producto.activo === false ? 'pi-unegocio-prod-inactivo' : ''}>
                       <td>
                         <div className="item-info">
                           {producto.imagen ? (
@@ -435,8 +469,34 @@ export default function UsuarioNegocio() {
                           <span className="fila-nombre">{producto.nombre}</span>
                         </div>
                       </td>
+                      <td>{producto.categoria || '—'}</td>
                       <td>
                         <span className="badge-precio">Bs. {Number(producto.precio).toFixed(2)}</span>
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        {producto.stock == null ? (
+                          <span className="pi-unegocio-nota">sin control</span>
+                        ) : (
+                          <input
+                            type="number" min="0" step="1"
+                            className="pi-unegocio-stock-input"
+                            defaultValue={producto.stock}
+                            onBlur={(e) => {
+                              const n = Number(e.target.value);
+                              if (!Number.isNaN(n) && n !== producto.stock) cambiarProducto(producto.id, { stock: n });
+                            }}
+                          />
+                        )}
+                      </td>
+                      <td style={{ textAlign: 'center' }}>
+                        <button
+                          type="button"
+                          className={producto.activo === false ? 'pi-unegocio-toggle inactivo' : 'pi-unegocio-toggle activo'}
+                          onClick={() => cambiarProducto(producto.id, { activo: producto.activo === false })}
+                          title={producto.activo === false ? 'Marcar como disponible' : 'Marcar como agotado'}
+                        >
+                          {producto.activo === false ? <><FaBan /> Agotado</> : <><FaCheckCircle /> Activo</>}
+                        </button>
                       </td>
                       <td style={{ textAlign: 'center' }}>
                         <button type="button" className="btn-eliminar" onClick={() => eliminarProducto(producto.id)} title="Eliminar producto">

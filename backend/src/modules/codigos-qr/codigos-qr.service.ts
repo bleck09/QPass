@@ -35,10 +35,14 @@ export class CodigosQrService {
     private readonly eventoPolicy: EventoPolicy,
   ) {}
 
-  async listar(eventoId?: string, disponibles?: string) {
+  async listar(eventoId?: string, disponibles?: string, diaEventoId?: string) {
     if (!eventoId) throw new BadRequestException('eventoId es requerido');
     return this.prisma.codigoQr.findMany({
-      where: { eventoId, entradaId: disponibles === 'true' ? null : undefined },
+      where: {
+        eventoId,
+        entradaId: disponibles === 'true' ? null : undefined,
+        diaEventoId: diaEventoId || undefined,
+      },
       orderBy: { numero: 'asc' },
     });
   }
@@ -58,6 +62,13 @@ export class CodigosQrService {
    */
   async generar(dto: GenerarCodigosQrDto) {
     await this.eventoPolicy.porEvento(dto.eventoId);
+    const dia = await this.prisma.diaEvento.findUnique({
+      where: { id: dto.diaEventoId },
+      select: { eventoId: true },
+    });
+    if (!dia || dia.eventoId !== dto.eventoId) {
+      throw new BadRequestException('La jornada no pertenece a este evento');
+    }
     const prefijoNormalizado =
       String(dto.prefijo || 'QP')
         .toUpperCase()
@@ -80,7 +91,12 @@ export class CodigosQrService {
       const codigo = `${prefijoNormalizado}-${generarParteAleatoria()}`;
       try {
         const creado = await this.prisma.codigoQr.create({
-          data: { eventoId: dto.eventoId, numero, codigo },
+          data: {
+            eventoId: dto.eventoId,
+            diaEventoId: dto.diaEventoId,
+            numero,
+            codigo,
+          },
         });
         creados.push(creado);
         numero += 1;

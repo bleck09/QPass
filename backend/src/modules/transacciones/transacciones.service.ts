@@ -1,13 +1,16 @@
 /* ============================================================================
  * src/modules/transacciones/transacciones.service.ts
  *
- * EL LEDGER. El ÚNICO lugar del proyecto que escribe Usuario.saldo (C7).
- * Todo movimiento pasa por un UPDATE atómico — condicional cuando puede dejar
- * el saldo negativo (consumo/venta/devolución) — dentro de una transacción
- * de Postgres (C4). Ningún otro service toca `saldo`: lo llaman a este.
+ * EL LEDGER. El ÚNICO lugar del proyecto que escribe BilleteraEvento.saldo (C7).
+ * El saldo cashless es POR EVENTO: cada movimiento toca la fila
+ * billeteras_evento (usuarioId, eventoId). Todo pasa por acá; ningún otro
+ * service toca el saldo. Los débitos que pueden dejar negativo
+ * (consumo/venta/devolución) usan una sola sentencia guardada
+ * (UPDATE ... WHERE saldo >= m RETURNING saldo). Los créditos hacen un upsert
+ * atómico (la billetera puede no existir todavía).
  *
- * Métodos con `tx?`: si el caller ya abrió un $transaction (VentasService,
- * IncidenciasRecargaService), lo reutilizan para no romper la atomicidad.
+ * Métodos con `tx`: corren dentro del $transaction que abrió el caller
+ * (VentasService, IncidenciasRecargaService) para no romper la atomicidad.
  * ========================================================================= */
 
 import {
@@ -16,7 +19,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { MotivoDevolucion, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { SaldoInsuficienteException } from '../../common/excepciones/dominio.excepciones';
@@ -37,6 +40,47 @@ export class TransaccionesService {
     private readonly eventoPolicy: EventoPolicy,
   ) {}
 
+  /**
+   * Crédito a la billetera del evento (crea la fila si no existe). Devuelve el
+   * saldo posterior.
+   */
+  private async acreditar(
+    tx: PrismaTx,
+    usuarioId: number,
+    eventoId: string,
+    monto: number,
+  ): Promise<Prisma.Decimal> {
+    const fila = await tx.billeteraEvento.upsert({
+      where: { usuarioId_eventoId: { usuarioId, eventoId } },
+      create: { usuarioId, eventoId, saldo: monto },
+      update: { saldo: { increment: monto } },
+      select: { saldo: true },
+    });
+    return fila.saldo;
+  }
+
+  /**
+   * §5.10 — débito atómico con guarda en UNA sola sentencia sobre la billetera
+   * del evento. Devuelve el saldo posterior, o `null` si no alcanzó (o la
+   * billetera todavía no existe = saldo 0).
+   */
+  private async debitarConGuarda(
+    tx: PrismaTx,
+    usuarioId: number,
+    eventoId: string,
+    monto: number,
+  ): Promise<string | null> {
+    const filas = await tx.$queryRaw<Array<{ saldo: string }>>(Prisma.sql`
+      UPDATE "billeteras_evento"
+      SET "saldo" = "saldo" - ${monto}
+      WHERE "usuarioId" = ${usuarioId}
+        AND "eventoId" = ${eventoId}
+        AND "saldo" >= ${monto}
+      RETURNING "saldo"
+    `);
+    return filas.length ? String(filas[0].saldo) : null;
+  }
+
   async listar(filtros: FiltrosTransaccion) {
     if (!filtros.usuarioId && !filtros.entradaId && !filtros.eventoId) {
       throw new BadRequestException(
@@ -53,14 +97,15 @@ export class TransaccionesService {
       include: {
         operador: { select: { id: true, nombre: true } },
         entrada: { select: { id: true, nombre: true, documento: true, foto: true } },
+        evento: { select: { id: true, nombre: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
   }
 
   /**
-   * Recarga: acredita saldo a la billetera personal del dueño de la Entrada
-   * escaneada. Es un crédito, nunca deja negativo -> UPDATE con increment.
+   * Recarga: acredita a la billetera del dueño de la Entrada PARA EL EVENTO de
+   * esa entrada. Crédito -> upsert, nunca deja negativo.
    */
   async recargar(params: { entradaId: string; monto: number; operadorId: number }) {
     await this.eventoPolicy.porEntrada(params.entradaId);
@@ -75,31 +120,36 @@ export class TransaccionesService {
         );
       }
 
-      const usuario = await tx.usuario.update({
+      const usuario = await tx.usuario.findUniqueOrThrow({
         where: { id: entrada.usuarioId },
-        data: { saldo: { increment: params.monto } },
-        select: { id: true, nombre: true, email: true, rol: true, saldo: true },
+        select: { id: true, nombre: true, email: true, rol: true },
       });
+      const saldo = await this.acreditar(
+        tx,
+        entrada.usuarioId,
+        entrada.eventoId,
+        params.monto,
+      );
 
       const transaccion = await tx.transaccion.create({
         data: {
           eventoId: entrada.eventoId,
           tipo: 'recarga',
           monto: params.monto,
-          saldoResultante: usuario.saldo, // valor real post-update, no calculado aparte
+          saldoResultante: saldo,
           usuarioId: usuario.id,
           entradaId: params.entradaId,
           operadorId: params.operadorId,
         },
       });
 
-      return { usuario, transaccion };
+      return { usuario: { ...usuario, saldo }, transaccion };
     });
   }
 
   /**
-   * Devolución: retira saldo de la billetera personal de un Usuario. Debita ->
-   * UPDATE condicional: si no alcanza, count = 0 y aborta sin dejar negativo.
+   * Devolución: retira saldo de la billetera del Usuario PARA ESE EVENTO. Débito
+   * guardado: si no alcanza, aborta sin dejar negativo.
    */
   async devolver(params: {
     usuarioId: number;
@@ -108,6 +158,8 @@ export class TransaccionesService {
     fotoCarnetUrl: string;
     eventoId: string;
     operadorId: number;
+    motivoDevolucion?: MotivoDevolucion;
+    nota?: string;
   }) {
     await this.eventoPolicy.porEvento(params.eventoId);
     return this.prisma.$transaction(async (tx) => {
@@ -116,26 +168,42 @@ export class TransaccionesService {
       });
       if (!usuario) throw new NotFoundException('Usuario no encontrado');
 
-      const debito = await tx.usuario.updateMany({
-        where: { id: params.usuarioId, saldo: { gte: params.monto } },
-        data: { saldo: { decrement: params.monto } },
+      // §T&C — el saldo de un evento se puede retirar hasta expiraEn (fijado por
+      // el cron: fechaFin + Evento.diasParaRetiro). Pasado ese plazo, no.
+      const billetera = await tx.billeteraEvento.findUnique({
+        where: {
+          usuarioId_eventoId: {
+            usuarioId: params.usuarioId,
+            eventoId: params.eventoId,
+          },
+        },
+        select: { expiraEn: true },
       });
-      if (debito.count === 0) {
-        throw new SaldoInsuficienteException('Saldo insuficiente para el retiro');
+      if (billetera?.expiraEn && new Date() > billetera.expiraEn) {
+        throw new ConflictException(
+          `El plazo para retirar el saldo de este evento venció el ${billetera.expiraEn.toLocaleDateString('es-BO')}.`,
+        );
       }
 
-      const actualizado = await tx.usuario.findUniqueOrThrow({
-        where: { id: params.usuarioId },
-        select: { saldo: true },
-      });
+      const saldoPost = await this.debitarConGuarda(
+        tx,
+        params.usuarioId,
+        params.eventoId,
+        params.monto,
+      );
+      if (saldoPost === null) {
+        throw new SaldoInsuficienteException('Saldo insuficiente para el retiro');
+      }
 
       return tx.transaccion.create({
         data: {
           eventoId: params.eventoId,
           tipo: 'devolucion',
           monto: params.monto,
-          saldoResultante: actualizado.saldo,
+          saldoResultante: saldoPost,
           fotoCarnetUrl: params.fotoCarnetUrl,
+          motivoDevolucion: params.motivoDevolucion,
+          nota: params.nota,
           usuarioId: params.usuarioId,
           entradaId: params.entradaId,
           operadorId: params.operadorId,
@@ -146,8 +214,8 @@ export class TransaccionesService {
 
   /**
    * Venta: SIEMPRE dos Transaccion con el mismo ventaId (consumo al dueño de la
-   * Entrada + venta acreditada al negocio). Debe correr dentro del mismo
-   * $transaction que crea la Venta -> recibe `tx` de VentasService.
+   * Entrada + venta acreditada al negocio), ambas en la billetera del evento.
+   * Corre dentro del $transaction que crea la Venta.
    */
   async registrarVenta(
     tx: PrismaTx,
@@ -161,23 +229,22 @@ export class TransaccionesService {
       operadorId: number;
     },
   ) {
-    const debito = await tx.usuario.updateMany({
-      where: { id: params.duenoEntradaId, saldo: { gte: params.monto } },
-      data: { saldo: { decrement: params.monto } },
-    });
-    if (debito.count === 0) {
+    const saldoComprador = await this.debitarConGuarda(
+      tx,
+      params.duenoEntradaId,
+      params.eventoId,
+      params.monto,
+    );
+    if (saldoComprador === null) {
       throw new SaldoInsuficienteException('Saldo insuficiente para esta venta');
     }
 
-    const comprador = await tx.usuario.findUniqueOrThrow({
-      where: { id: params.duenoEntradaId },
-      select: { saldo: true },
-    });
-    const negocio = await tx.usuario.update({
-      where: { id: params.duenoNegocioId },
-      data: { saldo: { increment: params.monto } },
-      select: { saldo: true },
-    });
+    const saldoNegocio = await this.acreditar(
+      tx,
+      params.duenoNegocioId,
+      params.eventoId,
+      params.monto,
+    );
 
     await tx.transaccion.createMany({
       data: [
@@ -185,7 +252,7 @@ export class TransaccionesService {
           eventoId: params.eventoId,
           tipo: 'consumo',
           monto: params.monto,
-          saldoResultante: comprador.saldo,
+          saldoResultante: saldoComprador,
           usuarioId: params.duenoEntradaId,
           entradaId: params.entradaId,
           ventaId: params.ventaId,
@@ -195,7 +262,7 @@ export class TransaccionesService {
           eventoId: params.eventoId,
           tipo: 'venta',
           monto: params.monto,
-          saldoResultante: negocio.saldo,
+          saldoResultante: saldoNegocio,
           usuarioId: params.duenoNegocioId,
           entradaId: params.entradaId,
           ventaId: params.ventaId,
@@ -206,8 +273,9 @@ export class TransaccionesService {
   }
 
   /**
-   * Ajuste manual (ej. al resolver una IncidenciaRecarga). Crédito -> increment.
-   * Recibe `tx` para correr dentro de la misma transacción que cierra el caso.
+   * Ajuste manual (ej. al resolver una IncidenciaRecarga). Crédito a la
+   * billetera del evento. Recibe `tx` para correr dentro de la misma transacción
+   * que cierra el caso.
    */
   async ajustar(
     tx: PrismaTx,
@@ -219,18 +287,19 @@ export class TransaccionesService {
       operadorId: number;
     },
   ) {
-    const usuario = await tx.usuario.update({
-      where: { id: params.usuarioId },
-      data: { saldo: { increment: params.monto } },
-      select: { saldo: true },
-    });
+    const saldo = await this.acreditar(
+      tx,
+      params.usuarioId,
+      params.eventoId,
+      params.monto,
+    );
 
     return tx.transaccion.create({
       data: {
         eventoId: params.eventoId,
         tipo: 'ajuste',
         monto: params.monto,
-        saldoResultante: usuario.saldo,
+        saldoResultante: saldo,
         usuarioId: params.usuarioId,
         entradaId: params.entradaId,
         operadorId: params.operadorId,
@@ -240,8 +309,9 @@ export class TransaccionesService {
 
   /**
    * Revierte las 2 filas de una Venta anulada (§5.3), espejo de registrarVenta:
-   * le quita el saldo al negocio (guarded) y se lo reintegra al comprador.
-   * Deja 2 filas nuevas (reverso_venta / reverso_consumo) con el mismo ventaId.
+   * le quita el saldo al negocio (guardado) y se lo reintegra al comprador, todo
+   * en la billetera del evento. Deja 2 filas nuevas (reverso_venta /
+   * reverso_consumo) con el mismo ventaId.
    */
   async anularVenta(
     tx: PrismaTx,
@@ -255,25 +325,24 @@ export class TransaccionesService {
       operadorId: number;
     },
   ) {
-    const clawback = await tx.usuario.updateMany({
-      where: { id: params.duenoNegocioId, saldo: { gte: params.monto } },
-      data: { saldo: { decrement: params.monto } },
-    });
-    if (clawback.count === 0) {
+    const saldoNegocio = await this.debitarConGuarda(
+      tx,
+      params.duenoNegocioId,
+      params.eventoId,
+      params.monto,
+    );
+    if (saldoNegocio === null) {
       throw new ConflictException(
         'El negocio ya retiró ese saldo; no se puede revertir automáticamente, hacé un ajuste manual.',
       );
     }
 
-    const negocio = await tx.usuario.findUniqueOrThrow({
-      where: { id: params.duenoNegocioId },
-      select: { saldo: true },
-    });
-    const comprador = await tx.usuario.update({
-      where: { id: params.duenoEntradaId },
-      data: { saldo: { increment: params.monto } },
-      select: { saldo: true },
-    });
+    const saldoComprador = await this.acreditar(
+      tx,
+      params.duenoEntradaId,
+      params.eventoId,
+      params.monto,
+    );
 
     await tx.transaccion.createMany({
       data: [
@@ -281,7 +350,7 @@ export class TransaccionesService {
           eventoId: params.eventoId,
           tipo: 'reverso_venta',
           monto: params.monto,
-          saldoResultante: negocio.saldo,
+          saldoResultante: saldoNegocio,
           usuarioId: params.duenoNegocioId,
           entradaId: params.entradaId,
           ventaId: params.ventaId,
@@ -292,7 +361,7 @@ export class TransaccionesService {
           eventoId: params.eventoId,
           tipo: 'reverso_consumo',
           monto: params.monto,
-          saldoResultante: comprador.saldo,
+          saldoResultante: saldoComprador,
           usuarioId: params.duenoEntradaId,
           entradaId: params.entradaId,
           ventaId: params.ventaId,
