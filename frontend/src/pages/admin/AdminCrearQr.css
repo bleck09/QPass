@@ -393,3 +393,24 @@
   background: var(--indigo-profundo);
   transition: width 0.15s ease-out;
 }
+
+/* Sugerencia de cantidad de manillas según el cupo (§Jornadas) */
+.pi-adqr-sugerencia {
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.pi-adqr-sugerencia strong { color: var(--text-primary); }
+.pi-adqr-btn-sugerido {
+  margin-left: 6px;
+  padding: 2px 10px;
+  border: 1px solid var(--indigo-profundo);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--indigo-profundo);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.pi-adqr-btn-sugerido:hover { background: var(--indigo-profundo-suave, rgba(26,43,107,0.08)); }

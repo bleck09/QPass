@@ -53,10 +53,14 @@ FASE 1 — JORNADAS (DiaEvento)   [IMPLEMENTADA — falta `npx prisma migrate de
       por jornada.
   [x] compras.service: la Entrada hereda diaEventoId de su CategoriaTicket
       (buy-time). corregirEntradas no cambia categoría -> no toca el día.
-  [x] codigos-qr: DTO += diaEventoId; generar() lo guarda en cada CodigoQr y
-      valida la jornada; listar() acepta ?diaEventoId=.
+  [x] codigos-qr: el pool se genera a NIVEL EVENTO (sin jornada). CodigoQr.diaEventoId
+      queda null al generar y la manilla lo ADOPTA de la entrada al vincularse
+      (entradas.service.vincularQr: diaEventoId = codigoQr.diaEventoId ?? entrada.diaEventoId).
+      [rev 2026-09-08: se quitó el <select> de jornada de "Generar QR" — la
+       jornada la define la entrada, no la manilla suelta.]
   [x] entradas.service.vincularQr(): 409 si la manilla y la entrada son de
-      jornadas distintas (ambas seteadas).
+      jornadas distintas (solo aplica si AMBAS ya están seteadas — red de
+      seguridad para re-vínculos).
   [x] entradas.service.registrarMovimiento(): la ventana de ingreso es la de la
       JORNADA de la entrada (inicio - MARGEN .. fin). Fallback al rango del
       evento si la entrada no tiene jornada (legacy).
@@ -70,7 +74,9 @@ FASE 1 — JORNADAS (DiaEvento)   [IMPLEMENTADA — falta `npx prisma migrate de
       - AdminGestionEventos: pestaña "Jornadas" (nuevo AdminJornadas.jsx/.css).
         Se quitó el campo aforoMaximo del form de evento.
       - AdminCrearTickets: <select> "Jornada" (si hay >1) + columna en la tabla.
-      - AdminCrearQr: <select> "Jornada" antes de generar.
+        (Acá SÍ se elige la jornada — es donde se decide "qué noche".)
+      - AdminCrearQr: SIN selector de jornada (pool por evento). Muestra el cupo
+        total del evento + sugerencia de cantidad (cupo x1.10 - ya generadas).
       - Compra (UsuarioNormal + landing pública App.jsx): la categoría muestra la
         jornada adelante ("Día 1 · VIP") cuando el evento tiene varias.
   [x] nest build OK · vite build OK · eslint sin errores nuevos.
@@ -81,8 +87,6 @@ FASE 1 — JORNADAS (DiaEvento)   [IMPLEMENTADA — falta `npx prisma migrate de
     ya no existe.
 
   MENOR / DIFERIDO de Fase 1:
-    - Filtro por jornada en el LISTADO de manillas de AdminCrearQr (el pool ya se
-      genera por jornada; el grid es solo visual).
     - El "gate" de publicación sigue contando categorías + QR globales, no exige
       que cada jornada tenga categoría. Se puede sumar como alerta W7 después.
 

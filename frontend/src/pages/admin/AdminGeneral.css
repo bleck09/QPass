@@ -52,7 +52,7 @@
 
 .pi-adg-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 16px;
 }
 
@@ -61,6 +61,15 @@
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
+}
+
+/* Contenedor para un `extra` de StatCard con varias líneas (chip de % + nota). */
+.pi-adg-extra {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
 }
 
 /* --- Alertas (W7) --- */

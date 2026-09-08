@@ -31,15 +31,16 @@ function ChipVar({ par }) {
   const varia = par.variacion != null
     ? par.variacion
     : par.anterior === 0 ? null : (par.actual - par.anterior) / par.anterior;
-  if (varia == null) return <span className="pi-ngd-nota">sin base del periodo anterior</span>;
+  if (varia == null) return null;
   const pct = varia * 100;
   const plano = Math.abs(pct) < 0.05;
   return (
     <span
       className="pi-ngd-nota"
+      title="vs. periodo anterior"
       style={{ color: plano ? 'var(--text-muted)' : pct >= 0 ? 'var(--ok)' : 'var(--danger)' }}
     >
-      {plano ? '=' : pct >= 0 ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% vs. periodo anterior
+      {plano ? '=' : pct >= 0 ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
     </span>
   );
 }

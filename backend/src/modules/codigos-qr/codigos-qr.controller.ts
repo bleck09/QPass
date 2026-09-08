@@ -21,9 +21,8 @@ export class CodigosQrController {
   listar(
     @Query('eventoId') eventoId?: string,
     @Query('disponibles') disponibles?: string,
-    @Query('diaEventoId') diaEventoId?: string,
   ) {
-    return this.codigosQrService.listar(eventoId, disponibles, diaEventoId);
+    return this.codigosQrService.listar(eventoId, disponibles);
   }
 
   @Get('buscar/:codigo')

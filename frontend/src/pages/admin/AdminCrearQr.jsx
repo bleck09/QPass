@@ -7,7 +7,7 @@ import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaCalendarAlt, FaCalendarDay, FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
+  FaCalendarAlt, FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
   FaEye, FaTimes, FaChevronLeft, FaChevronRight, FaLink, FaBan
 } from 'react-icons/fa';
 import BotonVolver from '../../components/BotonVolver.jsx';
@@ -63,14 +63,11 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
     recargar: recargarCodigos,
   } = useApi(cargarCodigos, { inicial: [], activo: !!eventoId });
 
-  // Jornadas del evento: el pool de manillas se genera por jornada.
-  const cargarJornadas = useCallback(() => api.diasEvento.listar(eventoId), [eventoId]);
-  const { data: jornadas } = useApi(cargarJornadas, { inicial: [], activo: !!eventoId });
-  const [diaElegido, setDiaElegido] = useState('');
-  const nombreJornada = (j, i) => j?.nombre || `Día ${j?.orden ?? i + 1}`;
-  // Jornada efectiva: la elegida a mano, o la primera por defecto (sin efecto).
-  const diaEventoId =
-    (jornadas.some(j => j.id === diaElegido) && diaElegido) || jornadas[0]?.id || '';
+  // El pool de manillas es a nivel EVENTO; cada manilla adopta la jornada cuando
+  // el supervisor la vincula a una entrada. Las categorías dan el cupo total,
+  // para sugerir cuántas generar.
+  const cargarCategorias = useCallback(() => api.categoriasTicket.listar(eventoId), [eventoId]);
+  const { data: categorias } = useApi(cargarCategorias, { inicial: [], activo: !!eventoId });
 
   const [cantidad, setCantidad] = useState('50');
   const [prefijo, setPrefijo] = useState('QP');
@@ -111,6 +108,17 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
     const anulados = codigos.filter(c => c.anulado).length;
     return { total, vinculados, anulados, libres: total - vinculados - anulados };
   }, [codigos]);
+
+  // Resumen del evento: cupo total (Σ categorías de todas las jornadas), entradas
+  // confirmadas, manillas ya generadas, y una cantidad sugerida (cupo + 10% de
+  // reserva por pérdidas/cambios, menos lo ya generado).
+  const resumenEvento = useMemo(() => {
+    const cupo = categorias.reduce((s, c) => s + Number(c.cantidad || 0), 0);
+    const confirmadas = categorias.reduce((s, c) => s + Number(c.vendidas || 0), 0);
+    const yaGeneradas = codigos.length;
+    const sugerido = Math.max(0, Math.ceil(cupo * 1.1) - yaGeneradas);
+    return { cupo, confirmadas, yaGeneradas, sugerido };
+  }, [categorias, codigos]);
   const totalPaginas = Math.max(1, Math.ceil(codigos.length / TAMANO_PAGINA));
   const codigosPagina = codigos.slice(pagina * TAMANO_PAGINA, pagina * TAMANO_PAGINA + TAMANO_PAGINA);
 
@@ -130,7 +138,6 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
     else if (n > 2000) errs.cantidad = 'El máximo por tanda es 2000.';
 
     if (!prefijo.trim()) errs.prefijo = 'Escribí un prefijo de 1 a 3 letras.';
-    if (!diaEventoId) errs.jornada = 'Elegí la jornada para este lote.';
 
     const a = Number(anchoCm);
     if (!String(anchoCm).trim()) errs.ancho = 'Indicá el ancho del QR.';
@@ -143,7 +150,7 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
     setErrores(errs);
     if (Object.keys(errs).length > 0) return;
 
-    await api.codigosQr.generar({ eventoId, diaEventoId, cantidad: n, prefijo });
+    await api.codigosQr.generar({ eventoId, cantidad: n, prefijo });
     await recargarCodigos();
     setPagina(0);
     setMostrarImagenes(false);
@@ -221,25 +228,6 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
       <div className="pi-adqr-card">
         <h3 className="pi-adqr-subtitulo">Generar nuevos códigos</h3>
         <form onSubmit={handleGenerar} className="pi-adqr-form" noValidate>
-          {jornadas.length > 1 && (
-            <div className="pi-adqr-input-group">
-              <label htmlFor="qr-jornada">Jornada</label>
-              <div className="pi-adqr-input-wrapper">
-                <FaCalendarDay className="pi-adqr-input-icon" aria-hidden="true" />
-                <select
-                  id="qr-jornada"
-                  value={diaEventoId}
-                  onChange={(e) => { setDiaElegido(e.target.value); limpiarError('jornada'); }}
-                  aria-invalid={!!errores.jornada}
-                >
-                  {jornadas.map((j, i) => (
-                    <option key={j.id} value={j.id}>{nombreJornada(j, i)}</option>
-                  ))}
-                </select>
-              </div>
-              {errores.jornada && <p className="pi-adqr-error">{errores.jornada}</p>}
-            </div>
-          )}
           <div className="pi-adqr-input-group">
             <label htmlFor="qr-cantidad">Cantidad a generar</label>
             <div className="pi-adqr-input-wrapper">
@@ -258,6 +246,24 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
               />
             </div>
             {errores.cantidad && <p id="qr-cantidad-error" className="pi-adqr-error">{errores.cantidad}</p>}
+            {resumenEvento.cupo > 0 && (
+              <p className="pi-adqr-sugerencia">
+                Cupo del evento: <strong>{resumenEvento.cupo}</strong> entradas
+                {' · '}{resumenEvento.confirmadas} confirmadas
+                {' · '}{resumenEvento.yaGeneradas} manillas ya generadas.
+                {resumenEvento.sugerido > 0 ? (
+                  <button
+                    type="button"
+                    className="pi-adqr-btn-sugerido"
+                    onClick={() => { setCantidad(String(resumenEvento.sugerido)); limpiarError('cantidad'); }}
+                  >
+                    Usar sugerido: {resumenEvento.sugerido}
+                  </button>
+                ) : (
+                  <span> Ya hay manillas para todo el cupo (+10% de reserva).</span>
+                )}
+              </p>
+            )}
           </div>
           <div className="pi-adqr-input-group">
             <label htmlFor="qr-prefijo">Prefijo (1 a 3 letras)</label>

@@ -47,12 +47,10 @@ const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFract
 const fmtPct = (frac) => `${(Number(frac || 0) * 100).toFixed(1)}%`;
 const fmtFecha = (iso) => new Date(iso).toLocaleDateString('es-BO');
 
-// Chip "▲ 12.3% vs. periodo anterior" para las comparaciones §1.2 #1.
-// `variacion` puede venir null (base 0 -> no hay % con sentido).
+// Chip compacto "▲ 12.3%" para las comparaciones §1.2 #1 (el detalle va en el
+// title). `variacion` null -> no hay base previa, no se muestra nada.
 function ChipVariacion({ variacion, anteriorTexto, invertirColor = false }) {
-  if (variacion == null) {
-    return <span className="pi-adg-antiguedad">sin base del periodo anterior</span>;
-  }
+  if (variacion == null) return null;
   const pct = variacion * 100;
   const plano = Math.abs(pct) < 0.05;
   const sube = pct >= 0;
@@ -60,10 +58,10 @@ function ChipVariacion({ variacion, anteriorTexto, invertirColor = false }) {
   return (
     <span
       className="pi-adg-antiguedad"
+      title={`vs. periodo anterior${anteriorTexto ? ` — ${anteriorTexto}` : ''}`}
       style={{ color: plano ? 'var(--text-muted)' : bueno ? 'var(--ok)' : 'var(--danger)' }}
     >
-      {plano ? '=' : sube ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% vs. periodo anterior
-      {anteriorTexto ? ` (${anteriorTexto})` : ''}
+      {plano ? '=' : sube ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
     </span>
   );
 }
@@ -272,7 +270,7 @@ export default function AdminGeneral() {
                 valor={fmtPct(data.kpis.tasaRechazoComprobantes)}
                 label="Rechazo de comprobantes"
                 extra={
-                  <>
+                  <span className="pi-adg-extra">
                     <span className="pi-adg-antiguedad">
                       {data.kpis.comprobantes.confirmadas} ok · {data.kpis.comprobantes.rechazadas} rech
                     </span>
@@ -289,7 +287,7 @@ export default function AdminGeneral() {
                         invertirColor
                       />
                     )}
-                  </>
+                  </span>
                 }
               />
               <StatCard

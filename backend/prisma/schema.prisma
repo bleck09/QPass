@@ -574,7 +574,9 @@ model RegistroIngreso {
 model CodigoQr {
   id          String   @id @default(cuid())
   eventoId    String
-  diaEventoId String?  // el pool de manillas se genera por jornada. Nullable por robustez.
+  diaEventoId String?  // jornada de la manilla. El pool se genera a nivel evento (sin
+                       // jornada) y la manilla la ADOPTA de la entrada al vincularse
+                       // (entradas.service.vincularQr). Null hasta entonces.
   numero      Int
   codigo      String   @unique
   generadoEn  DateTime @default(now())

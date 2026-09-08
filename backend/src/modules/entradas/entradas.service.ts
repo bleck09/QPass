@@ -235,7 +235,14 @@ export class EntradasService {
         : []),
       this.prisma.codigoQr.update({
         where: { id: codigoQrId },
-        data: { entradaId: id, asignadoPorId: actorId, asignadoEn: new Date() },
+        data: {
+          entradaId: id,
+          asignadoPorId: actorId,
+          asignadoEn: new Date(),
+          // La manilla adopta la jornada de la entrada a la que se vincula
+          // (el pool se genera a nivel evento, sin jornada).
+          diaEventoId: codigoQr.diaEventoId ?? entradaActual.diaEventoId,
+        },
       }),
     ]);
 

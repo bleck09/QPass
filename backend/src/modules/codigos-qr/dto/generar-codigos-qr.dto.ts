@@ -5,9 +5,8 @@ export class GenerarCodigosQrDto {
   @IsString()
   eventoId: string;
 
-  // Jornada para la que se genera este lote de manillas (ver DiaEvento).
-  @IsString()
-  diaEventoId: string;
+  // El pool de manillas es a nivel EVENTO. La jornada la adopta cada manilla
+  // cuando el supervisor la vincula a una Entrada (ver entradas.service.vincularQr).
 
   @Type(() => Number)
   @IsInt()
