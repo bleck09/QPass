@@ -1,7 +1,10 @@
 import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { Idempotente } from '../../common/decorators/idempotente.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UsuarioActual } from '../../common/decorators/usuario-actual.decorator';
+import {
+  UsuarioActual,
+  UsuarioJwt,
+} from '../../common/decorators/usuario-actual.decorator';
 import { TransaccionesService } from './transacciones.service';
 import { DevolucionDto, RecargaDto } from './dto/transacciones.dto';
 
@@ -27,25 +30,25 @@ export class TransaccionesController {
   @Post('recarga')
   @Roles('Recargador', 'Admin')
   @Idempotente()
-  recarga(@Body() dto: RecargaDto, @UsuarioActual('id') operadorId: number) {
+  recarga(@Body() dto: RecargaDto, @UsuarioActual() actor: UsuarioJwt) {
     return this.transaccionesService.recargar({
       entradaId: dto.entradaId,
       monto: dto.monto,
-      operadorId,
+      operador: { id: actor.id, rol: actor.rol },
     });
   }
 
   @Post('devolucion')
   @Roles('Devolucion', 'Admin')
   @Idempotente()
-  devolucion(@Body() dto: DevolucionDto, @UsuarioActual('id') operadorId: number) {
+  devolucion(@Body() dto: DevolucionDto, @UsuarioActual() actor: UsuarioJwt) {
     return this.transaccionesService.devolver({
       usuarioId: dto.usuarioId,
       entradaId: dto.entradaId,
       monto: dto.monto,
       fotoCarnetUrl: dto.fotoCarnetUrl,
       eventoId: dto.eventoId,
-      operadorId,
+      operador: { id: actor.id, rol: actor.rol },
       motivoDevolucion: dto.motivoDevolucion,
       nota: dto.nota,
     });

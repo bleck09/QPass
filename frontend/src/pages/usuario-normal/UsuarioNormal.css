@@ -378,3 +378,62 @@
   margin-top: 2px;
   flex-shrink: 0;
 }
+
+/* --- Saldo por evento: acordeón (§Billetera por evento) --- */
+.pi-usr-bill-lista { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.pi-usr-bill {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+.pi-usr-bill.abierto { border-color: var(--indigo-profundo); }
+.pi-usr-bill-cab {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto auto 20px;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text-primary);
+}
+.pi-usr-bill-titulo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pi-usr-bill-titulo strong { font-size: var(--text-sm); }
+.pi-usr-bill-fecha { font-size: 12px; color: var(--text-secondary); }
+.pi-usr-bill-saldo { font-size: var(--text-base); font-weight: 800; color: var(--indigo-profundo); white-space: nowrap; }
+.pi-usr-bill-plazo { font-size: 11px; font-weight: 700; white-space: nowrap; }
+.pi-usr-bill-plazo.tono-vencido { color: var(--rojo-error-texto); }
+.pi-usr-bill-plazo.tono-porVencer { color: var(--ambar-aviso-texto, #b26a00); }
+.pi-usr-bill-flecha { transition: transform 0.2s; color: var(--text-secondary); }
+.pi-usr-bill.abierto .pi-usr-bill-flecha { transform: rotate(180deg); }
+.pi-usr-bill-cuerpo { padding: 0 16px 16px; }
+.pi-usr-bill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+.pi-usr-bill-grid > div {
+  background: var(--bg-page);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pi-usr-bill-grid > div.destacado { background: var(--indigo-profundo-suave, rgba(26,43,107,0.08)); }
+.pi-usr-bill-grid span { font-size: var(--text-base); font-weight: 800; color: var(--text-primary); }
+.pi-usr-bill-grid small { font-size: 11px; color: var(--text-secondary); }
+.pi-usr-bill-plazo-detalle {
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--bg-page);
+  color: var(--text-secondary);
+}
+.pi-usr-bill-plazo-detalle.tono-vencido { color: var(--rojo-error-texto); background: var(--rojo-error-suave, rgba(220,53,69,0.08)); }
+.pi-usr-bill-plazo-detalle.tono-porVencer { color: var(--ambar-aviso-texto, #b26a00); background: var(--ambar-aviso-suave, rgba(255,193,7,0.12)); }

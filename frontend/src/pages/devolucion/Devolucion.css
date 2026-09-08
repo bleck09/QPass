@@ -546,3 +546,10 @@
   font-size: 14px;
 }
 .pi-dev-motivo-nota { margin-top: 6px; }
+
+/* Link "abrir arqueo de caja" en el aviso de "sin caja abierta" (§5.2) */
+.pi-dev-link-caja {
+  background: none; border: none; padding: 0;
+  color: inherit; font: inherit; font-weight: 700;
+  text-decoration: underline; cursor: pointer;
+}

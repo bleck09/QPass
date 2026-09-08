@@ -353,9 +353,10 @@ model CorteCaja {
   observacion    String?
   cerradaPorId   Int?
 
-  evento     Evento   @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  operador   Usuario  @relation("CorteCajaOperador", fields: [operadorId], references: [id])
-  cerradaPor Usuario? @relation("CorteCajaCerradoPor", fields: [cerradaPorId], references: [id])
+  evento        Evento        @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  operador      Usuario       @relation("CorteCajaOperador", fields: [operadorId], references: [id])
+  cerradaPor    Usuario?      @relation("CorteCajaCerradoPor", fields: [cerradaPorId], references: [id])
+  transacciones Transaccion[]
 
   @@index([eventoId, rol])
   @@index([operadorId, abiertaEn])
@@ -621,6 +622,11 @@ model Transaccion {
   entradaId  String? // contexto opcional: manilla/entrada escaneada, si aplica
   ventaId    String? // set en las dos filas (consumo + venta) que genera una Venta
   operadorId Int     // quién la ejecutó: Recargador, Ayudante o Devolucion
+  // §5.2 — caja de efectivo a la que pertenece este movimiento. Se estampa en
+  // recarga (Recargador) y devolucion (Devolucion): el arqueo cuadra sumando
+  // por corteCajaId, no por ventana de tiempo. NULL en ventas/consumos/ajustes
+  // y en recargas hechas por Admin (correcciones, fuera de turno).
+  corteCajaId String?
 
   fotoCarnetUrl    String?           // exigida en retiros (Devolucion)
   motivoDevolucion MotivoDevolucion? // §5.11 — solo en filas tipo=devolucion
@@ -628,17 +634,19 @@ model Transaccion {
 
   createdAt DateTime @default(now())
 
-  evento   Evento   @relation(fields: [eventoId], references: [id])
-  usuario  Usuario  @relation("BilleteraUsuario", fields: [usuarioId], references: [id])
-  entrada  Entrada? @relation(fields: [entradaId], references: [id])
-  venta    Venta?   @relation(fields: [ventaId], references: [id])
-  operador Usuario  @relation("Operador", fields: [operadorId], references: [id])
+  evento    Evento     @relation(fields: [eventoId], references: [id])
+  usuario   Usuario    @relation("BilleteraUsuario", fields: [usuarioId], references: [id])
+  entrada   Entrada?   @relation(fields: [entradaId], references: [id])
+  venta     Venta?     @relation(fields: [ventaId], references: [id])
+  operador  Usuario    @relation("Operador", fields: [operadorId], references: [id])
+  corteCaja CorteCaja? @relation(fields: [corteCajaId], references: [id])
 
   @@index([eventoId, operadorId])
   @@index([operadorId, createdAt]) // historial completo de un operador (cuadre de recarga/devolución)
   @@index([eventoId, tipo])
   @@index([usuarioId, createdAt])
   @@index([entradaId, createdAt])
+  @@index([corteCajaId])
   @@map("transacciones")
 }
 

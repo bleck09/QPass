@@ -81,6 +81,31 @@ export class TransaccionesService {
     return filas.length ? String(filas[0].saldo) : null;
   }
 
+  /**
+   * §5.2 — la caja de efectivo abierta del operador para ese evento. El
+   * Recargador/Devolución tiene que abrir su arqueo antes de mover efectivo, así
+   * cada recarga/devolución queda estampada con su `corteCajaId` y el cierre
+   * cuadra sumando por ahí. El Admin queda exento (correcciones, sin turno).
+   */
+  private async cajaObligatoria(
+    tx: PrismaTx,
+    operador: { id: number; rol: string },
+    eventoId: string,
+    accion: string,
+  ): Promise<string | null> {
+    if (operador.rol === 'Admin') return null;
+    const caja = await tx.corteCaja.findFirst({
+      where: { operadorId: operador.id, eventoId, estado: 'abierta' },
+      select: { id: true },
+    });
+    if (!caja) {
+      throw new ConflictException(
+        `Abrí tu caja para este evento antes de ${accion}.`,
+      );
+    }
+    return caja.id;
+  }
+
   async listar(filtros: FiltrosTransaccion) {
     if (!filtros.usuarioId && !filtros.entradaId && !filtros.eventoId) {
       throw new BadRequestException(
@@ -107,7 +132,11 @@ export class TransaccionesService {
    * Recarga: acredita a la billetera del dueño de la Entrada PARA EL EVENTO de
    * esa entrada. Crédito -> upsert, nunca deja negativo.
    */
-  async recargar(params: { entradaId: string; monto: number; operadorId: number }) {
+  async recargar(params: {
+    entradaId: string;
+    monto: number;
+    operador: { id: number; rol: string };
+  }) {
     await this.eventoPolicy.porEntrada(params.entradaId);
     return this.prisma.$transaction(async (tx) => {
       const entrada = await tx.entrada.findUnique({
@@ -119,6 +148,13 @@ export class TransaccionesService {
           'Esta entrada todavía no tiene una cuenta vinculada',
         );
       }
+
+      const corteCajaId = await this.cajaObligatoria(
+        tx,
+        params.operador,
+        entrada.eventoId,
+        'recargar',
+      );
 
       const usuario = await tx.usuario.findUniqueOrThrow({
         where: { id: entrada.usuarioId },
@@ -139,7 +175,8 @@ export class TransaccionesService {
           saldoResultante: saldo,
           usuarioId: usuario.id,
           entradaId: params.entradaId,
-          operadorId: params.operadorId,
+          operadorId: params.operador.id,
+          corteCajaId,
         },
       });
 
@@ -157,7 +194,7 @@ export class TransaccionesService {
     monto: number;
     fotoCarnetUrl: string;
     eventoId: string;
-    operadorId: number;
+    operador: { id: number; rol: string };
     motivoDevolucion?: MotivoDevolucion;
     nota?: string;
   }) {
@@ -167,6 +204,13 @@ export class TransaccionesService {
         where: { id: params.usuarioId },
       });
       if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+      const corteCajaId = await this.cajaObligatoria(
+        tx,
+        params.operador,
+        params.eventoId,
+        'registrar devoluciones',
+      );
 
       // §T&C — el saldo de un evento se puede retirar hasta expiraEn (fijado por
       // el cron: fechaFin + Evento.diasParaRetiro). Pasado ese plazo, no.
@@ -206,7 +250,8 @@ export class TransaccionesService {
           nota: params.nota,
           usuarioId: params.usuarioId,
           entradaId: params.entradaId,
-          operadorId: params.operadorId,
+          operadorId: params.operador.id,
+          corteCajaId,
         },
       });
     });

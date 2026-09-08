@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
@@ -83,6 +83,14 @@ export default function Devolucion() {
   const [retiros, setRetiros] = useState([]);
   // Billeteras de ESTE evento (por usuarioId) — para el retiro de saldo de negocios.
   const [saldosEvento, setSaldosEvento] = useState({});
+
+  // §5.2 — no se pueden registrar devoluciones sin una caja de arqueo abierta.
+  const cargarCaja = useCallback(
+    () => (eventoDetalle ? api.cortesCaja.actual({ eventoId: eventoDetalle.id }) : Promise.resolve(null)),
+    [eventoDetalle],
+  );
+  const { data: cajaAbierta, recargar: recargarCaja } = useApi(cargarCaja, { inicial: null, activo: !!eventoDetalle });
+  useEffect(() => { if (pestana === 'escanear') recargarCaja(); }, [pestana, recargarCaja]);
 
   const abrirEvento = (ev) => {
     setEventoDetalle(ev);
@@ -280,10 +288,25 @@ export default function Devolucion() {
       {/* --- PESTAÑA: ESCANEAR --- */}
       {pestana === 'escanear' && (
         <div className="pi-dev-escanear-panel">
+          {!cajaAbierta && (
+            <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginBottom: '4px' }}>
+              <FaExclamationTriangle /> No tenés una caja abierta para este evento.
+              {' '}
+              <button type="button" className="pi-dev-link-caja" onClick={() => navigate('/devolucion/caja')}>
+                Abrir arqueo de caja
+              </button>
+              {' '}antes de registrar devoluciones.
+            </p>
+          )}
           <FaQrcode size={70} color="var(--cian-digital)" />
           <h3>Escanea el código QR del participante</h3>
           <p>Apunta la cámara a la manilla del participante para cargar sus datos y procesar el retiro.</p>
-          <button type="button" className="pi-dev-btn-escanear" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
+          <button
+            type="button"
+            className="pi-dev-btn-escanear"
+            onClick={iniciarEscaneo}
+            disabled={escaneando || buscando || !cajaAbierta}
+          >
             <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
           </button>
           {errorEscaneo && (
@@ -296,7 +319,7 @@ export default function Devolucion() {
             Los Usuario Negocio todavía no tienen un código QR propio para escanear — mientras
             se implementa eso, elegí uno al azar de la lista para probar ese flujo.
           </p>
-          <button type="button" className="pi-dev-btn-escanear" onClick={handleSimularSeleccionNegocio} disabled={negocios.length === 0}>
+          <button type="button" className="pi-dev-btn-escanear" onClick={handleSimularSeleccionNegocio} disabled={negocios.length === 0 || !cajaAbierta}>
             <FaBuilding /> Simular selección de Negocio
           </button>
         </div>

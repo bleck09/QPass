@@ -566,3 +566,15 @@
 .pi-rec-btn-reportar-fila:hover {
   background-color: var(--ambar-aviso-suave);
 }
+
+/* Link "abrir arqueo de caja" dentro del aviso de "sin caja abierta" (§5.2) */
+.pi-rec-link-caja {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}

@@ -9,7 +9,7 @@ import {
   FaTicketAlt, FaWallet, FaQrcode, FaUpload, FaPlus, FaTrash, FaUserPlus,
   FaCheckCircle, FaHourglassHalf, FaEnvelope, FaHistory,
   FaStore, FaCoins, FaExclamationTriangle, FaUserTag, FaIdCard,
-  FaSearch, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt
+  FaSearch, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt, FaChevronDown
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
@@ -33,6 +33,49 @@ const DATOS_PAGO_NEGOCIO = {
   nombre: 'QPass Eventos',
   qrUrl: qrDe('QPASS-PAGO-NEGOCIO'),
 };
+
+// Estado del plazo de retiro de una billetera de evento (§T&C).
+function plazoRetiro(expiraEn) {
+  if (!expiraEn) return { tono: 'neutro', texto: 'El plazo de retiro se fija cuando termina el evento' };
+  const fin = new Date(expiraEn);
+  const dias = Math.ceil((fin - new Date()) / 86400000);
+  if (dias < 0) return { tono: 'vencido', texto: `Plazo de retiro vencido (${fin.toLocaleDateString('es-BO')})` };
+  if (dias === 0) return { tono: 'porVencer', texto: 'Hoy es el último día para retirar tu saldo' };
+  return {
+    tono: dias <= 7 ? 'porVencer' : 'ok',
+    texto: `Te quedan ${dias} día${dias === 1 ? '' : 's'} para retirar el saldo (hasta el ${fin.toLocaleDateString('es-BO')})`,
+  };
+}
+
+// Tarjeta expandible: saldo de un evento + desglose recargado/gastado/devuelto.
+function BilleteraAcordeon({ b }) {
+  const [abierto, setAbierto] = useState(false);
+  const plazo = plazoRetiro(b.expiraEn);
+  return (
+    <div className={`pi-usr-bill ${abierto ? 'abierto' : ''}`}>
+      <button type="button" className="pi-usr-bill-cab" onClick={() => setAbierto(o => !o)} aria-expanded={abierto}>
+        <span className="pi-usr-bill-titulo">
+          <strong>{b.eventoNombre}</strong>
+          <span className="pi-usr-bill-fecha">{new Date(b.fecha).toLocaleDateString('es-BO')}</span>
+        </span>
+        <span className={`pi-usr-bill-plazo tono-${plazo.tono}`}>{plazo.tono === 'vencido' ? 'Vencido' : plazo.tono === 'porVencer' ? '¡Retirá pronto!' : ''}</span>
+        <span className="pi-usr-bill-saldo">{Number(b.saldo)} pts</span>
+        <FaChevronDown className="pi-usr-bill-flecha" aria-hidden="true" />
+      </button>
+      {abierto && (
+        <div className="pi-usr-bill-cuerpo">
+          <div className="pi-usr-bill-grid">
+            <div><span>{Number(b.recargado)} pts</span><small>Recargado</small></div>
+            <div><span>{Number(b.gastado)} pts</span><small>Gastado en puestos</small></div>
+            <div><span>{Number(b.devuelto)} pts</span><small>Devuelto</small></div>
+            <div className="destacado"><span>{Number(b.saldo)} pts</span><small>Saldo disponible</small></div>
+          </div>
+          <p className={`pi-usr-bill-plazo-detalle tono-${plazo.tono}`}>{plazo.texto}</p>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function UsuarioNormal() {
   useTituloPagina('Mi panel');
@@ -803,35 +846,21 @@ export default function UsuarioNormal() {
             <h3><FaWallet color="var(--indigo-profundo)" /> Saldo por evento</h3>
             <p className="texto-ayuda">
               El saldo que recargás en un evento solo se puede usar en ese evento.
+              Tocá un evento para ver el detalle.
             </p>
-            <Tabla
-              columnas={['Evento', 'Fecha', 'Retirar antes de', { texto: 'Saldo disponible', align: 'right' }]}
-              datos={billeteras}
-              vacio="Todavía no recargaste saldo en ningún evento."
-              renderFila={b => {
-                const vencido = b.expiraEn && new Date(b.expiraEn) < new Date();
-                return (
-                  <tr key={b.eventoId}>
-                    <td>{b.eventoNombre}</td>
-                    <td style={{ color: 'var(--texto-secundario)', fontSize: '13px' }}>
-                      {new Date(b.fecha).toLocaleDateString('es-BO')}
-                    </td>
-                    <td style={{ fontSize: '13px', color: vencido ? 'var(--rojo-error-texto)' : 'var(--texto-secundario)' }}>
-                      {b.expiraEn
-                        ? (vencido ? 'Plazo vencido' : new Date(b.expiraEn).toLocaleDateString('es-BO'))
-                        : '—'}
-                    </td>
-                    <td style={{ textAlign: 'right', fontWeight: 700 }}>{Number(b.saldo)} pts</td>
-                  </tr>
-                );
-              }}
-            />
+            {billeteras.length === 0 ? (
+              <p className="texto-ayuda">Todavía no recargaste saldo en ningún evento.</p>
+            ) : (
+              <div className="pi-usr-bill-lista">
+                {billeteras.map(b => <BilleteraAcordeon key={b.eventoId} b={b} />)}
+              </div>
+            )}
           </div>
 
           <div className="pi-usr-card mt-20">
             <h3><FaHistory color="var(--indigo-profundo)" /> Mis Transacciones (Compras y Recargas)</h3>
             <Tabla
-              columnas={['Movimiento', 'Lugar / Detalle', 'Monto', 'Fecha / Hora']}
+              columnas={['Movimiento', 'Evento', 'Lugar / Detalle', 'Monto', 'Fecha / Hora']}
               datos={historial}
               vacio="Aún no tienes movimientos registrados."
               renderFila={item => (
@@ -842,8 +871,10 @@ export default function UsuarioNormal() {
                       {item.tipo === 'consumo' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
                       {item.tipo === 'devolucion' && <><FaTicketAlt color="var(--coral-compra)" /> Devolución</>}
                       {item.tipo === 'ajuste' && <><FaCoins color="var(--verde-recarga-texto)" /> Ajuste</>}
+                      {item.tipo === 'reverso_consumo' && <><FaCoins color="var(--verde-recarga-texto)" /> Reintegro por venta anulada</>}
                     </span>
                   </td>
+                  <td style={{ fontSize: '13px' }}>{item.evento?.nombre || '—'}</td>
                   <td>
                     {item.tipo === 'consumo' && item.venta ? (
                       <span className="pi-usr-detalle-consumo">
@@ -855,9 +886,14 @@ export default function UsuarioNormal() {
                       item.nota || '—'
                     )}
                   </td>
-                  <td className={item.tipo === 'recarga' || item.tipo === 'ajuste' ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
-                    {item.tipo === 'recarga' || item.tipo === 'ajuste' ? '+' : '-'}{Number(item.monto)} pts
-                  </td>
+                  {(() => {
+                    const positivo = ['recarga', 'ajuste', 'reverso_consumo'].includes(item.tipo);
+                    return (
+                      <td className={positivo ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
+                        {positivo ? '+' : '-'}{Number(item.monto)} pts
+                      </td>
+                    );
+                  })()}
                   <td style={{color: 'var(--texto-secundario)', fontSize: '13px'}}>{new Date(item.createdAt).toLocaleString('es-BO')}</td>
                 </tr>
               )}

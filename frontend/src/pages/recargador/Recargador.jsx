@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import { useApi } from '../../utils/useApi.js';
@@ -49,6 +49,16 @@ export default function Recargador() {
   } = useApi(cargarEventos, { inicial: [] });
 
   const [eventoDetalle, setEventoDetalle] = useState(null);
+
+  // §5.2 — no se puede recargar sin una caja de arqueo abierta para el evento.
+  const cargarCaja = useCallback(
+    () => (eventoDetalle ? api.cortesCaja.actual({ eventoId: eventoDetalle.id }) : Promise.resolve(null)),
+    [eventoDetalle],
+  );
+  const { data: cajaAbierta, recargar: recargarCaja } = useApi(cargarCaja, { inicial: null, activo: !!eventoDetalle });
+  // Al volver de la pestaña "Arqueo de caja" se refresca el estado de la caja.
+  useEffect(() => { if (pestana === 'escanear') recargarCaja(); }, [pestana, recargarCaja]);
+
   const [busquedaEvento, setBusquedaEvento] = useState('');
   const [filtroEvento, setFiltroEvento] = useState('todos');
   const [tarjetaQR, setTarjetaQR] = useState(null);
@@ -289,10 +299,29 @@ export default function Recargador() {
       {/* --- PESTAÑA: ESCANEAR --- */}
       {pestana === 'escanear' && (
         <div className="pi-rec-escanear-panel">
+          {!cajaAbierta && (
+            <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginBottom: '4px' }}>
+              <FaExclamationTriangle /> No tenés una caja abierta para este evento.
+              {' '}
+              <button
+                type="button"
+                className="pi-rec-link-caja"
+                onClick={() => { navigate('/recargador/caja'); }}
+              >
+                Abrir arqueo de caja
+              </button>
+              {' '}antes de recargar.
+            </p>
+          )}
           <FaQrcode size={70} color="var(--cian-digital)" />
           <h3>Escanea el código QR del participante</h3>
           <p>Apunta la cámara al código QR para cargar sus datos y registrar la recarga.</p>
-          <button type="button" className="pi-rec-btn-escanear" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
+          <button
+            type="button"
+            className="pi-rec-btn-escanear"
+            onClick={iniciarEscaneo}
+            disabled={escaneando || buscando || !cajaAbierta}
+          >
             <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
           </button>
           {errorEscaneo && (

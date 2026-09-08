@@ -2,9 +2,10 @@
  * src/modules/corte-caja/corte-caja.service.ts
  *
  * Arqueo de caja de un operador con efectivo (Recargador / Devolucion), §5.2.
- * El "monto de sistema" sale de sumar las transacciones del operador en ese
- * evento dentro de la ventana [abiertaEn, ahora); la diferencia contra lo que
- * el operador declara al cerrar es el descuadre.
+ * El "monto de sistema" sale de sumar las transacciones ESTAMPADAS con este
+ * corteCajaId (TransaccionesService las marca al procesarlas y no deja procesar
+ * sin caja abierta); la diferencia contra lo que el operador declara al cerrar
+ * es el descuadre.
  * ========================================================================= */
 
 import {
@@ -40,20 +41,10 @@ export class CorteCajaService {
       : montoInicial + montoSistema;
   }
 
-  private async sumaSistema(
-    operadorId: number,
-    eventoId: string,
-    rol: Rol,
-    desde: Date,
-  ) {
+  private async sumaSistema(cajaId: string, rol: Rol) {
     const agg = await this.prisma.transaccion.aggregate({
       _sum: { monto: true },
-      where: {
-        operadorId,
-        eventoId,
-        tipo: this.tipoDe(rol),
-        createdAt: { gte: desde },
-      },
+      where: { corteCajaId: cajaId, tipo: this.tipoDe(rol) },
     });
     return Number(agg._sum.monto ?? 0);
   }
@@ -96,12 +87,7 @@ export class CorteCajaService {
       where: { operadorId: actor.id, eventoId, estado: 'abierta' },
     });
     if (!caja) return null;
-    const montoSistemaParcial = await this.sumaSistema(
-      actor.id,
-      eventoId,
-      caja.rol,
-      caja.abiertaEn,
-    );
+    const montoSistemaParcial = await this.sumaSistema(caja.id, caja.rol);
     return {
       ...caja,
       montoSistemaParcial,
@@ -123,12 +109,7 @@ export class CorteCajaService {
       throw new ForbiddenException('Esta caja no es tuya');
     }
 
-    const montoSistema = await this.sumaSistema(
-      caja.operadorId,
-      caja.eventoId,
-      caja.rol,
-      caja.abiertaEn,
-    );
+    const montoSistema = await this.sumaSistema(caja.id, caja.rol);
     const montoEsperado = this.esperado(
       caja.rol,
       Number(caja.montoInicial),

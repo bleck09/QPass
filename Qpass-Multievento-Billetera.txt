@@ -116,8 +116,13 @@ FASE 2 — BILLETERA POR EVENTO   [IMPLEMENTADA — falta `npx prisma migrate de
   [x] usuarios.service: `saldo` fuera de SELECT_PUBLICO.
   [x] Frontend:
       - api.billeterasEvento { mias, porEvento }.
-      - UsuarioNormal "Mi Saldo": card de saldo total + tabla "Saldo por evento"
-        (api.billeterasEvento.mias). Total recargado/gastado se mantienen.
+      - UsuarioNormal "Mi Saldo": cards de totales + "Saldo por evento" como
+        ACORDEÓN — cada evento se expande y muestra recargado / gastado en
+        puestos / devuelto / saldo, más el estado del plazo de retiro
+        ("te quedan X días" / "hoy es el último día" / "plazo vencido").
+        billeteras-evento.service.mias() ahora devuelve recargado/gastado/devuelto
+        por evento (un groupBy sobre Transaccion). La tabla de movimientos ganó
+        columna "Evento".
       - Devolucion: el saldo del negocio para retiro sale de
         api.billeterasEvento.porEvento(eventoDetalle.id) (antes usaba n.saldo
         global). El retiro de un asistente ya viene per-evento del helper del back.
