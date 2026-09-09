@@ -35,7 +35,7 @@ export class DashboardNegocioService {
     const [puestos, ventas, acreditado, billetera] = await Promise.all([
       this.prisma.puesto.findMany({
         where: { negocioId, eventoId },
-        select: { id: true, nombre: true },
+        select: { id: true, base: { select: { nombre: true } } },
       }),
       this.prisma.venta.findMany({
         where: { puesto: { negocioId, eventoId }, ...enRango },
@@ -47,14 +47,14 @@ export class DashboardNegocioService {
           ayudanteId: true,
           anuladaEn: true,
           entrada: { select: { numero: true } },
-          puesto: { select: { nombre: true } },
+          puesto: { select: { base: { select: { nombre: true } } } },
           ayudante: { select: { nombre: true } },
           items: {
             select: {
               nombreProducto: true,
               cantidad: true,
               precioUnitario: true,
-              producto: { select: { categoria: true } },
+              productoBase: { select: { categoria: true } },
             },
           },
         },
@@ -150,7 +150,7 @@ export class DashboardNegocioService {
     for (const p of puestos) {
       porPuestoMap.set(p.id, {
         id: p.id,
-        nombre: p.nombre,
+        nombre: p.base?.nombre ?? 'Puesto',
         ingresos: 0,
         ventas: 0,
       });
@@ -173,7 +173,7 @@ export class DashboardNegocioService {
         porPuestoMap
           .set(v.puestoId, {
             id: v.puestoId,
-            nombre: v.puesto?.nombre ?? 'Puesto',
+            nombre: v.puesto?.base?.nombre ?? 'Puesto',
             ingresos: 0,
             ventas: 0,
           })
@@ -205,7 +205,7 @@ export class DashboardNegocioService {
         prev.ingresos += linea;
         productos.set(it.nombreProducto, prev);
 
-        const cat = it.producto?.categoria || 'Sin categoría';
+        const cat = it.productoBase?.categoria || 'Sin categoría';
         const pc = porCategoria.get(cat) ?? {
           categoria: cat,
           unidades: 0,
@@ -239,7 +239,7 @@ export class DashboardNegocioService {
     const ultimasVentas = ventas.slice(0, 20).map((v) => ({
       id: v.id,
       createdAt: v.createdAt,
-      puesto: v.puesto?.nombre ?? '—',
+      puesto: v.puesto?.base?.nombre ?? '—',
       ayudante: v.ayudante?.nombre ?? '—',
       entradaNumero: v.entrada?.numero ?? null,
       monto: Number(v.montoTotal),

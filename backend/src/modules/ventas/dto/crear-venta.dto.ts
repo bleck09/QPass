@@ -9,6 +9,7 @@ import {
 } from 'class-validator';
 
 export class ItemVentaDto {
+  /** ProductoBase.id — el precio/estado efectivo sale del ProductoEstado del puesto. */
   @IsString()
   productoId: string;
 

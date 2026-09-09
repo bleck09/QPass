@@ -6,37 +6,31 @@ import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
-  FaStore, FaPlus, FaTrash, FaTimes, FaDollarSign,
-  FaImage, FaListUl, FaUsers, FaBoxOpen, FaUpload, FaUserTie, FaHamburger,
-  FaArrowLeft, FaCheckCircle, FaBan, FaPen
+  FaStore, FaPlus, FaDollarSign,
+  FaListUl, FaUsers, FaBoxOpen, FaUserTie, FaHamburger,
+  FaArrowLeft, FaCheckCircle, FaBan, FaTrash, FaExternalLinkAlt,
 } from 'react-icons/fa';
 import './UsuarioNegocio.css';
 import '../supervisor/GestionEntrega.css';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { subirImagenDeInput } from '../../utils/imagenes.js';
-
-const initialStateFormPuesto = { nombre: '', descripcion: '', logo: '' };
-const initialStateFormProducto = { nombre: '', precio: '', imagen: '', stock: '', categoria: '' };
-const CATEGORIAS_PRODUCTO = ['Bebida', 'Comida', 'Postre', 'Snack', 'Otro'];
 
 export default function UsuarioNegocio() {
   useTituloPagina('Mi negocio');
   const sesion = leerSesion();
   const navigate = useNavigate();
+  const [confirmar, DialogoConfirmar] = useConfirmar();
 
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const eventoId = eventoSeleccionado?.id || '';
   const [busquedaEvento, setBusquedaEvento] = useState('');
   const [filtroEvento, setFiltroEvento] = useState('todos');
 
-  // Cargas con estados cargando/error/reintentar (Manual 8.9): eventos asignados
-  // y puestos del evento. setPuestos (alias de setData) conserva las
-  // actualizaciones optimistas del catálogo de productos.
   const cargarEventos = useCallback(
     () => api.eventos.misAsignados(sesion.id, sesion.rol),
     [sesion.id, sesion.rol],
@@ -60,135 +54,78 @@ export default function UsuarioNegocio() {
     recargar: recargarPuestos,
   } = useApi(cargarPuestos, { inicial: [], activo: !!eventoId });
 
+  // Catálogo del negocio: lo que se puede activar en este evento.
+  const cargarBase = useCallback(() => api.puestosBase.listar(), []);
+  const { data: puestosBase } = useApi(cargarBase, { inicial: [] });
+
   const eventosFiltrados = useMemo(
     () => filtrarEventos(eventos, busquedaEvento, filtroEvento),
     [eventos, busquedaEvento, filtroEvento],
   );
 
-  const [showModalPuesto, setShowModalPuesto] = useState(false);
-  const [puestoEditandoId, setPuestoEditandoId] = useState(null); // null = crear
+  const [showActivar, setShowActivar] = useState(false);
   const [showModalCatalogo, setShowModalCatalogo] = useState(false);
-  const [showModalAyudantesPuesto, setShowModalAyudantesPuesto] = useState(false); // New modal for managing ayudantes per puesto
-  const [puestoSeleccionado, setPuestoSeleccionado] = useState(null);
+  const [showModalAyudantesPuesto, setShowModalAyudantesPuesto] = useState(false);
+  const [puestoSeleccionadoId, setPuestoSeleccionadoId] = useState(null);
+  const [err, setErr] = useState('');
 
-  // Estados de los formularios
-  const [formPuesto, setFormPuesto] = useState(initialStateFormPuesto);
-  const [formProducto, setFormProducto] = useState(initialStateFormProducto);
+  const puestoSeleccionado = puestos.find(p => p.id === puestoSeleccionadoId) || null;
+
+  // Puestos base que todavía NO están activados en este evento.
+  const basesDisponibles = useMemo(() => {
+    const activados = new Set(puestos.map(p => p.puestoBaseId));
+    return puestosBase.filter(b => !activados.has(b.id));
+  }, [puestosBase, puestos]);
 
   const volverALista = () => setEventoSeleccionado(null);
 
-  // --- LÓGICA DE PUESTOS ---
-  const handlePuestoChange = (e) => {
-    setFormPuesto({ ...formPuesto, [e.target.name]: e.target.value });
-  };
-
-  const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
+  // --- ACTIVAR UN PUESTO BASE EN EL EVENTO ---
+  const activarPuesto = async (base) => {
+    setErr('');
     try {
-      const url = await subirImagenDeInput(file, 'puestos');
-      setFormPuesto(f => ({ ...f, logo: url }));
-    } catch (err) {
-      window.alert(err.message);
-    }
+      await api.puestos.crear({ eventoId, puestoBaseId: base.id });
+      await recargarPuestos();
+      setShowActivar(false);
+    } catch (e2) { setErr(e2.message); }
   };
 
-  const quitarImagen = () => setFormPuesto({ ...formPuesto, logo: '' });
-
-  const abrirEditarPuesto = (puesto) => {
-    setPuestoEditandoId(puesto.id);
-    setFormPuesto({
-      nombre: puesto.nombre || '',
-      descripcion: puesto.descripcion || '',
-      logo: puesto.logo || '',
+  const desactivarPuesto = async (puesto) => {
+    const ok = await confirmar({
+      titulo: `¿Quitar "${puesto.nombre}" de este evento?`,
+      mensaje: 'Dejará de aparecer en el mapa del evento. Si ya registró ventas, no se borra: solo queda inactivo. El catálogo base no se toca.',
+      textoConfirmar: 'Quitar del evento',
+      peligroso: true,
     });
-    setShowModalPuesto(true);
-  };
-
-  const guardarPuesto = async (e) => {
-    e.preventDefault();
-    const datos = {
-      nombre: formPuesto.nombre,
-      descripcion: formPuesto.descripcion,
-      logo: formPuesto.logo || null,
-    };
-    if (puestoEditandoId) {
-      await api.puestos.actualizar(puestoEditandoId, datos);
-    } else {
-      await api.puestos.crear({ eventoId, ...datos });
-    }
-    recargarPuestos();
-    setFormPuesto(initialStateFormPuesto);
-    setPuestoEditandoId(null);
-    setShowModalPuesto(false);
-  };
-
-  // --- LÓGICA DE CATÁLOGO Y PRODUCTOS ---
-  const abrirCatalogo = (puesto) => {
-    setPuestoSeleccionado(puesto);
-    setShowModalCatalogo(true);
-  };
-
-  // ¡CORRECCIÓN 2! Agregamos la función para abrir el modal de ayudantes
-  const abrirModalAyudantesPuesto = (puesto) => {
-    setPuestoSeleccionado(puesto);
-    setShowModalAyudantesPuesto(true);
-  };
-
-
-  const handleProductoChange = (e) => {
-    setFormProducto({ ...formProducto, [e.target.name]: e.target.value });
-  };
-
-  const handleProductoImageUpload = async (e) => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
+    if (!ok) return;
     try {
-      const url = await subirImagenDeInput(file, 'productos');
-      setFormProducto(f => ({ ...f, imagen: url }));
-    } catch (err) {
-      window.alert(err.message);
-    }
+      await api.puestos.desactivar(puesto.id);
+      await recargarPuestos();
+    } catch (e2) { setErr(e2.message); }
   };
 
-  const quitarImagenProducto = () => setFormProducto({ ...formProducto, imagen: '' });
+  // --- CATÁLOGO POR EVENTO (activo / stock / precio) ---
+  const abrirCatalogo = (puesto) => { setPuestoSeleccionadoId(puesto.id); setShowModalCatalogo(true); };
+  const abrirModalAyudantesPuesto = (puesto) => { setPuestoSeleccionadoId(puesto.id); setShowModalAyudantesPuesto(true); };
 
-  const agregarProducto = async (e) => {
-    e.preventDefault();
-    if (!formProducto.nombre || !formProducto.precio) return;
-
-    const nuevoProducto = await api.productos.crear({
-      puestoId: puestoSeleccionado.id,
-      nombre: formProducto.nombre,
-      precio: parseFloat(formProducto.precio),
-      imagen: formProducto.imagen || null,
-      stock: formProducto.stock === '' ? null : Number(formProducto.stock),
-      categoria: formProducto.categoria || null,
-    });
-
-    const productosActualizados = [...puestoSeleccionado.productos, nuevoProducto];
-    setPuestos(prev => prev.map(p => p.id === puestoSeleccionado.id ? { ...p, productos: productosActualizados } : p));
-    setPuestoSeleccionado({ ...puestoSeleccionado, productos: productosActualizados });
-    setFormProducto(initialStateFormProducto);
-  };
-
-  // Edita en caliente activo/stock/categoría de un producto del catálogo (§5.4).
-  const cambiarProducto = async (idProducto, cambios) => {
-    const actualizado = await api.productos.actualizar(idProducto, cambios);
-    const productosActualizados = puestoSeleccionado.productos.map(prod =>
-      prod.id === idProducto ? { ...prod, ...actualizado } : prod,
-    );
-    setPuestos(prev => prev.map(p => p.id === puestoSeleccionado.id ? { ...p, productos: productosActualizados } : p));
-    setPuestoSeleccionado({ ...puestoSeleccionado, productos: productosActualizados });
-  };
-
-  const eliminarProducto = async (idProducto) => {
-    await api.productos.eliminar(idProducto);
-    const productosActualizados = puestoSeleccionado.productos.filter(prod => prod.id !== idProducto);
-    setPuestos(prev => prev.map(p => p.id === puestoSeleccionado.id ? { ...p, productos: productosActualizados } : p));
-    setPuestoSeleccionado({ ...puestoSeleccionado, productos: productosActualizados });
+  // `cambios` solo lleva campos del DTO: activo? / stock? / precio? (null = sin override).
+  const cambiarEstadoProducto = async (producto, cambios) => {
+    setErr('');
+    try {
+      await api.productos.actualizarEstado({
+        puestoId: puestoSeleccionado.id,
+        productoBaseId: producto.id,
+        ...cambios,
+      });
+      const local = { ...cambios };
+      if ('precio' in cambios) {
+        local.precioSobrescrito = cambios.precio != null;
+        if (cambios.precio == null) local.precio = producto.precioBase;
+      }
+      const productos = puestoSeleccionado.productos.map(pr =>
+        pr.id === producto.id ? { ...pr, ...local } : pr,
+      );
+      setPuestos(prev => prev.map(p => p.id === puestoSeleccionado.id ? { ...p, productos } : p));
+    } catch (e2) { setErr(e2.message); }
   };
 
   if (!eventoSeleccionado) {
@@ -237,18 +174,17 @@ export default function UsuarioNegocio() {
   return (
     <div className="pi-unegocio-container">
 
-      {/* Cabecera y KPI */}
       <div className="pi-unegocio-header-wrapper">
         <div className="pi-unegocio-header">
           <button type="button" className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={volverALista}>
             <FaArrowLeft /> Cambiar de evento
           </button>
           <h1>{eventoSeleccionado.nombre}</h1>
-          <p>Crea puestos, administra sus menús y revisa su personal asignado.</p>
+          <p>Activá los puestos de tu catálogo en este evento y ajustá su menú (precios, stock y disponibilidad) solo para acá.</p>
         </div>
 
         <div className="pi-unegocio-kpi">
-          <span className="micro-etiqueta">Total de Puestos Activos</span>
+          <span className="micro-etiqueta">Puestos en este evento</span>
           <div className="kpi-valor">
             <FaStore className="kpi-icon" />
             <span className="numero-grande">{puestos.length}</span>
@@ -258,10 +194,17 @@ export default function UsuarioNegocio() {
 
       <div className="pi-unegocio-action-bar">
         <h2 className="pi-unegocio-subtitulo"><FaStore aria-hidden="true" /> Mis Puestos</h2>
-        <button type="button" className="btn-primario" onClick={() => { setPuestoEditandoId(null); setFormPuesto(initialStateFormPuesto); setShowModalPuesto(true); }}>
-          <FaPlus /> Crear Nuevo Puesto
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button type="button" className="btn-secundario-sm" onClick={() => navigate('/usuarionegocio/catalogo')}>
+            <FaExternalLinkAlt /> Mi Catálogo
+          </button>
+          <button type="button" className="btn-primario" onClick={() => { setErr(''); setShowActivar(true); }}>
+            <FaPlus /> Activar puesto
+          </button>
+        </div>
       </div>
+
+      {err && !showModalCatalogo && <p className="pi-unegocio-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
 
       {errorPuestos && <EstadoError onReintentar={recargarPuestos} />}
       {!errorPuestos && cargandoPuestos && <EstadoCarga filas={4} />}
@@ -270,7 +213,7 @@ export default function UsuarioNegocio() {
         <Tabla
           columnas={['Detalles del Puesto', 'Catálogo', { texto: 'Ayudantes', align: 'center' }, { texto: 'Acciones', align: 'center' }]}
           datos={puestos}
-          vacio="Aún no has creado ningún puesto. ¡Empieza creando uno!"
+          vacio="Aún no activaste ningún puesto en este evento. Usá “Activar puesto”."
           renderFila={puesto => (
             <tr key={puesto.id}>
               <td>
@@ -303,8 +246,8 @@ export default function UsuarioNegocio() {
                 </div>
               </td>
               <td style={{ textAlign: 'center' }}>
-                <button type="button" className="btn-secundario-sm" onClick={() => abrirEditarPuesto(puesto)}>
-                  <FaPen /> Editar
+                <button type="button" className="btn-eliminar" onClick={() => desactivarPuesto(puesto)} title="Quitar del evento">
+                  <FaTrash />
                 </button>
               </td>
             </tr>
@@ -314,238 +257,182 @@ export default function UsuarioNegocio() {
       )}
 
       {/* =========================================
-          MODAL 1: CREAR / EDITAR PUESTO
+          MODAL 1: ACTIVAR UN PUESTO BASE EN EL EVENTO
       ========================================= */}
-      {showModalPuesto && (
+      {showActivar && (
         <Modal
-          titulo={<><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> {puestoEditandoId ? 'Editar Puesto' : 'Registrar Puesto'}</>}
-          onCerrar={() => { setShowModalPuesto(false); setPuestoEditandoId(null); }}
+          titulo={<><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> Activar un puesto en {eventoSeleccionado.nombre}</>}
+          onCerrar={() => setShowActivar(false)}
         >
-            <div className="modal-body">
-              <form onSubmit={guardarPuesto} className="formulario">
-                <div className="input-group">
-                  <label htmlFor="neg-puesto-nombre">Nombre del puesto</label>
-                  <input id="neg-puesto-nombre" type="text" name="nombre" value={formPuesto.nombre} onChange={handlePuestoChange} placeholder="Ej: Pollos Doña María" required />
-                </div>
-                <div className="input-group">
-                  <label htmlFor="neg-puesto-desc">Breve descripción</label>
-                  <input id="neg-puesto-desc" type="text" name="descripcion" value={formPuesto.descripcion} onChange={handlePuestoChange} placeholder="Ej: Venta de comida rápida y gaseosas" />
-                </div>
-                <div className="input-group">
-                  <label htmlFor="neg-puesto-logo"><FaImage aria-hidden="true" /> Logo o foto del puesto (opcional)</label>
-                  {!formPuesto.logo ? (
-                    <div className="upload-zone">
-                      <FaUpload className="upload-icon" />
-                      <span className="upload-text">Haz clic para subir el logo</span>
-                      <span className="upload-subtext">PNG, JPG hasta 2MB</span>
-                      <input id="neg-puesto-logo" type="file" accept="image/*" onChange={handleImageUpload} className="upload-input-hidden" />
+          <div className="modal-body">
+            {puestosBase.length === 0 ? (
+              <div className="pi-unegocio-vacio-modal">
+                <p>Todavía no tenés puestos en tu catálogo.</p>
+                <button type="button" className="btn-primario" onClick={() => navigate('/usuarionegocio/catalogo')}>
+                  <FaExternalLinkAlt /> Ir a Mi Catálogo
+                </button>
+              </div>
+            ) : basesDisponibles.length === 0 ? (
+              <p className="tabla-vacia">Ya activaste todos tus puestos del catálogo en este evento.</p>
+            ) : (
+              <div className="pi-unegocio-base-lista">
+                {basesDisponibles.map(base => (
+                  <div key={base.id} className="pi-unegocio-base-item">
+                    <div className="item-info">
+                      {base.logo ? (
+                        <img width="44" height="44" src={base.logo} alt="Logo" className="item-img" />
+                      ) : (
+                        <div className="item-no-img"><FaStore /></div>
+                      )}
+                      <div>
+                        <div className="fila-nombre">{base.nombre}</div>
+                        <div className="celda-secundaria">{base.productos.length} productos · {base.descripcion || 'sin descripción'}</div>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="preview-zone">
-                      <img width="200" height="200" src={formPuesto.logo} alt="Vista previa" className="img-preview" />
-                      <button type="button" className="btn-quitar-imagen" onClick={quitarImagen}><FaTimes /> Quitar imagen</button>
-                    </div>
-                  )}
-                </div>
-                <div className="modal-actions">
-                  <button type="button" className="btn-cancelar" onClick={() => { setShowModalPuesto(false); setPuestoEditandoId(null); }}>Cancelar</button>
-                  <button type="submit" className="btn-primario">{puestoEditandoId ? 'Guardar cambios' : 'Guardar Puesto'}</button>
-                </div>
-              </form>
+                    <button type="button" className="btn-primario" onClick={() => activarPuesto(base)}>
+                      <FaPlus /> Activar
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            {err && <p className="pi-unegocio-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
+            <div className="modal-actions">
+              <button type="button" className="btn-cancelar" onClick={() => setShowActivar(false)}>Cerrar</button>
             </div>
+          </div>
         </Modal>
       )}
 
       {/* =========================================
-          MODAL 2: GESTIONAR CATÁLOGO (PRODUCTOS CON FOTO)
+          MODAL 2: CATÁLOGO POR EVENTO (activo / stock / precio)
       ========================================= */}
       {showModalCatalogo && puestoSeleccionado && (
         <Modal
-          titulo={<><FaBoxOpen color="var(--indigo-profundo)" aria-hidden="true" /> Catálogo: {puestoSeleccionado.nombre}</>}
+          titulo={<><FaBoxOpen color="var(--indigo-profundo)" aria-hidden="true" /> Menú de {puestoSeleccionado.nombre} · {eventoSeleccionado.nombre}</>}
           onCerrar={() => setShowModalCatalogo(false)}
           tamano="lg"
           className="modal-grande"
         >
-            <div className="modal-body bg-gris">
-              
-              <div className="form-añadir-producto">
-                <h3 className="titulo-seccion-pequeño">Añadir Nuevo Producto</h3>
-                <form onSubmit={agregarProducto}>
-                  <div className="producto-grid">
-                    
-                    <div className="input-group">
-                      <label>Nombre del Producto</label>
-                      <input 
-                        type="text" name="nombre" 
-                        value={formProducto.nombre} onChange={handleProductoChange} 
-                        placeholder="Ej: Hamburguesa Simple" required 
-                      />
-                    </div>
-
-                    <div className="input-group">
-                      <label>Precio (Bs.)</label>
-                      <div className="input-monto-wrapper">
+          <div className="modal-body bg-gris">
+            <p className="pi-unegocio-nota">
+              El catálogo sale de <strong>Mi Catálogo</strong>. Acá solo ajustás precio, stock y disponibilidad
+              para este evento. Precio vacío = usa el precio base.
+            </p>
+            {err && <p className="pi-unegocio-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
+            <div className="pi-unegocio-card no-margin">
+              <Tabla
+                columnas={['Producto', 'Categoría', 'Precio (este evento)', { texto: 'Stock', align: 'center' }, { texto: 'Estado', align: 'center' }]}
+                datos={puestoSeleccionado.productos}
+                porPagina={8}
+                vacio="Este puesto base no tiene productos. Agregalos en Mi Catálogo."
+                renderFila={producto => (
+                  <tr key={producto.id} className={producto.activo === false ? 'pi-unegocio-prod-inactivo' : ''}>
+                    <td>
+                      <div className="item-info">
+                        {producto.imagen ? (
+                          <img width="48" height="48" src={producto.imagen} alt="Prod" className="item-img img-cuadrada" />
+                        ) : (
+                          <div className="item-no-img img-cuadrada"><FaHamburger /></div>
+                        )}
+                        <span className="fila-nombre">{producto.nombre}</span>
+                      </div>
+                    </td>
+                    <td>{producto.categoria || '—'}</td>
+                    <td>
+                      <div className="input-monto-wrapper" style={{ maxWidth: 150 }}>
                         <FaDollarSign className="icon-monto" />
                         <input
-                          type="number" step="0.50" min="0" name="precio"
-                          value={formProducto.precio} onChange={handleProductoChange}
-                          placeholder="0.00" className="input-monto" required
+                          type="number" min="0" step="0.50"
+                          className="input-monto"
+                          placeholder={`base: ${Number(producto.precioBase).toFixed(2)}`}
+                          defaultValue={producto.precioSobrescrito ? Number(producto.precio) : ''}
+                          onBlur={(e) => {
+                            const raw = e.target.value.trim();
+                            const nuevo = raw === '' ? null : Number(raw);
+                            if (raw !== '' && Number.isNaN(nuevo)) return;
+                            const actual = producto.precioSobrescrito ? Number(producto.precio) : null;
+                            if (nuevo !== actual) cambiarEstadoProducto(producto, { precio: nuevo });
+                          }}
                         />
                       </div>
-                    </div>
-
-                    <div className="input-group">
-                      <label>Categoría (opcional)</label>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
                       <input
-                        type="text" name="categoria" list="cat-productos"
-                        value={formProducto.categoria} onChange={handleProductoChange}
-                        placeholder="Bebida, Comida…"
+                        type="number" min="0" step="1"
+                        className="pi-unegocio-stock-input"
+                        placeholder="sin control"
+                        defaultValue={producto.stock ?? ''}
+                        onBlur={(e) => {
+                          const raw = e.target.value.trim();
+                          const n = raw === '' ? null : Number(raw);
+                          if (raw !== '' && Number.isNaN(n)) return;
+                          if (n !== (producto.stock ?? null)) cambiarEstadoProducto(producto, { stock: n });
+                        }}
                       />
-                      <datalist id="cat-productos">
-                        {CATEGORIAS_PRODUCTO.map(c => <option key={c} value={c} />)}
-                      </datalist>
-                    </div>
-
-                    <div className="input-group">
-                      <label>Stock inicial (opcional)</label>
-                      <input
-                        type="number" min="0" step="1" name="stock"
-                        value={formProducto.stock} onChange={handleProductoChange}
-                        placeholder="sin control de inventario"
-                      />
-                    </div>
-
-                    <div className="input-group">
-                      <label>Foto (Opcional)</label>
-                      {!formProducto.imagen ? (
-                        <label className="btn-upload-small">
-                          <FaUpload /> Subir Foto
-                          <input type="file" accept="image/*" onChange={handleProductoImageUpload} hidden />
-                        </label>
-                      ) : (
-                        <div className="preview-small">
-                          <img width="400" height="225" src={formProducto.imagen} alt="Preview" />
-                          <button type="button" onClick={quitarImagenProducto} title="Quitar foto">
-                            <FaTimes />
-                          </button>
-                        </div>
-                      )}
-                    </div>
-
-                  </div>
-                  
-                  <div className="producto-actions">
-                    <button type="submit" className="btn-primario">
-                      <FaPlus /> Añadir al Menú
-                    </button>
-                  </div>
-                </form>
-              </div>
-
-              <div className="pi-unegocio-card no-margin">
-                <Tabla
-                  columnas={['Producto', 'Categoría', 'Precio', { texto: 'Stock', align: 'center' }, { texto: 'Estado', align: 'center' }, { texto: 'Acción', align: 'center' }]}
-                  datos={puestoSeleccionado.productos}
-                  porPagina={8}
-                  vacio="No hay productos en el menú de este puesto."
-                  renderFila={producto => (
-                    <tr key={producto.id} className={producto.activo === false ? 'pi-unegocio-prod-inactivo' : ''}>
-                      <td>
-                        <div className="item-info">
-                          {producto.imagen ? (
-                            <img width="48" height="48" src={producto.imagen} alt="Prod" className="item-img img-cuadrada" />
-                          ) : (
-                            <div className="item-no-img img-cuadrada"><FaHamburger /></div>
-                          )}
-                          <span className="fila-nombre">{producto.nombre}</span>
-                        </div>
-                      </td>
-                      <td>{producto.categoria || '—'}</td>
-                      <td>
-                        <span className="badge-precio">Bs. {Number(producto.precio).toFixed(2)}</span>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        {producto.stock == null ? (
-                          <span className="pi-unegocio-nota">sin control</span>
-                        ) : (
-                          <input
-                            type="number" min="0" step="1"
-                            className="pi-unegocio-stock-input"
-                            defaultValue={producto.stock}
-                            onBlur={(e) => {
-                              const n = Number(e.target.value);
-                              if (!Number.isNaN(n) && n !== producto.stock) cambiarProducto(producto.id, { stock: n });
-                            }}
-                          />
-                        )}
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button
-                          type="button"
-                          className={producto.activo === false ? 'pi-unegocio-toggle inactivo' : 'pi-unegocio-toggle activo'}
-                          onClick={() => cambiarProducto(producto.id, { activo: producto.activo === false })}
-                          title={producto.activo === false ? 'Marcar como disponible' : 'Marcar como agotado'}
-                        >
-                          {producto.activo === false ? <><FaBan /> Agotado</> : <><FaCheckCircle /> Activo</>}
-                        </button>
-                      </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button type="button" className="btn-eliminar" onClick={() => eliminarProducto(producto.id)} title="Eliminar producto">
-                          <FaTrash />
-                        </button>
-                      </td>
-                    </tr>
-                  )}
-                />
-              </div>
-
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <button
+                        type="button"
+                        className={producto.activo === false ? 'pi-unegocio-toggle inactivo' : 'pi-unegocio-toggle activo'}
+                        onClick={() => cambiarEstadoProducto(producto, { activo: producto.activo === false })}
+                        title={producto.activo === false ? 'Marcar como disponible' : 'Marcar como agotado'}
+                      >
+                        {producto.activo === false ? <><FaBan /> Agotado</> : <><FaCheckCircle /> Activo</>}
+                      </button>
+                    </td>
+                  </tr>
+                )}
+              />
             </div>
+          </div>
         </Modal>
       )}
 
       {/* =========================================
-          MODAL 3: VER EQUIPO (AYUDANTES ASIGNADOS) ¡NUEVO!
+          MODAL 3: VER EQUIPO (AYUDANTES ASIGNADOS)
       ========================================= */}
       {showModalAyudantesPuesto && puestoSeleccionado && (
         <Modal
           titulo={<><FaUsers color="var(--indigo-profundo)" aria-hidden="true" /> Equipo: {puestoSeleccionado.nombre}</>}
           onCerrar={() => setShowModalAyudantesPuesto(false)}
         >
-            <div className="modal-body bg-gris">
-              <div className="pi-unegocio-card no-margin">
-                <Tabla
-                  columnas={['Nombre del Ayudante', 'Correo']}
-                  datos={puestoSeleccionado.ayudantes}
-                  porPagina={8}
-                  vacio="Aún no hay ayudantes asignados a este puesto."
-                  renderFila={asignacion => (
-                    <tr key={asignacion.id}>
-                      <td>
-                        <div className="item-info">
-                          {asignacion.ayudante.foto ? (
-                            <img width="48" height="48" src={asignacion.ayudante.foto} alt="Ayudante" className="item-img" style={{borderRadius: '50%', width: '40px', height: '40px'}} />
-                          ) : (
-                            <div className="item-no-img" style={{borderRadius: '50%', width: '40px', height: '40px'}}><FaUserTie /></div>
-                          )}
-                          <div>
-                            <div className="fila-nombre">{asignacion.ayudante.nombre}</div>
-                          </div>
+          <div className="modal-body bg-gris">
+            <div className="pi-unegocio-card no-margin">
+              <Tabla
+                columnas={['Nombre del Ayudante', 'Correo']}
+                datos={puestoSeleccionado.ayudantes}
+                porPagina={8}
+                vacio="Aún no hay ayudantes asignados a este puesto."
+                renderFila={asignacion => (
+                  <tr key={asignacion.id}>
+                    <td>
+                      <div className="item-info">
+                        {asignacion.ayudante.foto ? (
+                          <img width="48" height="48" src={asignacion.ayudante.foto} alt="Ayudante" className="item-img" style={{ borderRadius: '50%', width: '40px', height: '40px' }} />
+                        ) : (
+                          <div className="item-no-img" style={{ borderRadius: '50%', width: '40px', height: '40px' }}><FaUserTie /></div>
+                        )}
+                        <div>
+                          <div className="fila-nombre">{asignacion.ayudante.nombre}</div>
                         </div>
-                      </td>
-                      <td><span className="celda-secundaria">{asignacion.ayudante.email}</span></td>
-                    </tr>
-                  )}
-                />
-              </div>
-              <div className="modal-actions" style={{ marginTop: '1rem' }}>
-                <button type="button" className="btn-primario" onClick={() => navigate('/usuarionegocio/ayudantes')}>
-                  Ir a Mis Ayudantes
-                </button>
-              </div>
+                      </div>
+                    </td>
+                    <td><span className="celda-secundaria">{asignacion.ayudante.email}</span></td>
+                  </tr>
+                )}
+              />
             </div>
+            <div className="modal-actions" style={{ marginTop: '1rem' }}>
+              <button type="button" className="btn-primario" onClick={() => navigate('/usuarionegocio/ayudantes')}>
+                Ir a Mis Ayudantes
+              </button>
+            </div>
+          </div>
         </Modal>
       )}
 
+      {DialogoConfirmar}
     </div>
   );
 }

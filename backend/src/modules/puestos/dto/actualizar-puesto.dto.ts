@@ -1,27 +1,12 @@
 import { Type } from 'class-transformer';
-import { IsBoolean, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsNumber, IsOptional } from 'class-validator';
 
 /**
- * Datos del puesto (nombre/logo) o su posición en el mapa
- * (x/y/ancho/alto/estadoActivo — los define el Admin).
+ * Posición del puesto en el mapa del recinto (x/y/ancho/alto — los define el
+ * Admin) y si se muestra activo. El nombre/logo/catálogo se editan en el
+ * PuestoBase, no acá.
  */
 export class ActualizarPuestoDto {
-  @IsOptional()
-  @IsString()
-  nombre?: string;
-
-  @IsOptional()
-  @IsString()
-  descripcion?: string;
-
-  @IsOptional()
-  @IsString()
-  logo?: string;
-
-  @IsOptional()
-  @IsString()
-  categoria?: string;
-
   @IsOptional()
   @Type(() => Number)
   @IsNumber()

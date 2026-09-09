@@ -427,12 +427,12 @@ export default function App() {
             </div>
             <div className="pi-landing-modal-body">
               {puestoModal.descripcion && <p>{puestoModal.descripcion}</p>}
-              {(puestoModal.productos || []).length === 0 ? (
+              {(puestoModal.productos || []).filter(p => p.activo !== false).length === 0 ? (
                 <p>Este puesto todavía no tiene productos publicados.</p>
               ) : (
                 <ul className="pricing-features">
-                  {puestoModal.productos.map(p => (
-                    <li key={p.id}><FaCheck className="check-icon" aria-hidden="true" /> {p.nombre} — {p.precio} Bs</li>
+                  {puestoModal.productos.filter(p => p.activo !== false).map(p => (
+                    <li key={p.id}><FaCheck className="check-icon" aria-hidden="true" /> {p.nombre} — {Number(p.precio)} Bs</li>
                   ))}
                 </ul>
               )}

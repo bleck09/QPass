@@ -48,7 +48,10 @@ export default function Ayudante() {
 
   const seleccionarPuesto = (p) => {
     setPuesto(p);
-    api.productos.listar(p.id).then(setProductos);
+    // Solo los productos habilitados para vender en ESTE evento (activo + stock).
+    api.productos.listar(p.id).then(lista =>
+      setProductos(lista.filter(x => x.activo !== false && x.stock !== 0)),
+    );
     api.ventas.listar({ puestoId: p.id }).then(setVentas);
   };
 

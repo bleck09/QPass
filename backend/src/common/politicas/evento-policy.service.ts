@@ -47,14 +47,6 @@ export class EventoPolicy {
     return this.porEvento(puesto?.eventoId);
   }
 
-  async porProducto(productoId: string): Promise<void> {
-    const producto = await this.prisma.producto.findUnique({
-      where: { id: productoId },
-      select: { puesto: { select: { eventoId: true } } },
-    });
-    return this.porEvento(producto?.puesto?.eventoId);
-  }
-
   async porCategoriaTicket(categoriaTicketId: string): Promise<void> {
     const categoria = await this.prisma.categoriaTicket.findUnique({
       where: { id: categoriaTicketId },

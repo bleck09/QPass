@@ -237,4 +237,77 @@ EXTRA — GESTIÓN DEL PERSONAL DEL NEGOCIO (ayudantes + puestos)   [IMPLEMENTAD
         el form. Se quitó la columna "Turno" del modal de equipo por puesto
         (PuestoAyudante.turno queda en la BD con su default, no se usa).
 
+--------------------------------------------------------------------------------
+EXTRA — CATÁLOGO BASE DEL NEGOCIO (puestos reutilizables entre eventos)  [IMPLEMENTADO]
+--------------------------------------------------------------------------------
+  Antes: Puesto y Producto eran POR EVENTO. Un negocio que vende lo mismo en
+  cada evento recreaba el puesto y todo su catálogo cada vez (datos duplicados).
+  Ahora: el negocio define su catálogo UNA vez (PuestoBase + ProductoBase) y en
+  cada evento "activa" los puestos que va a usar. Lo único por evento es la
+  posición en el mapa y el estado local de cada producto.
+
+  Decisiones: precio en el base, sobrescribible por evento (guarda solo el
+  override); un puesto de evento SIEMPRE sale de un base; migración DESTRUCTIVA
+  (dev) — se descartaron Puesto/Producto/Venta/VentaItem previos.
+
+  Migración 20260909120000_catalogo_base (--create-only, DESTRUCTIVA):
+  [x] nuevos: PuestoBase { id, negocioId, nombre, descripcion?, logo?,
+      categoria?, archivado } · ProductoBase { id, puestoBaseId, nombre,
+      precio, imagen?, categoria?, archivado } · ProductoEstado { id, puestoId,
+      productoBaseId, activo, stock?, precio? (null=usa base),
+      @@unique([puestoId, productoBaseId]) }.
+  [x] Puesto: pierde nombre/descripcion/logo/categoria (salen del base); gana
+      puestoBaseId NOT NULL + @@unique([eventoId, puestoBaseId]). Venta.puesto
+      pasa a onDelete: Restrict (no cascadea ventas al quitar un puesto).
+  [x] VentaItem.productoId -> productoBaseId (FK a productos_base). Sigue con
+      nombreProducto + precioUnitario snapshot (historial intacto).
+  [x] DROP TABLE productos. El SQL primero NULea transacciones.ventaId y borra
+      venta_items/ventas/puesto_ayudantes/productos/puestos.
+
+  Backend:
+  [x] nuevo módulo src/modules/puestos-base/ (@Roles UsuarioNegocio, todo
+      scopeado a actor.id): GET/POST/PATCH /puestos-base, POST
+      /puestos-base/:id/archivar, POST /puestos-base/:id/productos, PATCH
+      /puestos-base/productos/:id, DELETE /puestos-base/productos/:id (si el
+      producto ya se vendió -> archivado; si no -> delete).
+  [x] puestos.service: crear({ eventoId, puestoBaseId }) = ACTIVAR un base ->
+      crea Puesto + un ProductoEstado por ProductoBase no archivado; P2002 ->
+      409 "ya activado". actualizar() = solo x/y/ancho/alto/estadoActivo.
+      listar() devuelve el puesto con nombre/logo aplanados del base +
+      productos:[{ id=ProductoBase.id, precio efectivo, precioBase,
+      precioSobrescrito, activo, stock }]. desactivar(): con ventas -> queda
+      inactivo; sin ventas -> delete. DELETE /puestos/:id.
+  [x] productos.service: listar(puestoId) aplana base+estado; PATCH
+      /productos/estado { puestoId, productoBaseId, activo?, stock?, precio? }
+      hace upsert de ProductoEstado (guard de dueño vía el puesto).
+  [x] ventas.service: items[].productoId = ProductoBase.id. precioUnitario =
+      estado?.precio ?? base.precio; 409 si estado.activo=false; stock guardado
+      sobre ProductoEstado; anular restituye sobre ProductoEstado.
+  [x] dashboard-negocio/-cliente + puesto-ayudantes + evento-policy: puesto.base
+      para el nombre; it.productoBase.categoria; se borró EventoPolicy.porProducto.
+
+  Frontend:
+  [x] api.puestosBase { listar, crear, actualizar, archivar, crearProducto,
+      actualizarProducto, eliminarProducto }. api.puestos.crear ahora manda
+      { eventoId, puestoBaseId }; + api.puestos.desactivar;
+      api.productos.actualizarEstado (reemplaza crear/actualizar/eliminar).
+  [x] nueva página src/pages/usuario-negocio/MiCatalogo.jsx (ruta
+      /usuarionegocio/catalogo, menú "Mi Catálogo"): CRUD de puestos base y su
+      catálogo de productos. Se define TODO una vez.
+  [x] UsuarioNegocio.jsx (por evento): "Activar puesto" (elige de los base no
+      activados) en vez del form "Crear Puesto". "Ver Catálogo" ahora togglea
+      activo / stock / precio (override) SOLO para ese evento. Botón "Quitar del
+      evento" (desactivar). Link a "Mi Catálogo".
+  [x] Ayudante.jsx: la grilla filtra activo!==false && stock!==0; productoId
+      enviado = ProductoBase.id. App.jsx landing: filtra activo. MisAyudantes /
+      dashboards leen el nombre del base (aplanado por el backend).
+  [x] Mapa.jsx (diseñador del recinto): el Admin YA NO crea puestos ni edita
+      nombre/logo — solo ubica y escala en el plano los que el negocio activó.
+  [x] nest build OK · vite build OK · eslint 5 problems (baseline, sin nuevos).
+
+  PENDIENTE OPERATIVO: `cd backend && npx prisma migrate dev`
+    (aplica 20260909120000_catalogo_base — DESTRUCTIVA: borra puestos/productos/
+     ventas de prueba). Los saldos de billetera de ventas viejas quedan como
+     estaban (transacciones no se recomputan); recargar de cero para probar.
+
 ================================================================================

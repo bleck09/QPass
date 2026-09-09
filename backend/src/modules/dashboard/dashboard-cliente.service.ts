@@ -128,7 +128,7 @@ export class DashboardClienteService {
       }),
       this.prisma.puesto.findMany({
         where: { eventoId },
-        select: { id: true, nombre: true },
+        select: { id: true, base: { select: { nombre: true } } },
       }),
       // E1 — movimientos de puerta (para el aforo acumulado por hora).
       this.prisma.registroIngreso.findMany({
@@ -182,7 +182,7 @@ export class DashboardClienteService {
       0,
     );
 
-    const nombrePuesto = new Map(puestos.map((p) => [p.id, p.nombre]));
+    const nombrePuesto = new Map(puestos.map((p) => [p.id, p.base.nombre]));
     const topPuestos = ventasPorPuesto
       .map((v) => ({
         nombre: nombrePuesto.get(v.puestoId) ?? 'Puesto',

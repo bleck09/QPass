@@ -24,13 +24,25 @@ export class PuestoAyudantesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async listar(puestoId?: string, ayudanteId?: number) {
-    return this.prisma.puestoAyudante.findMany({
+    const filas = await this.prisma.puestoAyudante.findMany({
       where: { puestoId, ayudanteId },
       include: {
         ayudante: { select: { id: true, nombre: true, email: true, foto: true } },
-        puesto: true,
+        puesto: { include: { base: true } },
       },
     });
+    // El nombre/logo/descripcion del puesto viven en el PuestoBase: se aplanan
+    // acá para que el POS del Ayudante los siga leyendo como puesto.nombre/logo.
+    return filas.map((f) => ({
+      ...f,
+      puesto: {
+        ...f.puesto,
+        nombre: f.puesto.base.nombre,
+        descripcion: f.puesto.base.descripcion,
+        logo: f.puesto.base.logo,
+        categoria: f.puesto.base.categoria,
+      },
+    }));
   }
 
   /**
@@ -55,7 +67,7 @@ export class PuestoAyudantesService {
             puesto: {
               select: {
                 id: true,
-                nombre: true,
+                base: { select: { nombre: true } },
                 eventoId: true,
                 evento: { select: { nombre: true } },
               },
@@ -74,7 +86,7 @@ export class PuestoAyudantesService {
         id: pa.id,
         puestoId: pa.puestoId,
         turno: pa.turno,
-        puestoNombre: pa.puesto.nombre,
+        puestoNombre: pa.puesto.base.nombre,
         eventoId: pa.puesto.eventoId,
         eventoNombre: pa.puesto.evento.nombre,
       })),

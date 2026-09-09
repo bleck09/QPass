@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -16,7 +17,7 @@ import {
   UsuarioJwt,
 } from '../../common/decorators/usuario-actual.decorator';
 import { PuestosService } from './puestos.service';
-import { CrearPuestoDto } from './dto/crear-puesto.dto';
+import { ActivarPuestoDto } from './dto/crear-puesto.dto';
 import { ActualizarPuestoDto } from './dto/actualizar-puesto.dto';
 
 @Controller('puestos')
@@ -42,9 +43,10 @@ export class PuestosController {
     return this.puestosService.mios(negocioId);
   }
 
+  /** Activa un PuestoBase del catálogo del negocio en un evento. */
   @Post()
   @Roles('UsuarioNegocio', 'Admin')
-  crear(@Body() dto: CrearPuestoDto, @UsuarioActual() actor: UsuarioJwt) {
+  crear(@Body() dto: ActivarPuestoDto, @UsuarioActual() actor: UsuarioJwt) {
     return this.puestosService.crear(dto, actor);
   }
 
@@ -57,5 +59,12 @@ export class PuestosController {
     @UsuarioActual() actor: UsuarioJwt,
   ) {
     return this.puestosService.actualizar(id, dto, actor);
+  }
+
+  @Delete(':id')
+  @Roles('UsuarioNegocio', 'Admin')
+  @HttpCode(HttpStatus.OK)
+  desactivar(@Param('id') id: string, @UsuarioActual() actor: UsuarioJwt) {
+    return this.puestosService.desactivar(id, actor);
   }
 }

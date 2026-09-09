@@ -39,7 +39,13 @@ export class VentasService {
       },
       include: {
         items: true,
-        puesto: { select: { id: true, nombre: true, negocioId: true } },
+        puesto: {
+          select: {
+            id: true,
+            negocioId: true,
+            base: { select: { nombre: true } },
+          },
+        },
         entrada: { select: { id: true, nombre: true, documento: true, foto: true } },
         ayudante: { select: { id: true, nombre: true } },
       },
@@ -63,40 +69,50 @@ export class VentasService {
       const puesto = await tx.puesto.findUnique({ where: { id: dto.puestoId } });
       if (!puesto) throw new NotFoundException('Puesto no encontrado');
 
-      const productos = await tx.producto.findMany({
-        where: { id: { in: dto.items.map((i) => i.productoId) } },
-      });
+      // El carrito manda ProductoBase.id; el precio/estado (activo/stock) es el
+      // de ESTE puesto (ProductoEstado). Sin fila de estado => activo, sin stock.
+      const ids = dto.items.map((i) => i.productoId);
+      const [bases, estados] = await Promise.all([
+        tx.productoBase.findMany({ where: { id: { in: ids } } }),
+        tx.productoEstado.findMany({
+          where: { puestoId: dto.puestoId, productoBaseId: { in: ids } },
+        }),
+      ]);
+      const estadoDe = new Map(estados.map((e) => [e.productoBaseId, e]));
       const lineas = dto.items.map((i) => {
-        const producto = productos.find((p) => p.id === i.productoId);
-        if (!producto) {
+        const base = bases.find((p) => p.id === i.productoId);
+        if (!base) {
           throw new BadRequestException(`Producto ${i.productoId} no encontrado`);
         }
+        const estado = estadoDe.get(i.productoId);
         // §5.4 — no se vende un producto marcado como inactivo/agotado.
-        if (!producto.activo) {
-          throw new ConflictException(
-            `"${producto.nombre}" no está disponible`,
-          );
+        if (estado && !estado.activo) {
+          throw new ConflictException(`"${base.nombre}" no está disponible`);
         }
         return {
-          productoId: i.productoId,
-          nombreProducto: producto.nombre,
-          precioUnitario: producto.precio,
+          productoBaseId: i.productoId,
+          nombreProducto: base.nombre,
+          precioUnitario: estado?.precio ?? base.precio, // override del evento
           cantidad: i.cantidad,
         };
       });
 
-      // §5.4 — descuento de inventario (solo productos con stock controlado).
-      // Guardado: si no alcanza, count = 0 y revierte todo el $transaction.
+      // §5.4 — descuento de inventario (solo productos con stock controlado en
+      // este puesto). Guardado: si no alcanza, count = 0 y revierte el $transaction.
       for (const l of lineas) {
-        const producto = productos.find((p) => p.id === l.productoId)!;
-        if (producto.stock == null) continue;
-        const bajado = await tx.producto.updateMany({
-          where: { id: l.productoId, stock: { gte: l.cantidad } },
+        const estado = estadoDe.get(l.productoBaseId);
+        if (!estado || estado.stock == null) continue;
+        const bajado = await tx.productoEstado.updateMany({
+          where: {
+            puestoId: dto.puestoId,
+            productoBaseId: l.productoBaseId,
+            stock: { gte: l.cantidad },
+          },
           data: { stock: { decrement: l.cantidad } },
         });
         if (bajado.count === 0) {
           throw new ConflictException(
-            `Sin stock suficiente de "${producto.nombre}" (quedan ${producto.stock})`,
+            `Sin stock suficiente de "${l.nombreProducto}" (quedan ${estado.stock})`,
           );
         }
       }
@@ -178,10 +194,14 @@ export class VentasService {
       });
 
       // §5.4 — devolver el inventario descontado al vender (solo productos que
-      // hoy siguen con stock controlado).
+      // hoy siguen con stock controlado en este puesto).
       for (const it of venta.items) {
-        await tx.producto.updateMany({
-          where: { id: it.productoId, stock: { not: null } },
+        await tx.productoEstado.updateMany({
+          where: {
+            puestoId: venta.puestoId,
+            productoBaseId: it.productoBaseId,
+            stock: { not: null },
+          },
           data: { stock: { increment: it.cantidad } },
         });
       }

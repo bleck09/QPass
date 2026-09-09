@@ -51,6 +51,7 @@ const menuConfig = {
   ],
   [ROLES.USUARIO_NEGOCIO]: [
     { titulo: 'Dashboard de Negocio', ruta: '/UsuNegoDasboar', icono: <FaChartPie />  },
+    { titulo: 'Mi Catálogo', ruta: '/usuarionegocio/catalogo', icono: <FaBoxOpen /> },
     { titulo: 'Mi Negocio', ruta: '/usuarionegocio', icono: <FaFileInvoiceDollar /> },
     { titulo: 'Mis Ayudantes', ruta: '/usuarionegocio/ayudantes', icono:<FaUsers /> }
   ],

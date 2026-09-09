@@ -132,18 +132,32 @@ export const reportesEntrada = {
   corregir: (id, valorCorregido) => apiPost(`/reportes-entrada/${id}/corregir`, { valorCorregido }),
 };
 
+// Catálogo del negocio: puestos base + productos base, definidos una vez y
+// reutilizados entre eventos.
+export const puestosBase = {
+  listar: () => apiGet('/puestos-base'),
+  crear: (datos) => apiPost('/puestos-base', datos),
+  actualizar: (id, datos) => apiPatch(`/puestos-base/${id}`, datos),
+  archivar: (id) => apiPost(`/puestos-base/${id}/archivar`),
+  crearProducto: (puestoBaseId, datos) => apiPost(`/puestos-base/${puestoBaseId}/productos`, datos),
+  actualizarProducto: (id, datos) => apiPatch(`/puestos-base/productos/${id}`, datos),
+  eliminarProducto: (id) => apiDelete(`/puestos-base/productos/${id}`),
+};
+
 export const puestos = {
   listar: (params) => apiGet(`/puestos${qs(params)}`),
   mios: () => apiGet('/puestos/mios'),
+  // Activa un puesto base del catálogo en un evento: { eventoId, puestoBaseId }.
   crear: (datos) => apiPost('/puestos', datos),
   actualizar: (id, datos) => apiPatch(`/puestos/${id}`, datos),
+  desactivar: (id) => apiDelete(`/puestos/${id}`),
 };
 
 export const productos = {
+  // Catálogo del puesto (base + estado del evento) aplanado.
   listar: (puestoId) => apiGet(`/productos${qs({ puestoId })}`),
-  crear: (datos) => apiPost('/productos', datos),
-  actualizar: (id, datos) => apiPatch(`/productos/${id}`, datos),
-  eliminar: (id) => apiDelete(`/productos/${id}`),
+  // Ajusta activo/stock/precio de un producto para ese evento.
+  actualizarEstado: (datos) => apiPatch('/productos/estado', datos),
 };
 
 export const puestoAyudantes = {
@@ -211,7 +225,7 @@ export const dashboard = {
 
 const api = {
   auth, usuarios, eventos, asignaciones, diasEvento, billeterasEvento, codigosRetiroNegocio, categoriasTicket, compras, entradas,
-  codigosQr, transacciones, incidencias, reportesEntrada, puestos, productos,
+  codigosQr, transacciones, incidencias, reportesEntrada, puestosBase, puestos, productos,
   puestoAyudantes, ventas, landingConfig, solicitudesEvento, cortesCaja,
   auditoria, dashboard,
 };

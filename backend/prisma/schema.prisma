@@ -139,6 +139,7 @@ model Usuario {
   compras               Compra[]              @relation("Comprador")
   entradasPropias       Entrada[]              @relation("TitularCuenta")
   puestos               Puesto[]               @relation("NegocioDueno")
+  puestosBase           PuestoBase[]           @relation("NegocioPuestoBase")
   puestosComoAyudante   PuestoAyudante[]       @relation("AyudanteAsignado")
   ayudantesCreados      PuestoAyudante[]       @relation("NegocioQueCreaAyudante")
   ventasRealizadas      Venta[]                @relation("Vendedor")
@@ -726,18 +727,78 @@ model ReporteEntrada {
   @@map("reportes_entrada")
 }
 
-// Puesto/stand de un Usuario Negocio. Un negocio puede tener varios Puesto en el MISMO evento.
-// Como los eventos no se solapan en fecha, un negocio no tiene puestos activos simultáneos
-// en eventos distintos (regla validada en la app, no en la BD).
-// x/y/ancho/alto los define el ADMIN (posición en el mapa del recinto), no el usuario negocio.
+// Catálogo del negocio definido UNA sola vez, reutilizable entre eventos.
+// El negocio crea sus PuestoBase (nombre + logo + catálogo) y luego los "activa"
+// en cada evento — cada activación crea un Puesto (abajo) que apunta acá.
+model PuestoBase {
+  id          String   @id @default(cuid())
+  negocioId   Int
+  nombre      String
+  descripcion String?
+  logo        String?
+  categoria   String?
+  archivado   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  negocio   Usuario        @relation("NegocioPuestoBase", fields: [negocioId], references: [id])
+  productos ProductoBase[]
+  puestos   Puesto[]
+
+  @@index([negocioId])
+  @@map("puestos_base")
+}
+
+model ProductoBase {
+  id           String   @id @default(cuid())
+  puestoBaseId String
+  nombre       String
+  precio       Decimal  @db.Decimal(10, 2) // precio por defecto; cada evento puede sobrescribirlo
+  imagen       String?
+  categoria    String?  // §5.11 — "bebida" | "comida" | ... para agrupar ventas
+  archivado    Boolean  @default(false)    // no se borra si ya tiene VentaItem
+  createdAt    DateTime @default(now())
+
+  puestoBase PuestoBase       @relation(fields: [puestoBaseId], references: [id], onDelete: Cascade)
+  estados    ProductoEstado[]
+  ventaItems VentaItem[]
+
+  @@index([puestoBaseId])
+  @@map("productos_base")
+}
+
+// Estado local de un ProductoBase dentro de un Puesto (evento). Se crea una fila
+// por producto al activar el puesto en el evento.
+//   activo=false => no se puede vender en ESE evento (sin tocar el base).
+//   stock null   => sin control de inventario; si es número, cada venta lo
+//                   decrementa (guardado) y una anulación lo restituye.
+//   precio null  => usa ProductoBase.precio; si tiene valor, lo sobrescribe.
+model ProductoEstado {
+  id             String   @id @default(cuid())
+  puestoId       String
+  productoBaseId String
+  activo         Boolean  @default(true)
+  stock          Int?
+  precio         Decimal? @db.Decimal(10, 2)
+
+  puesto       Puesto       @relation(fields: [puestoId], references: [id], onDelete: Cascade)
+  productoBase ProductoBase @relation(fields: [productoBaseId], references: [id], onDelete: Cascade)
+
+  @@unique([puestoId, productoBaseId])
+  @@index([puestoId])
+  @@map("productos_estado")
+}
+
+// Activación de un PuestoBase en un evento concreto. Un negocio puede activar
+// varios PuestoBase distintos en el MISMO evento, pero cada base a lo sumo una vez.
+// Como los eventos no se solapan en fecha, un negocio no tiene puestos activos
+// simultáneos en eventos distintos (regla validada en la app, no en la BD).
+// x/y/ancho/alto los define el ADMIN (posición en el mapa del recinto).
+// nombre/logo/catálogo se leen del PuestoBase.
 model Puesto {
   id           String   @id @default(cuid())
   eventoId     String
   negocioId    Int
-  nombre       String
-  descripcion  String?
-  logo         String?
-  categoria    String?
+  puestoBaseId String
   x            Float    @default(0)
   y            Float    @default(0)
   ancho        Float    @default(100)
@@ -745,38 +806,17 @@ model Puesto {
   estadoActivo Boolean  @default(true)
   createdAt    DateTime @default(now())
 
-  evento    Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  negocio   Usuario          @relation("NegocioDueno", fields: [negocioId], references: [id])
-  productos Producto[]
-  ayudantes PuestoAyudante[]
-  ventas    Venta[]
+  evento          Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  negocio         Usuario          @relation("NegocioDueno", fields: [negocioId], references: [id])
+  base            PuestoBase       @relation(fields: [puestoBaseId], references: [id])
+  productosEstado ProductoEstado[]
+  ayudantes       PuestoAyudante[]
+  ventas          Venta[]
 
+  @@unique([eventoId, puestoBaseId])
   @@index([eventoId])
   @@index([negocioId, eventoId])
   @@map("puestos")
-}
-
-model Producto {
-  id        String   @id @default(cuid())
-  puestoId  String
-  nombre    String
-  precio    Decimal  @db.Decimal(10, 2)
-  imagen    String?
-  // §5.4 — estado e inventario. `activo=false` => no se puede vender (habilita
-  // "productos agotados" sin borrar el Producto, que tiene FK desde VentaItem).
-  // `stock` null => sin control de inventario; si es un número, cada venta lo
-  // decrementa (guardado) y una anulación lo restituye.
-  activo    Boolean  @default(true)
-  stock     Int?
-  categoria String?  // §5.11 — "bebida" | "comida" | ... para agrupar ventas
-  createdAt DateTime @default(now())
-
-  puesto     Puesto      @relation(fields: [puestoId], references: [id], onDelete: Cascade)
-  ventaItems VentaItem[]
-
-  @@index([puestoId])
-  @@index([puestoId, activo])
-  @@map("productos")
 }
 
 // Un Ayudante puede trabajar en varios puestos a la vez, pero SIEMPRE del mismo Usuario Negocio
@@ -817,7 +857,7 @@ model Venta {
   anuladaPorId    Int?
   motivoAnulacion String?
 
-  puesto        Puesto        @relation(fields: [puestoId], references: [id], onDelete: Cascade)
+  puesto        Puesto        @relation(fields: [puestoId], references: [id], onDelete: Restrict)
   ayudante      Usuario       @relation("Vendedor", fields: [ayudanteId], references: [id])
   entrada       Entrada       @relation(fields: [entradaId], references: [id])
   anuladaPor    Usuario?      @relation("VentaAnuladaPor", fields: [anuladaPorId], references: [id])
@@ -834,16 +874,16 @@ model Venta {
 model VentaItem {
   id             String  @id @default(cuid())
   ventaId        String
-  productoId     String
+  productoBaseId String
   nombreProducto String  // snapshot: el nombre puede cambiar después
-  precioUnitario Decimal @db.Decimal(10, 2)
+  precioUnitario Decimal @db.Decimal(10, 2) // snapshot: incluye el override del evento
   cantidad       Int
 
-  venta    Venta    @relation(fields: [ventaId], references: [id], onDelete: Cascade)
-  producto Producto @relation(fields: [productoId], references: [id])
+  venta        Venta        @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  productoBase ProductoBase @relation(fields: [productoBaseId], references: [id])
 
   @@index([ventaId])
-  @@index([productoId])
+  @@index([productoBaseId])
   @@map("venta_items")
 }
 

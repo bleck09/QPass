@@ -37,6 +37,7 @@ import { TransaccionesModule } from './modules/transacciones/transacciones.modul
 import { IncidenciasRecargaModule } from './modules/incidencias-recarga/incidencias-recarga.module';
 import { ReportesEntradaModule } from './modules/reportes-entrada/reportes-entrada.module';
 import { PuestosModule } from './modules/puestos/puestos.module';
+import { PuestosBaseModule } from './modules/puestos-base/puestos-base.module';
 import { ProductosModule } from './modules/productos/productos.module';
 import { PuestoAyudantesModule } from './modules/puesto-ayudantes/puesto-ayudantes.module';
 import { VentasModule } from './modules/ventas/ventas.module';
@@ -70,6 +71,7 @@ import { CorteCajaModule } from './modules/corte-caja/corte-caja.module';
     IncidenciasRecargaModule,
     ReportesEntradaModule,
     PuestosModule,
+    PuestosBaseModule,
     ProductosModule,
     PuestoAyudantesModule,
     VentasModule,
