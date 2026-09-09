@@ -38,6 +38,21 @@ export class PuestosBaseService {
     });
   }
 
+  /** Un puesto base con su catálogo (para la página de detalle). */
+  async obtener(negocioId: number, id: string) {
+    await this.miPuestoBase(negocioId, id);
+    return this.prisma.puestoBase.findUniqueOrThrow({
+      where: { id },
+      include: {
+        productos: {
+          where: { archivado: false },
+          orderBy: { createdAt: 'asc' },
+        },
+        _count: { select: { puestos: true } },
+      },
+    });
+  }
+
   async crear(negocioId: number, dto: CrearPuestoBaseDto) {
     return this.prisma.puestoBase.create({
       data: {

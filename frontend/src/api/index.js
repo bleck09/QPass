@@ -136,6 +136,7 @@ export const reportesEntrada = {
 // reutilizados entre eventos.
 export const puestosBase = {
   listar: () => apiGet('/puestos-base'),
+  obtener: (id) => apiGet(`/puestos-base/${id}`),
   crear: (datos) => apiPost('/puestos-base', datos),
   actualizar: (id, datos) => apiPatch(`/puestos-base/${id}`, datos),
   archivar: (id) => apiPost(`/puestos-base/${id}/archivar`),

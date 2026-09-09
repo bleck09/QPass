@@ -30,6 +30,7 @@ import UsuarioNormal from './pages/usuario-normal/UsuarioNormal.jsx'
 import UsuarioNegocio from './pages/usuario-negocio/UsuarioNegocio.jsx'
 import MisAyudantes from './pages/usuario-negocio/MisAyudantes.jsx'
 import MiCatalogo from './pages/usuario-negocio/MiCatalogo.jsx'
+import MiCatalogoPuesto from './pages/usuario-negocio/MiCatalogoPuesto.jsx'
 import Ayudante from './pages/ayudante/Ayudante.jsx'
 import Perfil from './pages/perfil/Perfil.jsx'
 import Registrar from './pages/publico/Registrar.jsx'
@@ -165,6 +166,10 @@ const router = createBrowserRouter([
   {
     path: "/usuarionegocio/catalogo",
     element: <MenuLateral><MiCatalogo /></MenuLateral>,
+  },
+  {
+    path: "/usuarionegocio/catalogo/:id",
+    element: <MenuLateral><MiCatalogoPuesto /></MenuLateral>,
   },
   {
     path: "/UsuNegoDasboar",

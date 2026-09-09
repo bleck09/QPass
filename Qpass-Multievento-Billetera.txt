@@ -291,9 +291,18 @@ EXTRA — CATÁLOGO BASE DEL NEGOCIO (puestos reutilizables entre eventos)  [IMP
       actualizarProducto, eliminarProducto }. api.puestos.crear ahora manda
       { eventoId, puestoBaseId }; + api.puestos.desactivar;
       api.productos.actualizarEstado (reemplaza crear/actualizar/eliminar).
-  [x] nueva página src/pages/usuario-negocio/MiCatalogo.jsx (ruta
-      /usuarionegocio/catalogo, menú "Mi Catálogo"): CRUD de puestos base y su
-      catálogo de productos. Se define TODO una vez.
+  [x] MiCatalogo.jsx (ruta /usuarionegocio/catalogo, menú "Mi Catálogo"): los
+      puestos base se ven como GRILLA DE TARJETAS (foto del puesto o icono
+      FaStore por defecto, chips "N productos"/"N eventos"; editar puesto y
+      archivar son modal/confirm de pocos campos).
+  [x] MiCatalogoPuesto.jsx (ruta /usuarionegocio/catalogo/:id) — PÁGINA aparte
+      (no modal) para el detalle de un puesto: botón "Añadir producto" -> modal;
+      productos como GRILLA DE TARJETAS PEQUEÑAS (foto/icono, categoría, precio,
+      botones Editar/Quitar); editar producto y editar puesto en modales chicos.
+      GET /puestos-base/:id nuevo en el backend. Se define TODO una vez.
+  [x] componente compartido src/components/Migas.jsx (+ .css) — ruta de migas
+      con el mismo look que el panel de Admin. Usado en Mi Catálogo ("Mi
+      Catálogo") y su detalle ("Mi Catálogo › <puesto>").
   [x] UsuarioNegocio.jsx (por evento): "Activar puesto" (elige de los base no
       activados) en vez del form "Crear Puesto". "Ver Catálogo" ahora togglea
       activo / stock / precio (override) SOLO para ese evento. Botón "Quitar del

@@ -15,6 +15,7 @@ import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import './Ayudante.css';
+import '../supervisor/GestionEntrega.css';
 
 export default function Ayudante() {
   useTituloPagina('Vender y cobrar');
@@ -199,11 +200,13 @@ export default function Ayudante() {
     <div className="pi-ayu-container">
 
       {/* --- CABECERA CON EL NOMBRE DEL NEGOCIO --- */}
+      {puestosAsignados.length > 1 && (
+        <button type="button" className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={() => setPuesto(null)}>
+          <FaArrowLeft /> Cambiar de puesto
+        </button>
+      )}
       <div className="pi-ayu-header-wrapper">
         <div className="pi-ayu-header-negocio">
-          {puestosAsignados.length > 1 && (
-            <button type="button" className="pi-ayu-btn-quitar" onClick={() => setPuesto(null)} aria-label="Cambiar de puesto"><FaArrowLeft aria-hidden="true" /></button>
-          )}
           {puesto.logo
             ? <img width="64" height="64" src={puesto.logo} alt={puesto.nombre} className="pi-ayu-logo-negocio" />
             : <div className="pi-ayu-logo-placeholder"><FaStore /></div>}

@@ -30,6 +30,14 @@ export class PuestosBaseController {
     return this.service.listar(negocioId);
   }
 
+  @Get(':id')
+  obtener(
+    @UsuarioActual('id') negocioId: number,
+    @Param('id') id: string,
+  ) {
+    return this.service.obtener(negocioId, id);
+  }
+
   @Post()
   crear(
     @UsuarioActual('id') negocioId: number,
