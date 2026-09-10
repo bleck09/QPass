@@ -156,7 +156,7 @@ export class TransaccionesService {
         'usuarioId, entradaId o eventoId es requerido',
       );
     }
-    return this.prisma.transaccion.findMany({
+    const filas = await this.prisma.transaccion.findMany({
       where: {
         usuarioId: filtros.usuarioId,
         entradaId: filtros.entradaId,
@@ -167,9 +167,40 @@ export class TransaccionesService {
         operador: { select: { id: true, nombre: true } },
         entrada: { select: { id: true, nombre: true, documento: true, foto: true } },
         evento: { select: { id: true, nombre: true } },
+        // Detalle de la compra (consumo / reverso_consumo): puesto y productos,
+        // para que "Mi historial" muestre en qué se gastó y no solo el monto.
+        venta: {
+          select: {
+            id: true,
+            puesto: { select: { id: true, base: { select: { nombre: true } } } },
+            items: {
+              select: {
+                cantidad: true,
+                nombreProducto: true,
+                precioUnitario: true,
+              },
+            },
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
+
+    // El nombre del puesto vive en PuestoBase; se aplana para el front.
+    return filas.map((f) =>
+      f.venta
+        ? {
+            ...f,
+            venta: {
+              id: f.venta.id,
+              items: f.venta.items,
+              puesto: f.venta.puesto
+                ? { id: f.venta.puesto.id, nombre: f.venta.puesto.base.nombre }
+                : null,
+            },
+          }
+        : f,
+    );
   }
 
   /**

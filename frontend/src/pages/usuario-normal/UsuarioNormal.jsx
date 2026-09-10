@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import Buscador from '../../components/Buscador.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -215,6 +216,46 @@ export default function UsuarioNormal() {
     () => historial.filter(t => t.tipo === 'consumo').reduce((total, t) => total + Number(t.monto), 0),
     [historial]
   );
+
+  // --- Búsqueda + filtros del historial de transacciones ---
+  const [busquedaHist, setBusquedaHist] = useState('');
+  const [filtroHist, setFiltroHist] = useState('todos');
+
+  // Agrupa los tipos crudos en las categorías que ve el usuario.
+  const grupoTipo = (tipo) => {
+    if (tipo === 'recarga') return 'recarga';
+    if (tipo === 'consumo') return 'consumo';
+    if (tipo === 'devolucion') return 'devolucion';
+    return 'ajuste'; // ajuste, reverso_consumo, reverso_venta…
+  };
+
+  const filtrosHist = useMemo(() => {
+    const conteo = (g) => historial.filter(t => grupoTipo(t.tipo) === g).length;
+    return [
+      { valor: 'todos', texto: 'Todos', conteo: historial.length },
+      { valor: 'recarga', texto: 'Recargas', conteo: conteo('recarga') },
+      { valor: 'consumo', texto: 'Consumos', conteo: conteo('consumo') },
+      { valor: 'devolucion', texto: 'Devoluciones', conteo: conteo('devolucion') },
+      { valor: 'ajuste', texto: 'Ajustes', conteo: conteo('ajuste') },
+    ].filter(f => f.valor === 'todos' || f.conteo > 0);
+  }, [historial]);
+
+  const historialFiltrado = useMemo(() => {
+    const q = busquedaHist.trim().toLowerCase();
+    return historial.filter(t => {
+      if (filtroHist !== 'todos' && grupoTipo(t.tipo) !== filtroHist) return false;
+      if (!q) return true;
+      const enProductos = (t.venta?.items || [])
+        .some(i => (i.nombreProducto || '').toLowerCase().includes(q));
+      return (
+        (t.evento?.nombre || '').toLowerCase().includes(q) ||
+        (t.venta?.puesto?.nombre || '').toLowerCase().includes(q) ||
+        (t.operador?.nombre || '').toLowerCase().includes(q) ||
+        (t.nota || '').toLowerCase().includes(q) ||
+        enProductos
+      );
+    });
+  }, [historial, busquedaHist, filtroHist]);
 
   // Cuenta regresiva hasta la fecha/hora del evento destacado (mismo cálculo que el contador de App.jsx).
   const [tiempoRestante, setTiempoRestante] = useState(null);
@@ -866,44 +907,91 @@ export default function UsuarioNormal() {
 
           <div className="pi-usr-card mt-20">
             <h3><FaHistory color="var(--indigo-profundo)" /> Mis Transacciones (Compras y Recargas)</h3>
+
+            <div className="pi-usr-hist-buscador">
+              <Buscador
+                valor={busquedaHist}
+                onCambio={setBusquedaHist}
+                placeholder="Buscar por evento, puesto o producto…"
+                filtros={filtrosHist}
+                filtroActivo={filtroHist}
+                onFiltro={setFiltroHist}
+                etiquetaFiltros="Filtrar movimientos por tipo"
+              />
+            </div>
+
             <Tabla
               columnas={['Movimiento', 'Evento', 'Lugar / Detalle', 'Monto', 'Fecha / Hora']}
-              datos={historial}
-              vacio="Aún no tienes movimientos registrados."
-              renderFila={item => (
-                <tr key={item.id}>
-                  <td>
-                    <span className="pi-usr-tipo-celda">
-                      {item.tipo === 'recarga' && <><FaCoins color="var(--verde-recarga-texto)" /> Recarga de Saldo</>}
-                      {item.tipo === 'consumo' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
-                      {item.tipo === 'devolucion' && <><FaTicketAlt color="var(--coral-compra)" /> Devolución</>}
-                      {item.tipo === 'ajuste' && <><FaCoins color="var(--verde-recarga-texto)" /> Ajuste</>}
-                      {item.tipo === 'reverso_consumo' && <><FaCoins color="var(--verde-recarga-texto)" /> Reintegro por venta anulada</>}
+              datos={historialFiltrado}
+              vacio={
+                historial.length === 0
+                  ? 'Aún no tienes movimientos registrados.'
+                  : 'Ningún movimiento coincide con la búsqueda.'
+              }
+              renderFila={item => {
+                const esVenta = ['consumo', 'reverso_consumo'].includes(item.tipo) && item.venta;
+                let detalle;
+                if (esVenta) {
+                  const items = item.venta.items || [];
+                  detalle = (
+                    <span className="pi-usr-detalle-consumo">
+                      <strong>{item.venta.puesto?.nombre || 'Puesto'}</strong>
+                      {items.length > 0 ? (
+                        <span className="pi-usr-detalle-items">
+                          {items.map((i, idx) => (
+                            <span key={idx} className="pi-usr-detalle-item">
+                              <span>{i.cantidad}× {i.nombreProducto}</span>
+                              <span className="pi-usr-detalle-precio">
+                                {Number(i.precioUnitario) * i.cantidad} pts
+                                {i.cantidad > 1 && ` (${Number(i.precioUnitario)} c/u)`}
+                              </span>
+                            </span>
+                          ))}
+                        </span>
+                      ) : (
+                        <span className="pi-usr-detalle-items">Compra sin detalle de productos</span>
+                      )}
                     </span>
-                  </td>
-                  <td style={{ fontSize: '13px' }}>{item.evento?.nombre || '—'}</td>
-                  <td>
-                    {item.tipo === 'consumo' && item.venta ? (
-                      <span className="pi-usr-detalle-consumo">
-                        <strong>{item.venta.puesto?.nombre}</strong>
-                        {' — '}
-                        {item.venta.items.map(i => `${i.cantidad}x ${i.nombreProducto}`).join(', ')}
+                  );
+                } else if (item.tipo === 'recarga') {
+                  detalle = item.operador?.nombre
+                    ? <span className="pi-usr-detalle-consumo">Recargado por {item.operador.nombre}</span>
+                    : (item.nota || '—');
+                } else if (item.tipo === 'devolucion') {
+                  detalle = (
+                    <span className="pi-usr-detalle-consumo">
+                      {item.nota || 'Retiro de saldo'}
+                      {item.operador?.nombre ? ` · ${item.operador.nombre}` : ''}
+                    </span>
+                  );
+                } else {
+                  detalle = item.nota || '—';
+                }
+                return (
+                  <tr key={item.id}>
+                    <td>
+                      <span className="pi-usr-tipo-celda">
+                        {item.tipo === 'recarga' && <><FaCoins color="var(--verde-recarga-texto)" /> Recarga de Saldo</>}
+                        {item.tipo === 'consumo' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
+                        {item.tipo === 'devolucion' && <><FaTicketAlt color="var(--coral-compra)" /> Devolución</>}
+                        {item.tipo === 'ajuste' && <><FaCoins color="var(--verde-recarga-texto)" /> Ajuste</>}
+                        {item.tipo === 'reverso_consumo' && <><FaCoins color="var(--verde-recarga-texto)" /> Reintegro por venta anulada</>}
                       </span>
-                    ) : (
-                      item.nota || '—'
-                    )}
-                  </td>
-                  {(() => {
-                    const positivo = ['recarga', 'ajuste', 'reverso_consumo'].includes(item.tipo);
-                    return (
-                      <td className={positivo ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
-                        {positivo ? '+' : '-'}{Number(item.monto)} pts
-                      </td>
-                    );
-                  })()}
-                  <td style={{color: 'var(--texto-secundario)', fontSize: '13px'}}>{new Date(item.createdAt).toLocaleString('es-BO')}</td>
-                </tr>
-              )}
+                    </td>
+                    <td style={{ fontSize: '13px' }}>{item.evento?.nombre || '—'}</td>
+                    <td>{detalle}</td>
+                    {(() => {
+                      const positivo = ['recarga', 'ajuste', 'reverso_consumo'].includes(item.tipo);
+                      return (
+                        <td className={positivo ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
+                          {positivo ? '+' : '-'}{Number(item.monto)} pts
+                        </td>
+                      );
+                    })()}
+                    <td style={{color: 'var(--texto-secundario)', fontSize: '13px'}}>{new Date(item.createdAt).toLocaleString('es-BO')}</td>
+                  </tr>
+                );
+              }}
             />
           </div>
         </div>
