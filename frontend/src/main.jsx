@@ -1,7 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import './index.css'
+import './styles/index.css'
+import './styles/buttons.css'
+import './styles/forms.css'
+import './styles/layout.css'
 
 // 1. IMPORTAMOS LA NUEVA LANDING PAGE GLOBAL Y LA DEL EVENTO
 import PaginaPrincipal from './pages/publico/PaginaPrincipal.jsx'
@@ -31,6 +34,7 @@ import UsuarioNegocio from './pages/usuario-negocio/UsuarioNegocio.jsx'
 import MisAyudantes from './pages/usuario-negocio/MisAyudantes.jsx'
 import MiCatalogo from './pages/usuario-negocio/MiCatalogo.jsx'
 import MiCatalogoPuesto from './pages/usuario-negocio/MiCatalogoPuesto.jsx'
+import MiPuestoDetalle from './pages/usuario-negocio/MiPuestoDetalle.jsx'
 import Ayudante from './pages/ayudante/Ayudante.jsx'
 import Perfil from './pages/perfil/Perfil.jsx'
 import Registrar from './pages/publico/Registrar.jsx'
@@ -170,6 +174,10 @@ const router = createBrowserRouter([
   {
     path: "/usuarionegocio/catalogo/:id",
     element: <MenuLateral><MiCatalogoPuesto /></MenuLateral>,
+  },
+  {
+    path: "/usuarionegocio/evento/:eventoId/puesto/:puestoId",
+    element: <MenuLateral><MiPuestoDetalle /></MenuLateral>,
   },
   {
     path: "/UsuNegoDasboar",

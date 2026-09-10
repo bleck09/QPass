@@ -1,15 +1,23 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
+import Migas from '../../components/Migas.jsx';
+import BotonVolver from '../../components/BotonVolver.jsx';
 import { useApi } from '../../utils/useApi.js';
+import { estadoEvento, imagenEvento, formatearFecha, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { estadoStockProducto } from '../../utils/stock.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaStore, FaShoppingCart, FaPlus, FaMinus, FaTrash, FaQrcode, FaTimes,
   FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle, FaHistory,
-  FaReceipt, FaHamburger, FaArrowLeft
+  FaReceipt, FaHamburger, FaMapMarkerAlt, FaCalendarAlt, FaBell
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
@@ -33,8 +41,11 @@ export default function Ayudante() {
     recargar: recargarPuestos,
   } = useApi(cargarPuestos, { inicial: [] });
 
-  const [puesto, setPuesto] = useState(null);
   const [productos, setProductos] = useState([]);
+  const [avisadosStock, setAvisadosStock] = useState(new Set()); // productoIds ya avisados
+  const [avisandoStock, setAvisandoStock] = useState(null);
+  const [avisoCantidad, setAvisoCantidad] = useState(null); // { id, texto } — "solo quedan N"
+  const [errorCobro, setErrorCobro] = useState('');
 
   const [pestana, setPestana] = useState('vender'); // vender | historial
   const [carrito, setCarrito] = useState([]);
@@ -47,14 +58,128 @@ export default function Ayudante() {
   const [ventaExitosa, setVentaExitosa] = useState(null);
   const [ventas, setVentas] = useState([]);
 
-  const seleccionarPuesto = (p) => {
-    setPuesto(p);
-    // Solo los productos habilitados para vender en ESTE evento (activo + stock).
-    api.productos.listar(p.id).then(lista =>
-      setProductos(lista.filter(x => x.activo !== false && x.stock !== 0)),
-    );
-    api.ventas.listar({ puestoId: p.id }).then(setVentas);
+  // --- Selección en dos pasos guardada en la URL (?evento=&puesto=): así el
+  //     botón Atrás del navegador retrocede paso a paso (venta -> puestos ->
+  //     eventos) en vez de sacar al ayudante de la página como si cerrara sesión.
+  //     · 1 evento asignado          -> se salta el paso 1.
+  //     · 1 puesto en el evento      -> se salta el paso 2 y entra directo a vender.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const eventoSelId = searchParams.get('evento') || null;
+  const puestoSelId = searchParams.get('puesto') || null;
+  const [busquedaEvento, setBusquedaEvento] = useState('');
+  const [filtroEstado, setFiltroEstado] = useState('todos');
+
+  const navSeleccion = useCallback((patch, { replace = false } = {}) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      for (const [clave, valor] of Object.entries(patch)) {
+        if (valor == null) next.delete(clave);
+        else next.set(clave, String(valor));
+      }
+      return next;
+    }, { replace });
+  }, [setSearchParams]);
+
+  // Puestos del ayudante agrupados por evento (un evento aparece una sola vez).
+  const eventosAsignados = useMemo(() => {
+    const map = new Map();
+    for (const p of puestosAsignados) {
+      const id = p.evento?.id || 'sin-evento';
+      const g = map.get(id) || {
+        evento: p.evento || { id: 'sin-evento', nombre: 'Sin evento' },
+        puestos: [],
+      };
+      g.puestos.push(p);
+      map.set(id, g);
+    }
+    return [...map.values()];
+  }, [puestosAsignados]);
+
+  const eventosFiltrados = useMemo(() => {
+    const q = busquedaEvento.trim().toLowerCase();
+    return eventosAsignados.filter(({ evento }) => {
+      const est = estadoEvento(evento);
+      const coincideFiltro =
+        filtroEstado === 'todos' ||
+        (filtroEstado === 'activos' && (est === 'en_curso' || est === 'proximo')) ||
+        (filtroEstado === 'en_curso' && est === 'en_curso') ||
+        (filtroEstado === 'finalizados' && (est === 'finalizado' || est === 'archivado'));
+      const coincideBusqueda = !q
+        || (evento.nombre || '').toLowerCase().includes(q)
+        || (evento.lugar || '').toLowerCase().includes(q);
+      return coincideFiltro && coincideBusqueda;
+    });
+  }, [eventosAsignados, busquedaEvento, filtroEstado]);
+
+  const grupoSel = eventoSelId
+    ? eventosAsignados.find(g => g.evento.id === eventoSelId) || null
+    : null;
+
+  // El puesto activo se deriva de la URL (no es estado propio).
+  const puesto = puestoSelId
+    ? (grupoSel?.puestos.find(p => p.id === puestoSelId)
+      || puestosAsignados.find(p => p.id === puestoSelId)
+      || null)
+    : null;
+
+  const seleccionarPuesto = (p) => navSeleccion({ evento: p.evento?.id || 'sin-evento', puesto: p.id });
+  const volverAPuestos = () => navSeleccion({ puesto: null });
+  const volverAEventos = () => navSeleccion({ evento: null, puesto: null });
+
+  // Productos + ventas del puesto activo — vía efecto, para que también funcione
+  // al refrescar la página o entrar con un enlace directo (?evento=&puesto=).
+  useEffect(() => {
+    setCarrito([]);
+    setAvisadosStock(new Set());
+    setAvisoCantidad(null);
+    if (!puesto) { setProductos([]); setVentas([]); return; }
+    let vivo = true;
+    // Se traen TODOS: los agotados / sin stock se muestran bloqueados (no se ocultan).
+    api.productos.listar(puesto.id).then(lista => {
+      if (vivo) setProductos(lista);
+    });
+    api.ventas.listar({ puestoId: puesto.id }).then(v => { if (vivo) setVentas(v); });
+    return () => { vivo = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [puesto?.id]);
+
+  // Refresca el catálogo (stock) — se llama después de cada cobro.
+  const recargarProductos = () => {
+    if (puesto) api.productos.listar(puesto.id).then(setProductos);
   };
+
+  // Si el catálogo se refresca y algún ítem del carrito quedó por encima del
+  // stock (o el producto se agotó), se ajusta / se saca solo.
+  useEffect(() => {
+    setCarrito(prev => {
+      let cambio = false;
+      const next = prev.flatMap(item => {
+        const p = productos.find(x => x.id === item.id);
+        if (!p) return [item];
+        const tope = p.stock == null ? Infinity : p.stock;
+        if (p.activo === false || tope === 0) { cambio = true; return []; }
+        if (item.cantidad > tope) { cambio = true; return [{ ...item, cantidad: tope }]; }
+        return [item];
+      });
+      return cambio ? next : prev;
+    });
+  }, [productos]);
+
+  // Cascada de auto-selección: si no hay ambigüedad, salta el paso que sobra.
+  // replace:true -> no mete pasos intermedios en el historial del navegador.
+  useEffect(() => {
+    if (puesto || cargandoPuestos || puestosAsignados.length === 0) return;
+    if (!eventoSelId) {
+      if (eventosAsignados.length === 1) {
+        navSeleccion({ evento: eventosAsignados[0].evento.id }, { replace: true });
+      }
+      return;
+    }
+    const grupo = eventosAsignados.find(g => g.evento.id === eventoSelId);
+    if (grupo && grupo.puestos.length === 1) {
+      navSeleccion({ evento: grupo.evento.id, puesto: grupo.puestos[0].id }, { replace: true });
+    }
+  }, [puesto, cargandoPuestos, puestosAsignados, eventosAsignados, eventoSelId, navSeleccion]);
 
   const totalCarrito = useMemo(
     () => carrito.reduce((suma, item) => suma + Number(item.precio) * item.cantidad, 0),
@@ -80,18 +205,36 @@ export default function Ayudante() {
 
   const saldoInsuficiente = tarjetaQR && totalCarrito > Number(tarjetaQR.saldo);
 
-  // --- LÓGICA DEL CARRITO ---
+  // --- LÓGICA DEL CARRITO (respeta el stock que queda) ---
+  // Tope de unidades para un producto: su stock actual, o Infinity si no controla stock.
+  const topeStock = (id) => {
+    const p = productos.find(x => x.id === id);
+    return p?.stock == null ? Infinity : p.stock;
+  };
+
   const agregarProducto = (producto) => {
+    const enCarrito = carrito.find(i => i.id === producto.id)?.cantidad ?? 0;
+    if (enCarrito >= topeStock(producto.id)) {
+      setAvisoCantidad({ id: producto.id, texto: `Solo quedan ${producto.stock}` });
+      return;
+    }
+    setAvisoCantidad(null);
     setCarrito(prev => {
       const existente = prev.find(i => i.id === producto.id);
-      if (existente) {
-        return prev.map(i => i.id === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i);
-      }
+      if (existente) return prev.map(i => i.id === producto.id ? { ...i, cantidad: i.cantidad + 1 } : i);
       return [...prev, { ...producto, cantidad: 1 }];
     });
   };
 
   const cambiarCantidad = (id, delta) => {
+    if (delta > 0) {
+      const actual = carrito.find(i => i.id === id)?.cantidad ?? 0;
+      if (actual >= topeStock(id)) {
+        setAvisoCantidad({ id, texto: `Solo quedan ${productos.find(p => p.id === id)?.stock}` });
+        return;
+      }
+    }
+    setAvisoCantidad(null);
     setCarrito(prev => prev.flatMap(item => {
       if (item.id !== id) return [item];
       const nuevaCantidad = item.cantidad + delta;
@@ -102,6 +245,20 @@ export default function Ayudante() {
   const quitarDelCarrito = (id) => setCarrito(prev => prev.filter(item => item.id !== id));
 
   const vaciarCarrito = () => setCarrito([]);
+
+  // Avisar al Usuario Negocio que un producto quedó sin stock / por agotarse.
+  const avisarStock = async (producto) => {
+    if (!puesto) return;
+    setAvisandoStock(producto.id);
+    try {
+      await api.avisosStock.crear({ puestoId: puesto.id, productoBaseId: producto.id });
+      setAvisadosStock(prev => new Set(prev).add(producto.id));
+    } catch {
+      /* silencioso: el negocio igual lo ve por el stock en su panel */
+    } finally {
+      setAvisandoStock(null);
+    }
+  };
 
   // --- LÓGICA DE COBRO ---
   const iniciarCobro = () => {
@@ -120,7 +277,11 @@ export default function Ayudante() {
         return;
       }
       setVentaExitosa(null);
-      setTarjetaQR({ ...entrada, saldo: Number(entrada.usuario?.saldo ?? 0) });
+      setTarjetaQR({
+        ...entrada,
+        saldo: Number(entrada.usuario?.saldo ?? 0), // ya viene como DISPONIBLE (sin lo retenido)
+        saldoBloqueado: Number(entrada.usuario?.saldoBloqueado ?? 0),
+      });
     } catch (err) {
       setErrorEscaneo(err.message);
     } finally {
@@ -131,6 +292,7 @@ export default function Ayudante() {
   const cerrarTarjeta = () => {
     setTarjetaQR(null);
     setVentaExitosa(null);
+    setErrorCobro('');
   };
 
   // Foco + ESC + scroll-lock de la tarjeta de cobro (look propio). El escáner
@@ -141,13 +303,22 @@ export default function Ayudante() {
     if (!tarjetaQR || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
 
     const nuevoSaldo = Number(tarjetaQR.saldo) - totalCarrito;
-    await api.ventas.crear({
-      puestoId: puesto.id,
-      entradaId: tarjetaQR.id,
-      items: carrito.map(i => ({ productoId: i.id, cantidad: i.cantidad })),
-    });
+    setErrorCobro('');
+    try {
+      await api.ventas.crear({
+        puestoId: puesto.id,
+        entradaId: tarjetaQR.id,
+        items: carrito.map(i => ({ productoId: i.id, cantidad: i.cantidad })),
+      });
+    } catch (err) {
+      // Ej: "Sin stock suficiente de X (quedan N)" — el ayudante se entera acá.
+      setErrorCobro(err.message);
+      recargarProductos();
+      return;
+    }
 
     api.ventas.listar({ puestoId: puesto.id }).then(setVentas);
+    recargarProductos(); // refresca el stock del catálogo tras la venta
     setVentaExitosa({ monto: totalCarrito, saldo: nuevoSaldo });
     setCarrito([]);
   };
@@ -176,22 +347,104 @@ export default function Ayudante() {
     );
   }
 
-  if (!puesto) {
+  // La cascada de auto-selección de arriba resuelve los casos sin ambigüedad
+  // (1 evento / 1 puesto). Mientras el efecto corre, no parpadees el selector.
+  const saltaEvento = !eventoSelId && eventosAsignados.length === 1;
+  const saltaPuesto = grupoSel && grupoSel.puestos.length === 1;
+  if (!puesto && (saltaEvento || saltaPuesto)) {
+    return (
+      <div className="pi-ayu-container">
+        <div className="pi-ayu-header-wrapper"><h1>Vender / cobrar</h1></div>
+        <EstadoCarga filas={3} />
+      </div>
+    );
+  }
+
+  // Paso 1 — elegir EVENTO (solo si el ayudante trabaja en más de un evento).
+  if (!puesto && !grupoSel) {
     return (
       <div className="pi-ayu-container">
         <div className="pi-ayu-header-wrapper">
-          <h1>Selecciona tu puesto</h1>
+          <h1>¿En qué evento vas a vender?</h1>
         </div>
-        <div className="pi-ayu-productos-grid">
-          {puestosAsignados.map(p => (
-            <button key={p.id} type="button" className="pi-ayu-producto-card" onClick={() => seleccionarPuesto(p)}>
-              {p.logo
-                ? <img width="160" height="90" src={p.logo} alt={p.nombre} className="pi-ayu-producto-img" />
-                : <div className="pi-ayu-producto-img-placeholder"><FaStore /></div>}
-              <span className="pi-ayu-producto-nombre">{p.nombre}</span>
-            </button>
-          ))}
+        <Buscador
+          valor={busquedaEvento}
+          onCambio={setBusquedaEvento}
+          placeholder="Buscar evento o lugar…"
+          etiqueta="Buscar evento por nombre o lugar"
+          filtros={FILTROS_ESTADO_EVENTO}
+          filtroActivo={filtroEstado}
+          onFiltro={setFiltroEstado}
+          etiquetaFiltros="Filtrar por estado del evento"
+        />
+        <GrillaEventos
+          eventos={eventosFiltrados}
+          gridClassName="pi-entrega-eventos-grid"
+          vacio="Ningún evento coincide con la búsqueda."
+        >
+          {g => (
+            <EventoCard
+              key={g.evento.id}
+              evento={{ ...g.evento, imagen: imagenEvento(g.evento) }}
+              onClick={() => navSeleccion({ evento: g.evento.id })}
+              meta={<><FaStore aria-hidden="true" /> {g.puestos.length === 1 ? '1 puesto' : `${g.puestos.length} puestos`}</>}
+              cta={g.puestos.length === 1 ? 'Vender' : 'Elegir puesto'}
+            />
+          )}
+        </GrillaEventos>
+      </div>
+    );
+  }
+
+  // Paso 2 — elegir PUESTO dentro del evento (solo si hay más de uno).
+  if (!puesto) {
+    return (
+      <div className="pi-ayu-container">
+        {eventosAsignados.length > 1 && (
+          <div className="qp-nav">
+            <BotonVolver onClick={volverAEventos}>Cambiar de evento</BotonVolver>
+            <Migas
+              items={[
+                { texto: 'Eventos', onClick: volverAEventos },
+                { texto: grupoSel.evento.nombre, actual: true },
+              ]}
+            />
+          </div>
+        )}
+        <div className="pi-ayu-header-wrapper pi-ayu-pos-header">
+          <div className="pi-ayu-header-negocio">
+            <div className="pi-ayu-header-texto">
+              <span className="pi-ayu-eyebrow">Elegí tu puesto</span>
+              <h1>
+                {grupoSel.evento.nombre}
+                <BadgeEstadoEvento evento={grupoSel.evento} className="pi-ayu-badge-evento" />
+              </h1>
+              <div className="pi-ayu-header-meta">
+                {grupoSel.evento.lugar && (
+                  <span className="pi-ayu-header-chip"><FaMapMarkerAlt aria-hidden="true" /> {grupoSel.evento.lugar}</span>
+                )}
+                {grupoSel.evento.fecha && (
+                  <span className="pi-ayu-header-chip"><FaCalendarAlt aria-hidden="true" /> {formatearFecha(grupoSel.evento.fecha, false)}</span>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
+        <GrillaEventos
+          eventos={grupoSel.puestos}
+          gridClassName="pi-entrega-eventos-grid"
+          vacio="Este evento no tiene puestos asignados a tu cuenta."
+        >
+          {p => (
+            <EventoCard
+              key={p.id}
+              evento={{ nombre: p.nombre, imagen: p.logo || undefined }}
+              onClick={() => seleccionarPuesto(p)}
+              meta={p.categoria || null}
+              cta="Vender aquí"
+            />
+          )}
+        </GrillaEventos>
       </div>
     );
   }
@@ -199,21 +452,52 @@ export default function Ayudante() {
   return (
     <div className="pi-ayu-container">
 
-      {/* --- CABECERA CON EL NOMBRE DEL NEGOCIO --- */}
-      {puestosAsignados.length > 1 && (
-        <button type="button" className="pi-entrega-btn-volver" style={{ marginBottom: '8px' }} onClick={() => setPuesto(null)}>
-          <FaArrowLeft /> Cambiar de puesto
-        </button>
-      )}
-      <div className="pi-ayu-header-wrapper">
+      {/* --- VOLVER + RUTA (dónde estoy) --- */}
+      <div className="qp-nav">
+        {grupoSel && grupoSel.puestos.length > 1 ? (
+          <BotonVolver onClick={volverAPuestos}>Cambiar de puesto</BotonVolver>
+        ) : eventosAsignados.length > 1 ? (
+          <BotonVolver onClick={volverAEventos}>Cambiar de evento</BotonVolver>
+        ) : null}
+        <Migas
+          items={[
+            ...(eventosAsignados.length > 1
+              ? [{ texto: 'Eventos', onClick: volverAEventos }]
+              : []),
+            grupoSel && grupoSel.puestos.length > 1
+              ? { texto: puesto.evento?.nombre || 'Evento', onClick: volverAPuestos }
+              : { texto: puesto.evento?.nombre || 'Evento' },
+            { texto: puesto.nombre, actual: true },
+          ]}
+        />
+      </div>
+
+      {/* --- CABECERA DEL PUNTO DE VENTA --- */}
+      <div className="pi-ayu-header-wrapper pi-ayu-pos-header">
         <div className="pi-ayu-header-negocio">
           {puesto.logo
-            ? <img width="64" height="64" src={puesto.logo} alt={puesto.nombre} className="pi-ayu-logo-negocio" />
+            ? <img width="72" height="72" src={puesto.logo} alt={puesto.nombre} className="pi-ayu-logo-negocio" />
             : <div className="pi-ayu-logo-placeholder"><FaStore /></div>}
-          <div>
-            <span className="pi-ayu-eyebrow">Punto de venta</span>
-            <h1>{puesto.nombre}</h1>
-            <p>{puesto.descripcion}</p>
+          <div className="pi-ayu-header-texto">
+            <span className="pi-ayu-eyebrow">
+              Punto de venta{puesto.evento?.nombre ? ` · ${puesto.evento.nombre}` : ''}
+            </span>
+            <h1>
+              {puesto.nombre}
+              {puesto.evento && <BadgeEstadoEvento evento={puesto.evento} className="pi-ayu-badge-evento" />}
+            </h1>
+            {puesto.descripcion && <p>{puesto.descripcion}</p>}
+            <div className="pi-ayu-header-meta">
+              {puesto.categoria && (
+                <span className="pi-ayu-header-chip"><FaHamburger aria-hidden="true" /> {puesto.categoria}</span>
+              )}
+              {puesto.evento?.lugar && (
+                <span className="pi-ayu-header-chip"><FaMapMarkerAlt aria-hidden="true" /> {puesto.evento.lugar}</span>
+              )}
+              {puesto.evento?.fecha && (
+                <span className="pi-ayu-header-chip"><FaCalendarAlt aria-hidden="true" /> {formatearFecha(puesto.evento.fecha, false)}</span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -244,15 +528,28 @@ export default function Ayudante() {
             <div className="pi-ayu-productos-grid">
               {productos.map(producto => {
                 const enCarrito = carrito.find(i => i.id === producto.id);
+                const estadoStk = estadoStockProducto(producto);
+                const bloqueado = estadoStk === 'inactivo' || estadoStk === 'sin_stock';
+                const avisado = avisadosStock.has(producto.id);
                 return (
-                  <div className="pi-ayu-producto-card" key={producto.id}>
+                  <div className={`pi-ayu-producto-card${bloqueado ? ' bloqueado' : ''}`} key={producto.id}>
                     {producto.imagen
                       ? <img width="160" height="90" src={producto.imagen} alt={producto.nombre} className="pi-ayu-producto-img" />
                       : <div className="pi-ayu-producto-img-placeholder"><FaHamburger /></div>}
                     <span className="pi-ayu-producto-nombre">{producto.nombre}</span>
                     <span className="pi-ayu-producto-precio">{Number(producto.precio)} pts</span>
 
-                    {enCarrito ? (
+                    {bloqueado ? (
+                      <span className="pi-ayu-badge-agotado">
+                        <FaExclamationTriangle aria-hidden="true" /> {estadoStk === 'inactivo' ? 'No disponible' : 'Sin stock'}
+                      </span>
+                    ) : estadoStk === 'bajo' ? (
+                      <span className="pi-ayu-badge-bajo">
+                        <FaExclamationTriangle aria-hidden="true" /> Quedan {producto.stock}
+                      </span>
+                    ) : null}
+
+                    {!bloqueado && (enCarrito ? (
                       <div className="pi-ayu-producto-stepper">
                         <button type="button" onClick={() => cambiarCantidad(producto.id, -1)}><FaMinus /></button>
                         <span>{enCarrito.cantidad}</span>
@@ -261,6 +558,25 @@ export default function Ayudante() {
                     ) : (
                       <button type="button" className="pi-ayu-btn-agregar" onClick={() => agregarProducto(producto)}>
                         <FaPlus /> Agregar
+                      </button>
+                    ))}
+
+                    {avisoCantidad?.id === producto.id && (
+                      <span className="pi-ayu-cantidad-aviso">
+                        <FaExclamationTriangle aria-hidden="true" /> {avisoCantidad.texto}
+                      </span>
+                    )}
+
+                    {(bloqueado || estadoStk === 'bajo') && (
+                      <button
+                        type="button"
+                        className="pi-ayu-btn-avisar"
+                        onClick={() => avisarStock(producto)}
+                        disabled={avisado || avisandoStock === producto.id}
+                      >
+                        {avisado
+                          ? <><FaCheckCircle aria-hidden="true" /> Negocio avisado</>
+                          : <><FaBell aria-hidden="true" /> Avisar al negocio</>}
                       </button>
                     )}
                   </div>
@@ -424,8 +740,13 @@ export default function Ayudante() {
                   <div className="pi-ayu-tarjeta-dato">
                     <FaWallet />
                     <div>
-                      <span className="label">Saldo Actual</span>
+                      <span className="label">Saldo disponible</span>
                       <span className="valor">{tarjetaQR.saldo} pts</span>
+                      {tarjetaQR.saldoBloqueado > 0 && (
+                        <span className="pi-ayu-saldo-disputa">
+                          + {tarjetaQR.saldoBloqueado} pts en disputa (no se pueden usar)
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -447,6 +768,12 @@ export default function Ayudante() {
                 {saldoInsuficiente && (
                   <div className="pi-ayu-alerta-error">
                     <FaExclamationTriangle /> El saldo disponible ({tarjetaQR.saldo} pts) no alcanza para cubrir esta venta.
+                  </div>
+                )}
+
+                {errorCobro && (
+                  <div className="pi-ayu-alerta-error">
+                    <FaExclamationTriangle /> {errorCobro}
                   </div>
                 )}
 

@@ -33,6 +33,7 @@ export class TransaccionesController {
   recarga(@Body() dto: RecargaDto, @UsuarioActual() actor: UsuarioJwt) {
     return this.transaccionesService.recargar({
       entradaId: dto.entradaId,
+      eventoId: dto.eventoId,
       monto: dto.monto,
       operador: { id: actor.id, rol: actor.rol },
     });

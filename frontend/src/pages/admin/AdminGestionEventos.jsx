@@ -604,12 +604,9 @@ export default function AdminGestionEventos() {
                 onClick={() => abrirDetalle(ev.id)}
                 cta="Gestionar"
                 badges={
-                  <>
-                    <BadgeEstadoEvento evento={ev} />
-                    <span className={`pi-ges-badge-publicacion ${ev.publicadoEn ? 'publicado' : 'borrador'}`}>
-                      {ev.publicadoEn ? <><FaCheckCircle /> Publicado</> : <><FaEyeSlash /> Borrador</>}
-                    </span>
-                  </>
+                  <span className={`pi-ges-badge-publicacion ${ev.publicadoEn ? 'publicado' : 'borrador'}`}>
+                    {ev.publicadoEn ? <><FaCheckCircle /> Publicado</> : <><FaEyeSlash /> Borrador</>}
+                  </span>
                 }
                 meta={<><FaUsers /> {contarAsignados(ev.id)} usuarios asignados</>}
               />

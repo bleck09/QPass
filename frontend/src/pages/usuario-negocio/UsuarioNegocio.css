@@ -83,72 +83,16 @@
   background-color: var(--bg-page);
   padding: 4px;
   border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
 }
 .pi-unegocio-tabs button {
-  display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
 }
 .pi-unegocio-tabs button.activo {
   background-color: var(--bg-surface); color: var(--indigo-profundo); box-shadow: 0 1px 4px rgba(10, 14, 39, 0.1);
 }
 
-/* Botón Principal (14px, 700) */
-.btn-primario {
-  background-color: var(--indigo-profundo);
-  color: var(--text-on-accent);
-  border: none;
-  padding: 8px 20px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: background 0.2s;
-}
-
-.btn-primario:hover {
-  background-color: var(--indigo-profundo-hover);
-}
-
-/* Botón Secundario / Cancelar (14px, 700) */
-.btn-cancelar {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-strong);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.btn-cancelar:hover {
-  background: var(--bg-page);
-}
-
-/* Botón secundario pequeño (para acciones de tabla) */
-.btn-secundario-sm {
-  background: var(--bg-page);
-  border: 1px solid var(--border);
-  color: var(--text-primary);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.btn-secundario-sm:hover {
-  background: var(--border);
-  color: var(--indigo-profundo);
-}
+/* .btn-primario / .btn-cancelar / .btn-secundario-sm -> styles/buttons.css (global) */
 
 /* Tarjeta Principal */
 .pi-unegocio-card {
@@ -191,6 +135,13 @@
   font-size: var(--text-lg);
 }
 
+/* Variante avatar redondo 40px (equipos / ayudantes) */
+.item-img--avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-full);
+}
+
 /* Fila Nombre: 14px, 600 */
 .fila-nombre {
   font-weight: 600 !important;
@@ -203,51 +154,18 @@
   margin-top: 2px;
 }
 
-.info-catalogo {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-
 /* Badge simple */
 .badge-info {
+  display: inline-block;
   background-color: var(--cian-digital-suave);
   color: var(--cian-digital-texto);
-  padding: 4px 8px;
-  border-radius: var(--radius-xl);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: 700;
 }
 
-.badge-precio {
-  background-color: var(--verde-recarga-suave);
-  color: var(--verde-recarga-texto);
-  padding: 8px 8px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 700;
-}
-
-/* Botón Eliminar (Rojo Suave) */
-.btn-eliminar {
-  background-color: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.2s;
-}
-
-.btn-eliminar:hover {
-  background-color: var(--rojo-error);
-  color: var(--text-on-accent);
-}
+/* .btn-eliminar -> .btn-secundario-sm.btn-secundario-sm--peligro (styles/buttons.css) */
 
 .tabla-vacia {
   text-align: center;
@@ -280,10 +198,6 @@
   display: flex;
   flex-direction: column;
   max-height: 90vh; /* Para que no se pase de la pantalla */
-}
-
-.modal-grande {
-  max-width: 700px;
 }
 
 @keyframes slideDown {
@@ -320,14 +234,10 @@
 
 .btn-close-modal:hover { color: var(--rojo-error); }
 
+/* Wrapper del contenido dentro del <Modal> compartido: el padding lo pone
+   <Modal> (.qp-modal__body). Acá solo evitamos doble padding. */
 .modal-body {
-  padding: 24px;
-  overflow-y: auto; /* Permite scroll interno si la tabla crece mucho */
-}
-
-.bg-gris {
-  background-color: var(--bg-page);
-  padding: 20px;
+  padding: 0;
 }
 
 .modal-actions {
@@ -337,12 +247,61 @@
   margin-top: 20px;
 }
 
-/* --- FORMULARIOS --- */
-.formulario {
+.modal-actions--gap-top { margin-top: var(--space-4); }
+
+/* Modal "Activar un puesto en …": lista de puestos-base disponibles */
+.pi-unegocio-base-lista {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
+
+.pi-unegocio-base-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.pi-unegocio-base-item .item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+/* el <div> con nombre + descripción: que trunque en vez de empujar el botón */
+.pi-unegocio-base-item .item-info > div {
+  min-width: 0;
+}
+
+.pi-unegocio-base-item .fila-nombre,
+.pi-unegocio-base-item .celda-secundaria {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pi-unegocio-base-item > .btn-primario {
+  flex-shrink: 0;
+}
+
+/* Estado vacío dentro de un modal (sin puestos en catálogo) */
+.pi-unegocio-vacio-modal {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+/* --- FORMULARIOS --- .formulario / .input-group / .input-monto* / .upload-*
+   / .preview-* / .btn-quitar-imagen / .btn-upload-small -> styles/forms.css */
 
 /* Formularios en línea (Para añadir productos) */
 .form-añadir-producto {
@@ -364,161 +323,70 @@
 .width-precio { width: 140px; }
 .btn-bottom { margin-bottom: 0 !important; }
 
-/* Labels: 14px, semibold */
-.input-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.input-group label {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.input-group input {
-  width: 100%;
-  padding: 8px 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  outline: none;
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 400;
-  color: var(--text-primary);
-  background-color: var(--bg-surface);
-  transition: border-color 0.2s;
-}
-
-.input-group input:focus {
-  border-color: var(--cian-digital);
-}
-
-/* Regla Guía QPass #4: INPUT DE MONTO (18px, 700) */
-.input-monto-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.icon-monto {
-  position: absolute;
-  left: 12px;
-  color: var(--text-secondary);
-  font-size: var(--text-base);
-}
-
-.input-monto {
-  padding-left: 32px !important;
-  font-size: var(--text-lg) !important;
-  font-weight: 700 !important;
-}
-
 @media (max-width: 600px) {
   .form-inline { flex-direction: column; align-items: stretch; }
   .width-precio { width: 100%; }
 }
-/* =========================================
-   NUEVOS ESTILOS: UPLOAD DE IMÁGENES
-========================================= */
-
-.upload-zone {
-  position: relative;
-  width: 100%;
-  padding: 32px 20px;
-  border: 2px dashed var(--border-strong);
-  border-radius: var(--radius-lg);
-  background-color: var(--bg-page);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: center;
-}
-
-.upload-zone:hover {
-  background-color: var(--cian-digital-suave);
-  border-color: var(--cian-digital);
-}
-
-.upload-icon {
-  font-size: var(--text-2xl);
-  color: var(--cian-digital);
-  margin-bottom: 8px;
-}
-
-.upload-text {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 4px;
-}
-
-.upload-subtext {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-.upload-input-hidden {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  opacity: 0;
-  cursor: pointer;
-}
-
-.preview-zone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background-color: var(--bg-surface);
-}
-
-.img-preview {
-  width: 100%;
-  max-width: 200px;
-  aspect-ratio: 1 / 1;   /* caja cuadrada reservada de antemano: sin salto al cargar (Manual 8.10) */
-  height: auto;
-  border-radius: var(--radius-md);
-  object-fit: cover;
-  box-shadow: 0 2px 4px rgba(10, 14, 39,0.1);
-}
-
-.btn-quitar-imagen {
-  background: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  border: none;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.2s;
-}
-
-.btn-quitar-imagen:hover {
-  background: var(--rojo-error);
-  color: var(--text-on-accent);
-}
 
 /* --- BADGES NUEVOS --- */
 .badge-ayudantes {
+  display: inline-block;
+  background-color: var(--bg-page);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+/* <Buscador> suelto en el contenedor: darle aire para que no quede pegado */
+.pi-unegocio-buscador {
+  margin-bottom: var(--space-4);
+}
+
+/* Panel "Asignar ayudante" dentro del detalle del puesto */
+.pi-unegocio-asignar {
+  margin-bottom: var(--space-4);
+}
+.pi-unegocio-asignar-lista {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pi-unegocio-asignar-lista li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border);
+}
+.pi-unegocio-asignar-lista li:last-child {
+  border-bottom: none;
+}
+
+/* Celda "Catálogo" de la tabla de puestos: pill de conteo + alertas de stock */
+.pi-unegocio-catalogo-cel {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Panel de avisos de stock -> componente <AvisosStockPanel> (components/) */
+
+/* Aviso: puesto sin ayudantes */
+.pi-unegocio-badge-falta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   background-color: var(--ambar-aviso-suave);
   color: var(--ambar-aviso-texto);
-  padding: 4px 8px;
-  border-radius: var(--radius-xl);
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
   font-size: var(--text-xs);
   font-weight: 700;
 }
@@ -563,65 +431,7 @@
   border-top: 1px solid var(--border);
 }
 
-/* Botón pequeño para subir foto de producto */
-.btn-upload-small {
-  background-color: var(--bg-page);
-  color: var(--text-primary);
-  border: 1px solid var(--border-strong);
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  transition: all 0.2s;
-  height: 44px; /* Para alinearse con los inputs normales */
-}
-
-.btn-upload-small:hover {
-  background-color: var(--border);
-  color: var(--indigo-profundo);
-  border-color: var(--indigo-profundo);
-}
-
-/* Previsualización pequeña del producto */
-.preview-small {
-  position: relative;
-  width: 100%;
-  height: 44px;
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--border-strong);
-}
-
-.preview-small img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.preview-small button {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(229, 72, 77, 0.9); /* Rojo error de QPass con opacidad */
-  color: white;
-  border: none;
-  width: 35px;
-  cursor: pointer;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  transition: background 0.2s;
-}
-
-.preview-small button:hover {
-  background: var(--rojo-error);
-}
+/* .btn-upload-small / .preview-small -> styles/forms.css (global) */
 
 /* Variación para las imágenes de productos en tabla */
 .img-cuadrada {
@@ -639,27 +449,50 @@
 }
 /* --- Catálogo: estado / stock / categoría de producto (§5.4) --- */
 .pi-unegocio-prod-inactivo td { opacity: 0.55; }
-.pi-unegocio-nota { color: var(--text-muted); font-size: 12px; }
-.pi-unegocio-stock-input {
-  width: 68px;
-  padding: 4px 6px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+.pi-unegocio-nota { color: var(--text-muted); font-size: var(--text-xs); }
+.pi-unegocio-nota--error { color: var(--rojo-error-texto); font-weight: 600; }
+.pi-unegocio-nota--aviso { color: var(--ambar-aviso-texto); font-weight: 600; }
+/* Input numérico compacto para celdas de tabla (precio / stock del menú) */
+.pi-unegocio-num-input {
+  width: 88px;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
   background: var(--bg-surface);
   color: var(--text-primary);
-  text-align: center;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-align: right;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.pi-unegocio-num-input:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--cian-digital-suave);
+}
+.pi-unegocio-num-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pi-unegocio-num-prefijo {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
 }
 .pi-unegocio-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 4px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   border: 1px solid var(--border);
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
   cursor: pointer;
   background: var(--bg-surface);
 }
+button.pi-unegocio-toggle { cursor: pointer; }
+span.pi-unegocio-toggle { cursor: default; }
 .pi-unegocio-toggle.activo { color: var(--ok); border-color: var(--ok); }
 .pi-unegocio-toggle.inactivo { color: var(--danger); border-color: var(--danger); }

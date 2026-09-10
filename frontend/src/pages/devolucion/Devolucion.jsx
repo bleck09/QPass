@@ -19,10 +19,11 @@ import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirFotoCapturada } from '../../utils/imagenes.js';
 import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
-import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import CorteCaja from '../../components/CorteCaja.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
+import AvisoSinCaja from '../../components/AvisoSinCaja.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
+import FotoZoom from '../../components/FotoZoom.jsx';
 import './Devolucion.css';
 import '../supervisor/GestionEntrega.css';
 
@@ -142,7 +143,13 @@ export default function Devolucion() {
           return;
         }
         limpiarForm();
-        setTarjetaQR({ ...entrada, tipo: 'Normal', saldoDisponible: Number(entrada.usuario?.saldo ?? 0) });
+        setTarjetaQR({
+          ...entrada,
+          tipo: 'Normal',
+          eventoId: entrada.eventoId || entrada.evento?.id,
+          eventoNombre: entrada.evento?.nombre,
+          saldoDisponible: Number(entrada.usuario?.saldo ?? 0),
+        });
         return;
       }
       // ¿Código de retiro de negocio?
@@ -152,6 +159,7 @@ export default function Devolucion() {
         tipo: 'Negocio',
         usuarioId: neg.negocioId,
         nombre: neg.negocioNombre,
+        eventoId: neg.eventoId,
         eventoNombre: neg.eventoNombre,
         saldoDisponible: neg.saldo,
       });
@@ -179,10 +187,12 @@ export default function Devolucion() {
   const refTarjeta = useModal(!!tarjetaQR, cerrarTarjeta);
 
   const esNegocio = tarjetaQR?.tipo === 'Negocio';
+  // La manilla / código puede ser de OTRO evento: no se puede operar acá.
+  const eventoNoCoincide = !!(tarjetaQR && eventoDetalle && tarjetaQR.eventoId && tarjetaQR.eventoId !== eventoDetalle.id);
 
   const confirmarRetiro = async () => {
     const valor = Number(monto);
-    if (!tarjetaQR || !valor || valor <= 0 || valor > tarjetaQR.saldoDisponible || !fotoCarnet) return;
+    if (!tarjetaQR || eventoNoCoincide || !valor || valor <= 0 || valor > tarjetaQR.saldoDisponible || !fotoCarnet) return;
     if (esNegocio && !fotoRostro) return; // foto de la cara obligatoria para negocios
 
     await api.transacciones.devolucion({
@@ -234,7 +244,6 @@ export default function Devolucion() {
                   evento={ev}
                   onClick={() => abrirEvento(ev)}
                   disabled={estadoEvento(ev) === 'archivado'}
-                  badges={<BadgeEstadoEvento evento={ev} />}
                   cta="Abrir devoluciones"
                 />
               )}
@@ -289,16 +298,13 @@ export default function Devolucion() {
       {/* --- PESTAÑA: ESCANEAR --- */}
       {pestana === 'escanear' && (
         <div className="pi-dev-escanear-panel">
-          {!cajaAbierta && (
-            <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginBottom: '4px' }}>
-              <FaExclamationTriangle /> No tenés una caja abierta para este evento.
-              {' '}
-              <button type="button" className="pi-dev-link-caja" onClick={() => navigate('/devolucion/caja')}>
-                Abrir arqueo de caja
-              </button>
-              {' '}antes de registrar devoluciones.
-            </p>
-          )}
+          {!cajaAbierta ? (
+          <AvisoSinCaja
+            descripcion="Necesitás un arqueo de caja abierto para este evento antes de escanear y registrar devoluciones."
+            onAbrir={() => navigate('/devolucion/caja')}
+          />
+          ) : (
+          <>
           <FaQrcode size={70} color="var(--cian-digital)" />
           <h3>Escaneá el código QR</h3>
           <p>
@@ -309,7 +315,7 @@ export default function Devolucion() {
             type="button"
             className="pi-dev-btn-escanear"
             onClick={iniciarEscaneo}
-            disabled={escaneando || buscando || !cajaAbierta}
+            disabled={escaneando || buscando}
           >
             <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
           </button>
@@ -317,6 +323,8 @@ export default function Devolucion() {
             <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginTop: '12px' }}>
               <FaExclamationTriangle /> {errorEscaneo}
             </p>
+          )}
+          </>
           )}
         </div>
       )}
@@ -357,7 +365,7 @@ export default function Devolucion() {
               <tr key={item.id}>
                 <td>
                   <div className="pi-dev-fila-persona">
-                    {item.entrada?.foto && <img width="34" height="34" src={item.entrada.foto} alt={item.entrada.nombre} className="pi-dev-mini-avatar" />}
+                    {item.entrada?.foto && <FotoZoom width={34} height={34} src={item.entrada.foto} alt={item.entrada.nombre} className="pi-dev-mini-avatar" />}
                     <span>{item.entrada?.nombre || '—'}</span>
                   </div>
                 </td>
@@ -369,7 +377,7 @@ export default function Devolucion() {
                 </td>
                 <td>
                   {item.fotoCarnetUrl
-                    ? <img width="40" height="40" src={item.fotoCarnetUrl} alt={`Carnet de ${item.entrada?.nombre}`} className="pi-dev-mini-carnet" />
+                    ? <FotoZoom width={40} height={40} src={item.fotoCarnetUrl} alt={`Carnet de ${item.entrada?.nombre}`} className="pi-dev-mini-carnet" />
                     : <span className="pi-dev-sin-carnet">—</span>}
                 </td>
                 <td className="pi-dev-monto-celda">-{Number(item.monto)} pts</td>
@@ -414,8 +422,15 @@ export default function Devolucion() {
                   <FaCheckCircle /> {esNegocio ? 'Código de negocio válido' : 'Código QR Válido'}
                 </div>
 
+                <div className="pi-dev-tarjeta-cols">
+                <div className="pi-dev-col-id">
                 {!esNegocio && (tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
-                  <img width="140" height="140" src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-dev-tarjeta-foto" />
+                  <FotoZoom
+                    width={140} height={140}
+                    src={tarjetaQR.usuario?.foto || tarjetaQR.foto}
+                    alt={`Foto de ${tarjetaQR.nombre}`}
+                    className="pi-dev-tarjeta-foto"
+                  />
                 )}
                 <h2 className="pi-dev-tarjeta-nombre">{tarjetaQR.nombre}</h2>
                 <span className={`pi-dev-badge-tipo ${esNegocio ? 'negocio' : 'normal'}`}>
@@ -423,15 +438,31 @@ export default function Devolucion() {
                 </span>
 
                 <div className="pi-dev-tarjeta-datos">
+                  {!esNegocio && (
+                    <div className="pi-dev-tarjeta-dato">
+                      <FaIdCard />
+                      <div>
+                        <span className="label">Documento</span>
+                        <span className="valor">{tarjetaQR.documento || tarjetaQR.ci || '—'}</span>
+                      </div>
+                    </div>
+                  )}
                   <div className="pi-dev-tarjeta-dato">
-                    {esNegocio ? <FaBuilding /> : <FaIdCard />}
+                    <FaBuilding />
                     <div>
-                      <span className="label">{esNegocio ? 'Ganancias del evento' : 'Documento'}</span>
-                      <span className="valor">
-                        {esNegocio ? (tarjetaQR.eventoNombre || eventoDetalle.nombre) : (tarjetaQR.documento || tarjetaQR.ci || '—')}
-                      </span>
+                      <span className="label">Evento</span>
+                      <span className="valor">{tarjetaQR.eventoNombre || eventoDetalle.nombre}</span>
                     </div>
                   </div>
+                  {!esNegocio && tarjetaQR.categoriaTicket?.nombre && (
+                    <div className="pi-dev-tarjeta-dato">
+                      <FaIdCard />
+                      <div>
+                        <span className="label">Tipo de entrada</span>
+                        <span className="valor">{tarjetaQR.categoriaTicket.nombre}</span>
+                      </div>
+                    </div>
+                  )}
                   <div className="pi-dev-tarjeta-dato">
                     <FaWallet />
                     <div>
@@ -441,13 +472,25 @@ export default function Devolucion() {
                   </div>
                 </div>
 
-                {esNegocio && (
+                {esNegocio && !eventoNoCoincide && (
                   <p className="pi-dev-negocio-aviso">
                     <FaExclamationTriangle aria-hidden="true" /> Retiro de un negocio: se exige
                     foto del carnet <strong>y</strong> foto de la cara de quien cobra.
                   </p>
                 )}
+                </div>
 
+                <div className="pi-dev-col-form">
+                {eventoNoCoincide ? (
+                  <div className="pi-dev-alerta-error">
+                    <FaExclamationTriangle aria-hidden="true" />
+                    <span>
+                      {esNegocio ? 'Este código' : 'Esta manilla'} es del evento <strong>«{tarjetaQR.eventoNombre}»</strong> y este
+                      puesto atiende <strong>«{eventoDetalle.nombre}»</strong>. No se puede hacer la devolución desde acá.
+                    </span>
+                  </div>
+                ) : (
+                <>
                 <div className="pi-dev-form-monto">
                   <label htmlFor="dev-monto"><FaMoneyBillWave aria-hidden="true" /> Monto a retirar (puntos)</label>
                   <input
@@ -513,7 +556,7 @@ export default function Devolucion() {
                     />
                   ) : fotoCarnet ? (
                     <div className="pi-dev-carnet-preview">
-                      <img width="200" height="150" src={fotoCarnet} alt="Carnet de quien retira" />
+                      <FotoZoom width={200} height={150} src={fotoCarnet} alt="Carnet de quien retira" />
                       <button type="button" className="pi-dev-btn-retomar" onClick={() => setCapturandoFotoCarnet(true)}>
                         <FaRedo /> Tomar otra
                       </button>
@@ -542,7 +585,7 @@ export default function Devolucion() {
                       />
                     ) : fotoRostro ? (
                       <div className="pi-dev-carnet-preview">
-                        <img width="200" height="150" src={fotoRostro} alt="Cara de quien cobra" />
+                        <FotoZoom width={200} height={150} src={fotoRostro} alt="Cara de quien cobra" />
                         <button type="button" className="pi-dev-btn-retomar" onClick={() => setCapturandoFotoRostro(true)}>
                           <FaRedo /> Tomar otra
                         </button>
@@ -554,16 +597,26 @@ export default function Devolucion() {
                     )}
                   </div>
                 )}
+                </>
+                )}
+                </div>
+                </div>
 
                 <div className="pi-dev-tarjeta-acciones">
-                  <button type="button" className="pi-dev-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
-                  <button
-                    className="pi-dev-btn-confirmar"
-                    onClick={confirmarRetiro}
-                    disabled={!monto || Number(monto) <= 0 || excedeSaldo || !fotoCarnet || (esNegocio && !fotoRostro)}
-                  >
-                    <FaCheckCircle /> Confirmar Retiro
-                  </button>
+                  {eventoNoCoincide ? (
+                    <button type="button" className="pi-dev-btn-cancelar" onClick={cerrarTarjeta}>Cerrar</button>
+                  ) : (
+                    <>
+                      <button type="button" className="pi-dev-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
+                      <button
+                        className="pi-dev-btn-confirmar"
+                        onClick={confirmarRetiro}
+                        disabled={!monto || Number(monto) <= 0 || excedeSaldo || !fotoCarnet || (esNegocio && !fotoRostro)}
+                      >
+                        <FaCheckCircle /> Confirmar Retiro
+                      </button>
+                    </>
+                  )}
                 </div>
               </>
             )}

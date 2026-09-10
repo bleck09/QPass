@@ -21,7 +21,15 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
   );
   const [avisoNoListo, setAvisoNoListo] = useState(false);
   const [camaras, setCamaras] = useState([]);
-  const [camaraId, setCamaraId] = useState('');
+  // La cámara elegida se recuerda entre capturas y sesiones.
+  const [camaraId, setCamaraId] = useState(() => {
+    try { return localStorage.getItem('qp-camara-id') || ''; } catch { return ''; }
+  });
+
+  const elegirCamara = (id) => {
+    setCamaraId(id);
+    try { localStorage.setItem('qp-camara-id', id); } catch { /* ignore */ }
+  };
 
   useEffect(() => {
     let activo = true;
@@ -48,15 +56,21 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
             const videos = dispositivos.filter(d => d.kind === 'videoinput');
             if (activo && videos.length > 1) {
               setCamaras(videos);
+              // Si no había una guardada válida, fijamos la que quedó activa.
               const idActual = s.getVideoTracks()[0]?.getSettings().deviceId;
-              if (idActual) setCamaraId(idActual);
+              const guardadaSirve = camaraId && videos.some(v => v.deviceId === camaraId);
+              if (idActual && !guardadaSirve) elegirCamara(idActual);
             }
           } catch {
             // no se pudo listar cámaras, seguimos con la que ya está activa
           }
         }
       })
-      .catch(() => setError('No se pudo acceder a la cámara. Revisa los permisos del navegador.'));
+      .catch(() => {
+        // El deviceId guardado ya no existe (cámara desconectada): reintenta con la default.
+        if (camaraId) { elegirCamara(''); return; }
+        setError('No se pudo acceder a la cámara. Revisa los permisos del navegador.');
+      });
 
     return () => {
       activo = false;
@@ -90,7 +104,7 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
               className="pi-captura-foto-select-camara"
               aria-label="Elegir cámara"
               value={camaraId}
-              onChange={(e) => setCamaraId(e.target.value)}
+              onChange={(e) => elegirCamara(e.target.value)}
             >
               {camaras.map((c, i) => (
                 <option key={c.deviceId} value={c.deviceId}>

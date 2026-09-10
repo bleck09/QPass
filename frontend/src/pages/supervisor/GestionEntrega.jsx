@@ -15,7 +15,6 @@ import {
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
-import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
@@ -290,7 +289,6 @@ export default function GestionEntrega() {
                   evento={ev}
                   onClick={() => abrirEvento(ev)}
                   disabled={estadoEvento(ev) === 'archivado'}
-                  badges={<BadgeEstadoEvento evento={ev} />}
                   cta="Gestionar entrega"
                 />
               )}

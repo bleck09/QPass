@@ -70,15 +70,59 @@ export class TransaccionesService {
     eventoId: string,
     monto: number,
   ): Promise<string | null> {
+    // §5.10 — se guarda contra el saldo DISPONIBLE (saldo - saldoBloqueado): la
+    // parte retenida por una IncidenciaRecarga pendiente no se puede gastar.
     const filas = await tx.$queryRaw<Array<{ saldo: string }>>(Prisma.sql`
       UPDATE "billeteras_evento"
       SET "saldo" = "saldo" - ${monto}
       WHERE "usuarioId" = ${usuarioId}
         AND "eventoId" = ${eventoId}
-        AND "saldo" >= ${monto}
+        AND "saldo" - "saldoBloqueado" >= ${monto}
       RETURNING "saldo"
     `);
     return filas.length ? String(filas[0].saldo) : null;
+  }
+
+  /**
+   * §5.10 — retiene parte del saldo por una IncidenciaRecarga pendiente. Solo
+   * bloquea lo que hay DISPONIBLE (si ya lo gastó, se bloquea lo que quede).
+   * Debe correr dentro del $transaction del que la llama. Devuelve lo bloqueado.
+   */
+  async bloquearSaldo(
+    tx: PrismaTx,
+    usuarioId: number,
+    eventoId: string,
+    monto: number,
+  ): Promise<number> {
+    if (monto <= 0) return 0;
+    const fila = await tx.billeteraEvento.findUnique({
+      where: { usuarioId_eventoId: { usuarioId, eventoId } },
+      select: { saldo: true, saldoBloqueado: true },
+    });
+    if (!fila) return 0;
+    const disponible = Number(fila.saldo) - Number(fila.saldoBloqueado);
+    const aBloquear = Math.max(0, Math.min(monto, disponible));
+    if (aBloquear === 0) return 0;
+    await tx.billeteraEvento.update({
+      where: { usuarioId_eventoId: { usuarioId, eventoId } },
+      data: { saldoBloqueado: { increment: aBloquear } },
+    });
+    return aBloquear;
+  }
+
+  /** Libera saldo retenido (al resolver la incidencia). */
+  async liberarSaldo(
+    tx: PrismaTx,
+    usuarioId: number,
+    eventoId: string,
+    monto: number,
+  ): Promise<void> {
+    if (monto <= 0) return;
+    await tx.$executeRaw(Prisma.sql`
+      UPDATE "billeteras_evento"
+      SET "saldoBloqueado" = GREATEST("saldoBloqueado" - ${monto}, 0)
+      WHERE "usuarioId" = ${usuarioId} AND "eventoId" = ${eventoId}
+    `);
   }
 
   /**
@@ -134,6 +178,7 @@ export class TransaccionesService {
    */
   async recargar(params: {
     entradaId: string;
+    eventoId?: string;
     monto: number;
     operador: { id: number; rol: string };
   }) {
@@ -146,6 +191,12 @@ export class TransaccionesService {
       if (!entrada.usuarioId) {
         throw new BadRequestException(
           'Esta entrada todavía no tiene una cuenta vinculada',
+        );
+      }
+      // La manilla tiene que ser del evento donde está el recargador.
+      if (params.eventoId && params.eventoId !== entrada.eventoId) {
+        throw new ConflictException(
+          'Esta manilla pertenece a otro evento: no se puede recargar desde este puesto.',
         );
       }
 
@@ -205,6 +256,19 @@ export class TransaccionesService {
         where: { id: params.usuarioId },
       });
       if (!usuario) throw new NotFoundException('Usuario no encontrado');
+
+      // La manilla escaneada tiene que ser del evento donde está el operador.
+      if (params.entradaId) {
+        const entrada = await tx.entrada.findUnique({
+          where: { id: params.entradaId },
+          select: { eventoId: true },
+        });
+        if (entrada && entrada.eventoId !== params.eventoId) {
+          throw new ConflictException(
+            'Esta manilla pertenece a otro evento: no se puede hacer la devolución desde este puesto.',
+          );
+        }
+      }
 
       const corteCajaId = await this.cajaObligatoria(
         tx,

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  FaArrowLeft, FaDollarSign, FaShoppingCart, FaReceipt, FaWallet,
+  FaDollarSign, FaShoppingCart, FaReceipt, FaWallet,
   FaStore, FaClock, FaTrophy, FaUsers, FaBan,
 } from 'react-icons/fa';
+import Migas from '../../components/Migas.jsx';
+import BotonVolver from '../../components/BotonVolver.jsx';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useApi } from '../../utils/useApi.js';
 import api from '../../api/index.js';
@@ -15,6 +17,7 @@ import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import Modal from '../../components/Modal.jsx';
 import SelectorRango from '../../components/SelectorRango.jsx';
+import AvisosStockPanel from '../../components/AvisosStockPanel.jsx';
 import { rangoDe } from '../../utils/rangoFechas.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { generarDataUrlQr } from '../../utils/qrPdf';
@@ -185,10 +188,16 @@ export default function UsuNegoDasboar() {
   // ---------- DASHBOARD ----------
   return (
     <div className="pi-ngd-container">
+      <div className="qp-nav">
+        <BotonVolver onClick={volverALista}>Cambiar de evento</BotonVolver>
+        <Migas
+          items={[
+            { texto: 'Eventos', onClick: volverALista },
+            { texto: eventoSeleccionado.nombre, actual: true },
+          ]}
+        />
+      </div>
       <div className="pi-ngd-header">
-        <button className="pi-entrega-btn-volver" onClick={volverALista}>
-          <FaArrowLeft /> Cambiar de evento
-        </button>
         <h1>{eventoSeleccionado.nombre}</h1>
         <p>Resumen de tus puestos y ventas en este evento.</p>
         <div className="pi-ngd-rango">
@@ -204,6 +213,8 @@ export default function UsuNegoDasboar() {
         <p className="pi-entrega-sin-eventos">No tienes puestos en este evento.</p>
       ) : (
         <>
+          <AvisosStockPanel />
+
           {/* --- RESUMEN (§3.1) --- */}
           <section className="pi-ngd-seccion">
             <h3 className="pi-ngd-seccion-titulo">Resumen del evento</h3>
@@ -213,14 +224,10 @@ export default function UsuNegoDasboar() {
                 tono="ok"
                 valor={fmtBs(data.resumen.ingresoTotal)}
                 label="Ventas del evento"
-                extra={
-                  <>
-                    {data.resumen.anuladas?.cantidad > 0 && (
-                      <span className="pi-ngd-nota">{data.resumen.anuladas.cantidad} anuladas ({fmtBs(data.resumen.anuladas.monto)})</span>
-                    )}
-                    <ChipVar par={data.resumen.comparativa?.ingresoTotal} />
-                  </>
-                }
+                nota={data.resumen.anuladas?.cantidad > 0
+                  ? `${data.resumen.anuladas.cantidad} anuladas (${fmtBs(data.resumen.anuladas.monto)})`
+                  : undefined}
+                extra={<ChipVar par={data.resumen.comparativa?.ingresoTotal} />}
               />
               <StatCard
                 icon={<FaShoppingCart />}
@@ -240,13 +247,13 @@ export default function UsuNegoDasboar() {
                 tono="info"
                 valor={fmtBs(data.resumen.acreditadoBilletera)}
                 label="Acreditado a mi billetera"
-                extra={<span className="pi-ngd-nota">debe coincidir con ventas</span>}
+                nota="debe coincidir con ventas"
               />
               <StatCard
                 icon={<FaWallet />}
                 valor={fmtBs(data.resumen.saldoBilletera)}
-                label="Saldo en mi billetera de este evento"
-                extra={<span className="pi-ngd-nota">lo que aún no retiraste</span>}
+                label="Saldo en mi billetera (este evento)"
+                nota="lo que aún no retiraste"
               />
             </div>
           </section>

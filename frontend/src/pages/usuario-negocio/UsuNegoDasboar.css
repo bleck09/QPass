@@ -45,15 +45,21 @@
 
 .pi-ngd-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 16px;
+}
+@media (min-width: 1100px) {
+  /* con 5 KPIs no dejar que se hagan tiras finísimas */
+  .pi-ngd-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1500px) {
+  .pi-ngd-grid { grid-template-columns: repeat(5, 1fr); }
 }
 
 .pi-ngd-nota {
   font-size: var(--text-xs);
-  font-weight: 600;
   color: var(--text-secondary);
-  white-space: nowrap;
+  line-height: 1.5;
 }
 
 /* --- Barra horizontal en celda de tabla (top productos) --- */

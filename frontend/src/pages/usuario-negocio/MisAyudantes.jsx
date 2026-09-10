@@ -20,6 +20,68 @@ import './MisAyudantes.css';
 const FORM_CREAR = { nombre: '', email: '', password: '', foto: '', puestosAsignados: [] };
 const FORM_EDITAR = { nombre: '', foto: '' };
 
+/**
+ * Selector de puestos en acordeón: toda la sección colapsada; al abrirla,
+ * un grupo por evento (también colapsable). Evita el listado larguísimo.
+ *
+ * @param {{eventoId, eventoNombre, puestos:{id,nombre}[]}[]} grupos
+ * @param {(puestoId:string)=>boolean} estaSeleccionado
+ * @param {(puesto)=>void} onToggle
+ * @param {boolean} defaultOpen  abre la sección de entrada (modal de asignar)
+ */
+function SelectorPuestos({ grupos, estaSeleccionado, onToggle, defaultOpen = false }) {
+  const [seccionAbierta, setSeccionAbierta] = useState(defaultOpen);
+  const [gruposAbiertos, setGruposAbiertos] = useState(
+    () => new Set(grupos.filter(g => g.puestos.some(p => estaSeleccionado(p.id))).map(g => g.eventoId)),
+  );
+
+  if (!grupos.length) return <p className="tabla-vacia">No tenés puestos todavía.</p>;
+
+  const total = grupos.reduce((n, g) => n + g.puestos.length, 0);
+  const nSel = grupos.reduce((n, g) => n + g.puestos.filter(p => estaSeleccionado(p.id)).length, 0);
+  const toggleGrupo = (id, abierto) => setGruposAbiertos(prev => {
+    const n = new Set(prev);
+    if (abierto) n.add(id); else n.delete(id);
+    return n;
+  });
+
+  return (
+    <details className="pi-ma-selector" open={seccionAbierta} onToggle={(e) => setSeccionAbierta(e.currentTarget.open)}>
+      <summary>
+        <FaMapMarkerAlt aria-hidden="true" /> Puestos
+        <span className="celda-secundaria">· {nSel} de {total} seleccionados</span>
+      </summary>
+      <div className="pi-ma-selector-cuerpo">
+        {grupos.map(g => {
+          const gSel = g.puestos.filter(p => estaSeleccionado(p.id)).length;
+          return (
+            <details
+              key={g.eventoId}
+              className="pi-ma-grupo"
+              open={gruposAbiertos.has(g.eventoId)}
+              onToggle={(e) => toggleGrupo(g.eventoId, e.currentTarget.open)}
+            >
+              <summary>{g.eventoNombre} <span className="celda-secundaria">· {gSel}/{g.puestos.length}</span></summary>
+              <div className="checkbox-grid">
+                {g.puestos.map(p => {
+                  const on = estaSeleccionado(p.id);
+                  return (
+                    <label key={p.id} className={`checkbox-item${on ? ' selected' : ''}`}>
+                      <input type="checkbox" checked={on} onChange={() => onToggle(p)} />
+                      {on ? <FaCheckSquare aria-hidden="true" /> : <FaSquare aria-hidden="true" />}
+                      {p.nombre}
+                    </label>
+                  );
+                })}
+              </div>
+            </details>
+          );
+        })}
+      </div>
+    </details>
+  );
+}
+
 export default function MisAyudantes() {
   useTituloPagina('Mis ayudantes');
   const [confirmar, DialogoConfirmar] = useConfirmar();
@@ -173,7 +235,7 @@ export default function MisAyudantes() {
       </div>
 
       {err && !showCrear && !editandoId && !reseteandoId && (
-        <p className="pi-ayudante-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>
+        <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>
       )}
 
       {errorAyudantes ? (
@@ -186,7 +248,9 @@ export default function MisAyudantes() {
             columnas={['Ayudante', 'Puestos', { texto: 'Acciones', align: 'center' }]}
             datos={ayudantesFiltrados}
             vacio={busqueda ? 'No se encontraron ayudantes.' : 'Aún no tenés ayudantes.'}
-            renderFila={a => (
+            renderFila={a => {
+              const eventos = [...new Set(a.asignaciones.map(x => x.eventoNombre).filter(Boolean))];
+              return (
               <tr key={a.id}>
                 <td>
                   <div className="item-info">
@@ -202,43 +266,53 @@ export default function MisAyudantes() {
                   </div>
                 </td>
                 <td>
-                  <div className="badge-sucursal-container">
-                    {a.asignaciones.length > 0 ? (
-                      a.asignaciones.map(x => (
-                        <span key={x.id} className="badge-puesto" title={x.eventoNombre}>
-                          {x.puestoNombre}{x.eventoNombre ? <em> · {x.eventoNombre}</em> : null}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="badge-sin-puesto">Sin asignar</span>
-                    )}
-                  </div>
+                  {a.asignaciones.length === 0 ? (
+                    <span className="badge-sin-puesto">Sin asignar</span>
+                  ) : a.asignaciones.length === 1 ? (
+                    <span className="badge-puesto" title={a.asignaciones[0].eventoNombre}>
+                      {a.asignaciones[0].puestoNombre}
+                      {a.asignaciones[0].eventoNombre ? <em> · {a.asignaciones[0].eventoNombre}</em> : null}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      className="badge-puesto badge-puesto--btn"
+                      onClick={() => { setAsignandoId(a.id); setErr(''); }}
+                      title="Ver / editar puestos"
+                    >
+                      <FaMapMarkerAlt aria-hidden="true" /> {a.asignaciones.length} puestos
+                      {eventos.length > 0 && (
+                        <em> · {eventos.length === 1 ? eventos[0] : `${eventos.length} eventos`}</em>
+                      )}
+                    </button>
+                  )}
                 </td>
                 <td>
-                  <div className="action-buttons">
-                    <button type="button" className="btn-asignar" onClick={() => { setAsignandoId(a.id); setErr(''); }} aria-label={`Asignar puestos a ${a.nombre}`} title="Asignar a puestos">
-                      <FaMapMarkerAlt />
+                  <div className="btn-acciones">
+                    <button type="button" className="btn-secundario-sm" onClick={() => { setAsignandoId(a.id); setErr(''); }} title="Asignar a puestos">
+                      <FaMapMarkerAlt aria-hidden="true" /> Puestos
                     </button>
-                    <button type="button" className="btn-asignar" onClick={() => abrirEditar(a)} aria-label={`Editar ${a.nombre}`} title="Editar nombre / foto">
-                      <FaPen />
+                    <button type="button" className="btn-secundario-sm" onClick={() => abrirEditar(a)} title="Editar nombre / foto">
+                      <FaPen aria-hidden="true" /> Editar
                     </button>
-                    <button type="button" className="btn-asignar" onClick={() => { setReseteandoId(a.id); setPassNueva(''); setErr(''); }} aria-label={`Resetear contraseña de ${a.nombre}`} title="Resetear contraseña">
-                      <FaKey />
+                    <button type="button" className="btn-secundario-sm" onClick={() => { setReseteandoId(a.id); setPassNueva(''); setErr(''); }} title="Resetear contraseña">
+                      <FaKey aria-hidden="true" /> Contraseña
                     </button>
-                    <button type="button" className="btn-eliminar" onClick={() => desvincular(a)} aria-label={`Desvincular a ${a.nombre}`} title="Desvincular del negocio">
-                      <FaUnlink />
+                    <button type="button" className="btn-secundario-sm btn-secundario-sm--peligro" onClick={() => desvincular(a)} title="Desvincular del negocio">
+                      <FaUnlink aria-hidden="true" /> Desvincular
                     </button>
                   </div>
                 </td>
               </tr>
-            )}
+              );
+            }}
           />
         </div>
       )}
 
       {/* CREAR */}
       {showCrear && (
-        <Modal titulo={<><FaUserTie color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Nuevo Ayudante</>} onCerrar={() => setShowCrear(false)} className="pi-usr-modal">
+        <Modal titulo={<><FaUserTie color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Nuevo Ayudante</>} onCerrar={() => setShowCrear(false)}>
           <div className="pi-usr-modal-body">
             <form onSubmit={crearAyudante} className="formulario">
               <div className="input-group">
@@ -254,29 +328,18 @@ export default function MisAyudantes() {
                 <input id="ma-pass" type="text" autoComplete="new-password" value={formCrear.password} onChange={(e) => setFormCrear(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" required minLength={6} />
               </div>
 
-              <fieldset className="input-group" style={{ border: 0, padding: 0, margin: 0 }}>
+              <fieldset className="input-group input-group--fieldset">
                 <legend><FaMapMarkerAlt aria-hidden="true" /> Puestos (opcional)</legend>
-                {puestosPorEvento.length === 0 && <p className="tabla-vacia">No tenés puestos todavía.</p>}
-                {puestosPorEvento.map(g => (
-                  <div key={g.eventoId} className="pi-ma-grupo">
-                    <span className="pi-ma-grupo-titulo">{g.eventoNombre}</span>
-                    <div className="checkbox-grid">
-                      {g.puestos.map(p => (
-                        <label key={p.id} className="checkbox-item">
-                          <input type="checkbox" checked={formCrear.puestosAsignados.includes(p.id)}
-                            onChange={() => setFormCrear(f => ({
-                              ...f,
-                              puestosAsignados: f.puestosAsignados.includes(p.id)
-                                ? f.puestosAsignados.filter(x => x !== p.id)
-                                : [...f.puestosAsignados, p.id],
-                            }))} />
-                          {formCrear.puestosAsignados.includes(p.id) ? <FaCheckSquare aria-hidden="true" /> : <FaSquare aria-hidden="true" />}
-                          {p.nombre}
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+                <SelectorPuestos
+                  grupos={puestosPorEvento}
+                  estaSeleccionado={(id) => formCrear.puestosAsignados.includes(id)}
+                  onToggle={(p) => setFormCrear(f => ({
+                    ...f,
+                    puestosAsignados: f.puestosAsignados.includes(p.id)
+                      ? f.puestosAsignados.filter(x => x !== p.id)
+                      : [...f.puestosAsignados, p.id],
+                  }))}
+                />
               </fieldset>
 
               <div className="input-group">
@@ -294,10 +357,10 @@ export default function MisAyudantes() {
                   </div>
                 )}
               </div>
-              {err && <p className="pi-ayudante-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
-              <div className="pi-usr-modal-acciones">
-                <button type="button" className="btn-cerrar-secundario" onClick={() => setShowCrear(false)}>Cancelar</button>
-                <button type="submit" className="pi-usr-btn-enviar"><FaSave /> Crear Ayudante</button>
+              {err && <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>}
+              <div className="modal-actions">
+                <button type="button" className="btn-cancelar" onClick={() => setShowCrear(false)}>Cancelar</button>
+                <button type="submit" className="btn-primario"><FaSave /> Crear Ayudante</button>
               </div>
             </form>
           </div>
@@ -306,7 +369,7 @@ export default function MisAyudantes() {
 
       {/* EDITAR */}
       {editandoId && (
-        <Modal titulo={<><FaPen color="var(--indigo-profundo)" aria-hidden="true" /> Editar ayudante</>} onCerrar={() => setEditandoId(null)} className="pi-usr-modal">
+        <Modal titulo={<><FaPen color="var(--indigo-profundo)" aria-hidden="true" /> Editar ayudante</>} onCerrar={() => setEditandoId(null)}>
           <div className="pi-usr-modal-body">
             <form onSubmit={guardarEdicion} className="formulario">
               <div className="input-group">
@@ -328,10 +391,10 @@ export default function MisAyudantes() {
                   </div>
                 )}
               </div>
-              {err && <p className="pi-ayudante-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
-              <div className="pi-usr-modal-acciones">
-                <button type="button" className="btn-cerrar-secundario" onClick={() => setEditandoId(null)}>Cancelar</button>
-                <button type="submit" className="pi-usr-btn-enviar"><FaSave /> Guardar</button>
+              {err && <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>}
+              <div className="modal-actions">
+                <button type="button" className="btn-cancelar" onClick={() => setEditandoId(null)}>Cancelar</button>
+                <button type="submit" className="btn-primario"><FaSave /> Guardar</button>
               </div>
             </form>
           </div>
@@ -340,7 +403,7 @@ export default function MisAyudantes() {
 
       {/* RESET PASSWORD */}
       {reseteando && (
-        <Modal titulo={<><FaKey color="var(--indigo-profundo)" aria-hidden="true" /> Resetear contraseña: {reseteando.nombre}</>} onCerrar={() => setReseteandoId(null)} className="pi-usr-modal">
+        <Modal titulo={<><FaKey color="var(--indigo-profundo)" aria-hidden="true" /> Resetear contraseña: {reseteando.nombre}</>} onCerrar={() => setReseteandoId(null)}>
           <div className="pi-usr-modal-body">
             <form onSubmit={confirmarReset} className="formulario">
               <p className="pi-ayudante-nota">Se le pone una contraseña temporal. Al entrar, el ayudante deberá cambiarla.</p>
@@ -348,10 +411,10 @@ export default function MisAyudantes() {
                 <label htmlFor="mr-pass"><FaLock aria-hidden="true" /> Nueva contraseña temporal</label>
                 <input id="mr-pass" type="text" value={passNueva} onChange={(e) => setPassNueva(e.target.value)} placeholder="Mínimo 6 caracteres" required minLength={6} autoFocus />
               </div>
-              {err && <p className="pi-ayudante-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
-              <div className="pi-usr-modal-acciones">
-                <button type="button" className="btn-cerrar-secundario" onClick={() => setReseteandoId(null)}>Cancelar</button>
-                <button type="submit" className="pi-usr-btn-enviar"><FaSave /> Resetear</button>
+              {err && <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>}
+              <div className="modal-actions">
+                <button type="button" className="btn-cancelar" onClick={() => setReseteandoId(null)}>Cancelar</button>
+                <button type="submit" className="btn-primario"><FaSave /> Resetear</button>
               </div>
             </form>
           </div>
@@ -360,30 +423,18 @@ export default function MisAyudantes() {
 
       {/* ASIGNAR A PUESTOS */}
       {asignando && (
-        <Modal titulo={<><FaMapMarkerAlt color="var(--indigo-profundo)" aria-hidden="true" /> Asignar Puestos: {asignando.nombre}</>} onCerrar={() => setAsignandoId(null)} className="pi-usr-modal">
+        <Modal titulo={<><FaMapMarkerAlt color="var(--indigo-profundo)" aria-hidden="true" /> Asignar Puestos: {asignando.nombre}</>} onCerrar={() => setAsignandoId(null)}>
           <div className="pi-usr-modal-body">
             <p className="pi-ayudante-nota">Marcá en qué puestos puede trabajar. Se guarda al instante.</p>
-            {puestosPorEvento.length === 0 && <p className="tabla-vacia">No tenés puestos todavía.</p>}
-            {puestosPorEvento.map(g => (
-              <div key={g.eventoId} className="pi-ma-grupo">
-                <span className="pi-ma-grupo-titulo">{g.eventoNombre}</span>
-                <div className="checkbox-grid">
-                  {g.puestos.map(p => {
-                    const asignado = asignando.asignaciones.some(x => x.puestoId === p.id);
-                    return (
-                      <label key={p.id} className="checkbox-item">
-                        <input type="checkbox" checked={asignado} onChange={() => togglePuesto(p)} />
-                        {asignado ? <FaCheckSquare /> : <FaSquare />}
-                        {p.nombre}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
-            {err && <p className="pi-ayudante-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
-            <div className="pi-usr-modal-acciones">
-              <button type="button" className="pi-usr-btn-enviar" onClick={() => setAsignandoId(null)}>Listo</button>
+            <SelectorPuestos
+              grupos={puestosPorEvento}
+              defaultOpen
+              estaSeleccionado={(id) => asignando.asignaciones.some(x => x.puestoId === id)}
+              onToggle={togglePuesto}
+            />
+            {err && <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>}
+            <div className="modal-actions">
+              <button type="button" className="btn-primario" onClick={() => setAsignandoId(null)}>Listo</button>
             </div>
           </div>
         </Modal>

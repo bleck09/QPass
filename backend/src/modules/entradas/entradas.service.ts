@@ -55,7 +55,9 @@ export class EntradasService {
   private async adjuntarSaldoEvento(
     entradas: Array<{
       eventoId: string;
-      usuario?: { id: number; saldo?: unknown } | null;
+      usuario?:
+        | { id: number; saldo?: unknown; saldoBloqueado?: unknown }
+        | null;
     }>,
   ): Promise<void> {
     const pares = new Map<string, { usuarioId: number; eventoId: string }>();
@@ -70,14 +72,26 @@ export class EntradasService {
     if (pares.size === 0) return;
     const filas = await this.prisma.billeteraEvento.findMany({
       where: { OR: [...pares.values()] },
-      select: { usuarioId: true, eventoId: true, saldo: true },
+      select: {
+        usuarioId: true,
+        eventoId: true,
+        saldo: true,
+        saldoBloqueado: true,
+      },
     });
-    const saldoDe = new Map(
-      filas.map((f) => [`${f.usuarioId}|${f.eventoId}`, Number(f.saldo)]),
+    const de = new Map(
+      filas.map((f) => [
+        `${f.usuarioId}|${f.eventoId}`,
+        { saldo: Number(f.saldo), bloqueado: Number(f.saldoBloqueado) },
+      ]),
     );
     for (const e of entradas) {
       if (e.usuario?.id) {
-        e.usuario.saldo = saldoDe.get(`${e.usuario.id}|${e.eventoId}`) ?? 0;
+        const v = de.get(`${e.usuario.id}|${e.eventoId}`);
+        // `saldo` = disponible para gastar (lo retenido por incidencia no cuenta);
+        // `saldoBloqueado` va aparte para poder mostrarlo.
+        e.usuario.saldoBloqueado = v?.bloqueado ?? 0;
+        e.usuario.saldo = Math.max(0, (v?.saldo ?? 0) - (v?.bloqueado ?? 0));
       }
     }
   }
@@ -278,6 +292,7 @@ export class EntradasService {
     tipo: TipoRegistroIngreso,
     foto: string | undefined,
     actorId: number,
+    eventoIdEsperado?: string,
   ) {
     await this.eventoPolicy.porEntrada(id);
     const entradaActual = await this.prisma.entrada.findUnique({
@@ -290,6 +305,14 @@ export class EntradasService {
       },
     });
     if (!entradaActual) throw new NotFoundException('Entrada no encontrada');
+
+    // La entrada está vinculada a un evento: no se puede registrar su ingreso/salida
+    // desde el control de otro evento.
+    if (eventoIdEsperado && entradaActual.eventoId !== eventoIdEsperado) {
+      throw new ConflictException(
+        `Esta entrada pertenece a "${entradaActual.evento.nombre}": no se puede registrar el movimiento desde el control de otro evento.`,
+      );
+    }
 
     if (tipo === 'ingreso') {
       const { evento, diaEvento } = entradaActual;

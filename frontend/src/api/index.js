@@ -103,8 +103,8 @@ export const entradas = {
   registros: (id) => apiGet(`/entradas/${id}/registros`),
   vincularQr: (id, codigoQrId) => apiPost(`/entradas/${id}/vincular-qr`, { codigoQrId }),
   anularQr: (id, motivo) => apiPost(`/entradas/${id}/anular-qr`, { motivo }),
-  ingreso: (id, foto) => apiPost(`/entradas/${id}/ingreso`, { foto }),
-  salida: (id, foto) => apiPost(`/entradas/${id}/salida`, { foto }),
+  ingreso: (id, foto, eventoId) => apiPost(`/entradas/${id}/ingreso`, { foto, eventoId }),
+  salida: (id, foto, eventoId) => apiPost(`/entradas/${id}/salida`, { foto, eventoId }),
 };
 
 export const codigosQr = {
@@ -177,6 +177,14 @@ export const ventas = {
   anular: (id, motivo) => apiPost(`/ventas/${id}/anular`, { motivo }),
 };
 
+// Aviso de un Ayudante al Usuario Negocio: producto sin stock / por agotarse.
+export const avisosStock = {
+  crear: (datos) => apiPost('/avisos-stock', datos),
+  listar: () => apiGet('/avisos-stock'),
+  marcarVisto: (id) => apiPatch(`/avisos-stock/${id}/visto`),
+  marcarTodosVistos: () => apiPost('/avisos-stock/marcar-vistos'),
+};
+
 export const landingConfig = {
   obtener: (eventoId) => apiGet(`/landing-config/${eventoId}`),
   guardar: (eventoId, datos) => apiPut(`/landing-config/${eventoId}`, datos),
@@ -227,7 +235,7 @@ export const dashboard = {
 const api = {
   auth, usuarios, eventos, asignaciones, diasEvento, billeterasEvento, codigosRetiroNegocio, categoriasTicket, compras, entradas,
   codigosQr, transacciones, incidencias, reportesEntrada, puestosBase, puestos, productos,
-  puestoAyudantes, ventas, landingConfig, solicitudesEvento, cortesCaja,
+  puestoAyudantes, ventas, avisosStock, landingConfig, solicitudesEvento, cortesCaja,
   auditoria, dashboard,
 };
 

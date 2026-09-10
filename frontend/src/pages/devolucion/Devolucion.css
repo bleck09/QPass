@@ -185,6 +185,7 @@
   align-items: center;
   justify-content: center;
   z-index: 100;
+  padding: 20px;
   animation: pi-dev-fadeIn 0.15s ease-out;
 }
 
@@ -196,13 +197,34 @@
 .pi-dev-modal-tarjeta {
   background: var(--bg-surface);
   width: 100%;
-  max-width: 420px;
+  max-width: 720px;
+  max-height: 92vh;
+  overflow-y: auto;
   border-radius: var(--radius-xl);
   padding: 32px 28px 24px;
   position: relative;
   text-align: center;
   box-shadow: 0 20px 50px rgba(10, 14, 39, 0.25);
   animation: pi-dev-slideUp 0.2s ease-out;
+}
+
+/* Dos columnas: identidad a la izquierda, formulario a la derecha, para que
+   la tarjeta no crezca a lo largo hasta abajo de la pantalla. */
+.pi-dev-tarjeta-cols {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+  text-align: left;
+  margin-top: 4px;
+}
+.pi-dev-col-id { text-align: center; }
+.pi-dev-col-form { min-width: 0; }
+.pi-dev-col-form > .pi-dev-form-monto { margin-top: 0; }
+
+@media (max-width: 680px) {
+  .pi-dev-modal-tarjeta { max-width: 440px; }
+  .pi-dev-tarjeta-cols { grid-template-columns: 1fr; gap: 20px; }
 }
 
 @keyframes pi-dev-slideUp {
@@ -436,15 +458,20 @@
 
 .pi-dev-alerta-error {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   background-color: var(--rojo-error-suave);
   color: var(--rojo-error-texto);
-  padding: 8px 12px;
+  padding: 10px 12px;
   border-radius: var(--radius-md);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
+  line-height: 1.5;
   margin-top: 12px;
+}
+.pi-dev-alerta-error svg {
+  flex-shrink: 0;
+  margin-top: 3px;
 }
 
 .pi-dev-tarjeta-acciones {
@@ -524,6 +551,17 @@
 
 .pi-dev-exito .pi-dev-btn-confirmar {
   width: 100%;
+  padding: 12px 20px;
+  min-height: 48px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
 /* --- Motivo tipado del retiro (§5.11) --- */
@@ -547,12 +585,7 @@
 }
 .pi-dev-motivo-nota { margin-top: 6px; }
 
-/* Link "abrir arqueo de caja" en el aviso de "sin caja abierta" (§5.2) */
-.pi-dev-link-caja {
-  background: none; border: none; padding: 0;
-  color: inherit; font: inherit; font-weight: 700;
-  text-decoration: underline; cursor: pointer;
-}
+/* Aviso "sin caja abierta" (§5.2) -> componente <AvisoSinCaja> (components/) */
 
 /* Aviso en la tarjeta de retiro de un negocio (§seguridad) */
 .pi-dev-negocio-aviso {

@@ -30,6 +30,7 @@ export default function StatCard({
   valor,
   label,
   extra,
+  nota,
   onClick,
   className = '',
 }) {
@@ -48,6 +49,7 @@ export default function StatCard({
       <span className="qp-stat__body">
         <span className="qp-stat__valor">{valor}</span>
         <span className="qp-stat__label">{label}</span>
+        {nota != null && <span className="qp-stat__nota">{nota}</span>}
       </span>
       {extra != null && <span className="qp-stat__extra">{extra}</span>}
     </Tag>

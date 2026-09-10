@@ -313,9 +313,12 @@ export default function Admin({
 
   const abrirResolucion = (incidencia) => {
     setIncidenciaModal(incidencia);
-    // Admin decide libremente cuánto acreditar; si el recargador dejó un monto
-    // de referencia lo usamos como punto de partida, si no arranca en blanco.
-    setMontoAjuste(incidencia.montoSolicitado != null ? String(incidencia.montoSolicitado) : '');
+    // Sugerencia: ajuste = lo que pagó - lo que se le cargó. Negativo si se le
+    // cargó de más (hay que descontar), positivo si le faltó (hay que acreditar).
+    const sugerido = incidencia.montoSolicitado != null
+      ? Number(incidencia.montoSolicitado) - Number(incidencia.montoEntregado)
+      : '';
+    setMontoAjuste(sugerido === '' ? '' : String(sugerido));
   };
 
   const cerrarResolucion = () => {
@@ -326,7 +329,7 @@ export default function Admin({
   const confirmarAjuste = async () => {
     const incidencia = incidenciaModal;
     const valor = Number(montoAjuste);
-    if (!incidencia || montoAjuste === '' || Number.isNaN(valor) || valor < 0) return;
+    if (!incidencia || montoAjuste === '' || Number.isNaN(valor)) return;
 
     await api.incidencias.resolver(incidencia.id, valor);
     setIncidencias(await api.incidencias.listar(reportesGlobal ? {} : { eventoId }));
@@ -1150,7 +1153,7 @@ export default function Admin({
                     <td>
                       {inc.estado === 'pendiente'
                         ? <span className="pi-dash-badge pi-dash-badge-pend"><FaExclamationTriangle /> Pendiente</span>
-                        : <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Resuelta (+{inc.ajusteAplicado} pts por {inc.resueltoPor?.nombre})</span>}
+                        : <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Resuelta ({Number(inc.ajusteAplicado) > 0 ? '+' : ''}{Number(inc.ajusteAplicado)} pts por {inc.resueltoPor?.nombre})</span>}
                     </td>
                     <td>
                       {!soloLectura && inc.estado === 'pendiente' && (
@@ -1388,25 +1391,40 @@ export default function Admin({
             <div><span>Documento</span><strong>{incidenciaModal.entrada.documento || '—'}</strong></div>
             <div><span>Recargador</span><strong>{incidenciaModal.recargador.nombre}</strong></div>
             {reportesGlobal && <div><span>Evento</span><strong>{incidenciaModal.evento?.nombre || '—'}</strong></div>}
-            <div><span>Se le dio</span><strong>{incidenciaModal.montoEntregado} pts</strong></div>
-            <div><span>Dijo que quería</span><strong>{incidenciaModal.montoSolicitado != null ? `${incidenciaModal.montoSolicitado} pts` : '—'}</strong></div>
+            <div><span>Se le cargó</span><strong>{incidenciaModal.montoEntregado} pts</strong></div>
+            <div><span>Pagó en realidad</span><strong>{incidenciaModal.montoSolicitado != null ? `${incidenciaModal.montoSolicitado} pts` : '—'}</strong></div>
+            {Number(incidenciaModal.montoBloqueado) > 0 && (
+              <div><span>Retenido de su saldo</span><strong>{Number(incidenciaModal.montoBloqueado)} pts</strong></div>
+            )}
           </div>
           {incidenciaModal.nota && (
             <p className="pi-dash-reporte-nota"><span>Qué pasó:</span> {incidenciaModal.nota}</p>
           )}
 
-          <label className="pi-dash-reporte-label" htmlFor="ajuste-monto">Puntos a acreditar de más</label>
+          <label className="pi-dash-reporte-label" htmlFor="ajuste-monto">Ajuste al saldo (pts)</label>
           <input
             id="ajuste-monto"
             className="pi-dash-reporte-input"
             type="number"
-            min="0"
             inputMode="numeric"
             value={montoAjuste}
             onChange={(e) => setMontoAjuste(e.target.value)}
             autoFocus
           />
-          <p className="pi-dash-reporte-ayuda">Se sumará al saldo del participante y la incidencia quedará resuelta. Poné 0 si no corresponde acreditar nada.</p>
+          {montoAjuste !== '' && !Number.isNaN(Number(montoAjuste)) && (
+            <p className="pi-dash-reporte-ayuda">
+              {Number(montoAjuste) > 0
+                ? `Se le ACREDITAN ${Number(montoAjuste)} pts.`
+                : Number(montoAjuste) < 0
+                  ? `Se le DESCUENTAN ${Math.abs(Number(montoAjuste))} pts.`
+                  : 'Sin movimiento de saldo.'}
+              {Number(incidenciaModal.montoBloqueado) > 0 && ` Se libera lo retenido (${Number(incidenciaModal.montoBloqueado)} pts).`}
+            </p>
+          )}
+          <p className="pi-dash-reporte-ayuda">
+            <strong>+</strong> acredita (se le debía), <strong>−</strong> descuenta (se le cargó de más),
+            <strong> 0</strong> cierra sin tocar el saldo.
+          </p>
 
           <div className="pi-dash-reporte-acciones">
             <button type="button" className="pi-dash-btn-ver" onClick={cerrarResolucion}>Cancelar</button>

@@ -29,7 +29,17 @@ const tonoDif = (d) => {
  */
 export default function CorteCaja({ evento, modo }) {
   const eventoId = evento?.id;
-  const etiquetaSistema = modo === 'devolucion' ? 'Entregado (sistema)' : 'Recargado (sistema)';
+  const esDevol = modo === 'devolucion';
+  const etiquetaSistema = esDevol ? 'Pagado en retiros (sistema)' : 'Recargado (sistema)';
+  const labelFondo = esDevol
+    ? 'Fondo de efectivo para pagar retiros'
+    : 'Fondo de cambio inicial';
+  const ayudaFondo = esDevol
+    ? 'El efectivo real que te entregaron para pagar los retiros de este turno. No es saldo del evento: es plata física y sirve para cuadrar la caja al cerrar.'
+    : 'El efectivo con el que arrancás el turno para poder dar cambio. Podés dejarlo en 0.';
+  const labelEsperado = esDevol
+    ? 'Efectivo que te debe quedar'
+    : 'Efectivo esperado en caja';
 
   const cargar = useCallback(
     () =>
@@ -105,10 +115,15 @@ export default function CorteCaja({ evento, modo }) {
           <>
             <div className="pi-caja-grid">
               <StatCard valor={fmtFechaHora(caja.abiertaEn)} label="Caja abierta desde" />
-              <StatCard valor={fmtBs(caja.montoInicial)} label="Fondo de cambio inicial" />
+              <StatCard valor={fmtBs(caja.montoInicial)} label={labelFondo} />
               <StatCard tono="total" valor={fmtBs(caja.montoSistemaParcial)} label={etiquetaSistema} />
-              <StatCard tono="info" valor={fmtBs(caja.montoEsperadoParcial)} label="Efectivo esperado ahora" />
+              <StatCard tono="info" valor={fmtBs(caja.montoEsperadoParcial)} label={labelEsperado} />
             </div>
+            <p className="pi-caja-ayuda">
+              {esDevol
+                ? `${labelEsperado} = fondo (${fmtBs(caja.montoInicial)}) − pagado en retiros (${fmtBs(caja.montoSistemaParcial)}).`
+                : `${labelEsperado} = fondo (${fmtBs(caja.montoInicial)}) + recargado en efectivo (${fmtBs(caja.montoSistemaParcial)}).`}
+            </p>
             <button type="button" className="pi-caja-btn-primario" onClick={() => setModalCerrar(true)}>
               <FaLock aria-hidden="true" /> Cerrar caja
             </button>
@@ -119,9 +134,14 @@ export default function CorteCaja({ evento, modo }) {
       {data && data.historial.length > 0 && (
         <section className="pi-caja-seccion">
           <h3 className="pi-caja-titulo">Cierres anteriores</h3>
+          <p className="pi-caja-ayuda">
+            {esDevol
+              ? 'Efectivo esperado = Fondo inicial − Pagado en retiros. Diferencia = Contado − Esperado.'
+              : 'Efectivo esperado = Fondo inicial + Recargado. Diferencia = Contado − Esperado.'}
+          </p>
           <Tabla
             card
-            columnas={['Abierta', 'Cerrada', 'Sistema', 'Esperado', 'Declarado', 'Diferencia']}
+            columnas={['Abierta', 'Cerrada', 'Fondo inicial', esDevol ? 'Pagado en retiros' : 'Recargado', 'Efectivo esperado', 'Contado', 'Diferencia']}
             datos={data.historial}
             porPagina={8}
             vacio="Sin cierres."
@@ -129,6 +149,7 @@ export default function CorteCaja({ evento, modo }) {
               <tr key={c.id}>
                 <td>{fmtFechaHora(c.abiertaEn)}</td>
                 <td>{c.cerradaEn ? fmtFechaHora(c.cerradaEn) : <span className="pi-caja-abierta-badge">Abierta</span>}</td>
+                <td>{fmtBs(c.montoInicial)}</td>
                 <td>{c.montoSistema == null ? '—' : fmtBs(c.montoSistema)}</td>
                 <td>{c.montoEsperado == null ? '—' : fmtBs(c.montoEsperado)}</td>
                 <td>{c.montoDeclarado == null ? '—' : fmtBs(c.montoDeclarado)}</td>
@@ -148,7 +169,7 @@ export default function CorteCaja({ evento, modo }) {
       {modalAbrir && (
         <Modal titulo="Abrir caja" onCerrar={() => setModalAbrir(false)} tamano="sm">
           <div className="pi-caja-form">
-            <label htmlFor="caja-inicial">Fondo de cambio inicial (opcional)</label>
+            <label htmlFor="caja-inicial">{labelFondo}{esDevol ? '' : ' (opcional)'}</label>
             <input
               id="caja-inicial"
               type="number"
@@ -159,7 +180,7 @@ export default function CorteCaja({ evento, modo }) {
               onChange={(e) => setMontoInicial(e.target.value)}
               autoFocus
             />
-            <p className="pi-caja-ayuda">El efectivo con el que arrancás el turno. Podés dejarlo en 0.</p>
+            <p className="pi-caja-ayuda">{ayudaFondo}</p>
             {errMut && <p className="pi-caja-err"><FaExclamationTriangle aria-hidden="true" /> {errMut}</p>}
             <div className="pi-caja-acciones">
               <button type="button" className="pi-caja-btn-sec" onClick={() => setModalAbrir(false)} disabled={enviando}>Cancelar</button>
@@ -175,7 +196,7 @@ export default function CorteCaja({ evento, modo }) {
         <Modal titulo="Cerrar caja" onCerrar={() => setModalCerrar(false)} tamano="sm">
           <div className="pi-caja-form">
             <div className="pi-caja-resumen">
-              <span>Efectivo esperado</span>
+              <span>{labelEsperado}</span>
               <strong>{fmtBs(caja.montoEsperadoParcial)}</strong>
             </div>
             <label htmlFor="caja-declarado">Efectivo contado en la caja</label>
@@ -200,7 +221,9 @@ export default function CorteCaja({ evento, modo }) {
             <textarea
               id="caja-obs"
               rows={2}
-              placeholder="Ej: se descontó cambio para colación"
+              placeholder={esDevol
+                ? 'Ej: un retiro se pagó con un billete de más y quedó faltando cambio'
+                : 'Ej: se descontó cambio para colación'}
               value={observacion}
               onChange={(e) => setObservacion(e.target.value)}
             />

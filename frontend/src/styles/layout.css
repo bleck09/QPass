@@ -1,0 +1,29 @@
+/* ============================================================================
+   HELPERS DE LAYOUT compartidos — se importa UNA vez en main.jsx.
+   Reemplazan estilos inline repetidos (style={{ display:'flex', gap:8 }}, etc.).
+   Solo tokens de index.css.
+   ========================================================================= */
+
+/* Bloque "volver + migas" agrupado, sin el gap grande del contenedor de página */
+.qp-nav {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-4);
+}
+
+.qp-nav .pi-boton-volver,
+.qp-nav .pi-migas {
+  margin-bottom: 0;
+}
+
+/* Fila de botones (barras de acción, footers) */
+.qp-btn-group {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Celdas de tabla alineadas (para renderFila propios de <Tabla>) */
+.td-centro { text-align: center; }
+.td-derecha { text-align: right; }

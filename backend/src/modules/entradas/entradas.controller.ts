@@ -73,7 +73,7 @@ export class EntradasController {
     @Body() dto: MovimientoDto,
     @UsuarioActual('id') actorId: number,
   ) {
-    return this.entradasService.registrarMovimiento(id, 'ingreso', dto.foto, actorId);
+    return this.entradasService.registrarMovimiento(id, 'ingreso', dto.foto, actorId, dto.eventoId);
   }
 
   @Post(':id/salida')
@@ -83,6 +83,6 @@ export class EntradasController {
     @Body() dto: MovimientoDto,
     @UsuarioActual('id') actorId: number,
   ) {
-    return this.entradasService.registrarMovimiento(id, 'salida', dto.foto, actorId);
+    return this.entradasService.registrarMovimiento(id, 'salida', dto.foto, actorId, dto.eventoId);
   }
 }

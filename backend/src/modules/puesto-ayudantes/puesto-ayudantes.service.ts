@@ -28,11 +28,30 @@ export class PuestoAyudantesService {
       where: { puestoId, ayudanteId },
       include: {
         ayudante: { select: { id: true, nombre: true, email: true, foto: true } },
-        puesto: { include: { base: true } },
+        puesto: {
+          include: {
+            base: true,
+            // Datos del evento para el selector de puesto del Ayudante: nombre +
+            // imagen para la tarjeta, y fecha/estado para derivar "en curso / próximo".
+            evento: {
+              select: {
+                id: true,
+                nombre: true,
+                lugar: true,
+                imagen: true,
+                fecha: true,
+                fechaFin: true,
+                estado: true,
+                archivadoEn: true,
+              },
+            },
+          },
+        },
       },
     });
     // El nombre/logo/descripcion del puesto viven en el PuestoBase: se aplanan
     // acá para que el POS del Ayudante los siga leyendo como puesto.nombre/logo.
+    // El evento se deja anidado para poder mostrar "para qué evento estoy vendiendo".
     return filas.map((f) => ({
       ...f,
       puesto: {

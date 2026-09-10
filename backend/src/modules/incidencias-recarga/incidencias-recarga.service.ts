@@ -6,7 +6,11 @@
  * TransaccionesService.ajustar, C7) y cierra el caso — todo en un $transaction.
  * ========================================================================= */
 
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EstadoCaso, Rol } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
@@ -56,15 +60,35 @@ export class IncidenciasRecargaService {
     });
     if (!entrada) throw new NotFoundException('Entrada no encontrada');
 
-    return this.prisma.incidenciaRecarga.create({
-      data: {
-        eventoId: entrada.eventoId,
-        entradaId: dto.entradaId,
-        montoEntregado: dto.montoEntregado,
-        montoSolicitado: dto.montoSolicitado,
-        nota: dto.nota,
-        recargadorId,
-      },
+    // Si se le cargó de MÁS (entregado > pagado), se retiene la diferencia del
+    // saldo del titular hasta que Admin resuelva: así no la puede gastar y que
+    // después no alcance para descontarla (§5.10).
+    const sobrecarga =
+      dto.montoSolicitado != null
+        ? Math.max(0, dto.montoEntregado - dto.montoSolicitado)
+        : 0;
+
+    return this.prisma.$transaction(async (tx) => {
+      let montoBloqueado = 0;
+      if (sobrecarga > 0 && entrada.usuarioId) {
+        montoBloqueado = await this.transacciones.bloquearSaldo(
+          tx,
+          entrada.usuarioId,
+          entrada.eventoId,
+          sobrecarga,
+        );
+      }
+      return tx.incidenciaRecarga.create({
+        data: {
+          eventoId: entrada.eventoId,
+          entradaId: dto.entradaId,
+          montoEntregado: dto.montoEntregado,
+          montoSolicitado: dto.montoSolicitado,
+          montoBloqueado,
+          nota: dto.nota,
+          recargadorId,
+        },
+      });
     });
   }
 
@@ -79,22 +103,35 @@ export class IncidenciasRecargaService {
     if (!incidencia) throw new NotFoundException('Incidencia no encontrada');
     await this.eventoPolicy.porEvento(incidencia.eventoId);
 
+    if (incidencia.estado === 'resuelto') {
+      throw new ConflictException('Esta incidencia ya está resuelta');
+    }
     const valor = dto.ajusteAplicado;
 
     return this.prisma.$transaction(async (tx) => {
-      if (valor > 0) {
-        const entrada = await tx.entrada.findUniqueOrThrow({
-          where: { id: incidencia.entradaId },
+      const entrada = await tx.entrada.findUniqueOrThrow({
+        where: { id: incidencia.entradaId },
+      });
+
+      // 1) Liberar lo que se había retenido al abrir la incidencia.
+      if (entrada.usuarioId && Number(incidencia.montoBloqueado) > 0) {
+        await this.transacciones.liberarSaldo(
+          tx,
+          entrada.usuarioId,
+          incidencia.eventoId,
+          Number(incidencia.montoBloqueado),
+        );
+      }
+
+      // 2) Aplicar el ajuste firmado (>0 acredita, <0 descuenta, 0 nada).
+      if (valor !== 0 && entrada.usuarioId) {
+        await this.transacciones.ajustar(tx, {
+          eventoId: incidencia.eventoId,
+          usuarioId: entrada.usuarioId,
+          entradaId: entrada.id,
+          monto: valor,
+          operadorId: adminId,
         });
-        if (entrada.usuarioId) {
-          await this.transacciones.ajustar(tx, {
-            eventoId: incidencia.eventoId,
-            usuarioId: entrada.usuarioId,
-            entradaId: entrada.id,
-            monto: valor,
-            operadorId: adminId,
-          });
-        }
       }
       const resuelta = await tx.incidenciaRecarga.update({
         where: { id: incidencia.id },

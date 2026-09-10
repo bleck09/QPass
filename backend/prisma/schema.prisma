@@ -318,6 +318,10 @@ model BilleteraEvento {
   usuarioId Int
   eventoId  String
   saldo     Decimal   @default(0) @db.Decimal(10, 2)
+  // §5.10 — parte del saldo retenida por una IncidenciaRecarga pendiente: NO se
+  // puede gastar/retirar (el débito guarda contra `saldo - saldoBloqueado`).
+  // Se libera al resolver la incidencia.
+  saldoBloqueado Decimal @default(0) @db.Decimal(10, 2)
   expiraEn  DateTime? // Fase 3: fin de la última jornada + Evento.diasParaRetiro
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -686,6 +690,11 @@ model IncidenciaRecarga {
   nota            String
   recargadorId    Int
   estado          EstadoCaso @default(pendiente)
+  // Parte del saldo del titular que quedó retenida al abrir la incidencia
+  // (cuando se le cargó de más). Se libera al resolver. 0 si no hubo retención.
+  montoBloqueado  Decimal    @default(0) @db.Decimal(10, 2)
+  // Ajuste aplicado al saldo al resolver: >0 acredita (se le debía), <0 descuenta
+  // (se le cargó de más), 0 sin movimiento. Antes solo permitía >= 0.
   ajusteAplicado  Decimal?   @db.Decimal(10, 2)
   resueltoPorId   Int?
   createdAt       DateTime   @default(now())
@@ -786,6 +795,28 @@ model ProductoEstado {
   @@unique([puestoId, productoBaseId])
   @@index([puestoId])
   @@map("productos_estado")
+}
+
+// Aviso que manda un Ayudante al Usuario Negocio cuando un producto de su puesto
+// se quedó sin stock o está por agotarse (§5.4). Campos denormalizados para
+// mostrarlo sin joins. `visto` lo marca el negocio desde su panel.
+model AvisoStock {
+  id             String   @id @default(cuid())
+  puestoId       String
+  productoBaseId String
+  productoNombre String
+  puestoNombre   String
+  eventoNombre   String
+  ayudanteId     Int
+  ayudanteNombre String
+  negocioId      Int
+  tipo           String // "sin_stock" | "bajo"
+  stockRestante  Int?
+  visto          Boolean  @default(false)
+  createdAt      DateTime @default(now())
+
+  @@index([negocioId, visto])
+  @@map("avisos_stock")
 }
 
 // Activación de un PuestoBase en un evento concreto. Un negocio puede activar

@@ -24,9 +24,9 @@ import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirFotoCapturada } from '../../utils/imagenes.js';
 import { formatearFecha, estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
-import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
+import FotoZoom from '../../components/FotoZoom.jsx';
 import './Supervisor.css';
 import './GestionEntrega.css';
 
@@ -182,6 +182,13 @@ export default function Supervisor() {
   // ========================================================
   const requiereFoto = !tarjetaQR?.usuario?.foto && !tarjetaQR?.foto;
 
+  // La entrada escaneada está vinculada a un evento. Si ese evento no es el que
+  // se está controlando, no se registra nada (la manilla es de otra fiesta).
+  const eventoEntrada = tarjetaQR?.evento || null;
+  const eventoNoCoincide = !!(
+    tarjetaQR && eventoDetalle && tarjetaQR.eventoId && tarjetaQR.eventoId !== eventoDetalle.id
+  );
+
   // "Foto de perfil" real (la que el usuario cargó en su cuenta) casi nunca existe — la
   // mayoría son invitados sin cuenta. Para esos casos la referencia es Entrada.foto, la
   // foto tomada la primera vez que esta entrada pasó por control.
@@ -209,6 +216,12 @@ export default function Supervisor() {
   }, [eventoDetalle]);
 
   const registrarMovimiento = async (tipo) => {
+    if (eventoNoCoincide) {
+      setAlertaToggle(
+        `Esta entrada pertenece a "${eventoEntrada?.nombre || 'otro evento'}" y este control es de "${eventoDetalle.nombre}". No se puede registrar el movimiento acá.`
+      );
+      return;
+    }
     if (tipo === 'salida' && tarjetaQR.estadoIngreso !== 'ingresado') {
       setAlertaToggle('Esta entrada no está adentro — no se puede registrar una salida.');
       return;
@@ -230,8 +243,8 @@ export default function Supervisor() {
     setAlertaToggle('');
     try {
       const actualizado = tipo === 'salida'
-        ? await api.entradas.salida(tarjetaQR.id, fotoCapturadaTemporal)
-        : await api.entradas.ingreso(tarjetaQR.id, fotoCapturadaTemporal);
+        ? await api.entradas.salida(tarjetaQR.id, fotoCapturadaTemporal, eventoDetalle.id)
+        : await api.entradas.ingreso(tarjetaQR.id, fotoCapturadaTemporal, eventoDetalle.id);
       setFotoCapturadaTemporal(null);
       // Refresca la fila en la tabla/estadísticas y deja la tarjeta abierta pero
       // actualizada (nuevo estado + historial); encima va el flash de confirmación.
@@ -276,7 +289,6 @@ export default function Supervisor() {
                   evento={ev}
                   onClick={() => abrirEvento(ev)}
                   disabled={estadoEvento(ev) === 'archivado'}
-                  badges={<BadgeEstadoEvento evento={ev} />}
                   cta="Abrir control"
                 />
               )}
@@ -418,14 +430,14 @@ export default function Supervisor() {
                 <div className="foto-box">
                   {fotoCapturadaTemporal ? (
                     <div className="foto-capturada-container foto-recien-capturada">
-                      <img width="110" height="110" src={fotoCapturadaTemporal} alt="Captura" className="foto-img border-cyan" />
+                      <FotoZoom width={110} height={110} src={fotoCapturadaTemporal} alt="Foto tomada en la puerta" className="foto-img border-cyan" />
                       <span className="foto-badge-ok"><FaCheckCircle /> Foto capturada</span>
                       <button type="button" className="btn-retake" onClick={descartarFoto} aria-label="Volver a tomar la foto"><FaSyncAlt aria-hidden="true" /></button>
                       <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
                     </div>
                   ) : fotoReferencia ? (
                     <div className="foto-capturada-container">
-                      <img width="110" height="110" src={fotoReferencia} alt="Foto de referencia registrada" className="foto-img" />
+                      <FotoZoom width={110} height={110} src={fotoReferencia} alt="Foto de referencia registrada" className="foto-img" />
                       <button type="button" className="btn-retake" onClick={() => setCapturandoFoto(true)} aria-label="Tomar una foto nueva"><FaCamera aria-hidden="true" /></button>
                       <span className="foto-label text-gray">{fotoReferenciaLabel}</span>
                     </div>
@@ -456,11 +468,16 @@ export default function Supervisor() {
             <h2 className="pi-sup-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
             <div className="pi-sup-info-card">
-              <div className="info-row">
+              <div className={`info-row${eventoNoCoincide ? ' info-row--alerta' : ''}`}>
                 <FaCalendarAlt className="info-icon" />
                 <div>
-                  <span className="info-label">EVENTO</span>
-                  <span className="info-valor">{eventoDetalle.nombre}</span>
+                  <span className="info-label">EVENTO DE LA ENTRADA</span>
+                  <span className="info-valor">{eventoEntrada?.nombre || eventoDetalle.nombre}</span>
+                  {eventoNoCoincide && (
+                    <span className="pi-sup-evento-mismatch">
+                      <FaExclamationTriangle aria-hidden="true" /> Este control es de «{eventoDetalle.nombre}»
+                    </span>
+                  )}
                 </div>
               </div>
               <div className="info-row">
@@ -494,7 +511,7 @@ export default function Supervisor() {
                   {historialTarjeta.map((mov) => (
                     <div key={mov.id} className={`historial-item ${mov.tipo === 'ingreso' ? 'item-in' : 'item-out'}`}>
                       {mov.foto
-                        ? <img width="32" height="32" src={mov.foto} alt="Foto del registro" className="historial-foto-thumb" />
+                        ? <FotoZoom width={32} height={32} src={mov.foto} alt="Foto del registro" className="historial-foto-thumb" />
                         : (mov.tipo === 'ingreso' ? <FaSignInAlt/> : <FaSignOutAlt/>)}
                       <span>
                         {mov.tipo === 'ingreso' ? 'Entrada' : 'Salida'} registrada el {formatearFecha(mov.createdAt)}
@@ -512,28 +529,42 @@ export default function Supervisor() {
                 que sale y vuelve a entrar) — no hay límite de ciclos.
             ========================================= */}
             <div className="pi-sup-modal-footer">
-              <div className="pi-sup-toggle-switch">
-                <button
-                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'salio' ? 'active-out' : ''} ${tarjetaQR.estadoIngreso !== 'ingresado' ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
-                  onClick={() => registrarMovimiento('salida')}
-                >
-                  <FaSignOutAlt /> REGISTRAR SALIDA
-                </button>
+              {eventoNoCoincide ? (
+                <div className="pi-sup-bloqueo-evento">
+                  <FaExclamationTriangle aria-hidden="true" />
+                  <span>
+                    Esta manilla pertenece al evento <strong>«{eventoEntrada?.nombre || 'otro'}»</strong> y
+                    este control atiende <strong>«{eventoDetalle.nombre}»</strong>. No se puede registrar
+                    ingreso ni salida desde acá.
+                  </span>
+                  <button type="button" className="btn-cancelar" onClick={cerrarTarjeta}>Cerrar</button>
+                </div>
+              ) : (
+                <>
+                  <div className="pi-sup-toggle-switch">
+                    <button
+                      className={`toggle-option ${tarjetaQR.estadoIngreso === 'salio' ? 'active-out' : ''} ${tarjetaQR.estadoIngreso !== 'ingresado' ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
+                      onClick={() => registrarMovimiento('salida')}
+                    >
+                      <FaSignOutAlt /> REGISTRAR SALIDA
+                    </button>
 
-                <button
-                  className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''} ${tarjetaQR.estadoIngreso === 'ingresado' || !ingresoDentroDeVentana ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
-                  onClick={() => registrarMovimiento('ingreso')}
-                >
-                  <FaSignInAlt /> REGISTRAR INGRESO
-                </button>
-              </div>
-              {!ingresoDentroDeVentana && (
-                <p className="pi-sup-hint-foto">
-                  Fuera del horario de ingreso ({MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio hasta el cierre). La salida sí está habilitada.
-                </p>
-              )}
-              {requiereFoto && !fotoCapturadaTemporal && (
-                <p className="pi-sup-hint-foto">Toma la foto de la puerta (arriba) para poder registrar el ingreso o salida.</p>
+                    <button
+                      className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''} ${tarjetaQR.estadoIngreso === 'ingresado' || !ingresoDentroDeVentana ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
+                      onClick={() => registrarMovimiento('ingreso')}
+                    >
+                      <FaSignInAlt /> REGISTRAR INGRESO
+                    </button>
+                  </div>
+                  {!ingresoDentroDeVentana && (
+                    <p className="pi-sup-hint-foto">
+                      Fuera del horario de ingreso ({MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio hasta el cierre). La salida sí está habilitada.
+                    </p>
+                  )}
+                  {requiereFoto && !fotoCapturadaTemporal && (
+                    <p className="pi-sup-hint-foto">Toma la foto de la puerta (arriba) para poder registrar el ingreso o salida.</p>
+                  )}
+                </>
               )}
             </div>
 

@@ -405,9 +405,22 @@
   margin: 8px 0 16px;
 }
 
-.pi-rec-exito .pi-rec-btn-confirmar {
+.pi-rec-exito .pi-rec-btn-confirmar,
+.pi-rec-btn-bloque {
   width: 100%;
+  padding: 12px 20px;
+  min-height: 48px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
+.pi-rec-btn-bloque { margin-top: 12px; }
 
 /* --- INCIDENCIAS DE RECARGA INCOMPLETA --- */
 .pi-rec-incidencias-nota {
@@ -485,6 +498,25 @@
   margin: 0 0 8px;
 }
 
+/* Aviso "manilla de otro evento" */
+.pi-rec-aviso-evento {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  text-align: left;
+}
+.pi-rec-aviso-evento svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
 .pi-rec-nota-incidencia {
   width: 100%;
   margin-top: 8px;
@@ -516,6 +548,31 @@
   width: 100%;
   margin-top: 4px;
   margin-bottom: 8px;
+}
+
+.pi-rec-incidencia-linea {
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  margin: 0 0 12px;
+  text-align: left;
+}
+
+/* Preview de la diferencia al escribir "cuánto pagó" */
+.pi-rec-diff {
+  font-size: var(--text-xs);
+  line-height: 1.5;
+  margin: 8px 0 0;
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+.pi-rec-diff--menos {
+  background: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+}
+.pi-rec-diff--mas {
+  background: var(--verde-recarga-suave, #e1f9f1);
+  color: var(--verde-recarga-texto, #1b7a4b);
 }
 
 .pi-rec-alerta-info {
@@ -567,14 +624,4 @@
   background-color: var(--ambar-aviso-suave);
 }
 
-/* Link "abrir arqueo de caja" dentro del aviso de "sin caja abierta" (§5.2) */
-.pi-rec-link-caja {
-  background: none;
-  border: none;
-  padding: 0;
-  color: inherit;
-  font: inherit;
-  font-weight: 700;
-  text-decoration: underline;
-  cursor: pointer;
-}
+/* Aviso "sin caja abierta" (§5.2) -> componente <AvisoSinCaja> (components/) */

@@ -1,0 +1,106 @@
+/* ============================================================================
+   BOTONES — sistema único del proyecto.
+   .btn-primario / .btn-cancelar / .btn-secundario-sm estaban repetidos en
+   varias CSS de página con tamaños distintos. Definición canónica, se importa
+   UNA vez en main.jsx. Solo tokens de index.css.
+   ========================================================================= */
+
+.btn-primario {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  min-height: 44px;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--action);
+  color: var(--text-on-accent);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primario:hover:not(:disabled) {
+  background-color: var(--action-hover);
+}
+
+.btn-primario:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.btn-cancelar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  min-height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancelar:hover {
+  background: var(--bg-page);
+}
+
+/* --- Acciones dentro de tablas / barras ---
+   Fila `.btn-acciones` + botón `.btn-secundario-sm` (icono + texto). Reemplaza
+   los .action-buttons / .btn-asignar / .btn-editar / .btn-eliminar que estaban
+   repetidos (y divergentes) en varias CSS de página.
+   Variante `--peligro` para la acción destructiva de la fila. */
+.btn-acciones {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.btn-secundario-sm {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.btn-secundario-sm:hover:not(:disabled) {
+  background: var(--bg-page);
+  color: var(--indigo-profundo);
+  border-color: var(--indigo-profundo);
+}
+
+.btn-secundario-sm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secundario-sm--peligro {
+  color: var(--rojo-error-texto);
+}
+
+.btn-secundario-sm--peligro:hover:not(:disabled) {
+  background: var(--rojo-error);
+  color: var(--text-on-accent);
+  border-color: var(--rojo-error);
+}

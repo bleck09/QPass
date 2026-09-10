@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Migas from '../../components/Migas.jsx';
-import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
-  FaStore, FaPlus, FaTimes, FaImage, FaUpload, FaListUl, FaBoxOpen,
-  FaPen, FaArchive, FaSave, FaCalendarAlt,
+  FaStore, FaPlus, FaTimes, FaImage, FaUpload, FaBoxOpen,
+  FaSave, FaCalendarAlt,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
@@ -21,12 +22,10 @@ const FORM_PUESTO = { nombre: '', descripcion: '', logo: '' };
 export default function MiCatalogo() {
   useTituloPagina('Mi catálogo');
   const navigate = useNavigate();
-  const [confirmar, DialogoConfirmar] = useConfirmar();
 
   const cargar = useCallback(() => api.puestosBase.listar(), []);
   const {
     data: puestosBase,
-    setData: setPuestosBase,
     cargando,
     error,
     recargar,
@@ -34,7 +33,6 @@ export default function MiCatalogo() {
 
   const [busqueda, setBusqueda] = useState('');
   const [showPuesto, setShowPuesto] = useState(false);
-  const [editandoId, setEditandoId] = useState(null); // null = crear
   const [formPuesto, setFormPuesto] = useState(FORM_PUESTO);
   const [err, setErr] = useState('');
 
@@ -46,7 +44,9 @@ export default function MiCatalogo() {
 
   const verCatalogo = (p) => navigate(`/usuarionegocio/catalogo/${p.id}`);
 
-  // ---------- CREAR / EDITAR PUESTO BASE (pocos campos → modal) ----------
+  // ---------- CREAR PUESTO BASE (pocos campos → modal). Editar / archivar
+  //            viven en la página del puesto (MiCatalogoPuesto), igual que en
+  //            la gestión de eventos: la tarjeta solo abre el detalle. ----------
   const subirLogo = async (e) => {
     const file = e.target.files[0];
     e.target.value = '';
@@ -57,41 +57,19 @@ export default function MiCatalogo() {
     } catch (e2) { setErr(e2.message); }
   };
 
-  const abrirCrear = () => { setEditandoId(null); setFormPuesto(FORM_PUESTO); setErr(''); setShowPuesto(true); };
-  const abrirEditar = (p) => {
-    setEditandoId(p.id);
-    setFormPuesto({ nombre: p.nombre, descripcion: p.descripcion || '', logo: p.logo || '' });
-    setErr('');
-    setShowPuesto(true);
-  };
+  const abrirCrear = () => { setFormPuesto(FORM_PUESTO); setErr(''); setShowPuesto(true); };
 
   const guardarPuesto = async (e) => {
     e.preventDefault();
     setErr('');
-    const datos = {
-      nombre: formPuesto.nombre,
-      descripcion: formPuesto.descripcion || null,
-      logo: formPuesto.logo || null,
-    };
     try {
-      if (editandoId) await api.puestosBase.actualizar(editandoId, datos);
-      else await api.puestosBase.crear(datos);
+      await api.puestosBase.crear({
+        nombre: formPuesto.nombre,
+        descripcion: formPuesto.descripcion || null,
+        logo: formPuesto.logo || null,
+      });
       await recargar();
       setShowPuesto(false);
-    } catch (e2) { setErr(e2.message); }
-  };
-
-  const archivarPuesto = async (p) => {
-    const ok = await confirmar({
-      titulo: `¿Archivar "${p.nombre}"?`,
-      mensaje: 'Dejará de aparecer en tu catálogo y no podrás activarlo en nuevos eventos. Los eventos donde ya está activado y sus ventas no se tocan.',
-      textoConfirmar: 'Archivar',
-      peligroso: true,
-    });
-    if (!ok) return;
-    try {
-      await api.puestosBase.archivar(p.id);
-      setPuestosBase(prev => prev.filter(x => x.id !== p.id));
     } catch (e2) { setErr(e2.message); }
   };
 
@@ -120,80 +98,41 @@ export default function MiCatalogo() {
       </div>
 
       {err && !showPuesto && (
-        <p className="pi-unegocio-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>
+        <p className="pi-unegocio-nota pi-unegocio-nota--error">{err}</p>
       )}
 
       {error ? (
         <EstadoError onReintentar={recargar} />
       ) : cargando ? (
         <EstadoCarga filas={4} />
-      ) : filtrados.length === 0 ? (
-        <p className="tabla-vacia">
-          {busqueda ? 'No se encontraron puestos.' : 'Aún no tenés puestos en tu catálogo. Creá el primero con “Nuevo puesto base”.'}
-        </p>
       ) : (
-        <div className="pi-mcat-grid">
-          {filtrados.map(p => (
-            <div
+        <GrillaEventos
+          eventos={filtrados}
+          gridClassName="pi-entrega-eventos-grid"
+          vacio={busqueda
+            ? 'No se encontraron puestos.'
+            : 'Aún no tenés puestos en tu catálogo. Creá el primero con “Nuevo puesto base”.'}
+        >
+          {p => (
+            <EventoCard
               key={p.id}
-              className="pi-mcat-card"
-              role="button"
-              tabIndex={0}
+              evento={{ nombre: p.nombre, imagen: p.logo || undefined }}
               onClick={() => verCatalogo(p)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); verCatalogo(p); } }}
-            >
-              <div
-                className="pi-mcat-card__media"
-                style={p.logo ? { backgroundImage: `url(${p.logo})` } : undefined}
-              >
-                {!p.logo && <FaStore aria-hidden="true" />}
-                {p.archivado && <span className="pi-mcat-card__archivada-tag">Archivado</span>}
-              </div>
-
-              <div className="pi-mcat-card__body">
-                <span className="pi-mcat-card__nombre">{p.nombre}</span>
-                {p.descripcion && <span className="pi-mcat-card__desc">{p.descripcion}</span>}
-                <div className="pi-mcat-card__chips">
-                  <span className="pi-mcat-card__chip"><FaBoxOpen aria-hidden="true" /> {p.productos.length} producto{p.productos.length === 1 ? '' : 's'}</span>
-                  <span className="pi-mcat-card__chip"><FaCalendarAlt aria-hidden="true" /> {p._count?.puestos ?? 0} evento{(p._count?.puestos ?? 0) === 1 ? '' : 's'}</span>
-                </div>
-              </div>
-
-              <div className="pi-mcat-card__acciones">
-                <button
-                  type="button"
-                  className="pi-mcat-flex-1"
-                  onClick={(e) => { e.stopPropagation(); verCatalogo(p); }}
-                >
-                  <FaListUl aria-hidden="true" /> Ver catálogo
-                </button>
-                <button
-                  type="button"
-                  onClick={(e) => { e.stopPropagation(); abrirEditar(p); }}
-                  aria-label={`Editar ${p.nombre}`}
-                  title="Editar nombre / foto"
-                >
-                  <FaPen aria-hidden="true" />
-                </button>
-                <button
-                  type="button"
-                  className="pi-mcat-danger"
-                  onClick={(e) => { e.stopPropagation(); archivarPuesto(p); }}
-                  aria-label={`Archivar ${p.nombre}`}
-                  title="Archivar puesto"
-                >
-                  <FaArchive aria-hidden="true" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
+              cta="Ver catálogo"
+              badges={p.archivado ? <span className="pi-mcat-tag-archivado">Archivado</span> : null}
+              meta={[
+                <><FaBoxOpen aria-hidden="true" /> {p.productos.length} producto{p.productos.length === 1 ? '' : 's'}</>,
+                <><FaCalendarAlt aria-hidden="true" /> {p._count?.puestos ?? 0} evento{(p._count?.puestos ?? 0) === 1 ? '' : 's'}</>,
+              ]}
+            />
+          )}
+        </GrillaEventos>
       )}
 
-      {/* CREAR / EDITAR PUESTO BASE */}
+      {/* CREAR PUESTO BASE */}
       {showPuesto && (
         <Modal
-          titulo={<><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> {editandoId ? 'Editar puesto base' : 'Nuevo puesto base'}</>}
+          titulo={<><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> Nuevo puesto base</>}
           onCerrar={() => setShowPuesto(false)}
         >
           <div className="modal-body">
@@ -222,17 +161,15 @@ export default function MiCatalogo() {
                   </div>
                 )}
               </div>
-              {err && <p className="pi-unegocio-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
+              {err && <p className="pi-unegocio-nota pi-unegocio-nota--error">{err}</p>}
               <div className="modal-actions">
                 <button type="button" className="btn-cancelar" onClick={() => setShowPuesto(false)}>Cancelar</button>
-                <button type="submit" className="btn-primario"><FaSave /> {editandoId ? 'Guardar cambios' : 'Crear puesto'}</button>
+                <button type="submit" className="btn-primario"><FaSave /> Crear puesto</button>
               </div>
             </form>
           </div>
         </Modal>
       )}
-
-      {DialogoConfirmar}
     </div>
   );
 }

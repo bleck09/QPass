@@ -1,15 +1,20 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Modal from '../../components/Modal.jsx';
 import Migas from '../../components/Migas.jsx';
 import BotonVolver from '../../components/BotonVolver.jsx';
+import Tabla from '../../components/Tabla.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import Paginador from '../../components/Paginador.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
+import { usePaginacion } from '../../utils/usePaginacion.js';
 import { useApi } from '../../utils/useApi.js';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaStore, FaPlus, FaTimes, FaImage, FaUpload, FaBoxOpen,
   FaDollarSign, FaHamburger, FaPen, FaArchive, FaTrash, FaSave, FaCalendarAlt,
+  FaThLarge, FaListUl,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
@@ -18,7 +23,42 @@ import './MiCatalogo.css';
 
 const FORM_PRODUCTO = { nombre: '', precio: '', imagen: '', categoria: '' };
 const FORM_PUESTO = { nombre: '', descripcion: '', logo: '' };
-const CATEGORIAS_PRODUCTO = ['Bebida', 'Comida', 'Postre', 'Snack', 'Otro'];
+// Categorías comunes para el <select>. Cualquier otra se escribe eligiendo "Otro…".
+const CATEGORIAS_PRODUCTO = ['Bebida', 'Comida', 'Postre', 'Snack'];
+
+/**
+ * Campo de categoría: <select> con las comunes + "Otro…" que despliega un input
+ * libre. Evita que se escriban variantes distintas de lo mismo.
+ */
+function SelectorCategoria({ id, valor, onCambio }) {
+  const [otro, setOtro] = useState(valor !== '' && !CATEGORIAS_PRODUCTO.includes(valor));
+  return (
+    <>
+      <select
+        id={id}
+        value={otro ? 'Otro' : valor}
+        onChange={(e) => {
+          const v = e.target.value;
+          if (v === 'Otro') { setOtro(true); onCambio(''); }
+          else { setOtro(false); onCambio(v); }
+        }}
+      >
+        <option value="">Sin categoría</option>
+        {CATEGORIAS_PRODUCTO.map(c => <option key={c} value={c}>{c}</option>)}
+        <option value="Otro">Otro…</option>
+      </select>
+      {otro && (
+        <input
+          type="text"
+          placeholder="Nombre de la categoría"
+          value={valor}
+          onChange={(e) => onCambio(e.target.value)}
+          autoFocus
+        />
+      )}
+    </>
+  );
+}
 
 export default function MiCatalogoPuesto() {
   const { id } = useParams();
@@ -43,6 +83,27 @@ export default function MiCatalogoPuesto() {
   const [showEditarPuesto, setShowEditarPuesto] = useState(false);
   const [formPuesto, setFormPuesto] = useState(FORM_PUESTO);
   const [err, setErr] = useState('');
+
+  // Vista de la lista de productos: tarjetas o tabla (se recuerda por navegador).
+  const [vista, setVista] = useState(() => {
+    try { return localStorage.getItem('mcat-vista-productos') || 'cards'; } catch { return 'cards'; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('mcat-vista-productos', vista); } catch { /* ignore */ }
+  }, [vista]);
+
+  const [busquedaProd, setBusquedaProd] = useState('');
+  const productosFiltrados = useMemo(() => {
+    const q = busquedaProd.trim().toLowerCase();
+    const lista = puesto?.productos || [];
+    if (!q) return lista;
+    return lista.filter(pr =>
+      pr.nombre.toLowerCase().includes(q) || (pr.categoria || '').toLowerCase().includes(q),
+    );
+  }, [puesto, busquedaProd]);
+
+  // Paginación de la vista TARJETAS (la de tabla la pagina <Tabla> sola).
+  const cardsPag = usePaginacion(productosFiltrados, 12);
 
   const setProductos = (productos) => setPuesto(p => (p ? { ...p, productos } : p));
 
@@ -213,7 +274,7 @@ export default function MiCatalogoPuesto() {
           <div>
             <h1>{puesto.nombre}</h1>
             {puesto.descripcion && <p>{puesto.descripcion}</p>}
-            <div className="pi-mcat-card__chips" style={{ marginTop: 6 }}>
+            <div className="pi-mcat-card__chips pi-mcat-card__chips--mt">
               <span className="pi-mcat-card__chip"><FaBoxOpen aria-hidden="true" /> {puesto.productos.length} producto{puesto.productos.length === 1 ? '' : 's'}</span>
               <span className="pi-mcat-card__chip"><FaCalendarAlt aria-hidden="true" /> activo en {puesto._count?.puestos ?? 0} evento{(puesto._count?.puestos ?? 0) === 1 ? '' : 's'}</span>
             </div>
@@ -231,21 +292,96 @@ export default function MiCatalogoPuesto() {
       </div>
 
       {err && !showEditarPuesto && !prodEditandoId && !showAgregar && (
-        <p className="pi-unegocio-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>
+        <p className="pi-unegocio-nota pi-unegocio-nota--error">{err}</p>
       )}
 
       <div className="pi-mcat-prod-bar">
         <h2><FaBoxOpen aria-hidden="true" /> Productos del catálogo</h2>
-        <button type="button" className="btn-primario" onClick={abrirAgregar}>
-          <FaPlus /> Añadir producto
-        </button>
+        <div className="qp-btn-group">
+          <div className="pi-mcat-vista-toggle" role="group" aria-label="Ver productos como">
+            <button
+              type="button"
+              className={vista === 'cards' ? 'activo' : ''}
+              aria-pressed={vista === 'cards'}
+              onClick={() => setVista('cards')}
+              title="Ver como tarjetas"
+            >
+              <FaThLarge aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className={vista === 'tabla' ? 'activo' : ''}
+              aria-pressed={vista === 'tabla'}
+              onClick={() => setVista('tabla')}
+              title="Ver como tabla"
+            >
+              <FaListUl aria-hidden="true" />
+            </button>
+          </div>
+          <button type="button" className="btn-primario" onClick={abrirAgregar}>
+            <FaPlus /> Añadir producto
+          </button>
+        </div>
       </div>
 
-      {puesto.productos.length === 0 ? (
-        <p className="tabla-vacia">Todavía no hay productos en este puesto. Agregá el primero con “Añadir producto”.</p>
+      {puesto.productos.length > 0 && (
+        <div className="pi-mcat-prod-buscador">
+          <Buscador
+            valor={busquedaProd}
+            onCambio={setBusquedaProd}
+            placeholder="Buscar producto por nombre o categoría…"
+            etiqueta="Buscar producto"
+          />
+        </div>
+      )}
+
+      {vista === 'tabla' ? (
+        <div className="pi-unegocio-card">
+          <Tabla
+            columnas={['Producto', 'Categoría', 'Precio base', { texto: 'Acciones', align: 'center' }]}
+            datos={productosFiltrados}
+            porPagina={8}
+            vacio={busquedaProd.trim()
+              ? 'Ningún producto coincide con la búsqueda.'
+              : 'Todavía no hay productos en este puesto. Agregá el primero con “Añadir producto”.'}
+            renderFila={pr => (
+              <tr key={pr.id}>
+                <td>
+                  <div className="item-info">
+                    {pr.imagen ? (
+                      <img width="48" height="48" src={pr.imagen} alt="" className="item-img img-cuadrada" />
+                    ) : (
+                      <div className="item-no-img img-cuadrada"><FaHamburger /></div>
+                    )}
+                    <span className="fila-nombre">{pr.nombre}</span>
+                  </div>
+                </td>
+                <td>{pr.categoria || '—'}</td>
+                <td className="fila-nombre">Bs. {Number(pr.precio).toFixed(2)}</td>
+                <td className="td-centro">
+                  <div className="btn-acciones">
+                    <button type="button" className="btn-secundario-sm" onClick={() => abrirEditarProducto(pr)} title="Editar producto">
+                      <FaPen aria-hidden="true" /> Editar
+                    </button>
+                    <button type="button" className="btn-secundario-sm btn-secundario-sm--peligro" onClick={() => eliminarProducto(pr)} title="Quitar producto">
+                      <FaTrash aria-hidden="true" /> Quitar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
+          />
+        </div>
+      ) : productosFiltrados.length === 0 ? (
+        <p className="tabla-vacia">
+          {busquedaProd.trim()
+            ? 'Ningún producto coincide con la búsqueda.'
+            : 'Todavía no hay productos en este puesto. Agregá el primero con “Añadir producto”.'}
+        </p>
       ) : (
+        <>
         <div className="pi-mcat-prod-grid">
-          {puesto.productos.map(pr => (
+          {cardsPag.slice.map(pr => (
             <div key={pr.id} className="pi-mcat-prod-card">
               <div
                 className="pi-mcat-prod-card__media"
@@ -269,6 +405,14 @@ export default function MiCatalogoPuesto() {
             </div>
           ))}
         </div>
+        <Paginador
+          pagina={cardsPag.paginaActual}
+          totalPaginas={cardsPag.totalPaginas}
+          onCambio={cardsPag.setPagina}
+          total={cardsPag.total}
+          unidad="productos"
+        />
+        </>
       )}
 
       {/* AÑADIR PRODUCTO */}
@@ -292,26 +436,29 @@ export default function MiCatalogoPuesto() {
               </div>
               <div className="input-group">
                 <label htmlFor="mcp-ag-cat">Categoría (opcional)</label>
-                <input id="mcp-ag-cat" type="text" list="mcp-cat-productos" value={formProducto.categoria} onChange={(e) => setFormProducto(f => ({ ...f, categoria: e.target.value }))} placeholder="Bebida, Comida…" />
-                <datalist id="mcp-cat-productos">
-                  {CATEGORIAS_PRODUCTO.map(c => <option key={c} value={c} />)}
-                </datalist>
+                <SelectorCategoria
+                  id="mcp-ag-cat"
+                  valor={formProducto.categoria}
+                  onCambio={(v) => setFormProducto(f => ({ ...f, categoria: v }))}
+                />
               </div>
               <div className="input-group">
-                <label><FaImage aria-hidden="true" /> Foto (opcional)</label>
+                <label htmlFor="mcp-ag-foto"><FaImage aria-hidden="true" /> Foto (opcional)</label>
                 {!formProducto.imagen ? (
-                  <label className="btn-upload-small">
-                    <FaUpload /> Subir foto
-                    <input type="file" accept="image/*" onChange={subirFotoProducto} hidden />
-                  </label>
+                  <div className="upload-zone">
+                    <FaUpload className="upload-icon" />
+                    <span className="upload-text">Haz clic para subir una foto</span>
+                    <span className="upload-subtext">PNG, JPG hasta 2MB</span>
+                    <input id="mcp-ag-foto" type="file" accept="image/*" onChange={subirFotoProducto} className="upload-input-hidden" />
+                  </div>
                 ) : (
-                  <div className="preview-small">
-                    <img width="400" height="225" src={formProducto.imagen} alt="Preview" />
-                    <button type="button" onClick={() => setFormProducto(f => ({ ...f, imagen: '' }))} title="Quitar foto"><FaTimes /></button>
+                  <div className="preview-zone">
+                    <img width="200" height="200" src={formProducto.imagen} alt="Vista previa" className="img-preview" />
+                    <button type="button" className="btn-quitar-imagen" onClick={() => setFormProducto(f => ({ ...f, imagen: '' }))}><FaTimes /> Quitar imagen</button>
                   </div>
                 )}
               </div>
-              {err && <p className="pi-unegocio-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
+              {err && <p className="pi-unegocio-nota pi-unegocio-nota--error">{err}</p>}
               <div className="modal-actions">
                 <button type="button" className="btn-cancelar" onClick={() => setShowAgregar(false)}>Cancelar</button>
                 <button type="submit" className="btn-primario"><FaPlus /> Añadir</button>
@@ -342,23 +489,29 @@ export default function MiCatalogoPuesto() {
               </div>
               <div className="input-group">
                 <label htmlFor="mcp-ed-cat">Categoría (opcional)</label>
-                <input id="mcp-ed-cat" type="text" list="mcp-cat-productos" value={formProdEditar.categoria} onChange={(e) => setFormProdEditar(f => ({ ...f, categoria: e.target.value }))} placeholder="Bebida, Comida…" />
+                <SelectorCategoria
+                  id="mcp-ed-cat"
+                  valor={formProdEditar.categoria}
+                  onCambio={(v) => setFormProdEditar(f => ({ ...f, categoria: v }))}
+                />
               </div>
               <div className="input-group">
-                <label><FaImage aria-hidden="true" /> Foto (opcional)</label>
+                <label htmlFor="mcp-ed-foto"><FaImage aria-hidden="true" /> Foto (opcional)</label>
                 {!formProdEditar.imagen ? (
-                  <label className="btn-upload-small">
-                    <FaUpload /> Subir foto
-                    <input type="file" accept="image/*" onChange={subirFotoProdEditar} hidden />
-                  </label>
+                  <div className="upload-zone">
+                    <FaUpload className="upload-icon" />
+                    <span className="upload-text">Haz clic para subir una foto</span>
+                    <span className="upload-subtext">PNG, JPG hasta 2MB</span>
+                    <input id="mcp-ed-foto" type="file" accept="image/*" onChange={subirFotoProdEditar} className="upload-input-hidden" />
+                  </div>
                 ) : (
-                  <div className="preview-small">
-                    <img width="400" height="225" src={formProdEditar.imagen} alt="Preview" />
-                    <button type="button" onClick={() => setFormProdEditar(f => ({ ...f, imagen: '' }))} title="Quitar foto"><FaTimes /></button>
+                  <div className="preview-zone">
+                    <img width="200" height="200" src={formProdEditar.imagen} alt="Vista previa" className="img-preview" />
+                    <button type="button" className="btn-quitar-imagen" onClick={() => setFormProdEditar(f => ({ ...f, imagen: '' }))}><FaTimes /> Quitar imagen</button>
                   </div>
                 )}
               </div>
-              {err && <p className="pi-unegocio-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
+              {err && <p className="pi-unegocio-nota pi-unegocio-nota--error">{err}</p>}
               <div className="modal-actions">
                 <button type="button" className="btn-cancelar" onClick={() => setProdEditandoId(null)}>Cancelar</button>
                 <button type="submit" className="btn-primario"><FaSave /> Guardar cambios</button>
@@ -400,7 +553,7 @@ export default function MiCatalogoPuesto() {
                   </div>
                 )}
               </div>
-              {err && <p className="pi-unegocio-nota" style={{ color: 'var(--rojo-error-texto)' }}>{err}</p>}
+              {err && <p className="pi-unegocio-nota pi-unegocio-nota--error">{err}</p>}
               <div className="modal-actions">
                 <button type="button" className="btn-cancelar" onClick={() => setShowEditarPuesto(false)}>Cancelar</button>
                 <button type="submit" className="btn-primario"><FaSave /> Guardar cambios</button>

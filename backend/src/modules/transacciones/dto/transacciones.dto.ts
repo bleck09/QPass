@@ -13,6 +13,12 @@ export class RecargaDto {
   @IsString()
   entradaId: string;
 
+  // Evento del puesto donde está parado el recargador. Si no coincide con el
+  // evento de la manilla escaneada, se rechaza (no se recarga de otro evento).
+  @IsOptional()
+  @IsString()
+  eventoId?: string;
+
   @Type(() => Number)
   @IsNumber()
   @IsPositive({ message: 'Monto inválido' })

@@ -437,3 +437,16 @@
 }
 .pi-usr-bill-plazo-detalle.tono-vencido { color: var(--rojo-error-texto); background: var(--rojo-error-suave, rgba(220,53,69,0.08)); }
 .pi-usr-bill-plazo-detalle.tono-porVencer { color: var(--ambar-aviso-texto, #b26a00); background: var(--ambar-aviso-suave, rgba(255,193,7,0.12)); }
+
+.pi-usr-bill-disputa {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ambar-aviso-texto, #b26a00);
+  background: var(--ambar-aviso-suave, rgba(255,193,7,0.12));
+}

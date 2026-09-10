@@ -17,9 +17,10 @@ import {
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
-import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import CorteCaja from '../../components/CorteCaja.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
+import AvisoSinCaja from '../../components/AvisoSinCaja.jsx';
+import FotoZoom from '../../components/FotoZoom.jsx';
 import './Recargador.css';
 import '../supervisor/GestionEntrega.css';
 
@@ -154,11 +155,14 @@ export default function Recargador() {
     setIncidenciaReportada(false);
   };
 
+  // La manilla escaneada puede ser de OTRO evento: en ese caso no se puede recargar acá.
+  const eventoNoCoincide = !!(tarjetaQR && eventoDetalle && tarjetaQR.eventoId && tarjetaQR.eventoId !== eventoDetalle.id);
+
   const confirmarRecarga = async () => {
     const valor = Number(monto);
-    if (!tarjetaQR || !valor || valor <= 0) return;
+    if (!tarjetaQR || eventoNoCoincide || !valor || valor <= 0) return;
 
-    const { transaccion } = await api.transacciones.recarga({ entradaId: tarjetaQR.id, monto: valor });
+    const { transaccion } = await api.transacciones.recarga({ entradaId: tarjetaQR.id, eventoId: eventoDetalle.id, monto: valor });
     api.transacciones.listar({ eventoId: eventoDetalle.id, tipo: 'recarga' }).then(lista =>
       setHistorial(lista.filter(t => t.operador.id === sesion.id))
     );
@@ -244,7 +248,6 @@ export default function Recargador() {
                   evento={ev}
                   onClick={() => abrirEvento(ev)}
                   disabled={estadoEvento(ev) === 'archivado'}
-                  badges={<BadgeEstadoEvento evento={ev} />}
                   cta="Abrir recargas"
                 />
               )}
@@ -299,20 +302,13 @@ export default function Recargador() {
       {/* --- PESTAÑA: ESCANEAR --- */}
       {pestana === 'escanear' && (
         <div className="pi-rec-escanear-panel">
-          {!cajaAbierta && (
-            <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginBottom: '4px' }}>
-              <FaExclamationTriangle /> No tenés una caja abierta para este evento.
-              {' '}
-              <button
-                type="button"
-                className="pi-rec-link-caja"
-                onClick={() => { navigate('/recargador/caja'); }}
-              >
-                Abrir arqueo de caja
-              </button>
-              {' '}antes de recargar.
-            </p>
-          )}
+          {!cajaAbierta ? (
+          <AvisoSinCaja
+            descripcion="Necesitás un arqueo de caja abierto para este evento antes de escanear y registrar recargas."
+            onAbrir={() => navigate('/recargador/caja')}
+          />
+          ) : (
+          <>
           <FaQrcode size={70} color="var(--cian-digital)" />
           <h3>Escanea el código QR del participante</h3>
           <p>Apunta la cámara al código QR para cargar sus datos y registrar la recarga.</p>
@@ -320,7 +316,7 @@ export default function Recargador() {
             type="button"
             className="pi-rec-btn-escanear"
             onClick={iniciarEscaneo}
-            disabled={escaneando || buscando || !cajaAbierta}
+            disabled={escaneando || buscando}
           >
             <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
           </button>
@@ -328,6 +324,8 @@ export default function Recargador() {
             <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginTop: '12px' }}>
               <FaExclamationTriangle /> {errorEscaneo}
             </p>
+          )}
+          </>
           )}
         </div>
       )}
@@ -369,7 +367,7 @@ export default function Recargador() {
               <tr key={item.id}>
                 <td>
                   <div className="pi-rec-fila-persona">
-                    {item.entrada?.foto && <img width="34" height="34" src={item.entrada.foto} alt={item.entrada.nombre} className="pi-rec-mini-avatar" />}
+                    {item.entrada?.foto && <FotoZoom width={34} height={34} src={item.entrada.foto} alt={item.entrada.nombre} className="pi-rec-mini-avatar" />}
                     <span>{item.entrada?.nombre || '—'}</span>
                   </div>
                 </td>
@@ -411,7 +409,7 @@ export default function Recargador() {
               <tr key={inc.id}>
                 <td>
                   <div className="pi-rec-fila-persona">
-                    {inc.entrada.foto && <img width="34" height="34" src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-rec-mini-avatar" />}
+                    {inc.entrada.foto && <FotoZoom width={34} height={34} src={inc.entrada.foto} alt={inc.entrada.nombre} className="pi-rec-mini-avatar" />}
                     <span>{inc.entrada.nombre}</span>
                   </div>
                 </td>
@@ -462,27 +460,41 @@ export default function Recargador() {
                   </div>
                 ) : mostrarFormIncidencia ? (
                   <div className="pi-rec-form-incidencia pi-rec-form-incidencia-post">
-                    <label htmlFor="rec-nota-incidencia">
-                      <FaExclamationTriangle aria-hidden="true" /> ¿Qué pasó con {tarjetaQR.nombre}?
-                    </label>
+                    <p className="pi-rec-incidencia-linea">
+                      Le cargaste <strong>{recargaExitosa.monto} pts</strong> a {tarjetaQR.nombre}.
+                    </p>
+
+                    <label htmlFor="rec-monto-solicitado">¿Cuánto pagó en realidad?</label>
+                    <input
+                      id="rec-monto-solicitado"
+                      type="number" min="0" inputMode="numeric"
+                      placeholder={`Ej: ${recargaExitosa.monto}`}
+                      value={montoSolicitado}
+                      onChange={(e) => setMontoSolicitado(e.target.value)}
+                      autoFocus
+                    />
+                    {montoSolicitado !== '' && Number(montoSolicitado) !== recargaExitosa.monto && (
+                      Number(montoSolicitado) < recargaExitosa.monto ? (
+                        <p className="pi-rec-diff pi-rec-diff--menos">
+                          Se le cargó <strong>{recargaExitosa.monto - Number(montoSolicitado)} pts de más</strong>. Esa
+                          plata se retiene de su saldo (no la puede gastar) hasta que Admin lo resuelva.
+                        </p>
+                      ) : (
+                        <p className="pi-rec-diff pi-rec-diff--mas">
+                          Le faltó cargar <strong>{Number(montoSolicitado) - recargaExitosa.monto} pts</strong>. Admin
+                          se los va a acreditar al resolver.
+                        </p>
+                      )
+                    )}
+
+                    <label htmlFor="rec-nota-incidencia">¿Qué pasó? (para Admin)</label>
                     <textarea
                       id="rec-nota-incidencia"
                       className="pi-rec-nota-incidencia"
-                      placeholder="Cuéntale a Admin qué pasó (ej: pidió 200 pero solo tenía 50 y no le alcanzó)"
+                      placeholder="Ej: pagó 100 en efectivo pero apreté 200 sin querer"
                       value={notaIncidencia}
                       onChange={(e) => setNotaIncidencia(e.target.value)}
                       rows={3}
-                      autoFocus
-                    />
-                    <label className="pi-rec-label-opcional" htmlFor="rec-monto-solicitado">Monto que dijo que quería (opcional)</label>
-                    <input
-                      id="rec-monto-solicitado"
-                      type="number"
-                      min="0"
-                      inputMode="numeric"
-                      placeholder="Ej: 200"
-                      value={montoSolicitado}
-                      onChange={(e) => setMontoSolicitado(e.target.value)}
                     />
                     <div className="pi-rec-tarjeta-acciones">
                       <button
@@ -515,7 +527,7 @@ export default function Recargador() {
                 </div>
 
                 {(tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
-                  <img width="140" height="140" src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-rec-tarjeta-foto" />
+                  <FotoZoom width={140} height={140} src={tarjetaQR.usuario?.foto || tarjetaQR.foto} alt={`Foto de ${tarjetaQR.nombre}`} className="pi-rec-tarjeta-foto" />
                 )}
                 <h2 className="pi-rec-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
@@ -528,6 +540,20 @@ export default function Recargador() {
                     </div>
                   </div>
                   <div className="pi-rec-tarjeta-dato">
+                    <FaHistory />
+                    <div>
+                      <span className="label">Evento</span>
+                      <span className="valor">{tarjetaQR.evento?.nombre || '—'}</span>
+                    </div>
+                  </div>
+                  <div className="pi-rec-tarjeta-dato">
+                    <FaIdCard />
+                    <div>
+                      <span className="label">Tipo de entrada</span>
+                      <span className="valor">{tarjetaQR.categoriaTicket?.nombre || '—'}</span>
+                    </div>
+                  </div>
+                  <div className="pi-rec-tarjeta-dato">
                     <FaWallet />
                     <div>
                       <span className="label">Saldo Actual</span>
@@ -536,6 +562,21 @@ export default function Recargador() {
                   </div>
                 </div>
 
+                {eventoNoCoincide ? (
+                  <div className="pi-rec-form-monto">
+                    <p className="pi-rec-aviso-evento">
+                      <FaExclamationTriangle aria-hidden="true" />
+                      <span>
+                        Esta manilla es del evento <strong>«{tarjetaQR.evento?.nombre}»</strong> y este puesto
+                        atiende <strong>«{eventoDetalle.nombre}»</strong>. No se puede recargar desde acá.
+                      </span>
+                    </p>
+                    <button type="button" className="pi-rec-btn-confirmar pi-rec-btn-bloque" onClick={cerrarTarjeta}>
+                      Cerrar
+                    </button>
+                  </div>
+                ) : (
+                <>
                 <div className="pi-rec-form-monto">
                   <label htmlFor="rec-monto"><FaCoins aria-hidden="true" /> Monto a recargar (puntos)</label>
                   <input
@@ -568,6 +609,8 @@ export default function Recargador() {
                     <FaCheckCircle aria-hidden="true" /> Confirmar Recarga
                   </button>
                 </div>
+                </>
+                )}
               </>
             )}
           </div>
@@ -594,7 +637,7 @@ export default function Recargador() {
               <FaExclamationTriangle /> Reportar incidencia
             </div>
 
-            {historialAReportar.entrada?.foto && <img width="140" height="140" src={historialAReportar.entrada.foto} alt={historialAReportar.entrada.nombre} className="pi-rec-tarjeta-foto" />}
+            {historialAReportar.entrada?.foto && <FotoZoom width={140} height={140} src={historialAReportar.entrada.foto} alt={historialAReportar.entrada.nombre} className="pi-rec-tarjeta-foto" />}
             <h2 className="pi-rec-tarjeta-nombre">{historialAReportar.entrada?.nombre}</h2>
 
             <div className="pi-rec-tarjeta-datos">
@@ -615,27 +658,34 @@ export default function Recargador() {
             </div>
 
             <div className="pi-rec-form-incidencia pi-rec-form-incidencia-post">
-              <label htmlFor="rec-nota-hist">
-                <FaExclamationTriangle aria-hidden="true" /> ¿Qué pasó con {historialAReportar.entrada?.nombre}?
-              </label>
+              <label htmlFor="rec-monto-solicitado-hist">¿Cuánto pagó en realidad?</label>
+              <input
+                id="rec-monto-solicitado-hist"
+                type="number" min="0" inputMode="numeric"
+                placeholder={`Ej: ${Number(historialAReportar.monto)}`}
+                value={montoSolicitadoHist}
+                onChange={(e) => setMontoSolicitadoHist(e.target.value)}
+                autoFocus
+              />
+              {montoSolicitadoHist !== '' && Number(montoSolicitadoHist) !== Number(historialAReportar.monto) && (
+                Number(montoSolicitadoHist) < Number(historialAReportar.monto) ? (
+                  <p className="pi-rec-diff pi-rec-diff--menos">
+                    Se le cargó <strong>{Number(historialAReportar.monto) - Number(montoSolicitadoHist)} pts de más</strong>. Se retienen de su saldo hasta que Admin lo resuelva.
+                  </p>
+                ) : (
+                  <p className="pi-rec-diff pi-rec-diff--mas">
+                    Le faltó cargar <strong>{Number(montoSolicitadoHist) - Number(historialAReportar.monto)} pts</strong>. Admin se los acredita al resolver.
+                  </p>
+                )
+              )}
+              <label htmlFor="rec-nota-hist">¿Qué pasó? (para Admin)</label>
               <textarea
                 id="rec-nota-hist"
                 className="pi-rec-nota-incidencia"
-                placeholder="Cuéntale a Admin qué pasó (ej: pidió 200 pero solo tenía 50 y no le alcanzó)"
+                placeholder="Ej: pagó 100 en efectivo pero apreté 200 sin querer"
                 value={notaIncidenciaHist}
                 onChange={(e) => setNotaIncidenciaHist(e.target.value)}
                 rows={3}
-                autoFocus
-              />
-              <label className="pi-rec-label-opcional" htmlFor="rec-monto-solicitado-hist">Monto que dijo que quería (opcional)</label>
-              <input
-                id="rec-monto-solicitado-hist"
-                type="number"
-                min="0"
-                inputMode="numeric"
-                placeholder="Ej: 200"
-                value={montoSolicitadoHist}
-                onChange={(e) => setMontoSolicitadoHist(e.target.value)}
               />
             </div>
 

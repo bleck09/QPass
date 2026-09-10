@@ -51,6 +51,8 @@ function plazoRetiro(expiraEn) {
 function BilleteraAcordeon({ b }) {
   const [abierto, setAbierto] = useState(false);
   const plazo = plazoRetiro(b.expiraEn);
+  const bloqueado = Number(b.bloqueado ?? 0);
+  const disponible = Number(b.disponible ?? b.saldo);
   return (
     <div className={`pi-usr-bill ${abierto ? 'abierto' : ''}`}>
       <button type="button" className="pi-usr-bill-cab" onClick={() => setAbierto(o => !o)} aria-expanded={abierto}>
@@ -59,7 +61,7 @@ function BilleteraAcordeon({ b }) {
           <span className="pi-usr-bill-fecha">{new Date(b.fecha).toLocaleDateString('es-BO')}</span>
         </span>
         <span className={`pi-usr-bill-plazo tono-${plazo.tono}`}>{plazo.tono === 'vencido' ? 'Vencido' : plazo.tono === 'porVencer' ? '¡Retirá pronto!' : ''}</span>
-        <span className="pi-usr-bill-saldo">{Number(b.saldo)} pts</span>
+        <span className="pi-usr-bill-saldo">{disponible} pts</span>
         <FaChevronDown className="pi-usr-bill-flecha" aria-hidden="true" />
       </button>
       {abierto && (
@@ -68,8 +70,13 @@ function BilleteraAcordeon({ b }) {
             <div><span>{Number(b.recargado)} pts</span><small>Recargado</small></div>
             <div><span>{Number(b.gastado)} pts</span><small>Gastado en puestos</small></div>
             <div><span>{Number(b.devuelto)} pts</span><small>Devuelto</small></div>
-            <div className="destacado"><span>{Number(b.saldo)} pts</span><small>Saldo disponible</small></div>
+            <div className="destacado"><span>{disponible} pts</span><small>Saldo disponible</small></div>
           </div>
+          {bloqueado > 0 && (
+            <p className="pi-usr-bill-disputa">
+              <FaExclamationTriangle aria-hidden="true" /> {bloqueado} pts retenidos por una incidencia de recarga en revisión — no los podés usar ni retirar hasta que se resuelva.
+            </p>
+          )}
           <p className={`pi-usr-bill-plazo-detalle tono-${plazo.tono}`}>{plazo.texto}</p>
         </div>
       )}
@@ -189,7 +196,7 @@ export default function UsuarioNormal() {
   const [historial, setHistorial] = useState([]);
   const [billeteras, setBilleteras] = useState([]);
   const saldoTotal = useMemo(
-    () => billeteras.reduce((s, b) => s + Number(b.saldo), 0),
+    () => billeteras.reduce((s, b) => s + Number(b.disponible ?? b.saldo), 0),
     [billeteras],
   );
 

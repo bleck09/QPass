@@ -22,23 +22,47 @@
   margin: 0;
 }
 
+/* .qp-nav (volver + migas agrupados) -> styles/layout.css (global) */
+
+/* Cabecera del punto de venta: barra de superficie a todo el ancho, para que
+   no quede un bloque chico flotando en un mar de espacio en blanco. */
+.pi-ayu-pos-header {
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-5) var(--space-6);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
 .pi-ayu-header-negocio {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-5);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.pi-ayu-header-texto {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
 .pi-ayu-logo-negocio {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: var(--radius-lg);
   object-fit: cover;
   box-shadow: 0 2px 10px rgba(10, 14, 39, 0.1);
+  flex-shrink: 0;
 }
 
 .pi-ayu-logo-placeholder {
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   border-radius: var(--radius-lg);
   background-color: var(--indigo-profundo-suave);
   color: var(--indigo-profundo);
@@ -46,26 +70,55 @@
   align-items: center;
   justify-content: center;
   font-size: var(--text-2xl);
+  flex-shrink: 0;
 }
 
 .pi-ayu-eyebrow {
   display: block;
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.6px;
   color: var(--cian-digital-texto);
 }
 
 .pi-ayu-header-negocio h1,
 .pi-ayu-header-negocio h2 {
-  font-size: var(--text-xl);
+  font-size: var(--text-2xl);
+  line-height: 1.15;
   color: var(--text-primary);
-  margin: 2px 0 2px;
+  margin: 0;
+}
+
+.pi-ayu-badge-evento {
+  margin-left: var(--space-2);
+  vertical-align: middle;
 }
 
 .pi-ayu-header-negocio p {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Chips de contexto (categoría · lugar · fecha) bajo el título */
+.pi-ayu-header-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+.pi-ayu-header-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: var(--radius-full);
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  font-size: var(--text-sm);
+  font-weight: 600;
   color: var(--text-secondary);
 }
 
@@ -79,8 +132,16 @@
   box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
 }
 
+/* Dentro de la barra de cabecera ya hay una superficie: el KPI va plano. */
+.pi-ayu-pos-header .pi-ayu-kpi {
+  background: var(--bg-page);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  flex-shrink: 0;
+}
+
 .pi-ayu-kpi .micro-etiqueta {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   font-weight: 600;
 }
@@ -136,7 +197,7 @@
 /* --- LAYOUT VENDER --- */
 .pi-ayu-vender-layout {
   display: grid;
-  grid-template-columns: 1fr 360px;
+  grid-template-columns: 1fr 440px;
   gap: 20px;
   align-items: start;
 }
@@ -178,6 +239,78 @@
   text-align: center;
 }
 
+/* Producto que no se puede vender (agotado / deshabilitado): se ve pero bloqueado */
+.pi-ayu-producto-card.bloqueado {
+  opacity: 0.75;
+  background: var(--bg-page);
+}
+.pi-ayu-producto-card.bloqueado .pi-ayu-producto-img {
+  filter: grayscale(1);
+}
+
+.pi-ayu-badge-agotado,
+.pi-ayu-badge-bajo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+.pi-ayu-badge-agotado {
+  background: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+}
+.pi-ayu-badge-bajo {
+  background: var(--ambar-aviso-suave);
+  color: var(--ambar-aviso-texto);
+}
+
+.pi-ayu-saldo-disputa {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--ambar-aviso-texto);
+}
+
+/* Aviso "solo quedan N" al topar el stock desde el carrito */
+.pi-ayu-cantidad-aviso {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--ambar-aviso-texto);
+}
+
+.pi-ayu-btn-avisar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--cian-digital-texto);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.pi-ayu-btn-avisar:hover:not(:disabled) {
+  background: var(--cian-digital-suave);
+  border-color: var(--cian-digital);
+}
+.pi-ayu-btn-avisar:disabled {
+  cursor: default;
+  color: var(--verde-recarga-texto);
+  border-color: var(--border);
+}
+
 .pi-ayu-producto-img,
 .pi-ayu-producto-img-placeholder {
   width: 100%;
@@ -196,10 +329,10 @@
 }
 
 .pi-ayu-producto-nombre {
-  font-size: var(--text-xs);
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--text-primary);
-  min-height: 34px;
+  min-height: 44px;
 }
 
 .pi-ayu-producto-precio {
@@ -219,7 +352,7 @@
   color: var(--cian-digital-texto);
   padding: 8px;
   border-radius: var(--radius-md);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 700;
   cursor: pointer;
   margin-top: 4px;
@@ -289,7 +422,7 @@
 }
 
 .pi-ayu-carrito-vacio {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-secondary);
   text-align: center;
   padding: 20px 8px;
@@ -317,7 +450,7 @@
 }
 
 .pi-ayu-carrito-item-info .nombre {
-  font-size: var(--text-xs);
+  font-size: var(--text-base);
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
@@ -326,12 +459,12 @@
 }
 
 .pi-ayu-carrito-item-info .precio-unit {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   color: var(--text-secondary);
 }
 
 .pi-ayu-carrito-subtotal {
-  font-size: var(--text-xs);
+  font-size: var(--text-base);
   font-weight: 700;
   color: var(--indigo-profundo);
   white-space: nowrap;
@@ -352,7 +485,7 @@
   align-items: center;
   padding-top: 12px;
   border-top: 1px solid var(--border);
-  font-size: var(--text-sm);
+  font-size: var(--text-base);
   color: var(--text-primary);
 }
 
@@ -367,7 +500,7 @@
   color: var(--text-secondary);
   padding: 8px;
   border-radius: var(--radius-md);
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 600;
   cursor: pointer;
 }
@@ -689,4 +822,15 @@
 
 .pi-ayu-exito .pi-ayu-btn-confirmar {
   width: 100%;
+  padding: 12px 20px;
+  min-height: 48px;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: var(--text-base);
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }

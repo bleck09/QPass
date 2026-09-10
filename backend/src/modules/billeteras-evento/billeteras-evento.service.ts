@@ -62,6 +62,9 @@ export class BilleterasEventoService {
         estado: f.evento.estado,
         archivadoEn: f.evento.archivadoEn,
         saldo: Number(f.saldo),
+        // Parte retenida por una IncidenciaRecarga pendiente (no disponible).
+        bloqueado: Number(f.saldoBloqueado),
+        disponible: Math.max(0, Number(f.saldo) - Number(f.saldoBloqueado)),
         expiraEn: f.expiraEn,
         recargado,
         gastado,
@@ -83,6 +86,8 @@ export class BilleterasEventoService {
       nombre: f.usuario.nombre,
       rol: f.usuario.rol,
       saldo: Number(f.saldo),
+      bloqueado: Number(f.saldoBloqueado),
+      disponible: Math.max(0, Number(f.saldo) - Number(f.saldoBloqueado)),
       expiraEn: f.expiraEn,
     }));
   }

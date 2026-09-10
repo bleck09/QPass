@@ -10,6 +10,7 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   text-align: left;
+  min-width: 0;
 }
 
 /* Variante clickable -> se renderiza como <button>; reset + affordance. */
@@ -58,14 +59,20 @@
   line-height: 1.1;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 .qp-stat__label {
   font-size: var(--text-sm);
   color: var(--text-secondary);
 }
+.qp-stat__nota {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  margin-top: 2px;
+}
 
 .qp-stat__extra {
   flex: none;
   margin-left: auto;
+  align-self: flex-start;
 }

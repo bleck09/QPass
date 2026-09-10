@@ -45,6 +45,7 @@ import { LandingConfigModule } from './modules/landing-config/landing-config.mod
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { CorteCajaModule } from './modules/corte-caja/corte-caja.module';
+import { AvisosStockModule } from './modules/avisos-stock/avisos-stock.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { CorteCajaModule } from './modules/corte-caja/corte-caja.module';
     UploadsModule,
     DashboardModule,
     CorteCajaModule,
+    AvisosStockModule,
   ],
   controllers: [HealthController],
   providers: [
