@@ -91,6 +91,9 @@ export default function App() {
   const data = carga?.data ?? defaultLandingData;
   const precios = carga?.precios ?? defaultLandingData.precios;
   const mapaPuestos = carga?.mapaPuestos ?? [];
+  // El mapa es opcional (Admin no lo arma, lo hace cada Usuario Negocio al activar
+  // su puesto): si todavía no hay ninguno colocado, la sección ni aparece.
+  const mapaPuestosActivos = mapaPuestos.filter(p => p.estadoActivo);
 
   const [puestoModal, setPuestoModal] = useState(null);
 
@@ -200,7 +203,7 @@ export default function App() {
         <ul className="pi-landing-nav-links">
           <li><a href="#entradas">Entradas</a></li>
           <li><a href="#actividades">Actividades</a></li>
-          <li><a href="#mapa">Mapa</a></li>
+          {mapaPuestosActivos.length > 0 && <li><a href="#mapa">Mapa</a></li>}
           <li><a href="#cronograma">Cronograma</a></li>
         </ul>
         <button className="pi-landing-btn-nav" onClick={handleLoginClick}>
@@ -330,7 +333,8 @@ export default function App() {
         </div>
       </section>
 
-      {/* SECCIÓN MAPA INTERACTIVO */}
+      {/* SECCIÓN MAPA INTERACTIVO — opcional: si Admin todavía no lo armó, no aparece */}
+      {mapaPuestosActivos.length > 0 && (
       <section id="mapa" className="pi-landing-section">
         <div className="pi-landing-section-header">
           <h2 className="pi-landing-section-title"><FaMapMarkedAlt /> Mapa del Evento</h2>
@@ -341,7 +345,7 @@ export default function App() {
 
         <div className="pi-landing-mapa-wrapper glass-panel">
           <div className="pi-landing-mapa-canvas">
-            {mapaPuestos.filter(p => p.estadoActivo).map((puesto) => (
+            {mapaPuestosActivos.map((puesto) => (
               // Cada puesto del mapa es un botón: se puede abrir con Tab + Enter.
               <button
                 type="button"
@@ -369,6 +373,7 @@ export default function App() {
           </div>
         </div>
       </section>
+      )}
 
       {/* SECCIÓN CRONOGRAMA */}
       <section id="cronograma" className="pi-landing-section">

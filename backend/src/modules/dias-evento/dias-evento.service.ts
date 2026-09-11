@@ -16,6 +16,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
+import { verificarSinChoqueDeFechas } from '../../common/utils/choque-eventos.utils';
 import {
   ActualizarDiaEventoDto,
   CrearDiaEventoDto,
@@ -36,7 +37,11 @@ export class DiasEventoService {
     });
   }
 
-  /** Recalcula Evento.fecha/fechaFin a partir de sus jornadas. */
+  /**
+   * Recalcula Evento.fecha/fechaFin a partir de sus jornadas — y de paso
+   * revalida que el evento siga sin cruzarse con ningún otro (§ un evento a
+   * la vez): agregar/editar/borrar una jornada puede correr el rango entero.
+   */
   private async resincronizarEvento(
     tx: Prisma.TransactionClient,
     eventoId: string,
@@ -47,6 +52,11 @@ export class DiasEventoService {
       _max: { fin: true },
     });
     if (rango._min.inicio && rango._max.fin) {
+      await verificarSinChoqueDeFechas(tx, {
+        inicio: rango._min.inicio,
+        fin: rango._max.fin,
+        excluirEventoId: eventoId,
+      });
       await tx.evento.update({
         where: { id: eventoId },
         data: { fecha: rango._min.inicio, fechaFin: rango._max.fin },

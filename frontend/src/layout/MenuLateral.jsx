@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import {
   FaChartPie, FaChartBar, FaUsers, FaSignOutAlt, FaUserCircle,
@@ -8,7 +8,8 @@ import {
 } from 'react-icons/fa';
 import { MdAccountBalance, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'react-icons/md';
 import { ROLES, ROLE_LABELS } from '../constants/roles.js';
-import { leerSesion, cerrarSesion } from '../api/client.js';
+import { leerSesion, guardarSesion, cerrarSesion } from '../api/client.js';
+import api from '../api/index.js';
 import { leerTema, aplicarTema } from '../utils/tema.js';
 import './MenuLateral.css';
 
@@ -71,6 +72,11 @@ export default function MenuLateral({ children }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [tema, setTema] = useState(leerTema);
+  // Las URLs de /uploads vienen firmadas con 30 min de vencimiento (ver
+  // firma-uploads.ts): la foto guardada en localStorage nunca se refresca sola,
+  // así que pasado ese rato el <img> tira 403. Guarda qué URL ya falló para no
+  // reintentar en bucle si el refresco también falla (ej. sin conexión).
+  const fotoFallidaRef = useRef(null);
 
   const cambiarTema = () => {
     const sig = tema === 'dark' ? 'light' : 'dark';
@@ -112,6 +118,21 @@ export default function MenuLateral({ children }) {
   const handleCerrarSesion = () => {
     cerrarSesion();
     navigate('/');
+  };
+
+  // Al 403 por firma vencida, pide un usuario fresco (viene con la foto
+  // re-firmada) y reutiliza el mismo mecanismo de Perfil.jsx para propagar el
+  // cambio: guardar sesión + avisar por el evento que ya escucha este mismo componente.
+  const refrescarFotoSiVencio = async () => {
+    if (fotoFallidaRef.current === usuario.foto) return;
+    fotoFallidaRef.current = usuario.foto;
+    try {
+      const fresco = await api.usuarios.obtener(usuario.id);
+      guardarSesion({ ...leerSesion(), foto: fresco.foto });
+      window.dispatchEvent(new Event(EVENTO_USUARIO_ACTUALIZADO));
+    } catch {
+      // Sin conexión o lo que sea: se deja el ícono roto, no insistimos.
+    }
   };
 
   const opcionesMenu = menuConfig[usuario.rol] || [];
@@ -251,7 +272,7 @@ export default function MenuLateral({ children }) {
               >
                 <div className="pi-layout-avatar">
                   {usuario.foto
-                    ? <img width="36" height="36" src={usuario.foto} alt={usuario.nombre} className="pi-layout-avatar-img" />
+                    ? <img width="36" height="36" src={usuario.foto} alt={usuario.nombre} className="pi-layout-avatar-img" onError={refrescarFotoSiVencio} />
                     : getIniciales(usuario.nombre || usuario.email)}
                 </div>
                 <div className="pi-layout-info-perfil hide-on-mobile">

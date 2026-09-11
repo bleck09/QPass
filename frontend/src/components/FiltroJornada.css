@@ -1,0 +1,133 @@
+/* Combobox con buscador para el filtro de jornada cuando hay más de 5
+   (con 5 o menos, FiltroJornada.jsx renderiza <Filtros> y esto no se usa). */
+
+.qp-filtro-jornada {
+  position: relative;
+  display: inline-block;
+}
+
+.qp-filtro-jornada__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 7px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    background var(--duration-fast) var(--ease-out);
+}
+.qp-filtro-jornada__btn:hover { border-color: var(--focus-ring); }
+.qp-filtro-jornada__btn.is-on {
+  background: var(--action);
+  border-color: var(--action);
+  color: var(--text-on-accent);
+}
+.qp-filtro-jornada__val {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.qp-filtro-jornada__pop {
+  position: absolute;
+  z-index: var(--z-dropdown, 50);
+  top: calc(100% + 6px);
+  left: 0;
+  width: 260px;
+  max-width: 78vw;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md, 0 12px 28px rgba(6, 9, 24, 0.18));
+  overflow: hidden;
+}
+
+.qp-filtro-jornada__buscar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.qp-filtro-jornada__buscar input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  outline: none;
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.qp-filtro-jornada__buscar input::-webkit-search-cancel-button { display: none; }
+
+.qp-filtro-jornada__lista {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.qp-filtro-jornada__lista > li > button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: 0;
+  background: none;
+  padding: 8px 8px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+}
+.qp-filtro-jornada__lista > li > button:hover { background: var(--bg-hover); }
+.qp-filtro-jornada__lista > li > button.is-on { background: var(--bg-hover); font-weight: var(--weight-semibold); }
+
+.qp-filtro-jornada__check {
+  flex: none;
+  width: 14px;
+  display: inline-flex;
+  justify-content: center;
+  color: var(--action);
+}
+.qp-filtro-jornada__txt {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qp-filtro-jornada__conteo {
+  flex: none;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.qp-filtro-jornada__vacio {
+  padding: 12px 10px;
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}

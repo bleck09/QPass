@@ -29,6 +29,14 @@ const CON_SALDO = {
   usuario: { select: { id: true, foto: true } },
 } satisfies Prisma.EntradaInclude;
 
+// Jornada (noche) a la que pertenece la entrada. Se muestra en el control de
+// acceso y en "Mis Entradas". `nombre` puede ser null -> la UI arma "Día {orden}".
+const CON_JORNADA = {
+  diaEvento: {
+    select: { id: true, nombre: true, orden: true, inicio: true, fin: true },
+  },
+} satisfies Prisma.EntradaInclude;
+
 // Una compra pendiente o rechazada no es un asistente real todavía.
 const SOLO_CONFIRMADAS = {
   compra: { estado: 'confirmado' },
@@ -39,6 +47,17 @@ const SOLO_CONFIRMADAS = {
 // evento.fechaFin. La SALIDA no tiene ventana: siempre se puede sacar a quien
 // esté adentro, incluso con el evento ya finalizado.
 const MARGEN_INGRESO_ANTICIPADO_HORAS = 3;
+
+// Fecha + hora en horario de Bolivia, para los mensajes de control de acceso
+// ("cerró el 10 sept, 02:00"). El server corre en UTC, así que se fija la zona.
+const fmtFechaHora = (fecha: Date): string =>
+  new Intl.DateTimeFormat('es-BO', {
+    timeZone: 'America/La_Paz',
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(fecha);
 
 @Injectable()
 export class EntradasService {
@@ -106,10 +125,12 @@ export class EntradasService {
       },
       include: {
         categoriaTicket: true,
+        ...CON_JORNADA,
         ...CODIGO_ACTIVO,
         ...CON_SALDO,
         registrosIngreso: { select: { tipo: true } },
       },
+      orderBy: [{ diaEvento: { orden: 'asc' } }, { numero: 'asc' }, { nombre: 'asc' }],
     });
     await this.adjuntarSaldoEvento(entradas);
     return entradas.map(({ codigosQr, registrosIngreso, ...e }) => ({
@@ -133,6 +154,7 @@ export class EntradasService {
         evento: true,
         categoriaTicket: true,
         compra: { select: { id: true, compradorId: true } },
+        ...CON_JORNADA,
         ...CODIGO_ACTIVO,
       },
       orderBy: { createdAt: 'desc' },
@@ -153,6 +175,7 @@ export class EntradasService {
             categoriaTicket: true,
             compra: { select: { estado: true } },
             evento: { select: { id: true, nombre: true } },
+            ...CON_JORNADA,
             ...CON_SALDO,
           },
         },
@@ -299,9 +322,15 @@ export class EntradasService {
       where: { id },
       include: {
         evento: {
-          select: { nombre: true, fecha: true, fechaFin: true, estado: true },
+          select: {
+            nombre: true,
+            fecha: true,
+            fechaFin: true,
+            estado: true,
+            _count: { select: { dias: true } },
+          },
         },
-        diaEvento: { select: { nombre: true, inicio: true, fin: true } },
+        diaEvento: { select: { nombre: true, orden: true, inicio: true, fin: true } },
       },
     });
     if (!entradaActual) throw new NotFoundException('Entrada no encontrada');
@@ -322,33 +351,52 @@ export class EntradasService {
       // rango del evento como antes.
       const desde = diaEvento?.inicio ?? evento.fecha;
       const hasta = diaEvento?.fin ?? evento.fechaFin;
-      const rotulo = diaEvento?.nombre
-        ? `"${evento.nombre}" (${diaEvento.nombre})`
-        : `"${evento.nombre}"`;
+      // Solo hablamos de "jornada" si el evento tiene más de una; en un evento de
+      // una sola noche el mensaje es simplemente sobre el evento.
+      const variasJornadas = (evento._count?.dias ?? 0) > 1;
+      const jornadaNombre =
+        variasJornadas && diaEvento
+          ? diaEvento.nombre || `Día ${diaEvento.orden}`
+          : null;
       const aperturaPuerta = new Date(
         desde.getTime() - MARGEN_INGRESO_ANTICIPADO_HORAS * 60 * 60 * 1000,
       );
+
       if (evento.estado === 'finalizado' || ahora > hasta) {
+        if (evento.estado === 'finalizado') {
+          throw new ConflictException(
+            `El evento "${evento.nombre}" ya finalizó — esta entrada ya no es válida para ingresar.`,
+          );
+        }
+        // Evento con varias noches: puede que solo esta jornada haya pasado y las
+        // otras sigan activas, así que se aclara cuál.
         throw new ConflictException(
-          `${rotulo} ya cerró — no se registran más ingresos`,
+          jornadaNombre
+            ? `Esta entrada ya no es válida: era para la jornada «${jornadaNombre}» de "${evento.nombre}", que cerró el ${fmtFechaHora(hasta)}.`
+            : `El evento "${evento.nombre}" ya cerró (terminó el ${fmtFechaHora(hasta)}) — esta entrada ya no es válida para ingresar.`,
         );
       }
       if (ahora < aperturaPuerta) {
+        const dondePara = jornadaNombre
+          ? `la jornada «${jornadaNombre}» de "${evento.nombre}"`
+          : `"${evento.nombre}"`;
         throw new ConflictException(
-          `Todavía no es horario de ingreso para ${rotulo}: se habilita ` +
-            `${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio`,
+          `El ingreso para ${dondePara} todavía no está habilitado. ` +
+            `Abre el ${fmtFechaHora(aperturaPuerta)} (${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio).`,
         );
       }
     }
 
     if (tipo === 'salida' && entradaActual.estadoIngreso !== 'ingresado') {
       throw new ConflictException(
-        'Esta entrada no está adentro — no se puede registrar una salida',
+        entradaActual.estadoIngreso === 'salio'
+          ? 'Esta persona ya registró su salida — no está adentro.'
+          : 'Esta persona todavía no registró su ingreso — no se puede registrar una salida.',
       );
     }
     if (tipo === 'ingreso' && entradaActual.estadoIngreso === 'ingresado') {
       throw new ConflictException(
-        'Esta entrada ya está registrada como ingresada',
+        'Esta entrada ya figura como ingresada. Si la persona salió, registrá primero su salida.',
       );
     }
     if (!entradaActual.foto && !foto) {

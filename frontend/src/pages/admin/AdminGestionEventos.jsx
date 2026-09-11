@@ -4,6 +4,7 @@ import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
+import CalendarioEventos from '../../components/CalendarioEventos.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
@@ -11,9 +12,9 @@ import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation } from 'react-router-dom';
 import {
   FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
-  FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaQrcode,
+  FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaUpload, FaQrcode,
   FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen,
-  FaRegCircle, FaRocket, FaEyeSlash, FaCalendarAlt
+  FaRegCircle, FaRocket, FaEyeSlash, FaCalendarAlt, FaListUl
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
@@ -43,7 +44,7 @@ const PESTANAS = [
 ];
 
 const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
-const FORM_EVENTO_VACIO = { nombre: '', lugar: '', coordenadas: '', fecha: '', fechaFin: '', imagen: '', clienteId: '', diasParaRetiro: '' };
+const FORM_EVENTO_VACIO = { nombre: '', lugar: '', coordenadas: '', fecha: '', fechaFin: '', imagen: '', tipoManilla: 'fisica', clienteId: '', diasParaRetiro: '' };
 const MAX_IMAGEN_BYTES = 3 * 1024 * 1024; // 3 MB
 
 // ISO -> valor para <input type="datetime-local"> (YYYY-MM-DDTHH:mm, hora local).
@@ -89,6 +90,10 @@ export default function AdminGestionEventos() {
   // compartible / sobrevive un refresco.
   const [eventoIdDetalle, abrirEventoUrl, cerrarDetalle] = useDetalleUrl('evento');
   const [pestana, setPestana] = useState('asignados');
+  // Crear/editar evento vivía en un modal; ahora es su propia vista de página
+  // (?formulario=crear o ?formulario=<id>), con el mismo soporte de "Atrás".
+  const [formularioParam, abrirFormularioUrl, cerrarFormularioUrl] = useDetalleUrl('formulario');
+  const editandoId = formularioParam && formularioParam !== 'crear' ? formularioParam : null;
 
   // Compat.: si se llega con location.state.eventoId (accesos rápidos de otra
   // página) y aún no está en la URL, lo abrimos.
@@ -101,39 +106,55 @@ export default function AdminGestionEventos() {
     setPestana('asignados');
     abrirEventoUrl(id);
   };
-  const [modalEventoAbierto, setModalEventoAbierto] = useState(false);
   const [modalSolicitudesAbierto, setModalSolicitudesAbierto] = useState(false);
-  const [editandoId, setEditandoId] = useState(null); // null = crear; id = editar
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
   const [formEvento, setFormEvento] = useState(FORM_EVENTO_VACIO);
   const [errorImagen, setErrorImagen] = useState('');
+  const [errorFormEvento, setErrorFormEvento] = useState('');
   const [previewFallo, setPreviewFallo] = useState(false);
 
-  const abrirCrearEvento = () => {
-    setEditandoId(null);
-    setErrorImagen('');
-    setPreviewFallo(false);
-    setFormEvento(FORM_EVENTO_VACIO);
-    setModalEventoAbierto(true);
-  };
+  const abrirCrearEvento = () => abrirFormularioUrl('crear');
+  const abrirEditarEvento = (ev) => abrirFormularioUrl(ev.id);
 
-  const abrirEditarEvento = (ev) => {
-    setEditandoId(ev.id);
-    setErrorImagen('');
-    setPreviewFallo(false);
-    setFormEvento({
-      nombre: ev.nombre || '',
-      lugar: ev.lugar || '',
-      coordenadas: ev.coordenadas || '',
-      imagen: ev.imagen || '',
-      fecha: isoADatetimeLocal(ev.fecha),
-      fechaFin: isoADatetimeLocal(ev.fechaFin),
-      clienteId: ev.clienteId != null ? String(ev.clienteId) : '',
-      diasParaRetiro: ev.diasParaRetiro != null ? String(ev.diasParaRetiro) : '',
-    });
-    setModalEventoAbierto(true);
-  };
+  // Sincroniza el formulario con la URL DURANTE EL RENDER (no en un efecto —
+  // "adjusting state when a prop changes", ver docs de React): así el
+  // formulario también se puebla solo si se llega directo por link o refresco,
+  // sin esperar a que `eventos` termine de cargar (reintenta en cada render
+  // hasta encontrar el evento).
+  const [formularioParamAplicado, setFormularioParamAplicado] = useState(formularioParam);
+  if (formularioParam !== formularioParamAplicado) {
+    if (formularioParam === 'crear') {
+      setFormularioParamAplicado(formularioParam);
+      setFormEvento(FORM_EVENTO_VACIO);
+      setErrorImagen('');
+      setErrorFormEvento('');
+      setPreviewFallo(false);
+    } else if (formularioParam) {
+      const ev = eventos.find(e => e.id === formularioParam);
+      if (ev) {
+        setFormularioParamAplicado(formularioParam);
+        setFormEvento({
+          nombre: ev.nombre || '',
+          lugar: ev.lugar || '',
+          coordenadas: ev.coordenadas || '',
+          imagen: ev.imagen || '',
+          tipoManilla: ev.tipoManilla || 'fisica',
+          fecha: isoADatetimeLocal(ev.fecha),
+          fechaFin: isoADatetimeLocal(ev.fechaFin),
+          clienteId: ev.clienteId != null ? String(ev.clienteId) : '',
+          diasParaRetiro: ev.diasParaRetiro != null ? String(ev.diasParaRetiro) : '',
+        });
+        setErrorImagen('');
+        setErrorFormEvento('');
+        setPreviewFallo(false);
+      }
+      // si el evento todavía no está en `eventos` (aún cargando), no se marca
+      // aplicado: se reintenta en el próximo render.
+    } else {
+      setFormularioParamAplicado(formularioParam); // formulario cerrado
+    }
+  }
   // Panel de asignar: filtro por rol + búsqueda por nombre/correo (ya no se elige rol).
   const [filtroRolAsignar, setFiltroRolAsignar] = useState('');
   const [busquedaUsuario, setBusquedaUsuario] = useState('');
@@ -146,6 +167,8 @@ export default function AdminGestionEventos() {
     );
   }, [eventoIdDetalle]);
 
+  const [errorSolicitudes, setErrorSolicitudes] = useState('');
+
   const aprobarSolicitud = async (s) => {
     const ok = await confirmar({
       titulo: '¿Aprobar la solicitud?',
@@ -153,10 +176,17 @@ export default function AdminGestionEventos() {
       textoConfirmar: 'Aprobar y crear',
     });
     if (!ok) return;
-    const nuevo = await api.solicitudesEvento.aprobar(s.id);
-    setEventos(prev => [nuevo, ...prev]);
-    setSolicitudes(prev => prev.filter(x => x.id !== s.id));
-    abrirDetalle(nuevo.id);
+    setErrorSolicitudes('');
+    try {
+      const nuevo = await api.solicitudesEvento.aprobar(s.id);
+      setEventos(prev => [nuevo, ...prev]);
+      setSolicitudes(prev => prev.filter(x => x.id !== s.id));
+      abrirDetalle(nuevo.id);
+    } catch (err) {
+      // Ej.: las fechas propuestas se cruzan con otro evento activo ("un
+      // evento a la vez") — hay que editar la solicitud o rechazarla.
+      setErrorSolicitudes(err.message);
+    }
   };
 
   const rechazarSolicitud = async (s) => {
@@ -176,6 +206,7 @@ export default function AdminGestionEventos() {
     () => filtrarEventos(eventos, busqueda, filtroEstadoEvento),
     [eventos, busqueda, filtroEstadoEvento],
   );
+  const [vistaEventos, setVistaEventos] = useState('lista'); // 'lista' | 'calendario'
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
 
@@ -247,6 +278,7 @@ export default function AdminGestionEventos() {
   const handleGuardarEvento = async (e) => {
     e.preventDefault();
     if (!formEvento.nombre.trim() || !formEvento.lugar.trim() || !formEvento.fecha || !formEvento.fechaFin) return;
+    setErrorFormEvento('');
 
     // clienteId / diasParaRetiro vacíos -> se omiten (el backend usa el default).
     const { clienteId, diasParaRetiro, ...resto } = formEvento;
@@ -256,18 +288,24 @@ export default function AdminGestionEventos() {
       ...(diasParaRetiro ? { diasParaRetiro: Number(diasParaRetiro) } : {}),
     };
 
-    if (editandoId) {
-      const actualizado = await api.eventos.actualizar(editandoId, payload);
-      setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
-      setModalEventoAbierto(false);
-      return;
-    }
+    try {
+      if (editandoId) {
+        const actualizado = await api.eventos.actualizar(editandoId, payload);
+        setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+        cerrarFormularioUrl();
+        return;
+      }
 
-    const nuevo = await api.eventos.crear(payload);
-    setEventos(prev => [nuevo, ...prev]);
-    setFormEvento(FORM_EVENTO_VACIO);
-    setModalEventoAbierto(false);
-    abrirDetalle(nuevo.id);
+      const nuevo = await api.eventos.crear(payload);
+      setEventos(prev => [nuevo, ...prev]);
+      setFormEvento(FORM_EVENTO_VACIO);
+      cerrarFormularioUrl();
+      abrirDetalle(nuevo.id);
+    } catch (err) {
+      // El backend rechaza fechas que se cruzan con otro evento activo ("un
+      // evento a la vez"): el mensaje ya viene listo para mostrar tal cual.
+      setErrorFormEvento(err.message);
+    }
   };
 
   const handleAsignar = async (usuario) => {
@@ -359,7 +397,138 @@ export default function AdminGestionEventos() {
 
   return (
     <div className="pi-ges-container">
-      {eventoDetalle ? (
+      {formularioParam ? (
+        <>
+          <button type="button" className="pi-ges-btn-volver" onClick={cerrarFormularioUrl}>
+            <FaArrowLeft /> {editandoId ? 'Volver al evento' : 'Volver a Gestión de Eventos'}
+          </button>
+
+          <div className="pi-ges-header">
+            <div>
+              <h1>{editandoId ? <><FaPen aria-hidden="true" /> Editar Evento</> : <><FaPlus aria-hidden="true" /> Crear Evento</>}</h1>
+              <p>{editandoId ? `Estás editando "${formEvento.nombre}".` : 'Completa los datos para crear un evento nuevo.'}</p>
+            </div>
+          </div>
+
+          <section className="pi-ges-seccion pi-ges-form-pagina">
+            <form className="pi-ges-form" onSubmit={handleGuardarEvento}>
+              <div className="pi-ges-input-group">
+                <label htmlFor="ev-nombre">Nombre del evento</label>
+                <input
+                  id="ev-nombre" type="text" name="nombre" value={formEvento.nombre} onChange={handleChangeFormEvento}
+                  placeholder="Ej: Festival de Verano 2027" required
+                />
+              </div>
+              <div className="pi-ges-input-group">
+                <label htmlFor="ev-lugar">Lugar</label>
+                <input
+                  id="ev-lugar" type="text" name="lugar" value={formEvento.lugar} onChange={handleChangeFormEvento}
+                  placeholder="Ej: Campo Ferial, Cbba" required
+                />
+              </div>
+              <div className="pi-ges-input-group">
+                <label htmlFor="ev-tipo-manilla">Tipo de manilla / control de acceso</label>
+                <select
+                  id="ev-tipo-manilla" name="tipoManilla" value={formEvento.tipoManilla} onChange={handleChangeFormEvento}
+                >
+                  <option value="fisica">Física — Supervisor entrega y vincula la manilla</option>
+                  <option value="digital">Digital — el QR se asigna solo al aprobar la compra</option>
+                </select>
+                <p className="pi-ges-ayuda-campo">
+                  {formEvento.tipoManilla === 'digital'
+                    ? 'Cada asistente ve su código QR en su perfil apenas se aprueba su compra; entra mostrándolo desde el celular. No hace falta imprimir ni entregar nada en Gestión de Entrega.'
+                    : 'Admin genera un lote de códigos QR imprimibles y Supervisor entrega + vincula la manilla física a cada asistente en Gestión de Entrega.'}
+                </p>
+              </div>
+              <div className="pi-ges-input-group">
+                <label htmlFor="ev-cliente">Cliente organizador (opcional)</label>
+                <select
+                  id="ev-cliente" name="clienteId" value={formEvento.clienteId} onChange={handleChangeFormEvento}
+                >
+                  <option value="">Sin cliente asignado</option>
+                  {clientes.map(c => (
+                    <option key={c.id} value={c.id}>{c.nombre} ({c.email})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="pi-ges-input-group">
+                <label htmlFor="ev-retiro">Días para retirar el saldo tras el cierre</label>
+                <input
+                  id="ev-retiro" type="number" min="1" step="1" name="diasParaRetiro"
+                  value={formEvento.diasParaRetiro} onChange={handleChangeFormEvento}
+                  placeholder="30 (por defecto)"
+                />
+              </div>
+              <div className="pi-ges-input-group">
+                <label>Ubicación en el mapa (opcional)</label>
+                <MapaSelector
+                  value={formEvento.coordenadas}
+                  onChange={(coords) => setFormEvento(f => ({ ...f, coordenadas: coords }))}
+                />
+              </div>
+              <div className="pi-ges-input-group">
+                <label htmlFor="ev-fecha">Fecha y hora de inicio</label>
+                <input
+                  id="ev-fecha" type="datetime-local" name="fecha" value={formEvento.fecha} onChange={handleChangeFormEvento}
+                  required
+                />
+              </div>
+              <div className="pi-ges-input-group">
+                <label htmlFor="ev-fechaFin">Fecha y hora de cierre</label>
+                <input
+                  id="ev-fechaFin" type="datetime-local" name="fechaFin" value={formEvento.fechaFin} onChange={handleChangeFormEvento}
+                  min={formEvento.fecha || undefined} required
+                />
+              </div>
+              <div className="pi-ges-input-group">
+                <label htmlFor="ev-imagen"><FaImage aria-hidden="true" /> Imagen del evento (opcional)</label>
+                {!formEvento.imagen ? (
+                  <div className="upload-zone">
+                    <FaUpload className="upload-icon" aria-hidden="true" />
+                    <span className="upload-text">Haz clic para subir una foto</span>
+                    <span className="upload-subtext">PNG, JPG hasta 3MB</span>
+                    <input id="ev-imagen" type="file" accept="image/*" onChange={handleImagenUpload} className="upload-input-hidden" />
+                  </div>
+                ) : previewFallo ? (
+                  <p className="pi-ges-error-imagen">
+                    No se puede mostrar esta imagen. Probá con otra en formato JPG o PNG.
+                  </p>
+                ) : (
+                  <div className="preview-zone">
+                    <img
+                      width="320" height="100" src={formEvento.imagen} alt="Vista previa"
+                      className="pi-ges-imagen-preview"
+                      onError={() => setPreviewFallo(true)}
+                      onLoad={() => setPreviewFallo(false)}
+                    />
+                    <button
+                      type="button"
+                      className="btn-quitar-imagen"
+                      onClick={() => { setErrorImagen(''); setFormEvento(f => ({ ...f, imagen: '' })); }}
+                    >
+                      <FaTimes aria-hidden="true" /> Quitar imagen
+                    </button>
+                  </div>
+                )}
+                {errorImagen && <p className="pi-ges-error-imagen">{errorImagen}</p>}
+              </div>
+
+              {errorFormEvento && (
+                <p className="pi-ges-error-fechas"><FaExclamationTriangle aria-hidden="true" /> {errorFormEvento}</p>
+              )}
+
+              <div className="pi-ges-modal-actions">
+                <button type="button" className="pi-ges-btn-cancelar" onClick={cerrarFormularioUrl}>
+                  Cancelar
+                </button>
+                <button type="submit" className="pi-ges-btn-guardar">
+                  {editandoId ? 'Guardar cambios' : 'Crear Evento'}
+                </button>
+              </div>
+            </form>
+          </section>
+        </>
+      ) : eventoDetalle ? (
         <>
           <button type="button" className="pi-ges-btn-volver" onClick={cerrarDetalle}>
             <FaArrowLeft /> Volver a Gestión de Eventos
@@ -372,6 +541,9 @@ export default function AdminGestionEventos() {
                 {eventoDetalle.nombre} <BadgeEstadoEvento evento={eventoDetalle} />{' '}
                 <span className={`pi-ges-badge-publicacion ${eventoDetalle.publicadoEn ? 'publicado' : 'borrador'}`}>
                   {eventoDetalle.publicadoEn ? <><FaCheckCircle /> Publicado</> : <><FaEyeSlash /> Borrador</>}
+                </span>{' '}
+                <span className="pi-ges-badge-manilla">
+                  {eventoDetalle.tipoManilla === 'digital' ? <><FaQrcode /> Manilla digital</> : <><FaTicketAlt /> Manilla física</>}
                 </span>
               </h1>
               <span>
@@ -450,15 +622,19 @@ export default function AdminGestionEventos() {
                   {progresoEvento.pasos.tickets ? <FaCheckCircle /> : <FaRegCircle />} Crear al menos un tipo de entrada
                 </li>
                 <li className={progresoEvento.pasos.qr ? 'listo' : ''}>
-                  {progresoEvento.pasos.qr ? <FaCheckCircle /> : <FaRegCircle />} Generar los códigos QR
+                  {progresoEvento.pasos.qr ? <FaCheckCircle /> : <FaRegCircle />}{' '}
+                  {eventoDetalle.tipoManilla === 'digital'
+                    ? 'Códigos QR: automáticos (manilla digital, no hace falta generarlos)'
+                    : 'Generar los códigos QR'}
                 </li>
                 <li className={progresoEvento.pasos.landing ? 'listo' : ''}>
                   {progresoEvento.pasos.landing ? <FaCheckCircle /> : <FaRegCircle />} Configurar la página del evento
                 </li>
-                <li className={progresoEvento.pasos.mapa ? 'listo' : ''}>
-                  {progresoEvento.pasos.mapa ? <FaCheckCircle /> : <FaRegCircle />} Armar el mapa (al menos un puesto)
-                </li>
               </ul>
+              <p className="pi-ges-progreso-nota">
+                El mapa es opcional: los puestos los activa cada Usuario Negocio y podés armarlo
+                antes o después de publicar. Si queda sin configurar, simplemente no se muestra en la página del evento.
+              </p>
               {errorPublicar && (
                 <p className="pi-ges-progreso-error"><FaExclamationTriangle /> {errorPublicar}</p>
               )}
@@ -487,7 +663,7 @@ export default function AdminGestionEventos() {
           {pestana === 'tickets' && <AdminCrearTickets eventoId={eventoDetalle.id} embebido />}
           {pestana === 'solicitudes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="solicitudesEntradas" />}
           {pestana === 'reportes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="incidencias" />}
-          {pestana === 'qr' && <AdminCrearQr eventoId={eventoDetalle.id} embebido />}
+          {pestana === 'qr' && <AdminCrearQr eventoId={eventoDetalle.id} tipoManilla={eventoDetalle.tipoManilla} embebido />}
           {pestana === 'config' && <AdminConfigurarPagina eventoId={eventoDetalle.id} embebido />}
           {pestana === 'mapa' && <Mapa eventoId={eventoDetalle.id} embebido />}
 
@@ -570,7 +746,7 @@ export default function AdminGestionEventos() {
                 <button
                   type="button"
                   className="pi-ges-btn-solicitudes"
-                  onClick={() => setModalSolicitudesAbierto(true)}
+                  onClick={() => { setErrorSolicitudes(''); setModalSolicitudesAbierto(true); }}
                 >
                   <FaFileAlt /> Solicitudes de clientes
                   <span className="pi-ges-solicitudes-contador">{solicitudes.length}</span>
@@ -592,136 +768,40 @@ export default function AdminGestionEventos() {
             etiquetaFiltros="Filtrar eventos por estado"
           />
 
-          <GrillaEventos
-            eventos={eventosFiltrados}
-            gridClassName="pi-ges-eventos-grid"
-            vacio="No se encontraron eventos."
-          >
-            {ev => (
-              <EventoCard
-                key={ev.id}
-                evento={ev}
-                onClick={() => abrirDetalle(ev.id)}
-                cta="Gestionar"
-                badges={
-                  <span className={`pi-ges-badge-publicacion ${ev.publicadoEn ? 'publicado' : 'borrador'}`}>
-                    {ev.publicadoEn ? <><FaCheckCircle /> Publicado</> : <><FaEyeSlash /> Borrador</>}
-                  </span>
-                }
-                meta={<><FaUsers /> {contarAsignados(ev.id)} usuarios asignados</>}
-              />
-            )}
-          </GrillaEventos>
+          <div className="pi-ges-vista-tabs" role="group" aria-label="Vista de eventos">
+            <button type="button" className={vistaEventos === 'lista' ? 'activo' : ''} onClick={() => setVistaEventos('lista')}>
+              <FaListUl aria-hidden="true" /> Lista
+            </button>
+            <button type="button" className={vistaEventos === 'calendario' ? 'activo' : ''} onClick={() => setVistaEventos('calendario')}>
+              <FaCalendarAlt aria-hidden="true" /> Calendario
+            </button>
+          </div>
+
+          {vistaEventos === 'calendario' ? (
+            <CalendarioEventos eventos={eventosFiltrados} onSeleccionar={abrirDetalle} />
+          ) : (
+            <GrillaEventos
+              eventos={eventosFiltrados}
+              gridClassName="pi-ges-eventos-grid"
+              vacio="No se encontraron eventos."
+            >
+              {ev => (
+                <EventoCard
+                  key={ev.id}
+                  evento={ev}
+                  onClick={() => abrirDetalle(ev.id)}
+                  cta="Gestionar"
+                  badges={
+                    <span className={`pi-ges-badge-publicacion ${ev.publicadoEn ? 'publicado' : 'borrador'}`}>
+                      {ev.publicadoEn ? <><FaCheckCircle /> Publicado</> : <><FaEyeSlash /> Borrador</>}
+                    </span>
+                  }
+                  meta={<><FaUsers /> {contarAsignados(ev.id)} usuarios asignados</>}
+                />
+              )}
+            </GrillaEventos>
+          )}
         </>
-      )}
-
-      {modalEventoAbierto && (
-        <Modal
-          titulo={editandoId ? <><FaPen aria-hidden="true" /> Editar Evento</> : <><FaPlus aria-hidden="true" /> Crear Evento</>}
-          onCerrar={() => setModalEventoAbierto(false)}
-          tamano="lg"
-          className="pi-ges-modal"
-        >
-              <form className="pi-ges-form" onSubmit={handleGuardarEvento}>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-nombre">Nombre del evento</label>
-                  <input
-                    id="ev-nombre" type="text" name="nombre" value={formEvento.nombre} onChange={handleChangeFormEvento}
-                    placeholder="Ej: Festival de Verano 2027" required
-                  />
-                </div>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-lugar">Lugar</label>
-                  <input
-                    id="ev-lugar" type="text" name="lugar" value={formEvento.lugar} onChange={handleChangeFormEvento}
-                    placeholder="Ej: Campo Ferial, Cbba" required
-                  />
-                </div>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-cliente">Cliente organizador (opcional)</label>
-                  <select
-                    id="ev-cliente" name="clienteId" value={formEvento.clienteId} onChange={handleChangeFormEvento}
-                  >
-                    <option value="">Sin cliente asignado</option>
-                    {clientes.map(c => (
-                      <option key={c.id} value={c.id}>{c.nombre} ({c.email})</option>
-                    ))}
-                  </select>
-                </div>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-retiro">Días para retirar el saldo tras el cierre</label>
-                  <input
-                    id="ev-retiro" type="number" min="1" step="1" name="diasParaRetiro"
-                    value={formEvento.diasParaRetiro} onChange={handleChangeFormEvento}
-                    placeholder="30 (por defecto)"
-                  />
-                </div>
-                <div className="pi-ges-input-group">
-                  <label>Ubicación en el mapa (opcional)</label>
-                  <MapaSelector
-                    value={formEvento.coordenadas}
-                    onChange={(coords) => setFormEvento(f => ({ ...f, coordenadas: coords }))}
-                  />
-                </div>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-fecha">Fecha y hora de inicio</label>
-                  <input
-                    id="ev-fecha" type="datetime-local" name="fecha" value={formEvento.fecha} onChange={handleChangeFormEvento}
-                    required
-                  />
-                </div>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-fechaFin">Fecha y hora de cierre</label>
-                  <input
-                    id="ev-fechaFin" type="datetime-local" name="fechaFin" value={formEvento.fechaFin} onChange={handleChangeFormEvento}
-                    min={formEvento.fecha || undefined} required
-                  />
-                </div>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-imagen">Imagen del evento (opcional)</label>
-                  <div className="pi-ges-image-upload">
-                    <label htmlFor="ev-imagen" className="pi-ges-btn-upload">
-                      <FaImage aria-hidden="true" /> {formEvento.imagen ? 'Cambiar imagen' : 'Subir imagen'}
-                    </label>
-                    <input
-                      id="ev-imagen" type="file" accept="image/*" onChange={handleImagenUpload} hidden
-                    />
-                    {formEvento.imagen && (
-                      <button
-                        type="button"
-                        className="pi-ges-btn-quitar-imagen"
-                        onClick={() => { setErrorImagen(''); setFormEvento(f => ({ ...f, imagen: '' })); }}
-                      >
-                        <FaTimes aria-hidden="true" /> Quitar
-                      </button>
-                    )}
-                  </div>
-                  {errorImagen && <p className="pi-ges-error-imagen">{errorImagen}</p>}
-                  {formEvento.imagen && !previewFallo && (
-                    <img
-                      width="320" height="100" src={formEvento.imagen} alt="Vista previa"
-                      className="pi-ges-imagen-preview"
-                      onError={() => setPreviewFallo(true)}
-                      onLoad={() => setPreviewFallo(false)}
-                    />
-                  )}
-                  {formEvento.imagen && previewFallo && (
-                    <p className="pi-ges-error-imagen">
-                      No se puede mostrar esta imagen. Probá con otra en formato JPG o PNG.
-                    </p>
-                  )}
-                </div>
-
-                <div className="pi-ges-modal-actions">
-                  <button type="button" className="pi-ges-btn-cancelar" onClick={() => setModalEventoAbierto(false)}>
-                    Cancelar
-                  </button>
-                  <button type="submit" className="pi-ges-btn-guardar">
-                    {editandoId ? 'Guardar cambios' : 'Crear Evento'}
-                  </button>
-                </div>
-              </form>
-        </Modal>
       )}
 
       {modalSolicitudesAbierto && (
@@ -730,6 +810,9 @@ export default function AdminGestionEventos() {
           onCerrar={() => setModalSolicitudesAbierto(false)}
           tamano="lg"
         >
+          {errorSolicitudes && (
+            <p className="pi-ges-error-fechas"><FaExclamationTriangle aria-hidden="true" /> {errorSolicitudes}</p>
+          )}
           {solicitudes.length === 0 ? (
             <p className="pi-ges-modal-vacio">No hay solicitudes pendientes.</p>
           ) : (

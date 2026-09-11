@@ -1,29 +1,18 @@
 import { useState } from 'react';
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  XAxis, YAxis, Tooltip, Legend,
 } from 'recharts';
 import Tabla from '../../components/Tabla.jsx';
+import { fmtBs, ejeTick, tooltipStyle, grid } from './graficosEstilos.jsx';
 
-const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })}`;
 const fmtDiaCorto = (d) => {
   const [, m, day] = String(d).split('-');
   return `${day}/${m}`;
 };
 
-// Estilos comunes (se resuelven contra los tokens del tema → modo oscuro automático).
-const ejeTick = { fill: 'var(--text-secondary)', fontSize: 11 };
-const tooltipStyle = {
-  background: 'var(--bg-surface)',
-  border: '1px solid var(--border)',
-  borderRadius: 8,
-  color: 'var(--text-primary)',
-  fontSize: 12,
-};
-const grid = <CartesianGrid vertical={false} stroke="var(--border)" />;
-
 /** Marco: título + toggle Gráfico/Tabla. `tabla` = { columnas, datos, renderFila }. */
-function PanelGrafico({ titulo, vacio, tabla, children }) {
+export function PanelGrafico({ titulo, vacio, tabla, children }) {
   const [modo, setModo] = useState('grafico');
   const sinDatos = !tabla.datos || tabla.datos.length === 0;
   return (
@@ -43,7 +32,9 @@ function PanelGrafico({ titulo, vacio, tabla, children }) {
       {sinDatos ? (
         <p className="pi-adg-nota-rango">{vacio}</p>
       ) : modo === 'tabla' ? (
-        <Tabla columnas={tabla.columnas} datos={tabla.datos} renderFila={tabla.renderFila} porPagina={0} />
+        <div className="pi-adg-tabla-scroll">
+          <Tabla columnas={tabla.columnas} datos={tabla.datos} renderFila={tabla.renderFila} porPagina={0} />
+        </div>
       ) : (
         <div className="pi-adg-grafico-body">{children}</div>
       )}

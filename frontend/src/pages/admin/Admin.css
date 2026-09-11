@@ -254,12 +254,15 @@ button.pi-dash-crumb:hover {
   transition: width 0.5s ease;
 }
 
+/* Antes usaba --coral-compra (el color de "comprar"/CTA de venta): acá es solo
+   "ver más", así que lleva el mismo azul de acción que el resto de la app. */
 .pi-dash-btn-detalle {
-  display: flex;
+  display: inline-flex;
+  align-self: flex-start;
   align-items: center;
   gap: 8px;
-  background-color: var(--coral-compra);
-  color: var(--texto-sobre-vivo);
+  background-color: var(--action);
+  color: var(--text-on-accent);
   border: none;
   padding: 12px 20px;
   border-radius: var(--radius-md);
@@ -270,7 +273,7 @@ button.pi-dash-crumb:hover {
 }
 
 .pi-dash-btn-detalle:hover {
-  background-color: var(--coral-compra-hover);
+  background-color: var(--action-hover);
 }
 
 /* --- ROLES (PERSONAL DEL EVENTO) --- */
@@ -577,14 +580,79 @@ button.pi-dash-crumb:hover {
   color: var(--texto-sobre-oscuro);
 }
 
-/* --- INCIDENCIAS DE RECARGA --- */
-.pi-dash-rol-card-alerta:hover {
-  background-color: var(--ambar-aviso-suave);
-  border-color: var(--ambar-aviso);
+/* --- NECESITA TU ATENCIÓN: separada del resto (accionable, no informativa) --- */
+.pi-dash-alertas {
+  background: var(--ambar-aviso-suave);
+  border: 1px solid var(--ambar-aviso);
+  border-radius: var(--radius-lg);
+  padding: 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
-.pi-dash-rol-card-alerta .pi-dash-rol-icon {
+.pi-dash-alertas-titulo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: 700;
   color: var(--ambar-aviso-texto);
+}
+
+.pi-dash-alertas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.pi-dash-alerta-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background-color: var(--bg-surface);
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.pi-dash-alerta-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(10, 14, 39, 0.08);
+}
+
+.pi-dash-alerta-numero {
+  flex: none;
+  min-width: 36px;
+  height: 36px;
+  padding: 0 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background-color: var(--ambar-aviso);
+  color: var(--texto-sobre-vivo);
+  font-size: var(--text-base);
+  font-weight: 800;
+}
+
+.pi-dash-alerta-label {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.pi-dash-alerta-flecha {
+  flex: none;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
 }
 
 .pi-dash-incidencias-nota {

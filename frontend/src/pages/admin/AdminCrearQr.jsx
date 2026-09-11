@@ -44,7 +44,7 @@ function QrImg({ qr, ancho = 180, alto = 180 }) {
   );
 }
 
-export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido = false } = {}) {
+export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManilla = null, embebido = false } = {}) {
   useTituloPagina('Generar códigos QR', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
@@ -216,6 +216,14 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, embebido =
             )}
           </div>
         </div>
+      )}
+
+      {(tipoManilla || eventoActual?.tipoManilla) === 'digital' && (
+        <p className="pi-adqr-aviso-digital">
+          <FaQrcode /> Este evento es de <strong>manilla digital</strong>: cada entrada recibe su
+          código QR solo al aprobarse la compra. Generar un lote acá es opcional (por ejemplo,
+          para staff u otro uso aparte de las entradas).
+        </p>
       )}
 
       <div className="pi-adqr-kpi-grid">

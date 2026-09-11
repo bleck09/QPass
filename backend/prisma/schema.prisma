@@ -53,6 +53,18 @@ enum EstadoEvento {
   finalizado
 }
 
+// Cómo entra la gente al evento (§ control de acceso):
+//   fisica  -> Admin genera un pool de códigos QR imprimibles; Supervisor
+//              entrega la manilla física y la vincula a la entrada (Gestión
+//              de Entrega, como hasta ahora).
+//   digital -> al aprobarse la compra, la entrada recibe su código QR solo
+//              (nadie lo entrega en persona); el asistente lo ve en su perfil
+//              y entra mostrando ese QR desde el celular.
+enum TipoManilla {
+  fisica
+  digital
+}
+
 // Arqueo de caja de un operador con efectivo (Recargador / Devolucion): §5.2.
 enum EstadoCorteCaja {
   abierta
@@ -236,6 +248,9 @@ model Evento {
   fechaFin    DateTime
   imagen      String?
   estado      EstadoEvento @default(activo)
+  // Física (Supervisor entrega y vincula la manilla) o digital (el QR se
+  // asigna solo al aprobar la compra). Ver enum TipoManilla.
+  tipoManilla TipoManilla  @default(fisica)
   // Cierre DEFINITIVO: distinto de estado=finalizado (que aún permite devoluciones,
   // incidencias, reportes...). Un evento archivado queda de SOLO LECTURA — ninguna
   // escritura ligada a él pasa (ver EventoPolicy). Solo Admin archiva/desarchiva, y

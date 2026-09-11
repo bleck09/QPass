@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import {
-  FaCalendarAlt, FaChevronLeft, FaChevronRight, FaMapMarkerAlt, FaExpandArrowsAlt
+  FaCalendarAlt, FaChevronLeft, FaChevronRight, FaMapMarkerAlt, FaExpandArrowsAlt, FaCoins
 } from 'react-icons/fa';
 import { formatearFecha, imagenEvento } from '../utils/eventos.js';
 import '../pages/publico/PaginaPrincipal.css';
 
 // Carrusel 3D de eventos reutilizado tanto en la home pública (PaginaPrincipal)
 // como en la pestaña "Eventos" del panel privado del Usuario Normal.
-export default function CarruselEventos({ eventos, onAdquirir }) {
+// `saldoPorEvento` es opcional (Map eventoId -> saldo disponible): solo lo pasa
+// el panel privado, para avisar "todavía te queda saldo acá". En la home pública
+// se omite y ninguna card muestra el aviso.
+export default function CarruselEventos({ eventos, onAdquirir, saldoPorEvento }) {
   const [activeIdx, setActiveIdx] = useState(0);
 
   const [touchStartX, setTouchStartX] = useState(null);
@@ -83,6 +86,11 @@ export default function CarruselEventos({ eventos, onAdquirir }) {
 
               <div className="card-3d-content">
                 <h3>{evento.nombre}</h3>
+                {saldoPorEvento?.get(evento.id) > 0 && (
+                  <span className="card-saldo-restante">
+                    <FaCoins aria-hidden="true" /> Te quedan {saldoPorEvento.get(evento.id)} pts acá
+                  </span>
+                )}
                 <p className="card-desc">Vive la mejor experiencia con tecnología Cashless. Evita filas y recarga desde tu celular.</p>
 
                 <div className="card-3d-footer">

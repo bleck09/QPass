@@ -6,6 +6,7 @@ import { VariablesEntorno } from '../../config/env.validation';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { CodigosQrModule } from '../codigos-qr/codigos-qr.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
         secret: config.get('JWT_SECRET', { infer: true }),
       }),
     }),
+    CodigosQrModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],

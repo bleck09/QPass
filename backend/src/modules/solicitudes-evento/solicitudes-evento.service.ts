@@ -17,6 +17,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 import { aFecha, aFechaCon } from '../../common/utils/fechas.utils';
+import { verificarSinChoqueDeFechas } from '../../common/utils/choque-eventos.utils';
 import {
   ActualizarSolicitudEventoDto,
   CrearSolicitudEventoDto,
@@ -131,6 +132,13 @@ export class SolicitudesEventoService {
     }
 
     return this.prisma.$transaction(async (tx) => {
+      // "Un evento a la vez": si estas fechas ya las ocupa otro evento activo,
+      // no se puede aprobar la solicitud tal cual — el admin tiene que editarla
+      // primero (o rechazarla) para que no se crucen.
+      await verificarSinChoqueDeFechas(tx, {
+        inicio: solicitud.fecha,
+        fin: solicitud.fechaFin,
+      });
       const nuevoEvento = await tx.evento.create({
         data: {
           nombre: solicitud.nombreEvento,

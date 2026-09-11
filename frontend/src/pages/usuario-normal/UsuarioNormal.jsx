@@ -10,7 +10,7 @@ import {
   FaTicketAlt, FaWallet, FaQrcode, FaUpload, FaPlus, FaTrash, FaUserPlus,
   FaCheckCircle, FaHourglassHalf, FaEnvelope, FaHistory,
   FaStore, FaCoins, FaExclamationTriangle, FaUserTag, FaIdCard,
-  FaSearch, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt, FaChevronDown
+  FaSearch, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt, FaChevronDown, FaMoon
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
@@ -18,7 +18,8 @@ import { VERSION_TERMINOS, TEXTO_TERMINOS } from '../../constants/terminos.js';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
-import { esVigente, formatearFecha, imagenEvento } from '../../utils/eventos.js';
+import { esVigente, estadoEvento, formatearFecha, imagenEvento, nombreJornada, mostrarJornada } from '../../utils/eventos.js';
+import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 
 const MAX_ENTRADAS = 6;
 
@@ -49,17 +50,22 @@ function plazoRetiro(expiraEn) {
 }
 
 // Tarjeta expandible: saldo de un evento + desglose recargado/gastado/devuelto.
-function BilleteraAcordeon({ b }) {
+// `enCurso`: es el mismo evento que ya se destacó grande arriba — se marca acá
+// también para no perderlo de vista dentro de la lista completa.
+function BilleteraAcordeon({ b, enCurso = false }) {
   const [abierto, setAbierto] = useState(false);
   const plazo = plazoRetiro(b.expiraEn);
   const bloqueado = Number(b.bloqueado ?? 0);
   const disponible = Number(b.disponible ?? b.saldo);
   return (
-    <div className={`pi-usr-bill ${abierto ? 'abierto' : ''}`}>
+    <div className={`pi-usr-bill ${abierto ? 'abierto' : ''}${enCurso ? ' pi-usr-bill--en-curso' : ''}`}>
       <button type="button" className="pi-usr-bill-cab" onClick={() => setAbierto(o => !o)} aria-expanded={abierto}>
         <span className="pi-usr-bill-titulo">
           <strong>{b.eventoNombre}</strong>
-          <span className="pi-usr-bill-fecha">{new Date(b.fecha).toLocaleDateString('es-BO')}</span>
+          <span className="pi-usr-bill-fecha">
+            {new Date(b.fecha).toLocaleDateString('es-BO')}
+            {enCurso && <span className="pi-usr-bill-badge-curso">En curso</span>}
+          </span>
         </span>
         <span className={`pi-usr-bill-plazo tono-${plazo.tono}`}>{plazo.tono === 'vencido' ? 'Vencido' : plazo.tono === 'porVencer' ? '¡Retirá pronto!' : ''}</span>
         <span className="pi-usr-bill-saldo">{disponible} pts</span>
@@ -173,14 +179,45 @@ export default function UsuarioNormal() {
       .sort((a, b) => new Date(b.evento.fecha) - new Date(a.evento.fecha));
   }, [compras]);
 
-  // Ya tienes tu propia entrada (pendiente o aprobada) para el evento que se está comprando:
-  // a partir de aquí, cada entrada nueva que agregues es para un invitado, no para ti.
-  const yaTieneEntrada = useMemo(() => {
-    if (!eventoSeleccionado) return false;
-    return comprasConEvento.some(c =>
-      c.evento.id === eventoSeleccionado.id && c.estado !== 'rechazado' && c.entradas.some(e => e.isTitular)
-    );
+  // La entrada titular ("para ti") se controla POR JORNADA, no por evento: podés
+  // tener tu entrada de la noche 1 y comprar la tuya para la noche 2. Solo cuando
+  // ya tenés entrada propia en TODAS las jornadas ofrecidas se te obliga a comprar
+  // solo para invitados.
+  const jornadaDeCategoria = useCallback(
+    (catId) => categoriasEntradas.find(c => c.id === catId)?.diaEventoId ?? null,
+    [categoriasEntradas],
+  );
+
+  // Jornadas ofrecidas por el evento seleccionado (una entrada "sin jornada" cuenta como null).
+  const jornadasDelEvento = useMemo(
+    () => [...new Set(categoriasEntradas.map(c => c.diaEventoId ?? null))],
+    [categoriasEntradas],
+  );
+
+  // Jornadas del evento seleccionado en las que YA tengo una entrada propia (no rechazada).
+  const misJornadasConEntrada = useMemo(() => {
+    if (!eventoSeleccionado) return new Set();
+    const s = new Set();
+    comprasConEvento
+      .filter(c => c.evento.id === eventoSeleccionado.id && c.estado !== 'rechazado')
+      .forEach(c => c.entradas.forEach(e => {
+        if (e.isTitular) s.add(e.diaEventoId ?? null);
+      }));
+    return s;
   }, [comprasConEvento, eventoSeleccionado]);
+
+  // ¿Ya tengo entrada propia para esta jornada? (contando compras previas + carrito actual)
+  const yaTengoJornada = useCallback(
+    (dia) => misJornadasConEntrada.has(dia ?? null)
+      || entradasCart.some(e => e.isTitular && (jornadaDeCategoria(e.categoriaTicketId) ?? null) === (dia ?? null)),
+    [misJornadasConEntrada, entradasCart, jornadaDeCategoria],
+  );
+
+  // ¿Queda alguna jornada donde todavía podría comprar mi propia entrada?
+  const puedoSerTitular = useMemo(
+    () => jornadasDelEvento.some(d => !yaTengoJornada(d)),
+    [jornadasDelEvento, yaTengoJornada],
+  );
 
   // Tu entrada propia ya aprobada del evento próximo más cercano: se destaca como "Tu Manilla Digital".
   const entradaDestacada = useMemo(() => {
@@ -198,6 +235,27 @@ export default function UsuarioNormal() {
   const [billeteras, setBilleteras] = useState([]);
   const saldoTotal = useMemo(
     () => billeteras.reduce((s, b) => s + Number(b.disponible ?? b.saldo), 0),
+    [billeteras],
+  );
+
+  // El evento que está pasando AHORA se destaca grande arriba de la lista; sigue
+  // apareciendo también en la lista de abajo (con buscador, para no perderlo de
+  // vista entre muchos eventos).
+  const billeteraEnCurso = useMemo(
+    () => billeteras.find(b => estadoEvento(b) === 'en_curso') || null,
+    [billeteras],
+  );
+  const [busquedaBilleteras, setBusquedaBilleteras] = useState('');
+  const billeterasFiltradas = useMemo(() => {
+    const q = busquedaBilleteras.trim().toLowerCase();
+    if (!q) return billeteras;
+    return billeteras.filter(b => b.eventoNombre.toLowerCase().includes(q));
+  }, [billeteras, busquedaBilleteras]);
+
+  // eventoId -> saldo disponible: para avisar en la cartelera de eventos que
+  // todavía te queda plata ahí (incluidos eventos ya pasados, por el retiro).
+  const saldoPorEvento = useMemo(
+    () => new Map(billeteras.map(b => [b.eventoId, Number(b.disponible ?? b.saldo)])),
     [billeteras],
   );
 
@@ -323,7 +381,8 @@ export default function UsuarioNormal() {
     const cat = categoriasEntradas.find(c => c.id === categoriaId) || categoriasEntradas[0];
     if (!cat || cupoLibreDe(cat) <= 0) return;
     const nuevoId = `cart-${siguienteIdCartRef.current++}`;
-    const esMiEntrada = !yaTieneEntrada && !entradasCart.some(ent => ent.isTitular);
+    // La primera entrada que agrego de una jornada donde no tengo la mía es "para mí".
+    const esMiEntrada = !yaTengoJornada(cat.diaEventoId ?? null);
     const nuevaEntrada = esMiEntrada
       ? { id: nuevoId, isTitular: true, nombre: usuario.nombre, correo: usuario.email, celular: '', categoriaTicketId: cat.id, precio: cat.precio }
       : { id: nuevoId, isTitular: false, nombre: '', correo: '', celular: '', categoriaTicketId: cat.id, precio: cat.precio };
@@ -507,7 +566,14 @@ export default function UsuarioNormal() {
   // Card compacta de una compra para "Otras entradas" / "Entradas pasadas": fondo con la
   // imagen del evento (para diferenciarlas de un vistazo) y sin mostrar el QR ahí mismo;
   // el QR y los datos de cada persona se ven al entrar a "Ver detalles".
-  const renderCompraCard = (compra) => (
+  const renderCompraCard = (compra) => {
+   const jornadas = [...new Map(
+     (compra.entradas || [])
+       .map(e => e.diaEvento)
+       .filter(mostrarJornada)
+       .map(d => [d.id, d])
+   ).values()];
+   return (
     <div key={compra.id} className="pi-usr-compra-card" style={{ backgroundImage: `url(${imagenEvento(compra.evento)})` }}>
       <div className="pi-usr-compra-card-overlay">
         <div className="pi-usr-compra-card-badges">
@@ -528,6 +594,9 @@ export default function UsuarioNormal() {
         <div className="pi-usr-compra-card-info">
           <strong>{compra.evento.nombre}</strong>
           <span><FaCalendarAlt /> {formatearFecha(compra.evento.fecha)}</span>
+          {jornadas.length > 0 && (
+            <span><FaMoon /> {jornadas.map(d => nombreJornada(d)).join(', ')}</span>
+          )}
           <span><FaTicketAlt /> Lote de {compra.entradas.length} entrada(s) · Bs. {compra.montoTotal}</span>
           {compra.entradas.some(e => e.numero != null) && (
             <span><FaIdCard /> N.º {compra.entradas.map(e => e.numero).filter(n => n != null).sort((a, b) => a - b).join(', ')}</span>
@@ -541,7 +610,8 @@ export default function UsuarioNormal() {
         </div>
       </div>
     </div>
-  );
+   );
+  };
 
   // Card de una entrada que compró otra persona a nombre del usuario logueado.
   // Aquí sí se muestra el QR (o el aviso de manilla pendiente), porque es el
@@ -557,6 +627,9 @@ export default function UsuarioNormal() {
         <div className="pi-usr-compra-card-info">
           <strong>{entrada.evento.nombre}</strong>
           <span><FaCalendarAlt /> {formatearFecha(entrada.evento.fecha)}</span>
+          {mostrarJornada(entrada.diaEvento) && (
+            <span><FaMoon /> {nombreJornada(entrada.diaEvento)}</span>
+          )}
           <span><FaMapMarkerAlt /> {entrada.evento.lugar}</span>
           {entrada.categoriaTicket && <span><FaTicketAlt /> {entrada.categoriaTicket.nombre}</span>}
         </div>
@@ -604,6 +677,7 @@ export default function UsuarioNormal() {
               <CarruselEventos
                 eventos={proximosEventos}
                 onAdquirir={(evento) => navigate('/usuarionormal/comprar', { state: { evento } })}
+                saldoPorEvento={saldoPorEvento}
               />
             )}
           </div>
@@ -611,15 +685,23 @@ export default function UsuarioNormal() {
           <div className="pi-usr-card mt-20">
             <h3><FaHistory color="var(--indigo-profundo)" /> Eventos Pasados</h3>
             <div className="pi-usr-eventos-pasados-grid">
-              {eventosPasados.map(ev => (
-                <div key={ev.id} className="pi-usr-evento-pasado-card">
-                  <img src={imagenEvento(ev)} alt={ev.nombre} width="320" height="120" loading="lazy" />
-                  <div className="pi-usr-evento-pasado-info">
-                    <strong>{ev.nombre}</strong>
-                    <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
+              {eventosPasados.map(ev => {
+                const saldoAhi = saldoPorEvento.get(ev.id);
+                return (
+                  <div key={ev.id} className="pi-usr-evento-pasado-card">
+                    <img src={imagenEvento(ev)} alt={ev.nombre} width="320" height="120" loading="lazy" />
+                    <div className="pi-usr-evento-pasado-info">
+                      <strong>{ev.nombre}</strong>
+                      <span><FaMapMarkerAlt /> {ev.lugar} · {formatearFecha(ev.fecha)}</span>
+                      {saldoAhi > 0 && (
+                        <span className="pi-usr-evento-pasado-saldo">
+                          <FaCoins aria-hidden="true" /> Te quedan {saldoAhi} pts por retirar
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -643,12 +725,17 @@ export default function UsuarioNormal() {
           </div>
 
           {/* Nota dinámica dependiendo de la validación */}
-          {yaTieneEntrada ? (
+          {!puedoSerTitular ? (
             <div className="pi-usr-nota-informativa nota-verde">
               <FaUserPlus className="nota-icon" />
               <div>
                 <strong>Comprando para terceros (Invitados)</strong>
-                <p>El sistema detecta que <b>ya cuentas con una entrada</b> asignada a tu cuenta. Todas las entradas que agregues abajo serán para tus invitados: al aprobarse la compra, cada uno recibe su propia cuenta. La manilla física con su código QR se la entrega Supervisor al recogerla en el evento.</p>
+                <p>
+                  {jornadasDelEvento.length > 1
+                    ? <>Ya tenés tu propia entrada en <b>todas las jornadas</b> de este evento. Las que agregues abajo serán para tus invitados.</>
+                    : <>El sistema detecta que <b>ya cuentas con una entrada</b> asignada a tu cuenta. Todas las entradas que agregues abajo serán para tus invitados.</>}
+                  {' '}Al aprobarse la compra, cada invitado recibe su propia cuenta. La manilla física con su código QR se la entrega Supervisor al recogerla en el evento.
+                </p>
               </div>
             </div>
           ) : (
@@ -656,7 +743,11 @@ export default function UsuarioNormal() {
               <FaIdCard className="nota-icon" />
               <div>
                 <strong>Elige una categoría para empezar</strong>
-                <p>La primera entrada que agregues abajo será la tuya (no vas a poder cambiar tu nombre ni correo). Si haces clic de nuevo, esa entrada será para un invitado, y así sucesivamente.</p>
+                <p>
+                  {jornadasDelEvento.length > 1
+                    ? 'La primera entrada que agregues de cada jornada será la tuya; las siguientes de esa jornada serán para invitados. Podés comprar tu entrada para cada noche del evento.'
+                    : 'La primera entrada que agregues abajo será la tuya (no vas a poder cambiar tu nombre ni correo). Si haces clic de nuevo, esa entrada será para un invitado, y así sucesivamente.'}
+                </p>
               </div>
             </div>
           )}
@@ -676,7 +767,9 @@ export default function UsuarioNormal() {
                         <div className="pi-usr-ticket-row-top">
                           <span className="pi-usr-ticket-row-titulo">
                             {entrada.isTitular ? <FaUserTag color="var(--indigo-profundo)"/> : <FaUserPlus color="var(--gris-medio)"/>}
-                            {entrada.isTitular ? 'Tú' : `Invitado ${index + (yaTieneEntrada ? 1 : 0)}`}
+                            {entrada.isTitular
+                              ? 'Tú'
+                              : `Invitado ${entradasCart.slice(0, index + 1).filter(e => !e.isTitular).length}`}
                           </span>
 
                           <span className="pi-usr-cat-badge-fija" style={{ background: catSeleccionada.color }}>
@@ -709,9 +802,9 @@ export default function UsuarioNormal() {
               )}
 
               <div className="pi-usr-categorias-grandes">
-                <h4>{entradasCart.some(ent => ent.isTitular) || yaTieneEntrada ? 'Añadir entradas para invitados' : 'Elige tu categoría'}</h4>
+                <h4>{!puedoSerTitular ? 'Añadir entradas para invitados' : 'Elige tu categoría'}</h4>
                 <p className="texto-ayuda">
-                  {entradasCart.some(ent => ent.isTitular) || yaTieneEntrada
+                  {!puedoSerTitular
                     ? `Elige la categoría para sumar una entrada de invitado. Puedes hacer clic varias veces para agregar a más de una persona (máx. ${MAX_ENTRADAS} entradas por compra).`
                     : 'Haz clic en la categoría que quieres para tu propia entrada.'}
                 </p>
@@ -733,8 +826,11 @@ export default function UsuarioNormal() {
                         {cantidad > 0 && (
                           <span className="cat-card-badge" style={{ color: cat.color }}>{cantidad}</span>
                         )}
-                        {cat.diaEvento && (cat.diaEvento.nombre || cat.diaEvento.orden > 1) && (
-                          <span className="cat-card-jornada">{cat.diaEvento.nombre || `Día ${cat.diaEvento.orden}`}</span>
+                        {mostrarJornada(cat.diaEvento) && (
+                          <span className="cat-card-jornada">{nombreJornada(cat.diaEvento)}</span>
+                        )}
+                        {misJornadasConEntrada.has(cat.diaEventoId ?? null) && (
+                          <span className="cat-card-jornada cat-card-jornada--tengo">Ya tenés tu entrada</span>
                         )}
                         <span className="cat-card-nombre">{cat.nombre}</span>
                         <span className="cat-card-precio">Bs. {cat.precio}</span>
@@ -890,6 +986,21 @@ export default function UsuarioNormal() {
             </div>
           </div>
 
+          {billeteraEnCurso && (
+            <div className="pi-usr-bill-destacada">
+              <div className="pi-usr-bill-destacada-info">
+                <BadgeEstadoEvento evento={billeteraEnCurso} className="pi-usr-bill-destacada-badge" />
+                <strong className="pi-usr-bill-destacada-nombre">{billeteraEnCurso.eventoNombre}</strong>
+                <span className="pi-usr-bill-destacada-saldo">
+                  {Number(billeteraEnCurso.disponible ?? billeteraEnCurso.saldo)} pts disponibles
+                </span>
+              </div>
+              <button type="button" className="btn-primario" onClick={() => navigate('/usuarionormal')}>
+                <FaQrcode aria-hidden="true" /> Ver mi manilla
+              </button>
+            </div>
+          )}
+
           <div className="pi-usr-card mt-20">
             <h3><FaWallet color="var(--indigo-profundo)" /> Saldo por evento</h3>
             <p className="texto-ayuda">
@@ -899,9 +1010,25 @@ export default function UsuarioNormal() {
             {billeteras.length === 0 ? (
               <p className="texto-ayuda">Todavía no recargaste saldo en ningún evento.</p>
             ) : (
-              <div className="pi-usr-bill-lista">
-                {billeteras.map(b => <BilleteraAcordeon key={b.eventoId} b={b} />)}
-              </div>
+              <>
+                {billeteras.length > 3 && (
+                  <Buscador
+                    valor={busquedaBilleteras}
+                    onCambio={setBusquedaBilleteras}
+                    placeholder="Buscar evento…"
+                    etiqueta="Buscar en saldo por evento"
+                  />
+                )}
+                {billeterasFiltradas.length === 0 ? (
+                  <p className="texto-ayuda">Ningún evento coincide con la búsqueda.</p>
+                ) : (
+                  <div className="pi-usr-bill-lista">
+                    {billeterasFiltradas.map(b => (
+                      <BilleteraAcordeon key={b.eventoId} b={b} enCurso={b.eventoId === billeteraEnCurso?.eventoId} />
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -981,10 +1108,16 @@ export default function UsuarioNormal() {
                     <td style={{ fontSize: '13px' }}>{item.evento?.nombre || '—'}</td>
                     <td>{detalle}</td>
                     {(() => {
-                      const positivo = ['recarga', 'ajuste', 'reverso_consumo'].includes(item.tipo);
+                      const monto = Number(item.monto);
+                      // El "ajuste" es el único tipo cuyo monto viene con signo propio
+                      // (puede ser una corrección negativa); los demás siempre guardan
+                      // una magnitud positiva y el signo lo da el tipo de movimiento.
+                      const positivo = item.tipo === 'ajuste'
+                        ? monto >= 0
+                        : ['recarga', 'reverso_consumo'].includes(item.tipo);
                       return (
                         <td className={positivo ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
-                          {positivo ? '+' : '-'}{Number(item.monto)} pts
+                          {positivo ? '+' : '-'}{Math.abs(monto)} pts
                         </td>
                       );
                     })()}
@@ -1020,6 +1153,11 @@ export default function UsuarioNormal() {
                     <span>
                       <FaCalendarAlt /> {formatearFecha(entradaDestacada.evento.fecha)}
                     </span>
+                    {mostrarJornada(entradaDestacada.diaEvento) && (
+                      <span className="pi-usr-badge" style={{ background: 'var(--indigo-profundo)', color: 'var(--blanco)' }}>
+                        <FaMoon /> {nombreJornada(entradaDestacada.diaEvento)}
+                      </span>
+                    )}
                     <span><FaMapMarkerAlt /> {entradaDestacada.evento.lugar}</span>
                     {entradaDestacada.categoriaTicket && (
                       <span className="pi-usr-badge" style={{ background: 'var(--cian-digital)', color: 'var(--blanco)' }}>
@@ -1249,6 +1387,9 @@ export default function UsuarioNormal() {
                           <div className="pi-usr-revision-datos">
                             <span><FaEnvelope /> {ent.correo}</span>
                             <span><FaPhoneAlt /> {ent.celular || '—'}</span>
+                            {mostrarJornada(ent.diaEvento) && (
+                              <span><FaMoon /> {nombreJornada(ent.diaEvento)}</span>
+                            )}
                           </div>
 
                           <div className="pi-usr-entrada-qr">

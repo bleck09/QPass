@@ -5,6 +5,7 @@
 
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -103,6 +104,57 @@ export class CodigosQrService {
     }
 
     return creados;
+  }
+
+  /**
+   * Eventos de manilla DIGITAL: genera un código YA VINCULADO a la entrada,
+   * sin pasar por el pool ni por Supervisor. Se llama al aprobar la compra
+   * (ComprasService.aprobar), dentro de esa misma transacción — de ahí que
+   * reciba `tx` en vez de usar `this.prisma`.
+   */
+  async crearYVincularAutomatico(
+    tx: Prisma.TransactionClient,
+    params: {
+      eventoId: string;
+      entradaId: string;
+      diaEventoId: string | null;
+      actorId: number;
+    },
+  ) {
+    const ultimo = await tx.codigoQr.findFirst({
+      where: { eventoId: params.eventoId },
+      orderBy: { numero: 'desc' },
+    });
+    let numero = (ultimo?.numero ?? 0) + 1;
+    const MAX_INTENTOS = 20;
+    for (let intento = 0; intento < MAX_INTENTOS; intento++) {
+      const codigo = `QP-${generarParteAleatoria()}`;
+      try {
+        return await tx.codigoQr.create({
+          data: {
+            eventoId: params.eventoId,
+            numero,
+            codigo,
+            entradaId: params.entradaId,
+            diaEventoId: params.diaEventoId,
+            asignadoPorId: params.actorId,
+            asignadoEn: new Date(),
+          },
+        });
+      } catch (err) {
+        // Choque de código o de número (concurrencia): se reintenta con otros.
+        if (
+          !(err instanceof Prisma.PrismaClientKnownRequestError) ||
+          err.code !== 'P2002'
+        ) {
+          throw err;
+        }
+        numero += 1;
+      }
+    }
+    throw new ConflictException(
+      'No se pudo generar un código QR único para esta entrada.',
+    );
   }
 
   /** Borra solo los códigos aún sin vincular (no reinicia la numeración). */

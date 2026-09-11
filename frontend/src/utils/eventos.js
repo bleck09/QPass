@@ -78,6 +78,40 @@ export function filtrarEventos(eventos, busqueda = '', filtro = 'todos') {
 export const IMAGEN_EVENTO_PLACEHOLDER = 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80';
 export const imagenEvento = (evento) => evento?.imagen || IMAGEN_EVENTO_PLACEHOLDER;
 
+// Nombre visible de una jornada (DiaEvento): su nombre propio, o "Día N" por su orden.
+// `indice` (0-based) es el respaldo cuando la jornada no trae `orden`.
+export const nombreJornada = (dia, indice = 0) =>
+  dia?.nombre || `Día ${dia?.orden ?? indice + 1}`;
+
+// ¿Vale la pena mostrar la jornada al público? Sí si tiene nombre propio o no es
+// la primera noche — en un evento de una sola jornada sería ruido redundante.
+export const mostrarJornada = (dia) => !!dia && (!!dia.nombre || (dia.orden ?? 1) > 1);
+
+// Pastillas de filtro por jornada a partir de una lista de entradas/participantes
+// (cada ítem con `.diaEvento` y/o `.diaEventoId`). Devuelve [] si el evento tiene
+// 0 o 1 jornadas (entonces el filtro no aporta).
+export function opcionesJornada(items) {
+  const porId = new Map();
+  for (const it of items || []) {
+    const id = it.diaEventoId ?? it.diaEvento?.id ?? null;
+    if (id == null) continue;
+    if (!porId.has(id)) porId.set(id, { dia: it.diaEvento, id, conteo: 0 });
+    porId.get(id).conteo += 1;
+  }
+  if (porId.size <= 1) return [];
+  const jornadas = [...porId.values()].sort(
+    (a, b) => (a.dia?.orden ?? 0) - (b.dia?.orden ?? 0),
+  );
+  return [
+    { valor: 'todas', texto: 'Todas' },
+    ...jornadas.map((j) => ({
+      valor: j.id,
+      texto: nombreJornada(j.dia),
+      conteo: j.conteo,
+    })),
+  ];
+}
+
 // evento.fecha ahora es un DateTime real (no un string ya formateado), así que hay que
 // formatearlo para mostrarlo en la UI.
 export const formatearFecha = (fechaISO, conHora = true) => {

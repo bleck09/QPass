@@ -123,14 +123,21 @@ export class IncidenciasRecargaService {
         );
       }
 
-      // 2) Aplicar el ajuste firmado (>0 acredita, <0 descuenta, 0 nada).
+      // 2) Aplicar el ajuste firmado (>0 acredita, <0 descuenta, 0 nada). La nota
+      // queda visible en "Mis Transacciones" del usuario — sin ella el ajuste
+      // aparecía sin ningún detalle de qué lo originó.
       if (valor !== 0 && entrada.usuarioId) {
+        const detalleMonto =
+          incidencia.montoSolicitado != null
+            ? `pediste Bs ${incidencia.montoSolicitado} y se te acreditaron Bs ${incidencia.montoEntregado}`
+            : `se te acreditaron Bs ${incidencia.montoEntregado}`;
         await this.transacciones.ajustar(tx, {
           eventoId: incidencia.eventoId,
           usuarioId: entrada.usuarioId,
           entradaId: entrada.id,
           monto: valor,
           operadorId: adminId,
+          nota: `Corrección de una recarga: ${detalleMonto}.`,
         });
       }
       const resuelta = await tx.incidenciaRecarga.update({

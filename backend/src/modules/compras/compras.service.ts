@@ -21,6 +21,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { MailService } from '../../mail/mail.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
+import { CodigosQrService } from '../codigos-qr/codigos-qr.service';
 import { SinCupoDisponibleException } from '../../common/excepciones/dominio.excepciones';
 import {
   CorregirEntradasDto,
@@ -39,6 +40,7 @@ export class ComprasService {
     private readonly eventoPolicy: EventoPolicy,
     private readonly mail: MailService,
     private readonly auditoria: AuditoriaService,
+    private readonly codigosQr: CodigosQrService,
   ) {}
 
   async crear(dto: CrearCompraDto, compradorId: number) {
@@ -76,28 +78,6 @@ export class ComprasService {
       throw new BadRequestException('Cada entrada necesita un correo distinto');
     }
 
-    const titularesEnLote = dto.entradas.filter((e) => e.isTitular).length;
-    if (titularesEnLote > 1) {
-      throw new BadRequestException(
-        'Solo puede haber una entrada tuya (titular) por compra',
-      );
-    }
-    if (titularesEnLote === 1) {
-      const yaTiene = await this.prisma.entrada.findFirst({
-        where: {
-          eventoId: dto.eventoId,
-          usuarioId: compradorId,
-          isTitular: true,
-          compra: { estado: { not: 'rechazado' } },
-        },
-      });
-      if (yaTiene) {
-        throw new ConflictException(
-          'Ya tienes una entrada para este evento; las demás deben ser para invitados',
-        );
-      }
-    }
-
     const idsCategoriaPedidos = [
       ...new Set(dto.entradas.map((e) => e.categoriaTicketId)),
     ];
@@ -117,6 +97,36 @@ export class ComprasService {
       categorias.find((c) => c.id === categoriaTicketId)?.precio ?? 0;
     const diaDe = (categoriaTicketId: string) =>
       categorias.find((c) => c.id === categoriaTicketId)?.diaEventoId ?? null;
+
+    const titularesEnLote = dto.entradas.filter((e) => e.isTitular).length;
+    if (titularesEnLote > 1) {
+      throw new BadRequestException(
+        'Solo puede haber una entrada tuya (titular) por compra',
+      );
+    }
+    if (titularesEnLote === 1) {
+      // La entrada titular ya no se bloquea "por evento" sino "por JORNADA": si
+      // ya tenés la tuya para esa noche no podés comprar otra, pero sí para otra
+      // jornada del mismo evento (típico: la noche 1 ya pasó y querés la noche 2).
+      const entradaTitular = dto.entradas.find((e) => e.isTitular)!;
+      const diaTitular = diaDe(entradaTitular.categoriaTicketId);
+      const yaTiene = await this.prisma.entrada.findFirst({
+        where: {
+          eventoId: dto.eventoId,
+          usuarioId: compradorId,
+          isTitular: true,
+          compra: { estado: { not: 'rechazado' } },
+          ...(diaTitular ? { diaEventoId: diaTitular } : {}),
+        },
+      });
+      if (yaTiene) {
+        throw new ConflictException(
+          diaTitular
+            ? 'Ya tienes tu entrada para esa jornada; las demás de esta compra deben ser para invitados.'
+            : 'Ya tienes una entrada para este evento; las demás deben ser para invitados.',
+        );
+      }
+    }
     const montoTotal = dto.entradas.reduce(
       (suma, e) => suma + Number(precioDe(e.categoriaTicketId)),
       0,
@@ -180,6 +190,15 @@ export class ComprasService {
         entradas: {
           include: {
             categoriaTicket: true,
+            diaEvento: {
+              select: {
+                id: true,
+                nombre: true,
+                orden: true,
+                inicio: true,
+                fin: true,
+              },
+            },
             codigosQr: { where: { anulado: false } },
           },
         },
@@ -244,7 +263,10 @@ export class ComprasService {
   async aprobar(id: string, adminId: number) {
     const compra = await this.prisma.compra.findUnique({
       where: { id },
-      include: { entradas: true },
+      include: {
+        entradas: true,
+        evento: { select: { tipoManilla: true } },
+      },
     });
     if (!compra) throw new NotFoundException('Compra no encontrada');
     await this.eventoPolicy.porEvento(compra.eventoId);
@@ -312,6 +334,21 @@ export class ComprasService {
 
         if (Object.keys(datos).length > 0) {
           await tx.entrada.update({ where: { id: entrada.id }, data: datos });
+        }
+
+        // Evento de manilla DIGITAL: al TITULAR (su propia cuenta, correo ya
+        // suyo) el código se le asigna de una, acá mismo. A los INVITADOS
+        // recién se les asigna cuando entran por primera vez a su cuenta
+        // (AuthService.login) — si quien compró escribió mal el correo del
+        // invitado, esa cuenta fantasma nunca hace login y nunca "gasta" un
+        // código, así los reportes de manillas asignadas quedan limpios.
+        if (compra.evento?.tipoManilla === 'digital' && entrada.isTitular) {
+          await this.codigosQr.crearYVincularAutomatico(tx, {
+            eventoId: compra.eventoId,
+            entradaId: entrada.id,
+            diaEventoId: entrada.diaEventoId,
+            actorId: adminId,
+          });
         }
       }
 

@@ -27,6 +27,7 @@ import {
   SolicitarRecuperacionDto,
   VerificarCodigoDto,
 } from './dto/recuperar-password.dto';
+import { CodigosQrService } from '../codigos-qr/codigos-qr.service';
 
 const MINUTOS_VALIDEZ_CODIGO = 15;
 const generarCodigo6Digitos = () =>
@@ -38,6 +39,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
     private readonly config: ConfigService<VariablesEntorno, true>,
+    private readonly codigosQr: CodigosQrService,
   ) {}
 
   /**
@@ -99,6 +101,15 @@ export class AuthService {
       });
     }
 
+    // Entradas de INVITADO en eventos de manilla digital: se les asigna el
+    // código QR recién EN CADA LOGIN (no solo el primero — una cuenta ya
+    // existente puede sumar una entrada nueva pendiente más adelante), no al
+    // aprobarse la compra (ver ComprasService.aprobar: al titular sí se le
+    // asigna de una, porque es su propia cuenta). Así, si quien compró
+    // escribió mal el correo del invitado, esa cuenta nunca hace login y
+    // nunca "gasta" un código — los reportes de manillas asignadas quedan limpios.
+    await this.asignarQrDigitalPendiente(usuario.id);
+
     return {
       token: this.firmarToken(usuario),
       usuario: {
@@ -112,6 +123,37 @@ export class AuthService {
         debeCompletarPerfil: usuario.debeCompletarPerfil,
       },
     };
+  }
+
+  /**
+   * Le asigna su código QR a cada entrada de INVITADO (compra ya aprobada,
+   * evento de manilla digital) que todavía no tenga uno activo. Se llama en
+   * CADA login — ver comentario en login(). Sin nada pendiente, es una sola
+   * consulta vacía y no hace nada más.
+   */
+  private async asignarQrDigitalPendiente(usuarioId: number) {
+    const pendientes = await this.prisma.entrada.findMany({
+      where: {
+        usuarioId,
+        isTitular: false,
+        compra: { estado: 'confirmado' },
+        evento: { tipoManilla: 'digital' },
+        codigosQr: { none: { anulado: false } },
+      },
+      select: { id: true, eventoId: true, diaEventoId: true },
+    });
+    if (pendientes.length === 0) return;
+
+    await this.prisma.$transaction(async (tx) => {
+      for (const entrada of pendientes) {
+        await this.codigosQr.crearYVincularAutomatico(tx, {
+          eventoId: entrada.eventoId,
+          entradaId: entrada.id,
+          diaEventoId: entrada.diaEventoId,
+          actorId: usuarioId,
+        });
+      }
+    });
   }
 
   // --- RECUPERAR CONTRASEÑA (código de 6 dígitos) ---

@@ -427,6 +427,7 @@ export class TransaccionesService {
       entradaId?: string;
       monto: number;
       operadorId: number;
+      nota?: string;
     },
   ) {
     const saldo = await this.acreditar(
@@ -445,6 +446,7 @@ export class TransaccionesService {
         usuarioId: params.usuarioId,
         entradaId: params.entradaId,
         operadorId: params.operadorId,
+        nota: params.nota,
       },
     });
   }

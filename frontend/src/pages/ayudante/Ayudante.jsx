@@ -11,13 +11,14 @@ import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import Migas from '../../components/Migas.jsx';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import { useApi } from '../../utils/useApi.js';
-import { estadoEvento, imagenEvento, formatearFecha, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { estadoEvento, imagenEvento, formatearFecha, nombreJornada, mostrarJornada, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import { estadoStockProducto } from '../../utils/stock.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaStore, FaShoppingCart, FaPlus, FaMinus, FaTrash, FaQrcode, FaTimes,
   FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle, FaHistory,
-  FaReceipt, FaHamburger, FaMapMarkerAlt, FaCalendarAlt, FaBell
+  FaReceipt, FaHamburger, FaMapMarkerAlt, FaCalendarAlt, FaBell,
+  FaTicketAlt, FaMoon, FaHashtag
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
@@ -734,9 +735,41 @@ export default function Ayudante() {
                     <FaIdCard />
                     <div>
                       <span className="label">Documento</span>
-                      <span className="valor">{tarjetaQR.documento}</span>
+                      <span className="valor">{tarjetaQR.documento || '—'}</span>
                     </div>
                   </div>
+                  <div className="pi-ayu-tarjeta-dato">
+                    <FaCalendarAlt />
+                    <div>
+                      <span className="label">Evento</span>
+                      <span className="valor">{tarjetaQR.evento?.nombre || '—'}</span>
+                    </div>
+                  </div>
+                  {mostrarJornada(tarjetaQR.diaEvento) && (
+                    <div className="pi-ayu-tarjeta-dato">
+                      <FaMoon />
+                      <div>
+                        <span className="label">Jornada</span>
+                        <span className="valor">{nombreJornada(tarjetaQR.diaEvento)}</span>
+                      </div>
+                    </div>
+                  )}
+                  <div className="pi-ayu-tarjeta-dato">
+                    <FaTicketAlt />
+                    <div>
+                      <span className="label">Tipo de entrada</span>
+                      <span className="valor">{tarjetaQR.categoriaTicket?.nombre || '—'}</span>
+                    </div>
+                  </div>
+                  {tarjetaQR.numero != null && (
+                    <div className="pi-ayu-tarjeta-dato">
+                      <FaHashtag />
+                      <div>
+                        <span className="label">N.º de entrada</span>
+                        <span className="valor">{tarjetaQR.numero}</span>
+                      </div>
+                    </div>
+                  )}
                   <div className="pi-ayu-tarjeta-dato">
                     <FaWallet />
                     <div>

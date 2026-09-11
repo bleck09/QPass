@@ -5,6 +5,19 @@
   gap: 20px;
 }
 
+.pi-adqr-aviso-digital {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: var(--cian-digital-suave);
+  color: var(--cian-digital-texto);
+  font-size: var(--text-xs);
+  line-height: 1.5;
+}
+
 .pi-adqr-header {
   display: flex;
   justify-content: space-between;

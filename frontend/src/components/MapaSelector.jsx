@@ -161,7 +161,7 @@ export default function MapaSelector({ value, onChange }) {
   };
 
   const buscar = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     const q = busqueda.trim();
     if (!q) return;
     setBuscando(true);
@@ -204,17 +204,22 @@ export default function MapaSelector({ value, onChange }) {
   return (
     <div className="pi-mapasel">
       <div className="pi-mapasel-controles">
-        <form className="pi-mapasel-buscar" onSubmit={buscar}>
+        {/* No es <form>: este selector vive DENTRO del <form> grande del evento
+            (nombre/lugar/fechas/...) y un <form> anidado es HTML inválido —
+            el navegador terminaba mandando el Enter de acá al submit de
+            afuera, guardando el evento entero en vez de solo buscar. */}
+        <div className="pi-mapasel-buscar">
           <FaSearch aria-hidden="true" />
           <input
             type="text"
             placeholder="Buscar dirección o lugar…"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') buscar(e); }}
             aria-label="Buscar lugar en el mapa"
           />
-          <button type="submit" disabled={buscando}>{buscando ? '…' : 'Buscar'}</button>
-        </form>
+          <button type="button" onClick={buscar} disabled={buscando}>{buscando ? '…' : 'Buscar'}</button>
+        </div>
         <button type="button" className="pi-mapasel-gps" onClick={usarMiUbicacion} title="Usar mi ubicación actual">
           <FaLocationArrow aria-hidden="true" /> Mi ubicación
         </button>

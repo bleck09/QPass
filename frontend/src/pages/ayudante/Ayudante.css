@@ -654,13 +654,20 @@
 
 .pi-ayu-tarjeta-datos {
   margin-top: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 20px;
   text-align: left;
   background-color: var(--bg-page);
   border-radius: var(--radius-lg);
   padding: 16px 16px;
+}
+/* El saldo (última fila) ocupa el ancho completo: es el dato clave para el cobro. */
+.pi-ayu-tarjeta-datos > .pi-ayu-tarjeta-dato:last-child {
+  grid-column: 1 / -1;
+}
+@media (max-width: 460px) {
+  .pi-ayu-tarjeta-datos { grid-template-columns: 1fr; }
 }
 
 .pi-ayu-tarjeta-dato {

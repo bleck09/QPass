@@ -4,17 +4,19 @@ import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
 import Buscador from '../../components/Buscador.jsx';
+import FiltroJornada from '../../components/FiltroJornada.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import {
   FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
   FaUsers, FaHourglassHalf, FaExclamationTriangle,
-  FaIdCard, FaTicketAlt, FaCalendarAlt, FaHashtag, FaUserCircle
+  FaIdCard, FaTicketAlt, FaCalendarAlt, FaHashtag, FaUserCircle,
+  FaMoon, FaEnvelope
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { estadoEvento, filtrarEventos, nombreJornada, mostrarJornada, opcionesJornada, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
@@ -44,6 +46,7 @@ export default function GestionEntrega() {
   const [participantes, setParticipantes] = useState([]);
   const [busqueda, setBusqueda] = useState('');
   const [filtroEntrega, setFiltroEntrega] = useState('todos');
+  const [filtroJornada, setFiltroJornada] = useState('todas');
   // Buscador de la pantalla de selección de evento (antes de entrar a uno)
   const [busquedaEvento, setBusquedaEvento] = useState('');
   const [filtroEvento, setFiltroEvento] = useState('todos');
@@ -93,9 +96,11 @@ export default function GestionEntrega() {
         filtroEntrega === 'todos' ||
         (filtroEntrega === 'entregado' && p.codigoQrVinculado) ||
         (filtroEntrega === 'pendiente' && !p.codigoQrVinculado);
-      return coincideBusqueda && coincideFiltro;
+      const coincideJornada =
+        filtroJornada === 'todas' || (p.diaEventoId ?? null) === filtroJornada;
+      return coincideBusqueda && coincideFiltro && coincideJornada;
     });
-  }, [participantes, busqueda, filtroEntrega]);
+  }, [participantes, busqueda, filtroEntrega, filtroJornada]);
 
   const eventosFiltrados = useMemo(
     () => filtrarEventos(eventos, busquedaEvento, filtroEvento),
@@ -108,6 +113,19 @@ export default function GestionEntrega() {
     const faltan = total - entregados;
     return { total, entregados, faltan };
   }, [participantes]);
+
+  // Evento de varias jornadas: se muestra la columna + el filtro de Jornada para
+  // distinguir entradas de la misma persona en noches distintas.
+  const filtrosJornada = useMemo(() => opcionesJornada(participantes), [participantes]);
+  const multiJornada = filtrosJornada.length > 0;
+  const columnasTabla = useMemo(() => [
+    'Participante',
+    ...(multiJornada ? ['Jornada'] : []),
+    'Tipo de Entrada',
+    'Documento',
+    'Vínculo QR',
+    { texto: 'Acciones', srOnly: true },
+  ], [multiJornada]);
 
   const abrirVincular = (participante) => {
     setParticipanteVinculando(participante);
@@ -177,6 +195,117 @@ export default function GestionEntrega() {
   // Foco + ESC + scroll-lock del resultado de verificación (look propio).
   const refVerif = useModal(!!entradaVerificada, cerrarVerificacion);
 
+  // Contenido del modal de detalle del participante: todos sus datos + el flujo
+  // de escaneo/vínculo de la manilla en la misma ventana.
+  const renderPanelVinculo = (p) => (
+    <div className="pi-entrega-panel">
+      <div className="pi-entrega-panel-persona">
+        {(p.foto || p.usuario?.foto)
+          ? <img width="52" height="52" src={p.foto || p.usuario.foto} alt={p.nombre} className="pi-entrega-preview-avatar" />
+          : <div className="pi-entrega-preview-avatar pi-entrega-preview-avatar-ph"><FaUserCircle size={32} /></div>}
+        <div>
+          <span className="pi-entrega-preview-nombre">{p.nombre}</span>
+          <span className="pi-entrega-preview-sub">{p.correo}</span>
+        </div>
+      </div>
+
+      <div className="pi-entrega-panel-cols">
+        <div className="pi-entrega-preview-datos">
+          {mostrarJornada(p.diaEvento) && (
+            <div className="pi-entrega-preview-fila">
+              <span><FaMoon /> Jornada</span>
+              <strong>{nombreJornada(p.diaEvento)}</strong>
+            </div>
+          )}
+          <div className="pi-entrega-preview-fila">
+            <span><FaTicketAlt /> Tipo de entrada</span>
+            <strong>{p.categoriaTicket?.nombre || '—'}</strong>
+          </div>
+          <div className="pi-entrega-preview-fila">
+            <span><FaHashtag /> N.º de entrada</span>
+            <strong>{p.numero != null ? `#${p.numero}` : '—'}</strong>
+          </div>
+          <div className="pi-entrega-preview-fila">
+            <span><FaIdCard /> Documento</span>
+            <strong>{p.documento || '—'}</strong>
+          </div>
+          <div className="pi-entrega-preview-fila">
+            <span><FaEnvelope /> Correo</span>
+            <strong>{p.correo}</strong>
+          </div>
+          <div className="pi-entrega-preview-fila">
+            <span><FaCalendarAlt /> Evento</span>
+            <strong>{eventoDetalle.nombre}</strong>
+          </div>
+          <div className="pi-entrega-preview-fila">
+            <span><FaUsers /> Estado de ingreso</span>
+            <strong>
+              {p.estadoIngreso === 'ingresado' ? 'Adentro'
+                : p.estadoIngreso === 'salio' ? 'Salió'
+                : 'Sin ingresar'}
+            </strong>
+          </div>
+          <div className="pi-entrega-preview-fila">
+            <span><FaQrcode /> Manilla actual</span>
+            <strong>{p.codigoQrVinculado?.codigo || 'Sin vincular'}</strong>
+          </div>
+        </div>
+
+        <div className="pi-entrega-panel-scan">
+          {escaneando ? (
+            <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
+          ) : validando ? (
+            <div className="pi-entrega-camara-simulada">
+              <FaQrcode size={48} />
+              <span>Verificando código…</span>
+            </div>
+          ) : codigoValidado ? (
+            <div className="pi-entrega-codigo-ok">
+              <FaCheckCircle color="var(--verde-recarga-texto)" size={26} />
+              <div>
+                <span className="pi-entrega-codigo-ok-label">Manilla lista para vincular</span>
+                <strong>{codigoValidado.codigo}</strong>
+                {p.codigoQrVinculado && (
+                  <span className="pi-entrega-preview-reemplazo">
+                    <FaExclamationTriangle /> Reemplaza a {p.codigoQrVinculado.codigo}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="pi-entrega-camara-simulada">
+              <FaQrcode size={48} />
+              <span>Escaneá el QR de la manilla a entregar</span>
+            </div>
+          )}
+
+          {errorCodigo && (
+            <p className="pi-entrega-aviso pi-entrega-aviso-error">
+              <FaExclamationTriangle /> {errorCodigo}
+            </p>
+          )}
+
+          {!escaneando && !codigoValidado && (
+            <button
+              className="pi-entrega-btn-escanear"
+              onClick={() => { setErrorCodigo(''); setEscaneando(true); }}
+              disabled={validando}
+            >
+              <FaQrcode /> {errorCodigo ? 'Escanear otro código' : 'Escanear código QR'}
+            </button>
+          )}
+
+          <div className="pi-entrega-modal-acciones">
+            <button className="pi-entrega-btn-cancelar" onClick={cerrarVincular}>Cancelar</button>
+            <button className="pi-entrega-btn-confirmar" onClick={confirmarVinculo} disabled={!codigoValidado}>
+              <FaLink /> {p.codigoQrVinculado ? 'Reemplazar manilla' : 'Vincular manilla'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="pi-entrega-container">
 
@@ -200,6 +329,14 @@ export default function GestionEntrega() {
               <FaQrcode /> {buscandoVerificacion ? 'Buscando...' : 'Verificar manilla'}
             </button>
           </div>
+
+          {eventoDetalle.tipoManilla === 'digital' && (
+            <p className="pi-entrega-aviso pi-entrega-aviso-info">
+              <FaQrcode /> Este evento es de <strong>manilla digital</strong>: el código QR de cada
+              asistente se asigna solo al aprobarse su compra — no hace falta imprimir ni entregar
+              nada acá. Igual podés vincular o reemplazar una manilla a mano si hace falta.
+            </p>
+          )}
 
           {errorVerificacion && (
             <p className="pi-entrega-aviso pi-entrega-aviso-error">
@@ -227,22 +364,45 @@ export default function GestionEntrega() {
             etiquetaFiltros="Filtrar participantes por entrega"
           />
 
+          {multiJornada && (
+            <div className="pi-entrega-filtro-jornada">
+              <span className="pi-entrega-filtro-jornada-label">Jornada:</span>
+              <FiltroJornada
+                opciones={filtrosJornada}
+                activo={filtroJornada}
+                onCambio={setFiltroJornada}
+                etiqueta="Filtrar participantes por jornada"
+              />
+            </div>
+          )}
 
           <Tabla
             card
-            columnas={['Participante', 'Tipo de Entrada', 'Correo', 'Vínculo QR', { texto: 'Acciones', srOnly: true }]}
+            columnas={columnasTabla}
             datos={participantesFiltrados}
             vacio="No se encontraron participantes."
             renderFila={p => (
               <tr key={p.id}>
                 <td>
                   <div className="pi-entrega-fila-persona">
-                    {p.foto && <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-entrega-mini-avatar" />}
-                    <span>{p.nombre}</span>
+                    {p.foto
+                      ? <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-entrega-mini-avatar" />
+                      : <div className="pi-entrega-mini-avatar pi-entrega-mini-avatar--ph"><FaUserCircle size={20} /></div>}
+                    <div className="pi-entrega-fila-persona-txt">
+                      <span className="pi-entrega-fila-nombre">{p.nombre}</span>
+                      <span className="pi-entrega-fila-correo"><FaEnvelope aria-hidden="true" /> {p.correo}</span>
+                    </div>
                   </div>
                 </td>
+                {multiJornada && (
+                  <td>
+                    {mostrarJornada(p.diaEvento)
+                      ? <span className="pi-entrega-badge-jornada"><FaMoon aria-hidden="true" /> {nombreJornada(p.diaEvento)}</span>
+                      : '—'}
+                  </td>
+                )}
                 <td>{p.categoriaTicket?.nombre || '—'}</td>
-                <td>{p.correo}</td>
+                <td>{p.documento || <span className="pi-entrega-dato-falta">Sin documento</span>}</td>
                 <td>
                   {p.codigoQrVinculado
                     ? <span className="pi-entrega-badge pi-entrega-badge-ok"><FaCheckCircle /> {p.codigoQrVinculado.codigo}</span>
@@ -298,101 +458,14 @@ export default function GestionEntrega() {
         </>
       )}
 
-      {/* MODAL: VINCULAR CÓDIGO QR */}
+      {/* MODAL: DETALLE DEL PARTICIPANTE + VINCULAR MANILLA */}
       {participanteVinculando && (
         <Modal
-          titulo={<><FaQrcode color="var(--indigo-profundo)" /> Vincular QR: {participanteVinculando.nombre}</>}
+          titulo={<><FaLink color="var(--indigo-profundo)" /> {participanteVinculando.codigoQrVinculado ? 'Cambiar manilla' : 'Vincular manilla'}</>}
           onCerrar={cerrarVincular}
-          className="pi-entrega-modal"
+          tamano="lg"
         >
-            <div className="pi-entrega-modal-body">
-              {escaneando ? (
-                <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
-              ) : validando ? (
-                <div className="pi-entrega-camara-simulada">
-                  <FaQrcode size={56} />
-                  <span>Verificando código...</span>
-                </div>
-              ) : codigoValidado ? (
-                <div className="pi-entrega-preview">
-                  <div className="pi-entrega-preview-persona">
-                    {(participanteVinculando.foto || participanteVinculando.usuario?.foto) ? (
-                      <img
-                        width="48" height="48"
-                        src={participanteVinculando.foto || participanteVinculando.usuario.foto}
-                        alt={participanteVinculando.nombre}
-                        className="pi-entrega-preview-avatar"
-                      />
-                    ) : (
-                      <div className="pi-entrega-preview-avatar pi-entrega-preview-avatar-ph">
-                        <FaUserCircle size={30} />
-                      </div>
-                    )}
-                    <div>
-                      <span className="pi-entrega-preview-nombre">{participanteVinculando.nombre}</span>
-                      <span className="pi-entrega-preview-sub">
-                        {participanteVinculando.categoriaTicket?.nombre || 'Sin categoría'}
-                        {participanteVinculando.numero ? ` · N.º ${participanteVinculando.numero}` : ''}
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="pi-entrega-preview-datos">
-                    <div className="pi-entrega-preview-fila">
-                      <span><FaIdCard /> Documento</span>
-                      <strong>{participanteVinculando.documento || '—'}</strong>
-                    </div>
-                    <div className="pi-entrega-preview-fila">
-                      <span><FaCalendarAlt /> Evento</span>
-                      <strong>{eventoDetalle.nombre}</strong>
-                    </div>
-                    <div className="pi-entrega-preview-fila">
-                      <span><FaQrcode /> Manilla a vincular</span>
-                      <strong>{codigoValidado.codigo}</strong>
-                    </div>
-                    {participanteVinculando.codigoQrVinculado && (
-                      <div className="pi-entrega-preview-fila pi-entrega-preview-reemplazo">
-                        <span><FaExclamationTriangle /> Reemplaza a</span>
-                        <strong>{participanteVinculando.codigoQrVinculado.codigo}</strong>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pi-entrega-codigo-detectado">
-                    <FaCheckCircle color="var(--verde-recarga-texto)" />
-                    <span>Listo para vincular</span>
-                  </div>
-                </div>
-              ) : (
-                <div className="pi-entrega-camara-simulada">
-                  <FaQrcode size={56} />
-                  <span>Apunta la cámara al código QR de la manilla</span>
-                </div>
-              )}
-
-              {errorCodigo && (
-                <p className="pi-entrega-aviso pi-entrega-aviso-error">
-                  <FaExclamationTriangle /> {errorCodigo}
-                </p>
-              )}
-
-              {!escaneando && !codigoValidado && (
-                <button
-                  className="pi-entrega-btn-escanear"
-                  onClick={() => { setErrorCodigo(''); setEscaneando(true); }}
-                  disabled={validando}
-                >
-                  <FaQrcode /> {errorCodigo ? 'Escanear otro código' : 'Escanear Código QR'}
-                </button>
-              )}
-
-              <div className="pi-entrega-modal-acciones">
-                <button className="pi-entrega-btn-cancelar" onClick={cerrarVincular}>Cancelar</button>
-                <button className="pi-entrega-btn-confirmar" onClick={confirmarVinculo} disabled={!codigoValidado}>
-                  <FaLink /> Vincular
-                </button>
-              </div>
-            </div>
+          {renderPanelVinculo(participanteVinculando)}
         </Modal>
       )}
 
@@ -472,6 +545,15 @@ export default function GestionEntrega() {
                     <span className="info-valor">{entradaVerificada.evento?.nombre || eventoDetalle.nombre}</span>
                   </div>
                 </div>
+                {mostrarJornada(entradaVerificada.diaEvento) && (
+                  <div className="info-row">
+                    <FaMoon className="info-icon" />
+                    <div>
+                      <span className="info-label">Jornada</span>
+                      <span className="info-valor">{nombreJornada(entradaVerificada.diaEvento)}</span>
+                    </div>
+                  </div>
+                )}
                 <div className="info-row">
                   <FaHashtag className="info-icon" />
                   <div>

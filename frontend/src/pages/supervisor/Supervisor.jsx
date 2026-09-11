@@ -4,6 +4,7 @@ import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
 import Buscador from '../../components/Buscador.jsx';
+import FiltroJornada from '../../components/FiltroJornada.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import Tabla from '../../components/Tabla.jsx';
@@ -14,7 +15,7 @@ import {
   FaUsers, FaCheckCircle, FaQrcode, FaTimes,
   FaIdCard, FaTicketAlt,  FaUserCheck, FaExclamationTriangle,
   FaSignOutAlt, FaCamera, FaHistory, FaSignInAlt, FaUserSecret, FaSyncAlt,
-  FaArrowLeft, FaCalendarAlt
+  FaArrowLeft, FaCalendarAlt, FaMoon
 } from 'react-icons/fa';
 
 // Debe coincidir con MARGEN_INGRESO_ANTICIPADO_HORAS del backend
@@ -23,7 +24,7 @@ const MARGEN_INGRESO_ANTICIPADO_HORAS = 3;
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirFotoCapturada } from '../../utils/imagenes.js';
-import { formatearFecha, estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { formatearFecha, nombreJornada, mostrarJornada, opcionesJornada, estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
 import FotoZoom from '../../components/FotoZoom.jsx';
@@ -61,6 +62,7 @@ export default function Supervisor() {
   const [errorEscaneo, setErrorEscaneo] = useState('');
 
   const [filtro, setFiltro] = useState('todos');
+  const [filtroJornada, setFiltroJornada] = useState('todas');
   const [busqueda, setBusqueda] = useState('');
   // Buscador de la pantalla de selección de evento (antes de entrar a uno)
   const [busquedaEvento, setBusquedaEvento] = useState('');
@@ -99,15 +101,20 @@ export default function Supervisor() {
     [eventos, busquedaEvento, filtroEvento],
   );
 
+  const filtrosJornada = useMemo(() => opcionesJornada(participantes), [participantes]);
+  const multiJornada = filtrosJornada.length > 0;
+
   const listaFiltrada = useMemo(() => {
     return participantes.filter(p => {
       const coincideFiltro = filtro === 'todos' || p.estadoIngreso === filtro;
+      const coincideJornada =
+        filtroJornada === 'todas' || (p.diaEventoId ?? null) === filtroJornada;
       const coincideBusqueda =
         p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
         (p.documento || '').toLowerCase().includes(busqueda.toLowerCase());
-      return coincideFiltro && coincideBusqueda;
+      return coincideFiltro && coincideJornada && coincideBusqueda;
     });
-  }, [participantes, filtro, busqueda]);
+  }, [participantes, filtro, filtroJornada, busqueda]);
 
   // ========================================================
   // ESCANEO REAL: abre la cámara, lee el QR y recién ahí le pregunta a la base quién es.
@@ -195,25 +202,42 @@ export default function Supervisor() {
   const fotoReferencia = tarjetaQR?.usuario?.foto || tarjetaQR?.foto || null;
   const fotoReferenciaLabel = tarjetaQR?.usuario?.foto ? 'FOTO DE PERFIL' : 'FOTO REGISTRADA';
 
-  // Ventana de ingreso: desde N horas antes del inicio hasta la hora de fin, y no
-  // si el evento está finalizado. La salida no tiene ventana (siempre se permite).
+  // Ventana de ingreso: desde N horas antes del inicio hasta la hora de fin. Si la
+  // entrada escaneada tiene JORNADA, la ventana es la de esa noche (no la del
+  // evento entero); si no, se usa el rango del evento. La salida no tiene ventana.
   // Se reevalúa cada minuto para que la puerta se habilite/cierre sola.
-  const [ingresoDentroDeVentana, setIngresoDentroDeVentana] = useState(false);
+  const jornadaEntrada = tarjetaQR?.diaEvento || null;
+  // Apertura/cierre de la ventana vigente (jornada si hay, si no el evento).
+  const aperturaVentana = eventoDetalle
+    ? new Date(new Date(jornadaEntrada?.inicio ?? eventoDetalle.fecha).getTime() - MARGEN_INGRESO_ANTICIPADO_HORAS * 60 * 60 * 1000)
+    : null;
+  const cierreVentana = eventoDetalle
+    ? new Date(jornadaEntrada?.fin ?? eventoDetalle.fechaFin)
+    : null;
+  // ¿Nombramos la jornada en los mensajes? Solo si aporta (tiene nombre o no es la 1.ª noche).
+  const refJornada = mostrarJornada(jornadaEntrada)
+    ? `la jornada «${nombreJornada(jornadaEntrada)}» de "${eventoDetalle?.nombre}"`
+    : `"${eventoDetalle?.nombre}"`;
+
+  // Estado de la ventana de ingreso, recalculado cada minuto (la salida no tiene ventana):
+  //   'ok' | 'finalizado' (evento cerrado) | 'cerrada' (ya pasó el fin) | 'aun_no' (todavía no abre)
+  const [motivoVentana, setMotivoVentana] = useState('aun_no');
+  const ingresoDentroDeVentana = motivoVentana === 'ok';
   useEffect(() => {
     const evaluar = () => {
-      if (!eventoDetalle) return setIngresoDentroDeVentana(false);
+      if (!eventoDetalle) return setMotivoVentana('aun_no');
       const ahora = Date.now();
-      const inicio = new Date(eventoDetalle.fecha).getTime();
-      const fin = new Date(eventoDetalle.fechaFin).getTime();
-      const apertura = inicio - MARGEN_INGRESO_ANTICIPADO_HORAS * 60 * 60 * 1000;
-      return setIngresoDentroDeVentana(
-        eventoDetalle.estado !== 'finalizado' && ahora >= apertura && ahora <= fin
-      );
+      const apertura = aperturaVentana.getTime();
+      const cierre = cierreVentana.getTime();
+      if (eventoDetalle.estado === 'finalizado') return setMotivoVentana('finalizado');
+      if (ahora > cierre) return setMotivoVentana('cerrada');
+      if (ahora < apertura) return setMotivoVentana('aun_no');
+      return setMotivoVentana('ok');
     };
     evaluar();
     const t = setInterval(evaluar, 60000);
     return () => clearInterval(t);
-  }, [eventoDetalle]);
+  }, [eventoDetalle, jornadaEntrada]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const registrarMovimiento = async (tipo) => {
     if (eventoNoCoincide) {
@@ -223,17 +247,31 @@ export default function Supervisor() {
       return;
     }
     if (tipo === 'salida' && tarjetaQR.estadoIngreso !== 'ingresado') {
-      setAlertaToggle('Esta entrada no está adentro — no se puede registrar una salida.');
+      setAlertaToggle(
+        tarjetaQR.estadoIngreso === 'salio'
+          ? 'Esta persona ya registró su salida — no está adentro.'
+          : 'Esta persona todavía no registró su ingreso — no se puede registrar una salida.'
+      );
       return;
     }
     if (tipo === 'ingreso' && tarjetaQR.estadoIngreso === 'ingresado') {
-      setAlertaToggle('Esta entrada ya está registrada como ingresada.');
+      setAlertaToggle('Esta entrada ya figura como ingresada. Si la persona salió, registrá primero su salida.');
       return;
     }
     if (tipo === 'ingreso' && !ingresoDentroDeVentana) {
-      setAlertaToggle(
-        `Fuera del horario de ingreso de "${eventoDetalle.nombre}": se habilita ${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio y hasta el cierre.`
-      );
+      if (motivoVentana === 'finalizado') {
+        setAlertaToggle(`El evento "${eventoDetalle.nombre}" ya finalizó — esta entrada ya no es válida para ingresar.`);
+      } else if (motivoVentana === 'cerrada') {
+        setAlertaToggle(
+          mostrarJornada(jornadaEntrada)
+            ? `Esta entrada ya no es válida: era para ${refJornada}, que cerró el ${formatearFecha(cierreVentana)}.`
+            : `El evento "${eventoDetalle.nombre}" ya cerró (terminó el ${formatearFecha(cierreVentana)}) — esta entrada ya no es válida para ingresar.`
+        );
+      } else {
+        setAlertaToggle(
+          `El ingreso para ${refJornada} todavía no está habilitado. Abre el ${formatearFecha(aperturaVentana)} (${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio).`
+        );
+      }
       return;
     }
     if (requiereFoto && !fotoCapturadaTemporal) {
@@ -356,13 +394,29 @@ export default function Supervisor() {
               onFiltro={setFiltro}
               etiquetaFiltros="Filtrar asistentes"
             />
+            {multiJornada && (
+              <FiltroJornada
+                opciones={filtrosJornada}
+                activo={filtroJornada}
+                onCambio={setFiltroJornada}
+                etiqueta="Filtrar asistentes por jornada"
+              />
+            )}
           </div>
         </div>
 
         <Tabla
-          columnas={['Participante', 'Documento', 'Entrada', 'Ingresos', 'Salidas', 'Estado Actual']}
+          columnas={[
+            'Participante',
+            'Documento',
+            ...(multiJornada ? ['Jornada'] : []),
+            'Entrada',
+            'Ingresos',
+            'Salidas',
+            'Estado Actual',
+          ]}
           datos={listaFiltrada}
-          vacio={busqueda.trim() || filtro !== 'todos'
+          vacio={busqueda.trim() || filtro !== 'todos' || filtroJornada !== 'todas'
             ? 'Ningún asistente coincide con la búsqueda.'
             : 'Todavía no hay asistentes en este evento.'}
           renderFila={p => (
@@ -374,6 +428,13 @@ export default function Supervisor() {
                 </div>
               </td>
               <td>{p.documento || '—'}</td>
+              {multiJornada && (
+                <td>
+                  {mostrarJornada(p.diaEvento)
+                    ? <span className="pi-sup-badge-jornada">{nombreJornada(p.diaEvento)}</span>
+                    : '—'}
+                </td>
+              )}
               <td>{p.categoriaTicket?.nombre || '—'}</td>
               <td>{p.vecesIngreso}</td>
               <td>{p.vecesSalida}</td>
@@ -467,6 +528,13 @@ export default function Supervisor() {
 
             <h2 className="pi-sup-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
+            {alertaToggle && (
+              <div className="pi-sup-alerta-modal">
+                <FaExclamationTriangle /> {alertaToggle}
+              </div>
+            )}
+
+            <div className="pi-sup-modal-cuerpo">
             <div className="pi-sup-info-card">
               <div className={`info-row${eventoNoCoincide ? ' info-row--alerta' : ''}`}>
                 <FaCalendarAlt className="info-icon" />
@@ -480,6 +548,18 @@ export default function Supervisor() {
                   )}
                 </div>
               </div>
+              {tarjetaQR.diaEvento && (
+                <div className="info-row">
+                  <FaMoon className="info-icon" />
+                  <div>
+                    <span className="info-label">JORNADA</span>
+                    <span className="info-valor">{nombreJornada(tarjetaQR.diaEvento)}</span>
+                    <span className="pi-sup-jornada-horario">
+                      {formatearFecha(tarjetaQR.diaEvento.inicio)} — {formatearFecha(tarjetaQR.diaEvento.fin)}
+                    </span>
+                  </div>
+                </div>
+              )}
               <div className="info-row">
                 <FaIdCard className="info-icon" />
                 <div>
@@ -495,12 +575,6 @@ export default function Supervisor() {
                 </div>
               </div>
             </div>
-
-            {alertaToggle && (
-              <div className="pi-sup-alerta-modal">
-                <FaExclamationTriangle /> {alertaToggle}
-              </div>
-            )}
 
             <div className="pi-sup-historial-section">
               <h4 className="historial-title"><FaHistory /> Historial de Accesos</h4>
@@ -521,6 +595,7 @@ export default function Supervisor() {
                   ))}
                 </div>
               )}
+            </div>
             </div>
 
             {/* =========================================
@@ -558,7 +633,11 @@ export default function Supervisor() {
                   </div>
                   {!ingresoDentroDeVentana && (
                     <p className="pi-sup-hint-foto">
-                      Fuera del horario de ingreso ({MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio hasta el cierre). La salida sí está habilitada.
+                      {motivoVentana === 'finalizado'
+                        ? `"${eventoDetalle.nombre}" ya finalizó: no se registran más ingresos. La salida sí está habilitada.`
+                        : motivoVentana === 'cerrada'
+                          ? `${mostrarJornada(jornadaEntrada) ? `La jornada «${nombreJornada(jornadaEntrada)}»` : 'El evento'} cerró el ${formatearFecha(cierreVentana)}: esta entrada ya no es válida para ingresar. La salida sí está habilitada.`
+                          : `El ingreso abre el ${formatearFecha(aperturaVentana)} (${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio). La salida sí está habilitada.`}
                     </p>
                   )}
                   {requiereFoto && !fotoCapturadaTemporal && (

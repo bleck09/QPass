@@ -35,7 +35,7 @@ export class CategoriasTicketService {
         where: { eventoId },
         include: {
           diaEvento: {
-            select: { id: true, nombre: true, orden: true, inicio: true },
+            select: { id: true, nombre: true, orden: true, inicio: true, fin: true },
           },
         },
         orderBy: [{ diaEvento: { orden: 'asc' } }, { createdAt: 'asc' }],

@@ -41,6 +41,10 @@
 .pi-usr-evento-pasado-info { padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
 .pi-usr-evento-pasado-info strong { font-size: var(--text-sm); color: var(--text-primary); }
 .pi-usr-evento-pasado-info span { display: flex; align-items: center; gap: 8px; font-size: var(--text-xs); color: var(--text-secondary); }
+.pi-usr-evento-pasado-info span.pi-usr-evento-pasado-saldo {
+  color: var(--ambar-aviso-texto, #9a6a15);
+  font-weight: 700;
+}
 
 /* --- PESTAÑA: COMPRAR --- */
 .pi-usr-comprar { display: flex; flex-direction: column; gap: 20px; }
@@ -128,6 +132,13 @@
   padding: 2px 8px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.28);
+}
+/* En esta jornada ya tengo mi entrada: lo que agregue de acá va como invitado. */
+.cat-card-jornada--tengo {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--indigo-profundo);
+  text-transform: none;
+  letter-spacing: 0;
 }
 .cat-card-nombre { font-size: var(--text-xl); font-weight: 800; text-shadow: 0 2px 6px rgba(0,0,0,0.2); }
 .cat-card-precio { font-size: var(--text-base); color: rgba(255,255,255,0.9); font-weight: 700; }
@@ -385,6 +396,25 @@
   flex-shrink: 0;
 }
 
+/* Billetera del evento EN CURSO: destacada arriba de la lista, con acceso directo
+   a la manilla — es la que el asistente necesita ver primero. */
+.pi-usr-bill-destacada {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 20px;
+  padding: 20px 24px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--verde-recarga, #2e9e5b);
+  background: var(--verde-recarga-suave, #d8f5e6);
+}
+.pi-usr-bill-destacada-info { display: flex; flex-direction: column; gap: 6px; }
+.pi-usr-bill-destacada-badge { align-self: flex-start; }
+.pi-usr-bill-destacada-nombre { font-size: var(--text-xl); color: var(--text-primary); }
+.pi-usr-bill-destacada-saldo { font-size: var(--text-base); font-weight: 800; color: var(--verde-recarga-texto, #1b7a4b); }
+
 /* --- Saldo por evento: acordeón (§Billetera por evento) --- */
 .pi-usr-bill-lista { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
 .pi-usr-bill {
@@ -409,7 +439,16 @@
 }
 .pi-usr-bill-titulo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .pi-usr-bill-titulo strong { font-size: var(--text-sm); }
-.pi-usr-bill-fecha { font-size: 12px; color: var(--text-secondary); }
+.pi-usr-bill-fecha { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-secondary); }
+.pi-usr-bill--en-curso { border-color: var(--verde-recarga, #2e9e5b); }
+.pi-usr-bill-badge-curso {
+  display: inline-flex; align-items: center;
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
+  padding: 2px 7px; border-radius: var(--radius-full);
+  background: var(--verde-recarga-suave, #d8f5e6); color: var(--verde-recarga-texto, #1b7a4b);
+}
+/* Buscador de la lista: separado del párrafo de ayuda y de la lista misma. */
+.pi-usr-card > .qp-buscador { margin: 14px 0 4px; }
 .pi-usr-bill-saldo { font-size: var(--text-base); font-weight: 800; color: var(--indigo-profundo); white-space: nowrap; }
 .pi-usr-bill-plazo { font-size: 11px; font-weight: 700; white-space: nowrap; }
 .pi-usr-bill-plazo.tono-vencido { color: var(--rojo-error-texto); }

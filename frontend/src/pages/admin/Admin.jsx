@@ -20,7 +20,11 @@ import {
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { GraficoActividadPorHora, GraficoIngresosPorCategoria } from './GraficosEvento.jsx';
 import './Admin.css';
+// Marco Gráfico/Tabla (.pi-adg-grafico*) compartido con el dashboard general —
+// se reutiliza tal cual en vez de duplicar el CSS.
+import './AdminGeneral.css';
 
 const ETIQUETA_CAMPO_ENTRADA = { nombre: 'Nombre completo', correo: 'Correo electrónico', celular: 'Celular' };
 
@@ -370,6 +374,13 @@ export default function Admin({
     () => reportesEntradas.filter(r => r.estado === 'pendiente'),
     [reportesEntradas]
   );
+  // `solicitudes` trae TODAS las compras del evento (pendientes, aprobadas y
+  // rechazadas) — la alerta de "necesita tu atención" es solo sobre las que
+  // todavía no se resolvieron.
+  const solicitudesPendientes = useMemo(
+    () => solicitudes.filter(c => c.estado === 'pendiente'),
+    [solicitudes]
+  );
 
   const solicitudesFiltradas = useMemo(
     () => filtroSolicitudes === 'todos' ? solicitudes : solicitudes.filter(c => c.estado === filtroSolicitudes),
@@ -519,6 +530,43 @@ export default function Admin({
   const totalRecargadoEvento = useMemo(() => sumar(recargadoresOrdenados, 'totalRecargado'), [recargadoresOrdenados]);
   const totalDevueltoEvento = useMemo(() => sumar(devolucionesOrdenadas, 'totalDevuelto'), [devolucionesOrdenadas]);
   const totalConsumoClientes = useMemo(() => sumar(negociosOrdenados, 'ventasTotal'), [negociosOrdenados]);
+
+  // Recargas vs. consumos por hora (Manual §17: "barras apiladas por hora").
+  // `hora` ya viene formateada "HH:mm" (helper `hora()`); se agrupa por la hora
+  // en punto. Las fiestas cruzan medianoche, así que las horas de madrugada
+  // (00-11) se ordenan COMO SI fueran continuación de la noche anterior.
+  const actividadPorHora = useMemo(() => {
+    const claveOrden = (h) => (h < 12 ? h + 24 : h);
+    const porHora = new Map(); // 'HH' -> { hora, recargas, consumos }
+    const upsert = (hh) => {
+      if (!porHora.has(hh)) porHora.set(hh, { hora: `${hh}:00`, recargas: 0, consumos: 0 });
+      return porHora.get(hh);
+    };
+    datos.recargadores.forEach(r => r.recargas.forEach(t => {
+      upsert(t.hora.slice(0, 2)).recargas += t.monto;
+    }));
+    datos.negocios.forEach(n => n.ventas.filter(v => !v.anulada).forEach(v => {
+      upsert(v.hora.slice(0, 2)).consumos += v.monto;
+    }));
+    return [...porHora.values()]
+      .sort((a, b) => claveOrden(Number(a.hora)) - claveOrden(Number(b.hora)))
+      .map(p => ({ ...p, recargas: Math.round(p.recargas), consumos: Math.round(p.consumos) }));
+  }, [datos]);
+
+  // Ingresos por categoría de entrada: plata REAL (Bs, precio de venta), no
+  // puntos — nunca se mezcla con el gráfico de arriba (dos monedas distintas).
+  const ingresosPorCategoria = useMemo(() => {
+    const porCategoria = new Map();
+    datos.entradas.forEach(e => {
+      const nombre = e.categoriaTicket?.nombre || 'Sin categoría';
+      const precio = Number(e.categoriaTicket?.precio || 0);
+      if (!porCategoria.has(nombre)) porCategoria.set(nombre, { nombre, entradas: 0, ingresos: 0 });
+      const c = porCategoria.get(nombre);
+      c.entradas += 1;
+      c.ingresos += precio;
+    });
+    return [...porCategoria.values()].sort((a, b) => b.ingresos - a.ingresos);
+  }, [datos]);
 
   const actividadReciente = useMemo(() => {
     const eventos = [];
@@ -739,6 +787,32 @@ export default function Admin({
       {/* ================= VISTA GENERAL ================= */}
       {vistaActual === null && (
         <>
+          {/* --- NECESITA TU ATENCIÓN: separado del resto para que lo accionable no se
+              pierda entre las cifras informativas de "Personal del Evento". Solo
+              aparece si hay algo pendiente — un evento sin pendientes no muestra
+              una sección de alertas vacía. --- */}
+          {(incidenciasPendientes.length + reportesEntradasPendientes.length + solicitudesPendientes.length) > 0 && (
+            <section className="pi-dash-alertas">
+              <h3 className="pi-dash-alertas-titulo"><FaExclamationTriangle aria-hidden="true" /> Necesita tu atención</h3>
+              <div className="pi-dash-alertas-grid">
+                {(incidenciasPendientes.length + reportesEntradasPendientes.length) > 0 && (
+                  <button type="button" className="pi-dash-alerta-card" onClick={() => abrirDetalle('incidencias')}>
+                    <span className="pi-dash-alerta-numero">{incidenciasPendientes.length + reportesEntradasPendientes.length}</span>
+                    <span className="pi-dash-alerta-label">Reportes pendientes</span>
+                    <FaChevronRight className="pi-dash-alerta-flecha" aria-hidden="true" />
+                  </button>
+                )}
+                {solicitudesPendientes.length > 0 && (
+                  <button type="button" className="pi-dash-alerta-card" onClick={() => abrirDetalle('solicitudesEntradas')}>
+                    <span className="pi-dash-alerta-numero">{solicitudesPendientes.length}</span>
+                    <span className="pi-dash-alerta-label">Solicitudes de entrada por revisar</span>
+                    <FaChevronRight className="pi-dash-alerta-flecha" aria-hidden="true" />
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* --- RESUMEN FINANCIERO --- */}
           <section className="pi-dash-seccion">
             <h3 className="pi-dash-seccion-titulo">Resumen Financiero del Evento</h3>
@@ -747,6 +821,10 @@ export default function Admin({
               <StatCard icon={<FaBoxOpen />} tono="warn" valor={`${totalDevueltoEvento} pts`} label="Total Devuelto" />
               <StatCard icon={<FaShoppingBag />} valor={`${totalConsumoClientes} pts`} label="Consumido por Clientes (total de totales)" />
               <StatCard icon={<FaWallet />} tono="total" valor={`${totalRecargadoEvento - totalDevueltoEvento - totalConsumoClientes} pts`} label="Saldo en Circulación" />
+            </div>
+            <div className="pi-adg-graficos-grid">
+              <GraficoActividadPorHora puntos={actividadPorHora} />
+              <GraficoIngresosPorCategoria filas={ingresosPorCategoria} />
             </div>
           </section>
 
@@ -806,16 +884,6 @@ export default function Admin({
                 <FaUserFriends className="pi-dash-rol-icon" />
                 <span className="numero">{totalAyudantes}</span>
                 <span className="label">Ayudantes (total)</span>
-              </button>
-              <button type="button" className="pi-dash-rol-card pi-dash-rol-card-alerta" onClick={() => abrirDetalle('incidencias')}>
-                <FaExclamationTriangle className="pi-dash-rol-icon" />
-                <span className="numero">{incidenciasPendientes.length + reportesEntradasPendientes.length}</span>
-                <span className="label">Reportes</span>
-              </button>
-              <button type="button" className="pi-dash-rol-card pi-dash-rol-card-alerta" onClick={() => abrirDetalle('solicitudesEntradas')}>
-                <FaTicketAlt className="pi-dash-rol-icon" />
-                <span className="numero">{solicitudes.length}</span>
-                <span className="label">Solicitudes de Entradas</span>
               </button>
             </div>
           </section>

@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsDateString,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -8,6 +9,9 @@ import {
   Min,
   MinLength,
 } from 'class-validator';
+import { TipoManilla } from '@prisma/client';
+
+const TIPOS_MANILLA: TipoManilla[] = ['fisica', 'digital'];
 
 /**
  * Espejo de lo que manda el frontend al crear un evento directo (sin pasar por
@@ -36,6 +40,12 @@ export class CrearEventoDto {
   @IsOptional()
   @IsString()
   imagen?: string;
+
+  // Física (Supervisor entrega y vincula la manilla) o digital (QR automático
+  // al aprobar la compra). Default 'fisica' si no viene (ver EventosService).
+  @IsOptional()
+  @IsIn(TIPOS_MANILLA)
+  tipoManilla?: TipoManilla;
 
   @IsOptional()
   @IsString()

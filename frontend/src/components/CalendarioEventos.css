@@ -1,0 +1,123 @@
+/* Calendario mensual de eventos (components/CalendarioEventos.jsx). */
+
+.qp-cal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  padding: var(--space-6);
+}
+
+.qp-cal__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.qp-cal__titulo {
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+}
+.qp-cal__titulo strong { text-transform: capitalize; }
+
+.qp-cal__nav { display: flex; align-items: center; gap: 8px; }
+.qp-cal__nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.qp-cal__nav button:hover { border-color: var(--focus-ring); }
+.qp-cal__hoy {
+  width: auto !important;
+  padding: 0 14px;
+  font-size: var(--text-xs);
+  font-weight: 700;
+}
+
+.qp-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+.qp-cal__grid--dias-semana { margin-bottom: 4px; }
+.qp-cal__dia-semana {
+  text-align: center;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+.qp-cal__celda {
+  min-height: 84px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 4px 4px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--bg-surface);
+}
+.qp-cal__celda--afuera { background: var(--bg-page); opacity: 0.55; }
+.qp-cal__celda--hoy { border-color: var(--indigo-profundo); border-width: 2px; }
+
+.qp-cal__num {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+.qp-cal__celda--hoy .qp-cal__num { color: var(--indigo-profundo); }
+
+.qp-cal__eventos { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
+.qp-cal__evento {
+  display: block;
+  width: 100%;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1.4;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.qp-cal__evento.ev-proximo { background: var(--gris-niebla, #eef1f6); color: var(--texto-secundario, #5b6472); }
+.qp-cal__evento.ev-en-curso { background: var(--verde-recarga-suave, #d8f5e6); color: var(--verde-recarga-texto, #1b7a4b); }
+.qp-cal__evento.ev-finalizado { background: var(--ambar-aviso-suave, #fdeecf); color: var(--ambar-aviso-texto, #9a6a15); }
+.qp-cal__evento.ev-archivado { background: var(--borde-suave, #e2e6ec); color: var(--texto-secundario, #5b6472); }
+
+.qp-cal__leyenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.qp-cal__leyenda span { display: inline-flex; align-items: center; gap: 6px; }
+.qp-cal__punto { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.qp-cal__punto.ev-proximo { background: var(--gris-niebla, #eef1f6); border: 1px solid var(--texto-secundario, #5b6472); }
+.qp-cal__punto.ev-en-curso { background: var(--verde-recarga, #2e9e5b); }
+.qp-cal__punto.ev-finalizado { background: var(--ambar-aviso, #d99a2b); }
+.qp-cal__punto.ev-archivado { background: var(--texto-secundario, #5b6472); }
+
+@media (max-width: 640px) {
+  .qp-cal__celda { min-height: 56px; }
+  .qp-cal__dia-semana { font-size: 10px; }
+}
