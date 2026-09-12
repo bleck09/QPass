@@ -1,11 +1,14 @@
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useModal } from '../../utils/useModal.js';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import MapaUbicacion from '../../components/MapaUbicacion.jsx';
+import { proyectarContorno } from '../../utils/contornoMapa.js';
+import { tipoElementoInfo } from '../../utils/elementosMapa.js';
 import {
   FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt,
-  FaQrcode, FaMapMarkedAlt, FaStore, FaTimes,
+  FaQrcode, FaMapMarkedAlt, FaMapMarkerAlt, FaStore, FaTimes,
   FaArrowLeft, FaCheck
 } from 'react-icons/fa';
 import api from '../../api/index.js';
@@ -13,6 +16,12 @@ import { estadoStock, ESTADO_STOCK } from '../../utils/eventos.js';
 import './App.css';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
+// El editor de Admin (Mapa.jsx) usa tamaño real en px con scroll horizontal
+// (una herramienta de trabajo, aceptable). Acá, una landing pública, el mapa
+// tiene que escalar como una imagen para que se vea entero sin scrollear —
+// por eso las cajas se ubican en % del lienzo en vez de en px fijos.
+const pct = (valor, total) => `${(valor / total) * 100}%`;
+
 const defaultLandingData = {
   titulo: 'Tomorrowland Bolivia 2026',
   informacion: 'La experiencia electrónica más grande llega a Bolivia. Vive la magia con nuestro sistema de accesos y pagos Cashless 100% digital.',
@@ -63,10 +72,11 @@ export default function App() {
   const cargarEvento = useCallback(async () => {
     const activo = await api.eventos.obtener(id);
     if (!activo) throw new Error('Evento no encontrado');
-    const [cfg, categorias, puestos] = await Promise.all([
+    const [cfg, categorias, puestos, elementosMapa] = await Promise.all([
       api.landingConfig.obtener(activo.id).catch(() => null),
       api.categoriasTicket.listar(activo.id).catch(() => []),
       api.puestos.listar({ eventoId: activo.id }).catch(() => []),
+      api.elementosMapa.listar(activo.id).catch(() => []),
     ]);
     return {
       evento: activo,
@@ -84,6 +94,7 @@ export default function App() {
           }))
         : defaultLandingData.precios,
       mapaPuestos: puestos,
+      mapaElementos: elementosMapa,
     };
   }, [id]);
   const { data: carga, cargando, error, recargar } = useApi(cargarEvento, { inicial: null, activo: !!id });
@@ -91,9 +102,13 @@ export default function App() {
   const data = carga?.data ?? defaultLandingData;
   const precios = carga?.precios ?? defaultLandingData.precios;
   const mapaPuestos = carga?.mapaPuestos ?? [];
-  // El mapa es opcional (Admin no lo arma, lo hace cada Usuario Negocio al activar
-  // su puesto): si todavía no hay ninguno colocado, la sección ni aparece.
+  const mapaElementos = carga?.mapaElementos ?? [];
+  // El mapa es opcional (Admin no lo arma directo, lo dispara cada Usuario
+  // Negocio al activar su puesto, o Admin dibujando el contorno / agregando
+  // zonas): si no hay nada de eso todavía, la sección ni aparece.
   const mapaPuestosActivos = mapaPuestos.filter(p => p.estadoActivo);
+  const contornoProyectado = useMemo(() => proyectarContorno(evento?.contornoMapa), [evento]);
+  const hayMapaDelEvento = mapaPuestosActivos.length > 0 || mapaElementos.length > 0 || !!contornoProyectado;
 
   const [puestoModal, setPuestoModal] = useState(null);
 
@@ -203,7 +218,8 @@ export default function App() {
         <ul className="pi-landing-nav-links">
           <li><a href="#entradas">Entradas</a></li>
           <li><a href="#actividades">Actividades</a></li>
-          {mapaPuestosActivos.length > 0 && <li><a href="#mapa">Mapa</a></li>}
+          {evento?.latitud != null && <li><a href="#ubicacion">Ubicación</a></li>}
+          {hayMapaDelEvento && <li><a href="#mapa">Mapa</a></li>}
           <li><a href="#cronograma">Cronograma</a></li>
         </ul>
         <button className="pi-landing-btn-nav" onClick={handleLoginClick}>
@@ -333,8 +349,22 @@ export default function App() {
         </div>
       </section>
 
+      {/* SECCIÓN UBICACIÓN — opcional en pantalla: solo eventos sin coordenadas
+          (previos a que este campo pasara a ser obligatorio) no la muestran */}
+      {evento?.latitud != null && (
+      <section id="ubicacion" className="pi-landing-section">
+        <div className="pi-landing-section-header">
+          <h2 className="pi-landing-section-title"><FaMapMarkerAlt /> Ubicación</h2>
+          <p className="pi-landing-subtitle">{evento.lugar}</p>
+        </div>
+        <div className="pi-landing-mapa-wrapper glass-panel">
+          <MapaUbicacion lat={evento.latitud} lng={evento.longitud} />
+        </div>
+      </section>
+      )}
+
       {/* SECCIÓN MAPA INTERACTIVO — opcional: si Admin todavía no lo armó, no aparece */}
-      {mapaPuestosActivos.length > 0 && (
+      {hayMapaDelEvento && (
       <section id="mapa" className="pi-landing-section">
         <div className="pi-landing-section-header">
           <h2 className="pi-landing-section-title"><FaMapMarkedAlt /> Mapa del Evento</h2>
@@ -344,16 +374,32 @@ export default function App() {
         </div>
 
         <div className="pi-landing-mapa-wrapper glass-panel">
-          <div className="pi-landing-mapa-canvas">
+          <div
+            className="pi-landing-mapa-canvas"
+            style={contornoProyectado
+              ? { width: '100%', minWidth: 0, height: 'auto', aspectRatio: `${contornoProyectado.ancho} / ${contornoProyectado.alto}` }
+              : undefined}
+          >
+            {contornoProyectado && (
+              <svg className="pi-landing-contorno-svg" viewBox={`0 0 ${contornoProyectado.ancho} ${contornoProyectado.alto}`} preserveAspectRatio="none" aria-hidden="true">
+                <polygon points={contornoProyectado.puntos.map(([x, y]) => `${x},${y}`).join(' ')} />
+              </svg>
+            )}
+
             {mapaPuestosActivos.map((puesto) => (
               // Cada puesto del mapa es un botón: se puede abrir con Tab + Enter.
+              // Con contorno, la posición va en % del lienzo (escala como una
+              // imagen); sin contorno, se mantiene el lienzo fijo de siempre.
               <button
                 type="button"
                 key={puesto.id}
                 className="pi-landing-puesto-box"
-                style={{
+                style={contornoProyectado ? {
+                  left: pct(puesto.x, contornoProyectado.ancho), top: pct(puesto.y, contornoProyectado.alto),
+                  width: pct(puesto.ancho, contornoProyectado.ancho), height: pct(puesto.alto, contornoProyectado.alto),
+                } : {
                   left: `${puesto.x}px`, top: `${puesto.y}px`,
-                  width: `${puesto.ancho}px`, height: `${puesto.alto}px`
+                  width: `${puesto.ancho}px`, height: `${puesto.alto}px`,
                 }}
                 onClick={() => setPuestoModal(puesto)}
                 aria-label={`Ver puesto ${puesto.nombre}`}
@@ -370,6 +416,30 @@ export default function App() {
                 )}
               </button>
             ))}
+
+            {/* Zonas (entrada, baños, escenario...): solo referencia visual, no abren detalle. */}
+            {mapaElementos.map((elemento) => {
+              const info = tipoElementoInfo(elemento.tipo);
+              const Icono = info.Icono;
+              return (
+                <div
+                  key={elemento.id}
+                  className="pi-landing-puesto-box pi-landing-elemento-box"
+                  style={contornoProyectado ? {
+                    left: pct(elemento.x, contornoProyectado.ancho), top: pct(elemento.y, contornoProyectado.alto),
+                    width: pct(elemento.ancho, contornoProyectado.ancho), height: pct(elemento.alto, contornoProyectado.alto),
+                  } : {
+                    left: `${elemento.x}px`, top: `${elemento.y}px`,
+                    width: `${elemento.ancho}px`, height: `${elemento.alto}px`,
+                  }}
+                >
+                  <div className="box-fondo-color">
+                    <Icono className="puesto-icon-dinamico" aria-hidden="true" />
+                    <strong>{elemento.nombre}</strong>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </section>

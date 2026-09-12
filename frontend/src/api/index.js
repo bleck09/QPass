@@ -39,10 +39,12 @@ export const eventos = {
   cerrar: (id) => apiPost(`/eventos/${id}/cerrar`),
   archivar: (id) => apiPost(`/eventos/${id}/archivar`),
   desarchivar: (id) => apiPost(`/eventos/${id}/desarchivar`),
-  // Qué le falta a un evento en borrador para poder publicarse (tickets, QR, página, mapa).
+  // Qué le falta a un evento en borrador para poder publicarse (tickets, QR, página).
   progreso: (id) => apiGet(`/eventos/${id}/progreso`),
   publicar: (id) => apiPost(`/eventos/${id}/publicar`),
   despublicar: (id) => apiPost(`/eventos/${id}/despublicar`),
+  // Contorno del recinto (Mapa.jsx, modo Contorno): array [[lat,lng], ...]; [] lo borra.
+  actualizarContorno: (id, contorno) => apiPatch(`/eventos/${id}/contorno`, { contorno }),
   // Solo los eventos donde Admin asignó a este usuario con este rol (Supervisor, Recargador,
   // Devolucion, UsuarioNegocio): evita que un operador vea/opere eventos que no le tocan.
   misAsignados: async (usuarioId, rol) => {
@@ -154,6 +156,15 @@ export const puestos = {
   desactivar: (id) => apiDelete(`/puestos/${id}`),
 };
 
+// Cuadros del plano que NO son un negocio: Entrada/Baños/Escenario/Recargador/
+// Supervisor/Otro. A diferencia de `puestos`, el Admin los crea y borra directo.
+export const elementosMapa = {
+  listar: (eventoId) => apiGet(`/elementos-mapa${qs({ eventoId })}`),
+  crear: (datos) => apiPost('/elementos-mapa', datos),
+  actualizar: (id, datos) => apiPatch(`/elementos-mapa/${id}`, datos),
+  eliminar: (id) => apiDelete(`/elementos-mapa/${id}`),
+};
+
 export const productos = {
   // Catálogo del puesto (base + estado del evento) aplanado.
   listar: (puestoId) => apiGet(`/productos${qs({ puestoId })}`),
@@ -234,7 +245,7 @@ export const dashboard = {
 
 const api = {
   auth, usuarios, eventos, asignaciones, diasEvento, billeterasEvento, codigosRetiroNegocio, categoriasTicket, compras, entradas,
-  codigosQr, transacciones, incidencias, reportesEntrada, puestosBase, puestos, productos,
+  codigosQr, transacciones, incidencias, reportesEntrada, puestosBase, puestos, elementosMapa, productos,
   puestoAyudantes, ventas, avisosStock, landingConfig, solicitudesEvento, cortesCaja,
   auditoria, dashboard,
 };

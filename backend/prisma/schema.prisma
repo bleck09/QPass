@@ -241,6 +241,12 @@ model Evento {
   coordenadas String?
   latitud     Float?
   longitud    Float?
+  // Contorno del recinto dibujado por Admin sobre un mapa real (Mapa.jsx,
+  // modo Contorno): array de vértices [[lat,lng], ...] del polígono. `null` =
+  // sin definir todavía. Es la referencia geográfica real; el lienzo donde se
+  // ubican Puesto/ElementoMapa la proyecta a un plano 2D (ver Mapa.jsx), no
+  // vive acá en coordenadas de pantalla.
+  contornoMapa Json?
   // §5.5 — el aforo legal es POR JORNADA (una fiesta nocturna cruza medianoche y
   // un festival tiene varias noches). Ver DiaEvento.aforoMaximo. `fecha`/`fechaFin`
   // quedan como el sobre del evento y se resincronizan al min/max de las jornadas.
@@ -289,6 +295,7 @@ model Evento {
   entradas          Entrada[]
   codigosQr         CodigoQr[]
   puestos           Puesto[]
+  elementosMapa     ElementoMapa[]
   transacciones     Transaccion[]
   incidenciasRecarga IncidenciaRecarga[]
   reportesEntrada    ReporteEntrada[]
@@ -863,6 +870,36 @@ model Puesto {
   @@index([eventoId])
   @@index([negocioId, eventoId])
   @@map("puestos")
+}
+
+// Cuadro del plano que NO es un negocio (Puesto): catálogo fijo de zonas del
+// recinto (entrada, baños, escenario, recargador, supervisor...). A diferencia
+// de Puesto, lo crea y borra directamente el Admin desde Mapa.jsx — no hay
+// ventas ni catálogo detrás, así que sí se puede eliminar de verdad.
+model ElementoMapa {
+  id        String           @id @default(cuid())
+  eventoId  String
+  tipo      TipoElementoMapa
+  nombre    String
+  x         Float            @default(0)
+  y         Float            @default(0)
+  ancho     Float            @default(100)
+  alto      Float            @default(100)
+  createdAt DateTime         @default(now())
+
+  evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+
+  @@index([eventoId])
+  @@map("elementos_mapa")
+}
+
+enum TipoElementoMapa {
+  entrada
+  banos
+  escenario
+  recargador
+  supervisor
+  otro
 }
 
 // Un Ayudante puede trabajar en varios puestos a la vez, pero SIEMPRE del mismo Usuario Negocio

@@ -37,6 +37,7 @@ import { TransaccionesModule } from './modules/transacciones/transacciones.modul
 import { IncidenciasRecargaModule } from './modules/incidencias-recarga/incidencias-recarga.module';
 import { ReportesEntradaModule } from './modules/reportes-entrada/reportes-entrada.module';
 import { PuestosModule } from './modules/puestos/puestos.module';
+import { ElementosMapaModule } from './modules/elementos-mapa/elementos-mapa.module';
 import { PuestosBaseModule } from './modules/puestos-base/puestos-base.module';
 import { ProductosModule } from './modules/productos/productos.module';
 import { PuestoAyudantesModule } from './modules/puesto-ayudantes/puesto-ayudantes.module';
@@ -72,6 +73,7 @@ import { AvisosStockModule } from './modules/avisos-stock/avisos-stock.module';
     IncidenciasRecargaModule,
     ReportesEntradaModule,
     PuestosModule,
+    ElementosMapaModule,
     PuestosBaseModule,
     ProductosModule,
     PuestoAyudantesModule,

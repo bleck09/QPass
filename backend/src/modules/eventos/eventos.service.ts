@@ -6,10 +6,12 @@
  * ========================================================================= */
 
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { aFecha, aFechaCon } from '../../common/utils/fechas.utils';
 import { verificarSinChoqueDeFechas } from '../../common/utils/choque-eventos.utils';
@@ -189,6 +191,44 @@ export class EventosService {
         estado: actualizado.estado,
         clienteId: actualizado.clienteId,
       },
+    });
+    return actualizado;
+  }
+
+  /**
+   * Guarda (o borra, con `[]`) el contorno del recinto que Admin dibuja sobre
+   * el mapa real en Mapa.jsx. `[[lat,lng], ...]`, mínimo 3 vértices o vacío.
+   */
+  async actualizarContorno(id: string, contorno: number[][], adminId: number) {
+    const evento = await this.obtenerPorIdAdmin(id);
+    if (evento.archivadoEn) {
+      throw new ConflictException(
+        'El evento está archivado: quedó de solo lectura. Desarchívalo para editarlo.',
+      );
+    }
+    if (contorno.length > 0 && contorno.length < 3) {
+      throw new BadRequestException('El contorno necesita al menos 3 vértices.');
+    }
+    const valido = contorno.every(
+      (p) =>
+        Array.isArray(p) &&
+        p.length === 2 &&
+        p.every((n) => typeof n === 'number' && Number.isFinite(n)),
+    );
+    if (!valido) {
+      throw new BadRequestException('Cada vértice del contorno debe ser [lat, lng].');
+    }
+    const actualizado = await this.prisma.evento.update({
+      where: { id },
+      data: { contornoMapa: contorno.length > 0 ? contorno : Prisma.JsonNull },
+    });
+    await this.auditoria.registrar(null, {
+      actorId: adminId,
+      entidad: 'evento',
+      entidadId: id,
+      accion: 'actualizar_contorno',
+      antes: { contornoMapa: evento.contornoMapa },
+      despues: { contornoMapa: actualizado.contornoMapa },
     });
     return actualizado;
   }

@@ -14,6 +14,7 @@ import { UsuarioActual } from '../../common/decorators/usuario-actual.decorator'
 import { EventosService } from './eventos.service';
 import { CrearEventoDto } from './dto/crear-evento.dto';
 import { ActualizarEventoDto } from './dto/actualizar-evento.dto';
+import { ActualizarContornoDto } from './dto/actualizar-contorno.dto';
 
 @Controller('eventos')
 export class EventosController {
@@ -59,6 +60,17 @@ export class EventosController {
     @UsuarioActual('id') adminId: number,
   ) {
     return this.eventosService.actualizar(id, dto, adminId);
+  }
+
+  @Patch(':id/contorno')
+  @Roles('Admin')
+  @HttpCode(HttpStatus.OK)
+  actualizarContorno(
+    @Param('id') id: string,
+    @Body() dto: ActualizarContornoDto,
+    @UsuarioActual('id') adminId: number,
+  ) {
+    return this.eventosService.actualizarContorno(id, dto.contorno, adminId);
   }
 
   @Post(':id/cerrar')

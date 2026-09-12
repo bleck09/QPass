@@ -6,6 +6,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
   Min,
   MinLength,
 } from 'class-validator';
@@ -26,9 +27,15 @@ export class CrearEventoDto {
   @MinLength(1)
   lugar: string;
 
-  @IsOptional()
+  // Obligatorio: la landing pública del evento la necesita para mostrar
+  // ubicación (ver App.jsx) y Mapa.jsx la usa como centro del mapa real donde
+  // se dibuja el contorno del recinto. Formato "lat, lng", el que produce
+  // MapaSelector.
   @IsString()
-  coordenadas?: string;
+  @Matches(/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/, {
+    message: 'coordenadas debe tener el formato "lat, lng"',
+  })
+  coordenadas: string;
 
   @IsDateString()
   fecha: string;

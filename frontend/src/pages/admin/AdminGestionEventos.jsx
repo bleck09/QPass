@@ -278,6 +278,10 @@ export default function AdminGestionEventos() {
   const handleGuardarEvento = async (e) => {
     e.preventDefault();
     if (!formEvento.nombre.trim() || !formEvento.lugar.trim() || !formEvento.fecha || !formEvento.fechaFin) return;
+    if (!formEvento.coordenadas) {
+      setErrorFormEvento('Marcá la ubicación del evento en el mapa: es obligatoria (se muestra en la página pública y sirve de base para el plano del recinto).');
+      return;
+    }
     setErrorFormEvento('');
 
     // clienteId / diasParaRetiro vacíos -> se omiten (el backend usa el default).
@@ -460,7 +464,7 @@ export default function AdminGestionEventos() {
                 />
               </div>
               <div className="pi-ges-input-group">
-                <label>Ubicación en el mapa (opcional)</label>
+                <label>Ubicación en el mapa</label>
                 <MapaSelector
                   value={formEvento.coordenadas}
                   onChange={(coords) => setFormEvento(f => ({ ...f, coordenadas: coords }))}
