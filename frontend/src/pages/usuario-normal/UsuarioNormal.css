@@ -76,6 +76,18 @@
 /* Carrito de Entradas (compacto: una fila por entrada) */
 .pi-usr-cart-list { display: flex; flex-direction: column; gap: 12px; }
 
+/* Encabezado de jornada — agrupa el carrito y la grilla de categorías cuando
+   el evento tiene 2+ noches (ver agruparPorJornada en utils/eventos.js). Con
+   0 o 1 jornada no se renderiza ninguno: la vista queda igual que siempre. */
+.pi-usr-cart-dia-header,
+.pi-usr-categorias-dia-header {
+  display: flex; align-items: center; gap: 8px;
+  margin: 8px 0 0; font-size: var(--text-sm); font-weight: 700; color: var(--indigo-profundo);
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.pi-usr-cart-dia-header:first-child,
+.pi-usr-categorias-dia-header:first-child { margin-top: 0; }
+
 .pi-usr-ticket-row {
   background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border); border-left: 5px solid var(--gris-medio);
   box-shadow: 0 2px 6px rgba(10, 14, 39,0.04); padding: 16px 16px; display: flex; flex-direction: column; gap: 12px;
@@ -494,4 +506,38 @@
   line-height: 1.5;
   color: var(--ambar-aviso-texto, #b26a00);
   background: var(--ambar-aviso-suave, rgba(255,193,7,0.12));
+}
+
+.pi-usr-bill-btn-qr {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: auto;
+  margin-top: 12px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--indigo-profundo);
+  color: var(--text-on-accent);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.pi-usr-bill-btn-qr:hover { background: var(--indigo-profundo-hover); }
+
+.pi-usr-qr-grande {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  padding: 8px 0 4px;
+}
+.pi-usr-qr-grande img {
+  border-radius: var(--radius-lg);
+  background: #fff;
+  padding: 12px;
+  border: 1px solid var(--border);
 }

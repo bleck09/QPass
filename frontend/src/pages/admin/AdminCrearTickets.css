@@ -90,21 +90,28 @@
   margin-bottom: 16px;
 }
 
+.pi-adtick-tabla-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.pi-adtick-tabla-header .pi-adtick-subtitulo { margin-bottom: 0; }
+
 /* --- FORMULARIO --- */
+/* auto-fit (no un número fijo de columnas): con "Jornada" apareciendo como
+   campo extra cuando el evento tiene 2+ jornadas, una grilla fija de 3
+   dejaba un campo solo en la fila siguiente con un hueco vacío al lado. */
 .pi-adtick-form-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
 }
 
 .pi-adtick-input-descripcion {
   grid-column: 1 / -1;
-}
-
-@media (max-width: 720px) {
-  .pi-adtick-form-grid {
-    grid-template-columns: 1fr;
-  }
 }
 
 .pi-adtick-input-group label {
@@ -128,7 +135,11 @@
   font-size: var(--text-sm);
 }
 
-.pi-adtick-input-wrapper input {
+/* El selector de Jornada usa el mismo wrapper con ícono que los inputs de
+   texto (ver JSX) — sin esto, el <select> quedaba con el estilo nativo del
+   navegador, chico y sin el borde/padding del resto de los campos. */
+.pi-adtick-input-wrapper input,
+.pi-adtick-input-wrapper select {
   width: 100%;
   padding: 8px 8px 8px 40px;
   border: 1px solid var(--border-strong);
@@ -137,12 +148,65 @@
   font-size: var(--text-sm);
   font-family: inherit;
   color: var(--text-primary);
+  background-color: var(--bg-surface);
   transition: border-color 0.2s;
 }
 
-.pi-adtick-input-wrapper input:focus {
+.pi-adtick-input-wrapper input:focus,
+.pi-adtick-input-wrapper select:focus {
   border-color: var(--cian-digital);
 }
+
+/* Lista de beneficios (uno por línea) — se van agregando de a uno, en vez de
+   un solo campo de texto largo ("se hacía un chorizo" en el card público). */
+.pi-adtick-beneficio-agregar { display: flex; gap: 8px; align-items: stretch; }
+.pi-adtick-beneficio-agregar .pi-adtick-input-wrapper { flex: 1; }
+
+.pi-adtick-btn-agregar-beneficio {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pi-adtick-btn-agregar-beneficio:hover { background: var(--indigo-profundo-suave); color: var(--indigo-profundo); }
+
+.pi-adtick-beneficios-lista {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pi-adtick-beneficios-lista li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-md);
+  background: var(--bg-page);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.pi-adtick-beneficio-check { color: var(--verde-recarga-texto); flex-shrink: 0; }
+.pi-adtick-beneficios-lista li span { flex: 1; }
+.pi-adtick-beneficios-lista li button {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 4px;
+}
+.pi-adtick-beneficios-lista li button:hover { color: var(--rojo-error-texto); }
 
 .pi-adtick-form-actions {
   display: flex;
@@ -195,9 +259,8 @@
   color: var(--rojo-error-texto);
 }
 
-.pi-adtick-btn-delete {
-  background-color: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
+.pi-adtick-btn-delete,
+.pi-adtick-btn-editar-cat {
   border: none;
   width: 32px;
   height: 32px;
@@ -207,10 +270,12 @@
   justify-content: center;
   align-items: center;
   transition: all 0.2s;
+  margin-right: 6px;
 }
 
-.pi-adtick-btn-delete:hover {
-  background-color: var(--rojo-error);
-  color: var(--text-on-accent);
-}
+.pi-adtick-btn-delete { background-color: var(--rojo-error-suave); color: var(--rojo-error-texto); }
+.pi-adtick-btn-delete:hover { background-color: var(--rojo-error); color: var(--text-on-accent); }
+
+.pi-adtick-btn-editar-cat { background-color: var(--indigo-profundo-suave); color: var(--indigo-profundo); }
+.pi-adtick-btn-editar-cat:hover { background-color: var(--indigo-profundo); color: var(--text-on-accent); }
 

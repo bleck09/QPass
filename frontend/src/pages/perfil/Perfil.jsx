@@ -4,13 +4,15 @@ import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
   FaCamera, FaSave, FaCheckCircle, FaExclamationTriangle, FaUserShield,
   FaCalendarAlt, FaIdBadge, FaPhone, FaMapMarkerAlt, FaUserEdit,
-  FaIdCard, FaBirthdayCake, FaEdit, FaTimes, FaCheck, FaEnvelope, FaQuoteLeft, FaUser
+  FaIdCard, FaBirthdayCake, FaEdit, FaTimes, FaCheck, FaEnvelope, FaQuoteLeft, FaUser,
+  FaQrcode, FaTicketAlt
 } from 'react-icons/fa';
 import { EVENTO_USUARIO_ACTUALIZADO } from '../../layout/MenuLateral';
 import { leerSesion, guardarSesion } from '../../api/client.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
+import EscanerQr from '../../components/EscanerQr.jsx';
 import './Perfil.css';
 
 const getIniciales = (nombre = 'Usuario') => nombre.substring(0, 2).toUpperCase();
@@ -46,6 +48,31 @@ export default function Perfil() {
   const [activeTab, setActiveTab] = useState('cuenta');
   const [isEditing, setIsEditing] = useState(false);
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
+
+  // --- VERIFICAR QR (solo Usuario Normal): escáner libre de cualquier evento
+  //     que solo devuelve nombre + evento + tipo de entrada, nada de saldo.
+  const [escaneandoQr, setEscaneandoQr] = useState(false);
+  const [buscandoQr, setBuscandoQr] = useState(false);
+  const [resultadoQr, setResultadoQr] = useState(null);
+  const [errorQr, setErrorQr] = useState('');
+
+  const iniciarEscaneoQr = () => {
+    setErrorQr('');
+    setResultadoQr(null);
+    setEscaneandoQr(true);
+  };
+
+  const handleCodigoQrDetectado = async (codigo) => {
+    setEscaneandoQr(false);
+    setBuscandoQr(true);
+    try {
+      setResultadoQr(await api.entradas.buscarBasico(codigo));
+    } catch (err) {
+      setErrorQr(err.message);
+    } finally {
+      setBuscandoQr(false);
+    }
+  };
 
   // Estados de la carga del perfil (Manual 8.9). El cuerpo de cargarPerfil()
   // arranca con la petición (no hay setState síncrono), así que el efecto que
@@ -280,6 +307,11 @@ export default function Perfil() {
             <button className={activeTab === 'seguridad' ? 'active' : ''} onClick={() => setActiveTab('seguridad')}>
               <FaUserShield style={{marginRight: '8px'}}/> Seguridad y Acceso
             </button>
+            {usuario.rol === 'UsuarioNormal' && (
+              <button className={activeTab === 'verificar' ? 'active' : ''} onClick={() => setActiveTab('verificar')}>
+                <FaQrcode style={{marginRight: '8px'}}/> Verificar QR
+              </button>
+            )}
           </div>
 
           <div className="pi-perfil-tab-content">
@@ -427,6 +459,43 @@ export default function Perfil() {
                     </ul>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* PESTAÑA: VERIFICAR QR (solo Usuario Normal) */}
+            {!errorPerfil && !cargandoPerfil && activeTab === 'verificar' && usuario.rol === 'UsuarioNormal' && (
+              <div className="animate-fade pi-perfil-qr-section">
+                <h3>Verificar una entrada</h3>
+                <p className="texto-ayuda">
+                  Escaneá el QR de una manilla de cualquier evento para ver a nombre de quién está
+                  y qué tipo de entrada es. No se muestra saldo ni ningún otro dato.
+                </p>
+
+                {escaneandoQr ? (
+                  <EscanerQr onDetectado={handleCodigoQrDetectado} onCancelar={() => setEscaneandoQr(false)} />
+                ) : buscandoQr ? (
+                  <p className="texto-ayuda">Buscando…</p>
+                ) : (
+                  <>
+                    {errorQr && (
+                      <div className="pi-perfil-alerta error"><FaExclamationTriangle /> {errorQr}</div>
+                    )}
+                    {resultadoQr && (
+                      <div className="pi-perfil-qr-resultado">
+                        <FaCheckCircle className="pi-perfil-qr-icono" aria-hidden="true" />
+                        <p className="pi-perfil-qr-nombre">{resultadoQr.nombre}</p>
+                        <p><FaCalendarAlt aria-hidden="true" /> {resultadoQr.eventoNombre}</p>
+                        {resultadoQr.categoriaNombre && (
+                          <p><FaTicketAlt aria-hidden="true" /> {resultadoQr.categoriaNombre}</p>
+                        )}
+                      </div>
+                    )}
+                    <button type="button" className="btn-guardar-toggle" onClick={iniciarEscaneoQr}>
+                      <FaQrcode style={{ marginRight: '8px' }} />
+                      {resultadoQr || errorQr ? 'Escanear otro código' : 'Escanear código QR'}
+                    </button>
+                  </>
+                )}
               </div>
             )}
 

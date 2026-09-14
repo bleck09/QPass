@@ -17,6 +17,7 @@ import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { verificarSinChoqueDeFechas } from '../../common/utils/choque-eventos.utils';
+import { nombreJornadaPorDefecto } from '../../common/utils/fechas.utils';
 import {
   ActualizarDiaEventoDto,
   CrearDiaEventoDto,
@@ -77,10 +78,12 @@ export class DiasEventoService {
         orderBy: { orden: 'desc' },
         select: { orden: true },
       });
+      // Sin nombre propio, cae en la fecha real ("Domingo 13") en vez de
+      // quedar sin nombre — más claro que el genérico "Día N".
       const dia = await tx.diaEvento.create({
         data: {
           eventoId: dto.eventoId,
-          nombre: dto.nombre?.trim() || null,
+          nombre: dto.nombre?.trim() || nombreJornadaPorDefecto(inicio),
           inicio,
           fin,
           orden: (ultimo?.orden ?? 0) + 1,
@@ -107,7 +110,9 @@ export class DiasEventoService {
         where: { id },
         data: {
           nombre:
-            dto.nombre === undefined ? undefined : dto.nombre.trim() || null,
+            dto.nombre === undefined
+              ? undefined
+              : dto.nombre.trim() || nombreJornadaPorDefecto(inicio),
           inicio: dto.inicio ? inicio : undefined,
           fin: dto.fin ? fin : undefined,
           aforoMaximo: dto.aforoMaximo,

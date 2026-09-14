@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsArray, IsInt, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class CrearCategoriaTicketDto {
   @IsString()
@@ -12,9 +12,12 @@ export class CrearCategoriaTicketDto {
   @IsString()
   nombre: string;
 
+  // Lista de beneficios/features ("Baño compartido", "Acceso VIP"...), una
+  // fila por línea — se muestran como bullets en la landing pública.
   @IsOptional()
-  @IsString()
-  descripcion?: string;
+  @IsArray()
+  @IsString({ each: true })
+  beneficios?: string[];
 
   @Type(() => Number)
   @IsInt()

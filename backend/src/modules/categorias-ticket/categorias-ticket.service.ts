@@ -13,6 +13,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { CrearCategoriaTicketDto } from './dto/crear-categoria-ticket.dto';
+import { ActualizarCategoriaTicketDto } from './dto/actualizar-categoria-ticket.dto';
 
 @Injectable()
 export class CategoriasTicketService {
@@ -74,7 +75,32 @@ export class CategoriasTicketService {
         eventoId: dto.eventoId,
         diaEventoId: dto.diaEventoId,
         nombre: dto.nombre,
-        descripcion: dto.descripcion,
+        beneficios: dto.beneficios?.filter((b) => b.trim() !== '') ?? [],
+        cantidad: dto.cantidad,
+        precio: dto.precio,
+      },
+    });
+  }
+
+  /**
+   * Solo nombre/beneficios/cantidad/precio (ver el DTO). El caso que motivó
+   * esto: subir el cupo de una categoría que se agotó más rápido de lo
+   * esperado, sin tener que borrarla y perder lo ya vendido.
+   */
+  async actualizar(id: string, dto: ActualizarCategoriaTicketDto) {
+    const categoria = await this.prisma.categoriaTicket.findUnique({ where: { id } });
+    if (!categoria) throw new NotFoundException('Categoría no encontrada');
+    await this.eventoPolicy.porEvento(categoria.eventoId);
+    if (dto.cantidad !== undefined && dto.cantidad < categoria.cantidadVendida) {
+      throw new ConflictException(
+        `No se puede bajar el cupo a ${dto.cantidad}: ya hay ${categoria.cantidadVendida} entradas vendidas o reservadas.`,
+      );
+    }
+    return this.prisma.categoriaTicket.update({
+      where: { id },
+      data: {
+        nombre: dto.nombre,
+        beneficios: dto.beneficios?.filter((b) => b.trim() !== ''),
         cantidad: dto.cantidad,
         precio: dto.precio,
       },

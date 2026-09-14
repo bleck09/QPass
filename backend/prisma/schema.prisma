@@ -496,7 +496,11 @@ model CategoriaTicket {
   eventoId        String
   diaEventoId     String   // toda categoría pertenece a una jornada (ver DiaEvento)
   nombre          String
-  descripcion     String?
+  // Lista de beneficios/features de esta categoría (una fila por línea, ej.
+  // "Baño compartido", "Acceso a zona VIP") — se muestran como bullets en la
+  // landing pública (ver App.jsx). Reemplaza a la vieja `descripcion` única
+  // (un solo texto largo, "se hacía un chorizo" en el card).
+  beneficios      String[] @default([])
   cantidad        Int
   cantidadVendida Int      @default(0)
   precio          Decimal  @db.Decimal(10, 2)

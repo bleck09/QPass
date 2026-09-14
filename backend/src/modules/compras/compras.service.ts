@@ -73,11 +73,6 @@ export class ComprasService {
       );
     }
 
-    const correos = dto.entradas.map((e) => e.correo.trim().toLowerCase());
-    if (new Set(correos).size !== correos.length) {
-      throw new BadRequestException('Cada entrada necesita un correo distinto');
-    }
-
     const idsCategoriaPedidos = [
       ...new Set(dto.entradas.map((e) => e.categoriaTicketId)),
     ];
@@ -98,23 +93,54 @@ export class ComprasService {
     const diaDe = (categoriaTicketId: string) =>
       categorias.find((c) => c.id === categoriaTicketId)?.diaEventoId ?? null;
 
-    const titularesEnLote = dto.entradas.filter((e) => e.isTitular).length;
-    if (titularesEnLote > 1) {
-      throw new BadRequestException(
-        'Solo puede haber una entrada tuya (titular) por compra',
-      );
+    // El correo debe ser único DENTRO de cada jornada (la misma persona puede
+    // repetirse en noches distintas del mismo evento: es normal comprar para
+    // "vos" y para un invitado en la noche 1 y volver a comprarles la noche 2
+    // en el mismo pedido). Sin jornada (evento de una sola noche), se agrupan
+    // todas bajo una única clave, igual que antes.
+    const correosPorJornada = new Map<string, string[]>();
+    for (const e of dto.entradas) {
+      const clave = diaDe(e.categoriaTicketId) ?? '__sin_jornada__';
+      const lista = correosPorJornada.get(clave) ?? [];
+      lista.push(e.correo.trim().toLowerCase());
+      correosPorJornada.set(clave, lista);
     }
-    if (titularesEnLote === 1) {
-      // La entrada titular ya no se bloquea "por evento" sino "por JORNADA": si
-      // ya tenés la tuya para esa noche no podés comprar otra, pero sí para otra
-      // jornada del mismo evento (típico: la noche 1 ya pasó y querés la noche 2).
-      const entradaTitular = dto.entradas.find((e) => e.isTitular)!;
-      const diaTitular = diaDe(entradaTitular.categoriaTicketId);
+    for (const correosDia of correosPorJornada.values()) {
+      if (new Set(correosDia).size !== correosDia.length) {
+        throw new BadRequestException(
+          'Cada entrada de una misma jornada necesita un correo distinto',
+        );
+      }
+    }
+
+    // La entrada titular se bloquea "por JORNADA", no por compra entera: en un
+    // evento de varias noches, un mismo pedido puede traer tu propia entrada
+    // para la noche 1 Y para la noche 2 (dos jornadas distintas) — lo que no
+    // vale es repetir DOS veces tu titular para la MISMA noche.
+    const titularesPorJornada = new Map<string, number>();
+    for (const e of dto.entradas) {
+      if (!e.isTitular) continue;
+      const clave = diaDe(e.categoriaTicketId) ?? '__sin_jornada__';
+      titularesPorJornada.set(clave, (titularesPorJornada.get(clave) ?? 0) + 1);
+    }
+    for (const cantidad of titularesPorJornada.values()) {
+      if (cantidad > 1) {
+        throw new BadRequestException(
+          'Solo puede haber una entrada tuya (titular) por jornada en esta compra',
+        );
+      }
+    }
+    for (const [clave] of titularesPorJornada) {
+      const diaTitular = clave === '__sin_jornada__' ? null : clave;
+      // OJO: sin filtrar por isTitular. Si otra persona ya te compró (y se
+      // aprobó) una entrada de invitado para esta jornada, esa Entrada queda
+      // vinculada a tu cuenta (usuarioId) igual que si la hubieras comprado
+      // vos — no deberías poder comprarte encima una segunda para la misma
+      // noche solo porque en AQUELLA no fuiste vos el titular.
       const yaTiene = await this.prisma.entrada.findFirst({
         where: {
           eventoId: dto.eventoId,
           usuarioId: compradorId,
-          isTitular: true,
           compra: { estado: { not: 'rechazado' } },
           ...(diaTitular ? { diaEventoId: diaTitular } : {}),
         },
@@ -122,7 +148,7 @@ export class ComprasService {
       if (yaTiene) {
         throw new ConflictException(
           diaTitular
-            ? 'Ya tienes tu entrada para esa jornada; las demás de esta compra deben ser para invitados.'
+            ? 'Ya tienes una entrada para esa jornada; las demás de esta compra deben ser para invitados.'
             : 'Ya tienes una entrada para este evento; las demás deben ser para invitados.',
         );
       }

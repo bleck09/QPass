@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
@@ -9,12 +9,12 @@ import Tabla from '../../components/Tabla.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import {
   FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaUpload, FaQrcode,
   FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen,
-  FaRegCircle, FaRocket, FaEyeSlash, FaCalendarAlt, FaListUl
+  FaRegCircle, FaRocket, FaEyeSlash, FaCalendarAlt, FaListUl, FaInfoCircle
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
@@ -32,19 +32,50 @@ import Admin from './Admin.jsx';
 import './AdminGestionEventos.css';
 
 // Pestañas del detalle de evento (todo se ve acá mismo, sin cambiar de página).
+// Orden = el flujo sugerido para armar un evento de punta a punta: primero
+// cuándo es (jornadas), después qué se vende y con qué acceso, y al final lo
+// que no bloquea publicar (mapa, opcional) ni depende de tener ya compras
+// (asignar gente, reportes, solicitudes).
 const PESTANAS = [
-  { id: 'asignados', label: 'Usuarios asignados', icono: <FaUsers /> },
   { id: 'jornadas', label: 'Jornadas', icono: <FaCalendarAlt /> },
   { id: 'tickets', label: 'Tickets del Evento', icono: <FaTicketAlt /> },
-  { id: 'solicitudes', label: 'Solicitudes de Entradas', icono: <FaClipboardList /> },
-  { id: 'reportes', label: 'Reportes', icono: <FaExclamationTriangle /> },
   { id: 'qr', label: 'Generar QR', icono: <FaQrcode /> },
   { id: 'config', label: 'Configurar Página', icono: <FaCog /> },
-  { id: 'mapa', label: 'Mapa', icono: <FaMapMarkedAlt /> },
+  { id: 'mapa', label: 'Mapa (opcional)', icono: <FaMapMarkedAlt /> },
+  { id: 'asignados', label: 'Usuarios asignados', icono: <FaUsers /> },
+  { id: 'reportes', label: 'Reportes', icono: <FaExclamationTriangle /> },
+  { id: 'solicitudes', label: 'Solicitudes de Entradas', icono: <FaClipboardList /> },
 ];
 
 const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
-const FORM_EVENTO_VACIO = { nombre: '', lugar: '', coordenadas: '', fecha: '', fechaFin: '', imagen: '', tipoManilla: 'fisica', clienteId: '', diasParaRetiro: '' };
+const FORM_EVENTO_VACIO = {
+  nombre: '', lugar: '', coordenadas: '',
+  // diaInicio/diaFin: 'YYYY-MM-DD' del calendario, tanto al Crear como al
+  // Editar (sin hora — eso se ajusta por jornada). Ver handleGuardarEvento.
+  diaInicio: '', diaFin: '',
+  // Con un rango de 2+ días elegido AL CREAR: ¿una sola jornada para todo el
+  // rango, o una jornada por cada día? Solo tiene sentido al crear (recién
+  // ahí el evento nace con una única jornada sin nada enganchado todavía) —
+  // ver handleGuardarEvento.
+  dividirJornadas: false,
+  imagen: '', tipoManilla: 'fisica', clienteId: '', diasParaRetiro: '',
+};
+
+// Lista de 'YYYY-MM-DD' desde `desdeISO` hasta `hastaISO`, ambos inclusive —
+// para crear una jornada por día cuando el Admin elige "dividir" el rango.
+const diasEntre = (desdeISO, hastaISO) => {
+  const dias = [];
+  const cursor = new Date(`${desdeISO}T00:00`);
+  const fin = new Date(`${hastaISO}T00:00`);
+  while (cursor <= fin) {
+    const y = cursor.getFullYear();
+    const m = String(cursor.getMonth() + 1).padStart(2, '0');
+    const d = String(cursor.getDate()).padStart(2, '0');
+    dias.push(`${y}-${m}-${d}`);
+    cursor.setDate(cursor.getDate() + 1);
+  }
+  return dias;
+};
 const MAX_IMAGEN_BYTES = 3 * 1024 * 1024; // 3 MB
 
 // ISO -> valor para <input type="datetime-local"> (YYYY-MM-DDTHH:mm, hora local).
@@ -54,6 +85,13 @@ const isoADatetimeLocal = (iso) => {
   const pad = (n) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
+
+// 'YYYY-MM-DD' -> "domingo 13 de septiembre", para mostrar el rango elegido
+// en el calendario de Crear Evento (sin depender de formatearFecha, que espera
+// un ISO con hora).
+const diaLocalLegible = (diaISO) => diaISO
+  ? new Date(`${diaISO}T00:00`).toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long' })
+  : '';
 
 export default function AdminGestionEventos() {
   useTituloPagina('Gestión de eventos');
@@ -94,6 +132,16 @@ export default function AdminGestionEventos() {
   // (?formulario=crear o ?formulario=<id>), con el mismo soporte de "Atrás".
   const [formularioParam, abrirFormularioUrl, cerrarFormularioUrl] = useDetalleUrl('formulario');
   const editandoId = formularioParam && formularioParam !== 'crear' ? formularioParam : null;
+  // Acceso directo SOLO para la transición "crear evento -> abrir su detalle":
+  // cerrar el formulario (useDetalleUrl('formulario')) y abrir el detalle
+  // (useDetalleUrl('evento')) son dos setSearchParams separados: llamados uno
+  // tras otro en el mismo tick, cada uno parte del mismo `location.search`
+  // "viejo" (React todavía no re-renderizó entre medio), así que el segundo
+  // pisa al primero y el resultado termina siendo "los dos parámetros puestos"
+  // en vez de "uno cerrado, el otro abierto" — quedaba el formulario reabierto
+  // (vacío) como si crear no hubiera hecho nada, aunque el evento sí se creó.
+  // Acá se hace UNA sola navegación combinada para evitar la carrera.
+  const [, setSearchParams] = useSearchParams();
 
   // Compat.: si se llega con location.state.eventoId (accesos rápidos de otra
   // página) y aún no está en la URL, lo abrimos.
@@ -113,6 +161,11 @@ export default function AdminGestionEventos() {
   const [errorImagen, setErrorImagen] = useState('');
   const [errorFormEvento, setErrorFormEvento] = useState('');
   const [previewFallo, setPreviewFallo] = useState(false);
+  // Falta la ubicación (obligatoria): remarca el campo del mapa y lo trae a
+  // la vista en vez de solo mostrar un texto de error al fondo del formulario
+  // — si no, con un formulario largo parece que el botón "no hizo nada".
+  const [faltaUbicacion, setFaltaUbicacion] = useState(false);
+  const ubicacionRef = useRef(null);
 
   const abrirCrearEvento = () => abrirFormularioUrl('crear');
   const abrirEditarEvento = (ev) => abrirFormularioUrl(ev.id);
@@ -129,6 +182,7 @@ export default function AdminGestionEventos() {
       setFormEvento(FORM_EVENTO_VACIO);
       setErrorImagen('');
       setErrorFormEvento('');
+      setFaltaUbicacion(false);
       setPreviewFallo(false);
     } else if (formularioParam) {
       const ev = eventos.find(e => e.id === formularioParam);
@@ -140,13 +194,17 @@ export default function AdminGestionEventos() {
           coordenadas: ev.coordenadas || '',
           imagen: ev.imagen || '',
           tipoManilla: ev.tipoManilla || 'fisica',
-          fecha: isoADatetimeLocal(ev.fecha),
-          fechaFin: isoADatetimeLocal(ev.fechaFin),
+          // Mismo calendario que Crear (ver más abajo): se parte del rango
+          // actual del evento, sin la hora (eso lo maneja cada jornada).
+          diaInicio: isoADatetimeLocal(ev.fecha).slice(0, 10),
+          diaFin: isoADatetimeLocal(ev.fechaFin).slice(0, 10),
+          dividirJornadas: false,
           clienteId: ev.clienteId != null ? String(ev.clienteId) : '',
           diasParaRetiro: ev.diasParaRetiro != null ? String(ev.diasParaRetiro) : '',
         });
         setErrorImagen('');
         setErrorFormEvento('');
+        setFaltaUbicacion(false);
         setPreviewFallo(false);
       }
       // si el evento todavía no está en `eventos` (aún cargando), no se marca
@@ -209,6 +267,11 @@ export default function AdminGestionEventos() {
   const [vistaEventos, setVistaEventos] = useState('lista'); // 'lista' | 'calendario'
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
+  // Si la manilla pasó a digital estando en la pestaña "Generar QR" (que ahí
+  // deja de mostrarse), no dejar al Admin viendo una pestaña fantasma.
+  if (eventoDetalle && pestana === 'qr' && eventoDetalle.tipoManilla === 'digital') {
+    setPestana('jornadas');
+  }
 
   // Qué le falta al evento para poder publicarse (tickets, QR, página, mapa).
   // Se recarga cada vez que se cambia de pestaña: es el punto natural en el que
@@ -277,17 +340,26 @@ export default function AdminGestionEventos() {
 
   const handleGuardarEvento = async (e) => {
     e.preventDefault();
-    if (!formEvento.nombre.trim() || !formEvento.lugar.trim() || !formEvento.fecha || !formEvento.fechaFin) return;
+    if (!formEvento.nombre.trim() || !formEvento.lugar.trim()) return;
+    // Los días se eligen en el calendario, tanto al crear como al editar (sin
+    // hora — eso se ajusta por jornada, ver AdminJornadas para el detalle).
+    if (!formEvento.diaInicio || !formEvento.diaFin) return;
     if (!formEvento.coordenadas) {
-      setErrorFormEvento('Marcá la ubicación del evento en el mapa: es obligatoria (se muestra en la página pública y sirve de base para el plano del recinto).');
+      setFaltaUbicacion(true);
+      ubicacionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    setFaltaUbicacion(false);
     setErrorFormEvento('');
 
     // clienteId / diasParaRetiro vacíos -> se omiten (el backend usa el default).
-    const { clienteId, diasParaRetiro, ...resto } = formEvento;
+    const { clienteId, diasParaRetiro, diaInicio, diaFin, dividirJornadas, ...resto } = formEvento;
     const payload = {
       ...resto,
+      // Sin hora todavía: abarca el/los día(s) completo(s) elegidos en el
+      // calendario; la hora real de cada noche se define en Jornadas.
+      fecha: `${diaInicio}T00:00`,
+      fechaFin: `${diaFin}T23:59`,
       ...(clienteId ? { clienteId: Number(clienteId) } : {}),
       ...(diasParaRetiro ? { diasParaRetiro: Number(diasParaRetiro) } : {}),
     };
@@ -302,9 +374,42 @@ export default function AdminGestionEventos() {
 
       const nuevo = await api.eventos.crear(payload);
       setEventos(prev => [nuevo, ...prev]);
+
+      // "Una jornada por cada día": el evento nace con UNA jornada que
+      // abarca todo el rango (ver EventosService.crear) — acá se la achica a
+      // solo el primer día y se agrega una más por cada día siguiente, en
+      // vez de una entrada que sirva para cualquier día del rango.
+      if (dividirJornadas && diaInicio !== diaFin) {
+        const dias = diasEntre(diaInicio, diaFin);
+        const [jornadaUnica] = await api.diasEvento.listar(nuevo.id);
+        if (jornadaUnica) {
+          await api.diasEvento.actualizar(jornadaUnica.id, {
+            inicio: new Date(`${dias[0]}T00:00`).toISOString(),
+            fin: new Date(`${dias[0]}T23:59`).toISOString(),
+          });
+          for (const dia of dias.slice(1)) {
+            await api.diasEvento.crear({
+              eventoId: nuevo.id,
+              inicio: new Date(`${dia}T00:00`).toISOString(),
+              fin: new Date(`${dia}T23:59`).toISOString(),
+            });
+          }
+        }
+      }
+
       setFormEvento(FORM_EVENTO_VACIO);
-      cerrarFormularioUrl();
-      abrirDetalle(nuevo.id);
+      // Recién creado, el primer paso del flujo es Jornadas (confirmar/editar
+      // la única noche que ya trae por defecto, o agregar más si hace falta).
+      setPestana('jornadas');
+      // Cierra el formulario Y abre el detalle en una sola navegación (ver
+      // comentario junto a `setSearchParams` más arriba) — evita la carrera
+      // que dejaba el formulario reabierto como si crear no hubiera hecho nada.
+      setSearchParams((prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete('formulario');
+        next.set('evento', nuevo.id);
+        return next;
+      });
     } catch (err) {
       // El backend rechaza fechas que se cruzan con otro evento activo ("un
       // evento a la vez"): el mensaje ya viene listo para mostrar tal cual.
@@ -380,6 +485,29 @@ export default function AdminGestionEventos() {
     if (!ok) return;
     const actualizado = await api.eventos.despublicar(eventoDetalle.id);
     setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+  };
+
+  // Borrado real (no archivar): solo tiene sentido para un borrador que
+  // resultó ser un error/prueba, antes de que nadie compre nada — el
+  // backend rechaza si ya está publicado o si ya tiene compras.
+  const [errorEliminar, setErrorEliminar] = useState('');
+  const handleEliminar = async () => {
+    if (!eventoDetalle) return;
+    const ok = await confirmar({
+      titulo: '¿Eliminar este evento?',
+      mensaje: `"${eventoDetalle.nombre}" se borra por completo (jornadas, tickets, mapa, página, usuarios asignados...) — no se puede deshacer. Si preferís conservarlo como referencia, usá "Archivar" en vez de esto.`,
+      textoConfirmar: 'Eliminar evento',
+      peligroso: true,
+    });
+    if (!ok) return;
+    setErrorEliminar('');
+    try {
+      await api.eventos.eliminar(eventoDetalle.id);
+      setEventos(prev => prev.filter(ev => ev.id !== eventoDetalle.id));
+      cerrarDetalle();
+    } catch (err) {
+      setErrorEliminar(err.message);
+    }
   };
 
   if (errorDatos) {
@@ -463,26 +591,68 @@ export default function AdminGestionEventos() {
                   placeholder="30 (por defecto)"
                 />
               </div>
-              <div className="pi-ges-input-group">
+              <div className={`pi-ges-input-group${faltaUbicacion ? ' pi-ges-campo-error' : ''}`} ref={ubicacionRef}>
                 <label>Ubicación en el mapa</label>
                 <MapaSelector
                   value={formEvento.coordenadas}
-                  onChange={(coords) => setFormEvento(f => ({ ...f, coordenadas: coords }))}
+                  onChange={(coords) => {
+                    setFormEvento(f => ({ ...f, coordenadas: coords }));
+                    if (coords) setFaltaUbicacion(false);
+                  }}
                 />
+                {faltaUbicacion && (
+                  <p className="pi-ges-error-fechas"><FaExclamationTriangle aria-hidden="true" /> Hacé clic en el mapa para marcar el lugar — es obligatorio.</p>
+                )}
               </div>
               <div className="pi-ges-input-group">
-                <label htmlFor="ev-fecha">Fecha y hora de inicio</label>
-                <input
-                  id="ev-fecha" type="datetime-local" name="fecha" value={formEvento.fecha} onChange={handleChangeFormEvento}
-                  required
+                <label>Días del evento</label>
+                <p className="pi-ges-ayuda-campo">
+                  <FaInfoCircle aria-hidden="true" /> Elegí en el calendario qué día(s) abarca — un clic marca un
+                  solo día, un segundo clic cierra el rango. La hora exacta de cada noche se ajusta después en
+                  "Jornadas".
+                </p>
+                <CalendarioEventos
+                  eventos={eventos.filter(ev => ev.id !== editandoId)}
+                  modoSeleccion
+                  rangoSeleccionado={formEvento.diaInicio ? { desde: formEvento.diaInicio, hasta: formEvento.diaFin } : null}
+                  onCambiarRango={(rango) => setFormEvento(f => ({ ...f, diaInicio: rango.desde, diaFin: rango.hasta }))}
                 />
-              </div>
-              <div className="pi-ges-input-group">
-                <label htmlFor="ev-fechaFin">Fecha y hora de cierre</label>
-                <input
-                  id="ev-fechaFin" type="datetime-local" name="fechaFin" value={formEvento.fechaFin} onChange={handleChangeFormEvento}
-                  min={formEvento.fecha || undefined} required
-                />
+                {formEvento.diaInicio && (
+                  <p className="pi-ges-ayuda-campo">
+                    {formEvento.diaInicio === formEvento.diaFin
+                      ? `Elegido: ${diaLocalLegible(formEvento.diaInicio)}`
+                      : `Elegido: del ${diaLocalLegible(formEvento.diaInicio)} al ${diaLocalLegible(formEvento.diaFin)}`}
+                  </p>
+                )}
+
+                {/* Solo al crear: recién ahí el evento nace con una única
+                    jornada sin nada enganchado todavía, así que dividirla es
+                    seguro. Al editar, las jornadas puntuales (con su hora
+                    real) se siguen tocando en la pestaña "Jornadas". */}
+                {!editandoId && formEvento.diaInicio && formEvento.diaInicio !== formEvento.diaFin && (
+                  <div className="pi-ges-radio-jornadas">
+                    <label className="pi-ges-radio-opcion">
+                      <input
+                        type="radio" name="dividirJornadas" checked={!formEvento.dividirJornadas}
+                        onChange={() => setFormEvento(f => ({ ...f, dividirJornadas: false }))}
+                      />
+                      <span>
+                        <strong>Una sola jornada para todo el rango</strong>
+                        <small>Una entrada sirve para cualquiera de esos días (ej. un pase de fin de semana).</small>
+                      </span>
+                    </label>
+                    <label className="pi-ges-radio-opcion">
+                      <input
+                        type="radio" name="dividirJornadas" checked={formEvento.dividirJornadas}
+                        onChange={() => setFormEvento(f => ({ ...f, dividirJornadas: true }))}
+                      />
+                      <span>
+                        <strong>Una jornada por cada día</strong>
+                        <small>Se crea una jornada separada por día (ej. entrada solo para el viernes, otra solo para el sábado). Después en "Jornadas" ajustás la hora real de cada una.</small>
+                      </span>
+                    </label>
+                  </div>
+                )}
               </div>
               <div className="pi-ges-input-group">
                 <label htmlFor="ev-imagen"><FaImage aria-hidden="true" /> Imagen del evento (opcional)</label>
@@ -593,8 +763,19 @@ export default function AdminGestionEventos() {
                   <FaArchive /> Archivar
                 </button>
               )}
+              {/* Borrado real: solo para un borrador (nunca publicado), a
+                  diferencia de "Archivar" que es para uno que ya terminó. */}
+              {!eventoDetalle.archivadoEn && !eventoDetalle.publicadoEn && (
+                <button type="button" className="pi-ges-btn-eliminar" onClick={handleEliminar}>
+                  <FaTrash /> Eliminar
+                </button>
+              )}
             </div>
           </div>
+
+          {errorEliminar && (
+            <p className="pi-ges-progreso-error"><FaExclamationTriangle /> {errorEliminar}</p>
+          )}
 
           {eventoDetalle.archivadoEn && (
             <p className="pi-ges-aviso-archivado">
@@ -646,7 +827,9 @@ export default function AdminGestionEventos() {
           )}
 
           <div className="pi-ges-tabs" role="tablist" aria-label="Secciones del evento">
-            {PESTANAS.map(p => (
+            {/* Manilla digital: el QR nace solo al aprobar cada compra, no hay
+                pool que generar — ese paso no aplica, así que no se muestra. */}
+            {PESTANAS.filter(p => p.id !== 'qr' || eventoDetalle.tipoManilla !== 'digital').map(p => (
               <button
                 key={p.id}
                 type="button"
@@ -665,11 +848,18 @@ export default function AdminGestionEventos() {
 
           {pestana === 'jornadas' && <AdminJornadas eventoId={eventoDetalle.id} soloLectura={!!eventoDetalle.archivadoEn} />}
           {pestana === 'tickets' && <AdminCrearTickets eventoId={eventoDetalle.id} embebido />}
-          {pestana === 'solicitudes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="solicitudesEntradas" />}
-          {pestana === 'reportes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="incidencias" />}
           {pestana === 'qr' && <AdminCrearQr eventoId={eventoDetalle.id} tipoManilla={eventoDetalle.tipoManilla} embebido />}
-          {pestana === 'config' && <AdminConfigurarPagina eventoId={eventoDetalle.id} embebido />}
+          {pestana === 'config' && (
+            <AdminConfigurarPagina
+              eventoId={eventoDetalle.id}
+              eventoNombre={eventoDetalle.nombre}
+              eventoImagen={eventoDetalle.imagen}
+              embebido
+            />
+          )}
           {pestana === 'mapa' && <Mapa eventoId={eventoDetalle.id} embebido />}
+          {pestana === 'reportes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="incidencias" />}
+          {pestana === 'solicitudes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="solicitudesEntradas" />}
 
           {pestana === 'asignados' && (
           <section className="pi-ges-seccion">

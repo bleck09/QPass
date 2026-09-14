@@ -80,7 +80,16 @@ export default function App() {
     ]);
     return {
       evento: activo,
-      data: cfg ? { ...defaultLandingData, ...cfg } : defaultLandingData,
+      // El título SIEMPRE es el nombre real del evento (no hay un "título de
+      // landing" separado para editar, ver AdminConfigurarPagina.jsx) y la
+      // imagen, si no se subió una específica para la landing, cae en la
+      // portada del evento antes que en la foto de stock de relleno.
+      data: {
+        ...defaultLandingData,
+        ...cfg,
+        titulo: activo.nombre,
+        imagen: cfg?.imagen || activo.imagen || defaultLandingData.imagen,
+      },
       precios: categorias.length > 0
         ? categorias.map(c => ({
             id: c.id,
@@ -89,7 +98,7 @@ export default function App() {
               ? `${c.diaEvento.nombre || `Día ${c.diaEvento.orden}`} · ${c.nombre}`
               : c.nombre,
             precio: `${c.precio} Bs`, destacado: false,
-            beneficios: [c.descripcion || 'Acceso al evento'],
+            beneficios: c.beneficios?.length ? c.beneficios : ['Acceso al evento'],
             cantidad: c.cantidad, disponibles: c.disponibles,
           }))
         : defaultLandingData.precios,

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpStatus,
@@ -39,6 +40,15 @@ export class EventosController {
     return this.eventosService.obtenerPorId(id);
   }
 
+  // Igual que obtenerPorId, pero sin filtrar por publicado — para pantallas
+  // de Admin (ej. Mapa.jsx) que necesitan ver un evento puntual aunque
+  // todavía esté en borrador.
+  @Get(':id/admin')
+  @Roles('Admin')
+  obtenerPorIdAdmin(@Param('id') id: string) {
+    return this.eventosService.obtenerPorIdAdmin(id);
+  }
+
   @Get(':id/progreso')
   @Roles('Admin')
   progreso(@Param('id') id: string) {
@@ -71,6 +81,13 @@ export class EventosController {
     @UsuarioActual('id') adminId: number,
   ) {
     return this.eventosService.actualizarContorno(id, dto.contorno, adminId);
+  }
+
+  @Delete(':id')
+  @Roles('Admin')
+  @HttpCode(HttpStatus.OK)
+  eliminar(@Param('id') id: string, @UsuarioActual('id') adminId: number) {
+    return this.eventosService.eliminar(id, adminId);
   }
 
   @Post(':id/cerrar')

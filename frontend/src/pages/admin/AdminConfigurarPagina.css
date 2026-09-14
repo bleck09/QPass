@@ -123,28 +123,52 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  border: 1px solid var(--border-strong);
-  padding: 8px 12px;
+}
+
+/* Cuadrado grande clickeable — el <input type="color"> real va invisible
+   encima (mismo truco que .upload-input-hidden), así se ve consistente en
+   todos los navegadores en vez del cuadradito nativo chico. */
+.pi-admin-color-swatch {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
   border-radius: var(--radius-md);
-  background-color: var(--bg-page);
-}
-
-.pi-admin-color-picker input[type="color"] {
-  border: none;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
+  border: 2px solid var(--border-strong);
+  overflow: hidden;
   cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s;
+}
+.pi-admin-color-swatch:hover { border-color: var(--cian-digital); }
+
+.pi-admin-color-swatch input[type="color"] {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
   padding: 0;
-  background: transparent;
+  border: none;
+  opacity: 0;
+  cursor: pointer;
 }
 
-.hex-label {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
+.pi-admin-color-hex {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  outline: none;
   font-family: monospace;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+  transition: border-color 0.2s;
 }
+.pi-admin-color-hex:focus { border-color: var(--cian-digital); }
 
 /* Formularios Generales */
 .pi-admin-form-group {
@@ -165,21 +189,22 @@
 
 .pi-admin-form-group input:focus, .pi-admin-form-group textarea:focus { border-color: var(--cian-digital); }
 
-/* --- UPLOAD IMAGEN --- */
-.pi-admin-image-upload-wrapper {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
-}
-
-.pi-admin-btn-upload {
-  background-color: var(--bg-page); color: var(--text-primary); border: 1px solid var(--border-strong);
-  padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600; cursor: pointer;
-  display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s;
-}
-
-.pi-admin-btn-upload:hover { background-color: var(--border); }
-
+/* --- IMAGEN (el upload en sí usa .upload-zone/.preview-zone globales, ver forms.css) --- */
 .pi-admin-preview-img {
-  width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-md); margin-top: 8px; border: 1px solid var(--border);
+  width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: 8px; border: 1px solid var(--border);
+}
+
+/* El nombre del evento no se edita acá (viene de Gestión de Eventos) — se
+   muestra como texto fijo, no un input, para que no parezca editable. */
+.pi-admin-titulo-fijo {
+  margin: 0;
+  padding: 8px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-page);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  font-weight: 600;
 }
 
 /* --- LISTAS DINÁMICAS --- */

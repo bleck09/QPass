@@ -29,26 +29,53 @@ export function proyectarContorno(contorno) {
   if (!Array.isArray(contorno) || contorno.length < 3) return null;
 
   const lats = contorno.map(([lat]) => lat);
-  const lngs = contorno.map(([, lng]) => lng);
-  const latMin = Math.min(...lats);
-  const latMax = Math.max(...lats);
-  const lngMin = Math.min(...lngs);
-  const lngMax = Math.max(...lngs);
-  const latMedia = (latMin + latMax) / 2;
+  const latMedia = (Math.min(...lats) + Math.max(...lats)) / 2;
   // A esta latitud, un grado de longitud mide menos metros que uno de
   // latitud — sin esto el contorno saldría estirado horizontalmente.
   const factorEquirect = Math.cos((latMedia * Math.PI) / 180) || 1;
 
-  const anchoCrudo = (lngMax - lngMin) * factorEquirect;
-  const altoCrudo = latMax - latMin;
+  // Coordenadas locales "crudas" (proporcionales a metros), todavía con la
+  // orientación real que tuvo el contorno al dibujarlo en el mapa (cualquier
+  // ángulo del compás — ningún terreno queda perfectamente norte-sur).
+  const crudos = contorno.map(([lat, lng]) => [lng * factorEquirect, lat]);
+
+  // Endereza el contorno: gira todo para que su lado más largo quede
+  // horizontal. Sin esto, un recinto más o menos rectangular en la realidad
+  // se ve como un rombo torcido en el plano, según hacia dónde haya quedado
+  // orientado en el mapa real — acá no importa el norte, importa que se vea
+  // como un plano normal.
+  let mejorAngulo = 0;
+  let mejorLargo = -1;
+  for (let i = 0; i < crudos.length; i++) {
+    const [x1, y1] = crudos[i];
+    const [x2, y2] = crudos[(i + 1) % crudos.length];
+    const largo = Math.hypot(x2 - x1, y2 - y1);
+    if (largo > mejorLargo) {
+      mejorLargo = largo;
+      mejorAngulo = Math.atan2(y2 - y1, x2 - x1);
+    }
+  }
+  const cos = Math.cos(-mejorAngulo);
+  const sin = Math.sin(-mejorAngulo);
+  const girados = crudos.map(([x, y]) => [x * cos - y * sin, x * sin + y * cos]);
+
+  const xs = girados.map(([x]) => x);
+  const ys = girados.map(([, y]) => y);
+  const xMin = Math.min(...xs);
+  const xMax = Math.max(...xs);
+  const yMin = Math.min(...ys);
+  const yMax = Math.max(...ys);
+
+  const anchoCrudo = xMax - xMin;
+  const altoCrudo = yMax - yMin;
   const ladoMayorCrudo = Math.max(anchoCrudo, altoCrudo) || 1;
   const escala = (LADO_MAXIMO - 2 * MARGEN) / ladoMayorCrudo;
 
-  const puntos = contorno.map(([lat, lng]) => [
-    MARGEN + (lng - lngMin) * factorEquirect * escala,
-    // El eje Y de pantalla crece hacia abajo; la latitud crece hacia el
-    // norte -> se invierte para que el contorno no salga espejado.
-    MARGEN + (latMax - lat) * escala,
+  const puntos = girados.map(([x, y]) => [
+    MARGEN + (x - xMin) * escala,
+    // El eje Y de pantalla crece hacia abajo -> se invierte para que no
+    // quede espejado.
+    MARGEN + (yMax - y) * escala,
   ]);
 
   return {

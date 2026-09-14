@@ -1,7 +1,22 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import iconUrl from 'leaflet/dist/images/marker-icon.png';
+import iconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png';
+import shadowUrl from 'leaflet/dist/images/marker-shadow.png';
 import './ContornoRecinto.css';
+
+// Mismo problema (y mismo fix) que MapaSelector.jsx: el ícono POR DEFECTO de
+// Leaflet no resuelve bien con bundlers. A diferencia de "arreglar el default
+// global" (poco confiable acá), se arma un ícono explícito y se lo pasa a
+// cada marcador — es lo que ya funciona en MapaSelector.jsx.
+const ICONO_UBICACION = L.icon({
+  iconUrl, iconRetinaUrl, shadowUrl,
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+});
 
 const CENTRO_DEFECTO = [-17.3895, -66.1568]; // Cochabamba, igual que MapaSelector
 
@@ -28,6 +43,7 @@ export default function ContornoRecinto({ centro, value, onChange }) {
   const contenedorRef = useRef(null);
   const mapaRef = useRef(null);
   const capaRef = useRef(null); // LayerGroup con el polígono/polilínea + vértices
+  const marcadorCentroRef = useRef(null); // pin fijo: dónde está el evento (referencia, no editable acá)
   const valueRef = useRef(value);
   const onChangeRef = useRef(onChange);
   useEffect(() => { valueRef.current = value; });
@@ -45,6 +61,15 @@ export default function ContornoRecinto({ centro, value, onChange }) {
     }).addTo(mapa);
 
     capaRef.current = L.layerGroup().addTo(mapa);
+
+    // Pin fijo de referencia: acá está el evento (Evento.latitud/longitud) —
+    // sin esto, un mapa recién abierto (sin contorno todavía) no tiene NADA
+    // marcado y no hay forma de saber dónde hay que empezar a dibujar.
+    if (centro) {
+      marcadorCentroRef.current = L.marker(centro, { icon: ICONO_UBICACION })
+        .addTo(mapa)
+        .bindPopup('Ubicación del evento');
+    }
 
     mapa.on('click', (e) => {
       const actual = valueRef.current || [];
@@ -70,15 +95,25 @@ export default function ContornoRecinto({ centro, value, onChange }) {
       mapa.remove();
       mapaRef.current = null;
       capaRef.current = null;
+      marcadorCentroRef.current = null;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Si la ubicación del evento llega después del montaje (carga async) y
-  // todavía no hay contorno dibujado, centra ahí. Si ya hay vértices, no le
-  // pisa la vista al usuario que está editando.
+  // Si la ubicación del evento llega después del montaje (carga async), pone
+  // (o mueve) el pin de referencia. Además, si todavía no hay contorno
+  // dibujado, centra el mapa ahí — si ya hay vértices, no le pisa la vista al
+  // usuario que está editando.
   useEffect(() => {
-    if (mapaRef.current && centro && (!value || value.length === 0)) {
+    if (!mapaRef.current || !centro) return;
+    if (marcadorCentroRef.current) {
+      marcadorCentroRef.current.setLatLng(centro);
+    } else {
+      marcadorCentroRef.current = L.marker(centro, { icon: ICONO_UBICACION })
+        .addTo(mapaRef.current)
+        .bindPopup('Ubicación del evento');
+    }
+    if (!value || value.length === 0) {
       mapaRef.current.setView(centro, 17);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

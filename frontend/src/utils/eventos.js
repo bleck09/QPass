@@ -1,3 +1,16 @@
+// 'YYYY-MM-DD' en el calendario LOCAL del navegador (nunca UTC) — así un
+// evento/jornada nocturno que cruza medianoche cuenta en ambos días tal como
+// se ve. Compartido por CalendarioEventos.jsx (grilla de días) y cualquier
+// pantalla que necesite ubicar una fecha en ese mismo calendario (ej. el mini
+// calendario de "días de la jornada" en AdminJornadas.jsx) — no duplicar.
+export const diaLocalISO = (fecha) => {
+  const d = new Date(fecha);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+};
+
 // Evento vence cuando fechaFin ya pasó.
 export const esVigente = (evento) => new Date(evento.fechaFin) >= new Date();
 
@@ -110,6 +123,24 @@ export function opcionesJornada(items) {
       conteo: j.conteo,
     })),
   ];
+}
+
+// Agrupa una lista en secciones por jornada, en el orden de las jornadas
+// (`dia.orden`). `obtenerDiaEvento(item)` debe devolver el `DiaEvento` del
+// ítem (o null/undefined si no tiene). Igual que `opcionesJornada`, devuelve
+// `[]` cuando hay 0 o 1 jornada distinta — ahí agrupar no aporta nada y el
+// llamador debe seguir mostrando la lista plana de siempre.
+// Uso: comprador armando su carrito/grilla de categorías (UsuarioNormal.jsx).
+export function agruparPorJornada(items, obtenerDiaEvento) {
+  const porId = new Map();
+  for (const item of items || []) {
+    const dia = obtenerDiaEvento(item) || null;
+    const id = dia?.id ?? null;
+    if (!porId.has(id)) porId.set(id, { dia, items: [] });
+    porId.get(id).items.push(item);
+  }
+  if (porId.size <= 1) return [];
+  return [...porId.values()].sort((a, b) => (a.dia?.orden ?? 0) - (b.dia?.orden ?? 0));
 }
 
 // evento.fecha ahora es un DateTime real (no un string ya formateado), así que hay que

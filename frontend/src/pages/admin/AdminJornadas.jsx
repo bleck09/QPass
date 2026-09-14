@@ -1,8 +1,10 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { FaPlus, FaTrash, FaPen, FaClock, FaUsers, FaCheck, FaTimes } from 'react-icons/fa';
 import { useApi } from '../../utils/useApi.js';
 import api from '../../api/index.js';
 import Tabla from '../../components/Tabla.jsx';
+import CalendarioEventos from '../../components/CalendarioEventos.jsx';
+import { diaLocalISO } from '../../utils/eventos.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import './AdminJornadas.css';
 
@@ -28,6 +30,17 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
   const [editandoId, setEditandoId] = useState(null);
   const [guardando, setGuardando] = useState(false);
   const [err, setErr] = useState('');
+  const formRef = useRef(null);
+
+  // Rango de días que ocupan TODAS las jornadas del evento (para el mini
+  // calendario de referencia de abajo) — de solo lectura, no se puede
+  // clickear, es nomás "acá cae la fiesta".
+  const rangoDias = useMemo(() => {
+    if (jornadas.length === 0) return null;
+    const desde = jornadas.reduce((min, j) => diaLocalISO(j.inicio) < min ? diaLocalISO(j.inicio) : min, diaLocalISO(jornadas[0].inicio));
+    const hasta = jornadas.reduce((max, j) => diaLocalISO(j.fin) > max ? diaLocalISO(j.fin) : max, diaLocalISO(jornadas[0].fin));
+    return { desde, hasta };
+  }, [jornadas]);
 
   const cambiar = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
@@ -40,6 +53,10 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
       aforoMaximo: j.aforoMaximo != null ? String(j.aforoMaximo) : '',
     });
     setErr('');
+    // Que se note que hay algo cargado para editar (si no, parece que
+    // "Editar" no hizo nada) — ahora que el layout ya no es gigante esto no
+    // debería saltar a un lugar raro.
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
   const cancelar = () => {
@@ -96,37 +113,49 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
         y el aforo se controla por jornada. Un evento de una sola noche tiene una.
       </p>
 
-      <Tabla
-        columnas={['Jornada', 'Inicio', 'Fin', { texto: 'Aforo', align: 'center' }, { texto: 'Acciones', srOnly: true }]}
-        datos={jornadas}
-        vacio="Este evento no tiene jornadas."
-        renderFila={(j, i) => (
-          <tr key={j.id}>
-            <td>{j.nombre || `Día ${j.orden ?? i + 1}`}</td>
-            <td>{fmt(j.inicio)}</td>
-            <td>{fmt(j.fin)}</td>
-            <td style={{ textAlign: 'center' }}>{j.aforoMaximo ?? '—'}</td>
-            <td className="pi-jor-acciones">
-              {!soloLectura && (
-                <>
-                  <button type="button" className="pi-jor-btn-editar" onClick={() => abrirEditar(j)} title="Editar">
-                    <FaPen />
-                  </button>
-                  <button type="button" className="pi-jor-btn-borrar" onClick={() => eliminar(j.id)} title="Borrar">
-                    <FaTrash />
-                  </button>
-                </>
-              )}
-            </td>
-          </tr>
-        )}
-      />
+      <div className="pi-jor-arriba">
+        <div className="pi-jor-arriba-izq">
+          {rangoDias && (
+            <div className="pi-jor-mini-calendario">
+              <CalendarioEventos eventos={[]} rangoSeleccionado={rangoDias} mini />
+            </div>
+          )}
+        </div>
+
+        <div className="pi-jor-arriba-der">
+          <Tabla
+            columnas={['Jornada', 'Inicio', 'Fin', { texto: 'Aforo', align: 'center' }, { texto: 'Acciones', srOnly: true }]}
+            datos={jornadas}
+            vacio="Este evento no tiene jornadas."
+            renderFila={(j, i) => (
+              <tr key={j.id}>
+                <td>{j.nombre || `Día ${j.orden ?? i + 1}`}</td>
+                <td>{fmt(j.inicio)}</td>
+                <td>{fmt(j.fin)}</td>
+                <td style={{ textAlign: 'center' }}>{j.aforoMaximo ?? '—'}</td>
+                <td className="pi-jor-acciones">
+                  {!soloLectura && (
+                    <>
+                      <button type="button" className="pi-jor-btn-editar" onClick={() => abrirEditar(j)} title="Editar">
+                        <FaPen />
+                      </button>
+                      <button type="button" className="pi-jor-btn-borrar" onClick={() => eliminar(j.id)} title="Borrar">
+                        <FaTrash />
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            )}
+          />
+        </div>
+      </div>
 
       {err && <p className="pi-jor-error"><FaTimes aria-hidden="true" /> {err}</p>}
 
       {!soloLectura && (
-        <form className="pi-jor-form" onSubmit={guardar}>
-          <h4>{editandoId ? 'Editar jornada' : 'Agregar jornada'}</h4>
+        <form ref={formRef} className={`pi-jor-form${editandoId ? ' pi-jor-form--editando' : ''}`} onSubmit={guardar}>
+          <h4>{editandoId ? <><FaPen aria-hidden="true" /> Editando: {form.nombre || 'esta jornada'}</> : 'Agregar jornada'}</h4>
           <div className="pi-jor-grid">
             <label>
               Nombre (opcional)

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import Tabla from '../../components/Tabla.jsx';
@@ -18,7 +18,7 @@ import { VERSION_TERMINOS, TEXTO_TERMINOS } from '../../constants/terminos.js';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
-import { esVigente, estadoEvento, formatearFecha, imagenEvento, nombreJornada, mostrarJornada } from '../../utils/eventos.js';
+import { esVigente, estadoEvento, formatearFecha, imagenEvento, nombreJornada, mostrarJornada, agruparPorJornada } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 
 const MAX_ENTRADAS = 6;
@@ -52,11 +52,20 @@ function plazoRetiro(expiraEn) {
 // Tarjeta expandible: saldo de un evento + desglose recargado/gastado/devuelto.
 // `enCurso`: es el mismo evento que ya se destacó grande arriba — se marca acá
 // también para no perderlo de vista dentro de la lista completa.
-function BilleteraAcordeon({ b, enCurso = false }) {
+function BilleteraAcordeon({ b, enCurso = false, qrCodigo }) {
   const [abierto, setAbierto] = useState(false);
+  const [verQr, setVerQr] = useState(false);
   const plazo = plazoRetiro(b.expiraEn);
   const bloqueado = Number(b.bloqueado ?? 0);
   const disponible = Number(b.disponible ?? b.saldo);
+  // Solo tiene sentido "retirar" (y por lo tanto mostrar el QR) en un evento
+  // que ya terminó, con saldo pendiente de cobrar y ANTES de que venza el
+  // plazo de retiro — pasada la fecha límite, ya no sirve mostrar el QR.
+  const puedeRetirar =
+    ['finalizado', 'archivado'].includes(estadoEvento(b)) &&
+    disponible > 0 &&
+    qrCodigo &&
+    plazo.tono !== 'vencido';
   return (
     <div className={`pi-usr-bill ${abierto ? 'abierto' : ''}${enCurso ? ' pi-usr-bill--en-curso' : ''}`}>
       <button type="button" className="pi-usr-bill-cab" onClick={() => setAbierto(o => !o)} aria-expanded={abierto}>
@@ -85,7 +94,26 @@ function BilleteraAcordeon({ b, enCurso = false }) {
             </p>
           )}
           <p className={`pi-usr-bill-plazo-detalle tono-${plazo.tono}`}>{plazo.texto}</p>
+          {puedeRetirar && (
+            <button type="button" className="pi-usr-bill-btn-qr" onClick={() => setVerQr(true)}>
+              <FaQrcode aria-hidden="true" /> Ver mi QR para retirar
+            </button>
+          )}
         </div>
+      )}
+      {verQr && (
+        <Modal
+          titulo={<><FaQrcode aria-hidden="true" /> Tu código QR — {b.eventoNombre}</>}
+          onCerrar={() => setVerQr(false)}
+          tamano="sm"
+        >
+          <div className="pi-usr-qr-grande">
+            <img width="260" height="260" src={qrDe(qrCodigo)} alt="Tu código QR" />
+            <p className="texto-ayuda">
+              Mostrá este código en el punto de retiro para cobrar tus {disponible} pts disponibles.
+            </p>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -116,7 +144,12 @@ export default function UsuarioNormal() {
     recargar: recargarEventos,
   } = useApi(cargarEventos, { inicial: [] });
   const proximosEventos = todosEventos.filter(esVigente);
-  const eventosPasados = todosEventos.filter(ev => !esVigente(ev));
+  // Los últimos 5 (por fecha del evento, no por orden de creación) — no toda
+  // la cartelera histórica, que solo va a crecer con el tiempo.
+  const eventosPasados = todosEventos
+    .filter(ev => !esVigente(ev))
+    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+    .slice(0, 5);
 
   // Evento para el que se está comprando: llega desde "Adquirir Entradas" en la pestaña Eventos.
   // Si se entra directo a /usuarionormal/comprar (sin pasar por ahí), caemos al primer evento disponible.
@@ -194,7 +227,28 @@ export default function UsuarioNormal() {
     [categoriasEntradas],
   );
 
-  // Jornadas del evento seleccionado en las que YA tengo una entrada propia (no rechazada).
+  // Agrupar la grilla de categorías y el carrito por jornada: con 2+ noches
+  // ofrecidas, cada una se ve en su propia sección (en vez de una lista plana
+  // mezclando categorías de días distintos). Con 0 o 1 jornada, ambas quedan
+  // en `[]` y el render sigue exactamente como antes (sin encabezados).
+  const gruposCategorias = useMemo(
+    () => agruparPorJornada(categoriasEntradas, (cat) => cat.diaEvento),
+    [categoriasEntradas],
+  );
+  const gruposCarrito = useMemo(
+    () => agruparPorJornada(
+      entradasCart,
+      (entrada) => categoriasEntradas.find(c => c.id === entrada.categoriaTicketId)?.diaEvento,
+    ),
+    [entradasCart, categoriasEntradas],
+  );
+
+  // Jornadas del evento seleccionado en las que YA tengo una entrada propia (no
+  // rechazada) — ya sea porque la compré yo (titular, pendiente o confirmada)
+  // o porque me la compró OTRA persona y ya está vinculada a mi cuenta
+  // (entradasANombreMio, que solo trae compras ya confirmadas). Sin esto, a
+  // alguien a quien ya le regalaron su entrada de una noche se le dejaba
+  // comprar otra "para sí mismo" en esa misma noche.
   const misJornadasConEntrada = useMemo(() => {
     if (!eventoSeleccionado) return new Set();
     const s = new Set();
@@ -203,8 +257,11 @@ export default function UsuarioNormal() {
       .forEach(c => c.entradas.forEach(e => {
         if (e.isTitular) s.add(e.diaEventoId ?? null);
       }));
+    entradasANombreMio
+      .filter(e => e.evento?.id === eventoSeleccionado.id)
+      .forEach(e => s.add(e.diaEventoId ?? null));
     return s;
-  }, [comprasConEvento, eventoSeleccionado]);
+  }, [comprasConEvento, eventoSeleccionado, entradasANombreMio]);
 
   // ¿Ya tengo entrada propia para esta jornada? (contando compras previas + carrito actual)
   const yaTengoJornada = useCallback(
@@ -219,15 +276,18 @@ export default function UsuarioNormal() {
     [jornadasDelEvento, yaTengoJornada],
   );
 
-  // Tu entrada propia ya aprobada del evento próximo más cercano: se destaca como "Tu Manilla Digital".
+  // Tu entrada ya aprobada del evento próximo más cercano: se destaca como "Tu
+  // Manilla Digital". No importa si la compraste vos (titular) o te la
+  // compró otra persona (invitado) — entradasANombreMio ya trae ambos casos,
+  // siempre confirmados. Antes esto solo miraba tus propias compras, así que
+  // alguien que únicamente tenía entradas de invitado nunca veía este banner.
   const entradaDestacada = useMemo(() => {
-    const candidatas = comprasConEvento
-      .filter(compra => compra.vigente && compra.estado === 'confirmado' && compra.entradas.some(ent => ent.isTitular))
+    const candidatas = entradasANombreMio
+      .filter(e => e.evento && esVigente(e.evento))
       .sort((a, b) => new Date(a.evento.fecha) - new Date(b.evento.fecha)); // más próximo primero
-    const compraDestacada = candidatas[0];
-    const titular = compraDestacada?.entradas.find(ent => ent.isTitular);
-    return titular ? { ...titular, evento: compraDestacada.evento, compraId: compraDestacada.id } : null;
-  }, [comprasConEvento]);
+    const entrada = candidatas[0];
+    return entrada ? { ...entrada, compraId: entrada.compra?.id } : null;
+  }, [entradasANombreMio]);
 
   // --- ESTADO DE SALDO (billetera POR EVENTO: el saldo recargado en un evento
   //     solo sirve en ese evento) ---
@@ -258,6 +318,16 @@ export default function UsuarioNormal() {
     () => new Map(billeteras.map(b => [b.eventoId, Number(b.disponible ?? b.saldo)])),
     [billeteras],
   );
+
+  // eventoId -> código QR de mi manilla en ese evento (titular o invitado): para
+  // mostrarlo grande en "Mi Saldo" cuando el evento ya pasó y hay que retirar.
+  const qrPorEvento = useMemo(() => {
+    const m = new Map();
+    entradasANombreMio.forEach(e => {
+      if (e.evento && e.codigoQrVinculado) m.set(e.evento.id, e.codigoQrVinculado.codigo);
+    });
+    return m;
+  }, [entradasANombreMio]);
 
   useEffect(() => {
     if (!usuario?.id) return;
@@ -343,8 +413,13 @@ export default function UsuarioNormal() {
   }, [entradaDestacada]);
 
   // El resto de solicitudes de eventos próximos (propias pendientes o compradas para invitados).
+  // La compra destacada solo se excluye si no tiene nada más que mostrar: si
+  // trae más entradas (ej. tu propia entrada de otra jornada del mismo evento,
+  // o invitados), esa compra también aparece acá para no esconder el resto.
   const comprasOtras = useMemo(
-    () => comprasConEvento.filter(compra => compra.vigente && compra.id !== entradaDestacada?.compraId),
+    () => comprasConEvento.filter(compra =>
+      compra.vigente && (compra.id !== entradaDestacada?.compraId || compra.entradas.length > 1)
+    ),
     [comprasConEvento, entradaDestacada]
   );
 
@@ -359,6 +434,20 @@ export default function UsuarioNormal() {
   const entradasDeInvitado = useMemo(
     () => entradasANombreMio
       .filter(e => e.evento && esVigente(e.evento))
+      .filter(e => e.compra?.compradorId !== usuario?.id)
+      // La más próxima ya se destaca arriba (pudo salir de acá mismo ahora
+      // que entradaDestacada también considera invitados) — no repetirla.
+      .filter(e => e.id !== entradaDestacada?.id),
+    [entradasANombreMio, usuario?.id, entradaDestacada]
+  );
+
+  // Igual que arriba, pero de eventos que ya pasaron: sin esto, la entrada de un
+  // invitado (comprada por otra persona) desaparecía para siempre en cuanto el
+  // evento terminaba — ni QR, ni categoría, nada (aunque le quedara saldo por
+  // retirar). Se muestran junto con "Mis entradas pasadas" al desplegarlas.
+  const entradasDeInvitadoPasadas = useMemo(
+    () => entradasANombreMio
+      .filter(e => e.evento && !esVigente(e.evento))
       .filter(e => e.compra?.compradorId !== usuario?.id),
     [entradasANombreMio, usuario?.id]
   );
@@ -426,8 +515,17 @@ export default function UsuarioNormal() {
     const invitadosIncompletos = entradasCart.some(ent => !ent.nombre.trim() || !ent.correo.trim() || (!ent.isTitular && !ent.celular.trim()));
     if (invitadosIncompletos) return setErrorForm('Completa el nombre, correo y celular de todas las personas asignadas.');
 
-    const correos = entradasCart.map(e => e.correo.toLowerCase());
-    if (correos.length !== new Set(correos).size) return setErrorForm('Cada entrada necesita un correo electrónico único.');
+    // El correo debe ser único DENTRO de cada jornada, no en todo el carrito:
+    // la misma persona puede tener una entrada la noche 1 y otra la noche 2.
+    const correosPorJornada = new Map();
+    entradasCart.forEach(e => {
+      const clave = jornadaDeCategoria(e.categoriaTicketId) ?? '__sin_jornada__';
+      const lista = correosPorJornada.get(clave) ?? [];
+      lista.push(e.correo.toLowerCase());
+      correosPorJornada.set(clave, lista);
+    });
+    const hayCorreoRepetido = [...correosPorJornada.values()].some(lista => lista.length !== new Set(lista).size);
+    if (hayCorreoRepetido) return setErrorForm('Cada entrada de una misma jornada necesita un correo electrónico único.');
 
     try {
       await api.compras.crear({
@@ -477,8 +575,16 @@ export default function UsuarioNormal() {
     const incompleto = entradasEdicion.some(ent => !ent.nombre.trim() || !ent.correo.trim() || !ent.celular.trim());
     if (incompleto) return setErrorRevision('Completa nombre, correo y celular de cada entrada.');
 
-    const correos = entradasEdicion.map(ent => ent.correo.toLowerCase());
-    if (correos.length !== new Set(correos).size) return setErrorRevision('Cada entrada necesita un correo electrónico único.');
+    // El correo debe ser único DENTRO de cada jornada, no en toda la solicitud.
+    const correosPorJornada = new Map();
+    entradasEdicion.forEach(ent => {
+      const clave = ent.diaEventoId ?? '__sin_jornada__';
+      const lista = correosPorJornada.get(clave) ?? [];
+      lista.push(ent.correo.toLowerCase());
+      correosPorJornada.set(clave, lista);
+    });
+    const hayCorreoRepetido = [...correosPorJornada.values()].some(lista => lista.length !== new Set(lista).size);
+    if (hayCorreoRepetido) return setErrorRevision('Cada entrada de una misma jornada necesita un correo electrónico único.');
 
     try {
       await api.compras.corregirEntradas(compraEnRevision.id, entradasEdicion);
@@ -622,6 +728,7 @@ export default function UsuarioNormal() {
         <div className="pi-usr-compra-card-badges">
           <span className="pi-usr-badge pi-usr-badge-ok"><FaCheckCircle /> Aprobada</span>
           {entrada.numero != null && <span className="pi-usr-badge"><FaIdCard /> Entrada N.º {entrada.numero}</span>}
+          {!esVigente(entrada.evento) && <span className="pi-usr-badge pi-usr-badge-pasado">Evento pasado</span>}
         </div>
 
         <div className="pi-usr-compra-card-info">
@@ -760,44 +867,55 @@ export default function UsuarioNormal() {
                 </div>
               ) : (
                 <div className="pi-usr-cart-list">
-                  {entradasCart.map((entrada, index) => {
-                    const catSeleccionada = categoriasEntradas.find(c => c.id === entrada.categoriaTicketId);
-                    return (
-                      <div key={entrada.id} className="pi-usr-ticket-row" style={{ borderLeftColor: catSeleccionada.color }}>
-                        <div className="pi-usr-ticket-row-top">
-                          <span className="pi-usr-ticket-row-titulo">
-                            {entrada.isTitular ? <FaUserTag color="var(--indigo-profundo)"/> : <FaUserPlus color="var(--gris-medio)"/>}
-                            {entrada.isTitular
-                              ? 'Tú'
-                              : `Invitado ${entradasCart.slice(0, index + 1).filter(e => !e.isTitular).length}`}
-                          </span>
+                  {/* Con 2+ jornadas en el carrito, agrupadas bajo un encabezado por
+                      noche; con 0 o 1, `gruposCarrito` viene [] y cae al grupo único
+                      sin encabezado — mismo render de siempre. */}
+                  {(gruposCarrito.length > 0 ? gruposCarrito : [{ dia: null, items: entradasCart }]).map((grupo) => (
+                    <Fragment key={grupo.dia?.id ?? 'unica'}>
+                      {grupo.dia && (
+                        <h5 className="pi-usr-cart-dia-header"><FaMoon aria-hidden="true" /> {nombreJornada(grupo.dia)}</h5>
+                      )}
+                      {grupo.items.map((entrada) => {
+                        const catSeleccionada = categoriasEntradas.find(c => c.id === entrada.categoriaTicketId);
+                        const indiceGlobal = entradasCart.indexOf(entrada);
+                        return (
+                          <div key={entrada.id} className="pi-usr-ticket-row" style={{ borderLeftColor: catSeleccionada.color }}>
+                            <div className="pi-usr-ticket-row-top">
+                              <span className="pi-usr-ticket-row-titulo">
+                                {entrada.isTitular ? <FaUserTag color="var(--indigo-profundo)"/> : <FaUserPlus color="var(--gris-medio)"/>}
+                                {entrada.isTitular
+                                  ? 'Tú'
+                                  : `Invitado ${entradasCart.slice(0, indiceGlobal + 1).filter(e => !e.isTitular).length}`}
+                              </span>
 
-                          <span className="pi-usr-cat-badge-fija" style={{ background: catSeleccionada.color }}>
-                            {catSeleccionada.nombre} · Bs.{catSeleccionada.precio}
-                          </span>
+                              <span className="pi-usr-cat-badge-fija" style={{ background: catSeleccionada.color }}>
+                                {catSeleccionada.nombre} · Bs.{catSeleccionada.precio}
+                              </span>
 
-                          <button type="button" className="btn-eliminar-ticket" onClick={() => quitarEntrada(entrada.id)} aria-label={`Quitar entrada de ${entrada.nombre || 'invitado'}`}>
-                            <FaTrash aria-hidden="true" />
-                          </button>
-                        </div>
+                              <button type="button" className="btn-eliminar-ticket" onClick={() => quitarEntrada(entrada.id)} aria-label={`Quitar entrada de ${entrada.nombre || 'invitado'}`}>
+                                <FaTrash aria-hidden="true" />
+                              </button>
+                            </div>
 
-                        <div className="pi-usr-ticket-inputs">
-                          <div className="input-group">
-                            <label htmlFor={`compra-nombre-${entrada.id}`}>Nombre completo</label>
-                            <input id={`compra-nombre-${entrada.id}`} type="text" autoComplete="name" placeholder="Ej: Ana López" value={entrada.nombre} onChange={(e) => actualizarEntrada(entrada.id, 'nombre', e.target.value)} disabled={entrada.isTitular} />
+                            <div className="pi-usr-ticket-inputs">
+                              <div className="input-group">
+                                <label htmlFor={`compra-nombre-${entrada.id}`}>Nombre completo</label>
+                                <input id={`compra-nombre-${entrada.id}`} type="text" autoComplete="name" placeholder="Ej: Ana López" value={entrada.nombre} onChange={(e) => actualizarEntrada(entrada.id, 'nombre', e.target.value)} disabled={entrada.isTitular} />
+                              </div>
+                              <div className="input-group">
+                                <label htmlFor={`compra-correo-${entrada.id}`}>Correo electrónico</label>
+                                <input id={`compra-correo-${entrada.id}`} type="email" autoComplete="email" placeholder="Para enviar credenciales" value={entrada.correo} onChange={(e) => actualizarEntrada(entrada.id, 'correo', e.target.value)} disabled={entrada.isTitular} />
+                              </div>
+                              <div className="input-group">
+                                <label htmlFor={`compra-celular-${entrada.id}`}>Celular (WhatsApp)</label>
+                                <input id={`compra-celular-${entrada.id}`} type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="Ej: 71234567" value={entrada.celular} onChange={(e) => actualizarEntrada(entrada.id, 'celular', e.target.value)} />
+                              </div>
+                            </div>
                           </div>
-                          <div className="input-group">
-                            <label htmlFor={`compra-correo-${entrada.id}`}>Correo electrónico</label>
-                            <input id={`compra-correo-${entrada.id}`} type="email" autoComplete="email" placeholder="Para enviar credenciales" value={entrada.correo} onChange={(e) => actualizarEntrada(entrada.id, 'correo', e.target.value)} disabled={entrada.isTitular} />
-                          </div>
-                          <div className="input-group">
-                            <label htmlFor={`compra-celular-${entrada.id}`}>Celular (WhatsApp)</label>
-                            <input id={`compra-celular-${entrada.id}`} type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="Ej: 71234567" value={entrada.celular} onChange={(e) => actualizarEntrada(entrada.id, 'celular', e.target.value)} />
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
+                        );
+                      })}
+                    </Fragment>
+                  ))}
                 </div>
               )}
 
@@ -808,46 +926,57 @@ export default function UsuarioNormal() {
                     ? `Elige la categoría para sumar una entrada de invitado. Puedes hacer clic varias veces para agregar a más de una persona (máx. ${MAX_ENTRADAS} entradas por compra).`
                     : 'Haz clic en la categoría que quieres para tu propia entrada.'}
                 </p>
-                <div className="pi-usr-categorias-grid">
-                  {categoriasEntradas.map(cat => {
-                    const cantidad = entradasCart.filter(ent => ent.categoriaTicketId === cat.id).length;
-                    const alMaximo = entradasCart.length >= MAX_ENTRADAS;
-                    const cupoLibre = cupoLibreDe(cat);
-                    const agotada = Number(cat.cantidad) - Number(cat.cantidadVendida) <= 0;
-                    const sinCupoParaMas = cupoLibre <= 0;
-                    return (
-                      <button
-                        key={cat.id}
-                        className="pi-usr-categoria-card"
-                        style={{ background: cat.color, opacity: agotada ? 0.55 : 1 }}
-                        disabled={alMaximo || sinCupoParaMas}
-                        onClick={() => agregarEntrada(cat.id)}
-                      >
-                        {cantidad > 0 && (
-                          <span className="cat-card-badge" style={{ color: cat.color }}>{cantidad}</span>
-                        )}
-                        {mostrarJornada(cat.diaEvento) && (
-                          <span className="cat-card-jornada">{nombreJornada(cat.diaEvento)}</span>
-                        )}
-                        {misJornadasConEntrada.has(cat.diaEventoId ?? null) && (
-                          <span className="cat-card-jornada cat-card-jornada--tengo">Ya tenés tu entrada</span>
-                        )}
-                        <span className="cat-card-nombre">{cat.nombre}</span>
-                        <span className="cat-card-precio">Bs. {cat.precio}</span>
-                        {agotada ? (
-                          <span className="cat-card-cta">Agotada</span>
-                        ) : sinCupoParaMas ? (
-                          <span className="cat-card-cta">Sin más cupo</span>
-                        ) : (
-                          <span className="cat-card-cta"><FaPlus /> {cantidad > 0 ? 'Agregar otra' : 'Agregar'}</span>
-                        )}
-                        {!agotada && cupoLibre > 0 && cupoLibre <= 10 && (
-                          <span className="cat-card-stock">Quedan {cupoLibre}</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                {/* Con 2+ jornadas ofrecidas, una grilla por noche bajo su propio
+                    encabezado (el badge de jornada de la tarjeta se omite ahí, ya
+                    es redundante); con 0 o 1, `gruposCategorias` viene [] y cae a
+                    una sola grilla — mismo render de siempre, badge incluido. */}
+                {(gruposCategorias.length > 0 ? gruposCategorias : [{ dia: null, items: categoriasEntradas }]).map((grupo) => (
+                  <Fragment key={grupo.dia?.id ?? 'unica'}>
+                    {grupo.dia && (
+                      <h5 className="pi-usr-categorias-dia-header"><FaMoon aria-hidden="true" /> {nombreJornada(grupo.dia)}</h5>
+                    )}
+                    <div className="pi-usr-categorias-grid">
+                      {grupo.items.map(cat => {
+                        const cantidad = entradasCart.filter(ent => ent.categoriaTicketId === cat.id).length;
+                        const alMaximo = entradasCart.length >= MAX_ENTRADAS;
+                        const cupoLibre = cupoLibreDe(cat);
+                        const agotada = Number(cat.cantidad) - Number(cat.cantidadVendida) <= 0;
+                        const sinCupoParaMas = cupoLibre <= 0;
+                        return (
+                          <button
+                            key={cat.id}
+                            className="pi-usr-categoria-card"
+                            style={{ background: cat.color, opacity: agotada ? 0.55 : 1 }}
+                            disabled={alMaximo || sinCupoParaMas}
+                            onClick={() => agregarEntrada(cat.id)}
+                          >
+                            {cantidad > 0 && (
+                              <span className="cat-card-badge" style={{ color: cat.color }}>{cantidad}</span>
+                            )}
+                            {!grupo.dia && mostrarJornada(cat.diaEvento) && (
+                              <span className="cat-card-jornada">{nombreJornada(cat.diaEvento)}</span>
+                            )}
+                            {misJornadasConEntrada.has(cat.diaEventoId ?? null) && (
+                              <span className="cat-card-jornada cat-card-jornada--tengo">Ya tenés tu entrada</span>
+                            )}
+                            <span className="cat-card-nombre">{cat.nombre}</span>
+                            <span className="cat-card-precio">Bs. {cat.precio}</span>
+                            {agotada ? (
+                              <span className="cat-card-cta">Agotada</span>
+                            ) : sinCupoParaMas ? (
+                              <span className="cat-card-cta">Sin más cupo</span>
+                            ) : (
+                              <span className="cat-card-cta"><FaPlus /> {cantidad > 0 ? 'Agregar otra' : 'Agregar'}</span>
+                            )}
+                            {!agotada && cupoLibre > 0 && cupoLibre <= 10 && (
+                              <span className="cat-card-stock">Quedan {cupoLibre}</span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </Fragment>
+                ))}
                 {entradasCart.length >= MAX_ENTRADAS && (
                   <p className="texto-ayuda">Llegaste al máximo de {MAX_ENTRADAS} entradas por compra.</p>
                 )}
@@ -1024,7 +1153,12 @@ export default function UsuarioNormal() {
                 ) : (
                   <div className="pi-usr-bill-lista">
                     {billeterasFiltradas.map(b => (
-                      <BilleteraAcordeon key={b.eventoId} b={b} enCurso={b.eventoId === billeteraEnCurso?.eventoId} />
+                      <BilleteraAcordeon
+                        key={b.eventoId}
+                        b={b}
+                        enCurso={b.eventoId === billeteraEnCurso?.eventoId}
+                        qrCodigo={qrPorEvento.get(b.eventoId)}
+                      />
                     ))}
                   </div>
                 )}
@@ -1232,18 +1366,30 @@ export default function UsuarioNormal() {
           )}
 
           <button type="button" className="pi-usr-btn-toggle-pasadas" onClick={() => setMostrarPasadas(v => !v)}>
-            <FaHistory /> {mostrarPasadas ? 'Ocultar entradas pasadas' : `Ver entradas pasadas (${comprasPasadas.length})`}
+            <FaHistory /> {mostrarPasadas ? 'Ocultar entradas pasadas' : `Ver entradas pasadas (${comprasPasadas.length + entradasDeInvitadoPasadas.length})`}
           </button>
 
           {mostrarPasadas && (
-            comprasPasadas.length === 0 ? (
+            comprasPasadas.length === 0 && entradasDeInvitadoPasadas.length === 0 ? (
               <div className="pi-usr-card" style={{ textAlign: 'center', color: 'var(--gris-medio)' }}>
                 Aún no tienes entradas de eventos pasados.
               </div>
             ) : (
-              <div className="pi-usr-entradas-grid">
-                {comprasPasadas.map(renderCompraCard)}
-              </div>
+              <>
+                {entradasDeInvitadoPasadas.length > 0 && (
+                  <>
+                    <h3 className="pi-usr-mis-entradas-subtitulo">Entradas que compraron para ti</h3>
+                    <div className="pi-usr-entradas-grid">
+                      {entradasDeInvitadoPasadas.map(renderEntradaInvitadoCard)}
+                    </div>
+                  </>
+                )}
+                {comprasPasadas.length > 0 && (
+                  <div className="pi-usr-entradas-grid">
+                    {comprasPasadas.map(renderCompraCard)}
+                  </div>
+                )}
+              </>
             )
           )}
         </div>

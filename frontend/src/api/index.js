@@ -34,8 +34,13 @@ export const eventos = {
   // TODOS los eventos (publicados o en borrador) — solo para el panel de Admin.
   listarTodos: () => apiGet('/eventos/todos'),
   obtener: (id) => apiGet(`/eventos/${id}`),
+  // Igual que obtener(), pero sin filtrar por publicado — para pantallas de
+  // Admin (Mapa.jsx) que necesitan un evento puntual aunque esté en borrador.
+  obtenerAdmin: (id) => apiGet(`/eventos/${id}/admin`),
   crear: (datos) => apiPost('/eventos', datos),
   actualizar: (id, datos) => apiPatch(`/eventos/${id}`, datos),
+  // Borrado real (no archivar): solo un borrador sin ninguna compra registrada.
+  eliminar: (id) => apiDelete(`/eventos/${id}`),
   cerrar: (id) => apiPost(`/eventos/${id}/cerrar`),
   archivar: (id) => apiPost(`/eventos/${id}/archivar`),
   desarchivar: (id) => apiPost(`/eventos/${id}/desarchivar`),
@@ -83,6 +88,9 @@ export const codigosRetiroNegocio = {
 export const categoriasTicket = {
   listar: (eventoId) => apiGet(`/categorias-ticket${qs({ eventoId })}`),
   crear: (datos) => apiPost('/categorias-ticket', datos),
+  // nombre/beneficios/cantidad/precio — el backend rechaza bajar la cantidad
+  // por debajo de lo ya vendido/reservado.
+  actualizar: (id, datos) => apiPatch(`/categorias-ticket/${id}`, datos),
   eliminar: (id) => apiDelete(`/categorias-ticket/${id}`),
 };
 
@@ -102,6 +110,7 @@ export const entradas = {
   mias: () => apiGet('/entradas/mias'),
   obtener: (id) => apiGet(`/entradas/${id}`),
   buscarPorCodigo: (codigo) => apiGet(`/entradas/buscar/${encodeURIComponent(codigo)}`),
+  buscarBasico: (codigo) => apiGet(`/entradas/buscar-basico/${encodeURIComponent(codigo)}`),
   registros: (id) => apiGet(`/entradas/${id}/registros`),
   vincularQr: (id, codigoQrId) => apiPost(`/entradas/${id}/vincular-qr`, { codigoQrId }),
   anularQr: (id, motivo) => apiPost(`/entradas/${id}/anular-qr`, { motivo }),

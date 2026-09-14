@@ -41,18 +41,45 @@
   gap: 6px;
 }
 
+/* Texto + mini calendario a un costado, la tabla al lado — en vez de apilado
+   (dejaba un hueco enorme a la derecha del calendario chico). Se apila solo
+   en pantallas angostas. */
+.pi-jor-arriba {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.pi-jor-arriba-izq { flex: 0 1 280px; }
+.pi-jor-arriba-der { flex: 1 1 320px; min-width: 280px; }
+
+.pi-jor-mini-calendario { max-width: 260px; }
+
 .pi-jor-form {
   margin-top: 20px;
   padding: 16px;
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--bg-surface);
+  transition: border-color 0.2s, background 0.2s;
+}
+/* Se nota que hay algo cargado para editar — si no, con el formulario
+   siempre visible parece que "Editar" no hizo nada. */
+.pi-jor-form--editando {
+  border-color: var(--cian-digital);
+  border-width: 2px;
+  background: var(--cian-digital-suave);
 }
 .pi-jor-form h4 {
   margin: 0 0 12px;
   font-size: 14px;
   color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
+.pi-jor-form--editando h4 { color: var(--indigo-profundo); }
 .pi-jor-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));

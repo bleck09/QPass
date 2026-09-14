@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
-import { aFecha, aFechaCon } from '../../common/utils/fechas.utils';
+import { aFecha, aFechaCon, nombreJornadaPorDefecto } from '../../common/utils/fechas.utils';
 import { verificarSinChoqueDeFechas } from '../../common/utils/choque-eventos.utils';
 import { CrearEventoDto } from './dto/crear-evento.dto';
 import { ActualizarEventoDto } from './dto/actualizar-evento.dto';
@@ -127,8 +127,16 @@ export class EventosService {
       });
       // Toda categoría / entrada / manilla cuelga de una jornada: el evento
       // nace con una (= su rango completo). Multi-día se agrega después.
+      // Nombre por defecto: la fecha real ("Domingo 13") en vez de nada — se
+      // ve así hasta que el Admin la renombre a mano ("Noche de apertura"...).
       await tx.diaEvento.create({
-        data: { eventoId: evento.id, inicio: fecha, fin: fechaFin, orden: 1 },
+        data: {
+          eventoId: evento.id,
+          inicio: fecha,
+          fin: fechaFin,
+          orden: 1,
+          nombre: nombreJornadaPorDefecto(fecha),
+        },
       });
       return evento;
     });
@@ -231,6 +239,62 @@ export class EventosService {
       despues: { contornoMapa: actualizado.contornoMapa },
     });
     return actualizado;
+  }
+
+  /**
+   * Borra un evento DE VERDAD (no es archivar) — solo tiene sentido para un
+   * borrador que resultó ser un error/prueba, antes de que nadie compre nada.
+   * Por eso: nunca si está publicado, y nunca si ya hay al menos una Compra
+   * (cubre también el caso raro de "se publicó, vendió algo, y se
+   * despublicó" — sigue sin poder borrarse). El resto de las tablas del
+   * evento (jornadas, categorías, mapa, asignaciones...) están en cascada en
+   * el schema; si algo no lo estuviera, el propio delete de Postgres lo
+   * frenaría con una FK y acá se traduce a un mensaje entendible.
+   */
+  async eliminar(id: string, adminId: number) {
+    const evento = await this.obtenerPorIdAdmin(id);
+    if (evento.publicadoEn) {
+      throw new ConflictException(
+        'No se puede eliminar un evento publicado. Volvelo a borrador (o archivalo si ya terminó) en vez de borrarlo.',
+      );
+    }
+    const compras = await this.prisma.compra.count({ where: { eventoId: id } });
+    if (compras > 0) {
+      throw new ConflictException(
+        'Este evento ya tiene compras registradas: no se puede eliminar (solo un borrador sin actividad).',
+      );
+    }
+    try {
+      await this.prisma.$transaction(async (tx) => {
+        // La solicitud que originó este evento (si vino de una) no cae en
+        // cascada — se desvincula en vez de bloquear el borrado; el pedido
+        // en sí queda como registro histórico.
+        await tx.solicitudEvento.updateMany({
+          where: { eventoId: id },
+          data: { eventoId: null },
+        });
+        await this.auditoria.registrar(tx, {
+          actorId: adminId,
+          entidad: 'evento',
+          entidadId: id,
+          accion: 'eliminar',
+          antes: { nombre: evento.nombre, fecha: evento.fecha, fechaFin: evento.fechaFin },
+          despues: null,
+        });
+        await tx.evento.delete({ where: { id } });
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2003'
+      ) {
+        throw new ConflictException(
+          'Este evento tiene datos que impiden borrarlo (ej. ventas ya registradas en algún puesto). Contactá a soporte.',
+        );
+      }
+      throw e;
+    }
+    return { eliminado: true };
   }
 
   /** Cierra el evento manualmente, antes de su fechaFin si hace falta (C22). */

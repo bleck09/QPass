@@ -72,12 +72,33 @@
 .qp-cal__celda--afuera { background: var(--bg-page); opacity: 0.55; }
 .qp-cal__celda--hoy { border-color: var(--indigo-profundo); border-width: 2px; }
 
+/* Modo selección (elegir el rango de días de un evento nuevo/editado). */
+.qp-cal__celda--seleccionado { background: var(--cian-digital-suave); border-color: var(--cian-digital); }
+
 .qp-cal__num {
   font-size: var(--text-xs);
   font-weight: 700;
   color: var(--text-secondary);
 }
 .qp-cal__celda--hoy .qp-cal__num { color: var(--indigo-profundo); }
+
+/* En modoSeleccion la celda ENTERA es un <button> (no solo el número) —
+   se resetean los estilos nativos de botón para que siga viéndose como la
+   celda de siempre, solo que clickeable en cualquier parte del cuadrado. */
+.qp-cal__celda--clickable {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  align-items: flex-start;
+  transition: background 0.15s, border-color 0.15s;
+}
+.qp-cal__celda--clickable:hover { background: var(--cian-digital-suave); border-color: var(--cian-digital); }
+.qp-cal__celda--clickable.qp-cal__celda--seleccionado:hover { background: var(--cian-digital-suave); }
+.qp-cal__celda--seleccionado .qp-cal__num { color: var(--indigo-profundo); }
+
+/* En modo selección los eventos de otros días son solo referencia visual
+   (para no chocar fechas), no hay nada que "abrir" acá. */
+.qp-cal__evento--inerte { cursor: default; }
 
 .qp-cal__eventos { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
 .qp-cal__evento {
@@ -121,3 +142,15 @@
   .qp-cal__celda { min-height: 56px; }
   .qp-cal__dia-semana { font-size: 10px; }
 }
+
+/* Modo mini: referencia rápida (ej. "días de la jornada" en AdminJornadas),
+   no una vista principal — celdas bajas, sin leyenda, todo más compacto. */
+.qp-cal--mini { padding: var(--space-4); }
+.qp-cal--mini .qp-cal__cabecera { margin-bottom: 8px; }
+.qp-cal--mini .qp-cal__titulo { font-size: var(--text-sm); }
+.qp-cal--mini .qp-cal__nav button { width: 24px; height: 24px; }
+.qp-cal--mini .qp-cal__hoy { font-size: 10px; padding: 0 8px; }
+.qp-cal--mini .qp-cal__dia-semana { font-size: 9px; padding: 2px 0; }
+.qp-cal--mini .qp-cal__grid { gap: 2px; }
+.qp-cal--mini .qp-cal__celda { min-height: 26px; padding: 2px; border-radius: 4px; }
+.qp-cal--mini .qp-cal__num { font-size: 10px; }

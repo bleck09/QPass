@@ -1013,3 +1013,24 @@
   border-color: var(--text-primary);
   transform: translateY(-1px);
 }
+
+/* =======================================================
+   PESTAÑA "VERIFICAR QR" (solo Usuario Normal)
+======================================================= */
+.pi-perfil-qr-section h3 { margin: 0 0 4px 0; font-size: var(--text-lg); color: var(--text-primary); }
+.pi-perfil-qr-section > .texto-ayuda { margin: 0 0 20px 0; }
+
+.pi-perfil-qr-resultado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  background-color: var(--bg-page);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 20px;
+}
+.pi-perfil-qr-icono { font-size: 40px; color: var(--verde-recarga-texto); }
+.pi-perfil-qr-nombre { font-size: var(--text-lg); font-weight: 700; color: var(--text-primary); margin: 0; }
+.pi-perfil-qr-resultado p { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--text-secondary); font-size: var(--text-sm); }

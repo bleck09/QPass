@@ -102,6 +102,24 @@
 
 .input-monto-wrapper--sm { max-width: 150px; }
 
+/* --- Fila de campos lado a lado (ej. Cantidad + Precio) --- */
+.form-inline { display: flex; gap: var(--space-4); width: 100%; }
+.flex-1 { flex: 1; min-width: 0; }
+
+@media (max-width: 480px) {
+  .form-inline { flex-direction: column; }
+}
+
+/* --- Texto informativo con ícono (aviso corto, no es error) --- */
+.info-text {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
 /* --- Pie de acciones de un formulario / modal --- */
 .modal-actions {
   display: flex;

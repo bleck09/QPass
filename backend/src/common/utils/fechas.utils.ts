@@ -1,3 +1,19 @@
+/**
+ * "Domingo 13" — nombre por defecto de una jornada (DiaEvento) según su fecha
+ * de inicio, en horario de Bolivia (el server corre en UTC). Se usa cuando el
+ * Admin no le puso nombre propio a la jornada (ver EventosService.crear —
+ * jornada inicial del evento — y DiasEventoService), en vez de dejarla sin
+ * nombre (mostraría "Día N", menos claro que la fecha real).
+ */
+export function nombreJornadaPorDefecto(fecha: Date): string {
+  const texto = new Intl.DateTimeFormat('es-BO', {
+    timeZone: 'America/La_Paz',
+    weekday: 'long',
+    day: 'numeric',
+  }).format(fecha);
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+}
+
 /** Convierte a Date sólo si viene un valor; si no, devuelve undefined. */
 export function aFecha(valor?: string | Date | null): Date | undefined {
   if (valor === undefined || valor === null || valor === '') return undefined;

@@ -199,6 +199,44 @@ export class EntradasService {
     };
   }
 
+  /**
+   * Versión mínima de `buscarPorCodigoQr`, para el escáner de "Mi Perfil"
+   * (cualquier usuario logueado, de cualquier evento): a diferencia del
+   * escaneo de staff, acá NO se expone saldo ni ningún otro dato sensible —
+   * solo el nombre de la persona, el evento y el tipo de entrada.
+   */
+  async buscarBasicoPorCodigoQr(codigo: string) {
+    const codigoQr = await this.prisma.codigoQr.findUnique({
+      where: { codigo },
+      include: {
+        entrada: {
+          select: {
+            nombre: true,
+            compra: { select: { estado: true } },
+            evento: { select: { nombre: true } },
+            categoriaTicket: { select: { nombre: true } },
+          },
+        },
+      },
+    });
+    if (
+      !codigoQr ||
+      codigoQr.anulado ||
+      !codigoQr.entrada ||
+      codigoQr.entrada.compra?.estado !== 'confirmado'
+    ) {
+      throw new NotFoundException(
+        'Código no vinculado a ninguna entrada activa',
+      );
+    }
+    const { entrada } = codigoQr;
+    return {
+      nombre: entrada.nombre,
+      eventoNombre: entrada.evento.nombre,
+      categoriaNombre: entrada.categoriaTicket?.nombre ?? null,
+    };
+  }
+
   async obtenerPorId(id: string) {
     const entrada = await this.prisma.entrada.findUnique({
       where: { id },

@@ -2,13 +2,16 @@ import { useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useNavigate } from 'react-router-dom';
 import { MdLock, MdVisibility, MdVisibilityOff } from 'react-icons/md';
-import { FaIdCard, FaBirthdayCake, FaMapMarkerAlt, FaCamera, FaCheckCircle } from 'react-icons/fa';
+import { FaIdCard, FaBirthdayCake, FaMapMarkerAlt, FaCamera, FaLock, FaUserCheck } from 'react-icons/fa';
 import { ROLE_HOME_PATH } from '../../constants/roles.js';
 import { leerSesion, guardarSesion } from '../../api/client.js';
 import { EVENTO_USUARIO_ACTUALIZADO } from '../../layout/MenuLateral.jsx';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
 import api from '../../api/index.js';
+import './auth.css';
 import './Registrar.css';
+
+const TOTAL_PASOS = 2;
 
 /* ============================================================================
  * Paso obligatorio para las cuentas que se auto-crean al aprobar una compra
@@ -17,17 +20,23 @@ import './Registrar.css';
  * verificar identidad) — el resto de los datos es opcional. MenuLateral.jsx
  * redirige acá mientras sesion.debeCompletarPerfil sea true; esta pantalla no
  * tiene menú lateral para que no se pueda navegar a otro lado sin terminar.
+ *
+ * Dos pasos (como Registrar): 1) seguridad, 2) datos. Reusa el mismo shell de
+ * las pantallas de acceso: pi-auth__* vive en auth.css, pi-register-grid/
+ * divider/phone-wrapper en Registrar.css.
  * ========================================================================= */
 export default function CompletarPerfil() {
   useTituloPagina('Completa tu cuenta');
   const navigate = useNavigate();
   const sesion = leerSesion();
 
+  // 1 = Seguridad (cambiar contraseña temporal) · 2 = Tus datos (CI + opcionales)
+  const [step, setStep] = useState(1);
+
   const [passwordActual, setPasswordActual] = useState('');
   const [passwordNueva, setPasswordNueva] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [passwordCambiada, setPasswordCambiada] = useState(false);
 
   const [ci, setCi] = useState('');
   const [celular, setCelular] = useState('');
@@ -58,27 +67,34 @@ export default function CompletarPerfil() {
     }
   };
 
-  const handleSubmit = async (e) => {
+  // PASO 1 -> 2: cambia la contraseña temporal ya mismo (no se difiere al
+  // final: si falla acá, todavía no se tocó nada del perfil).
+  const handlePaso1 = async (e) => {
     e.preventDefault();
     setError('');
+    if (!passwordActual) return setError('Ingresa la contraseña con la que iniciaste sesión.');
+    if (passwordNueva.length < 6) return setError('La nueva contraseña debe tener al menos 6 caracteres.');
+    if (passwordNueva !== confirmarPassword) return setError('Las contraseñas nuevas no coinciden.');
 
-    if (!passwordCambiada) {
-      if (!passwordActual) return setError('Ingresa la contraseña con la que iniciaste sesión.');
-      if (passwordNueva.length < 6) return setError('La nueva contraseña debe tener al menos 6 caracteres.');
-      if (passwordNueva !== confirmarPassword) return setError('Las contraseñas nuevas no coinciden.');
+    setEnviando(true);
+    try {
+      await api.usuarios.cambiarPassword(sesion.id, passwordActual, passwordNueva);
+      setStep(2);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEnviando(false);
     }
+  };
+
+  // PASO 2: datos del perfil (CI obligatorio, el resto opcional) y sale del gate.
+  const handlePaso2 = async (e) => {
+    e.preventDefault();
+    setError('');
     if (!ci.trim()) return setError('El número de carnet es obligatorio.');
 
     setEnviando(true);
     try {
-      // Primero la contraseña: si ya se cambió en un intento anterior (el paso
-      // de abajo falló y el usuario reintentó), no se repite — passwordActual
-      // ya no serviría porque dejó de ser la actual.
-      if (!passwordCambiada) {
-        await api.usuarios.cambiarPassword(sesion.id, passwordActual, passwordNueva);
-        setPasswordCambiada(true);
-      }
-
       const actualizado = await api.usuarios.actualizar(sesion.id, {
         ci: ci.trim(),
         celular: celular || undefined,
@@ -98,169 +114,205 @@ export default function CompletarPerfil() {
   };
 
   return (
-    <div className="pi-register-wrapper">
-      <div className="bg-glow glow-top-left"></div>
-      <div className="bg-glow glow-bottom-right"></div>
+    <div className="pi-auth">
+      <div className="pi-auth__card">
+        <div className="pi-auth__panel">
+          <main className="pi-auth__body" id="contenido">
 
-      <main className="pi-register-content" id="contenido">
-        <div className="pi-register-card glass-panel">
-          <h1 className="pi-register-title">Completa tu cuenta</h1>
-          <p className="pi-register-subtitle">
-            Antes de continuar, cambiá la contraseña temporal y cargá tu número de carnet — te lo van
-            a pedir en la puerta para verificar tu identidad.
-          </p>
-
-          <form onSubmit={handleSubmit} className="pi-register-form">
-            {!passwordCambiada ? (
-              <div className="pi-register-grid">
-                <div className="pi-register-input-group full-width">
-                  <label htmlFor="cp-password-actual">Contraseña actual (la temporal) *</label>
-                  <div className="pi-register-input-wrapper">
-                    <span className="pi-register-icon" aria-hidden="true"><MdLock size={18} /></span>
-                    <input
-                      id="cp-password-actual"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="current-password"
-                      value={passwordActual}
-                      onChange={(e) => setPasswordActual(e.target.value)}
-                      placeholder="La que te llegó por correo"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="pi-register-input-group">
-                  <label htmlFor="cp-password-nueva">Contraseña nueva *</label>
-                  <div className="pi-register-input-wrapper">
-                    <span className="pi-register-icon" aria-hidden="true"><MdLock size={18} /></span>
-                    <input
-                      id="cp-password-nueva"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      value={passwordNueva}
-                      onChange={(e) => setPasswordNueva(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="pi-register-eye-btn"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
-                      aria-pressed={showPassword}
-                    >
-                      {showPassword ? <MdVisibilityOff size={18} aria-hidden="true" /> : <MdVisibility size={18} aria-hidden="true" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pi-register-input-group">
-                  <label htmlFor="cp-password-confirmar">Confirmar contraseña nueva *</label>
-                  <div className="pi-register-input-wrapper">
-                    <span className="pi-register-icon" aria-hidden="true"><MdLock size={18} /></span>
-                    <input
-                      id="cp-password-confirmar"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      value={confirmarPassword}
-                      onChange={(e) => setConfirmarPassword(e.target.value)}
-                      placeholder="Repetila"
-                      required
-                    />
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="pi-register-success"><FaCheckCircle aria-hidden="true" /> Contraseña actualizada.</p>
-            )}
-
-            <div className="pi-register-divider"><span>Tus datos</span></div>
-
-            <div className="pi-register-grid">
-              <div className="pi-register-input-group">
-                <label htmlFor="cp-ci">Número de carnet (C.I.) *</label>
-                <div className="pi-register-input-wrapper">
-                  <span className="pi-register-icon" aria-hidden="true"><FaIdCard size={16} /></span>
-                  <input
-                    id="cp-ci"
-                    type="text"
-                    inputMode="numeric"
-                    value={ci}
-                    onChange={(e) => setCi(e.target.value)}
-                    placeholder="Ej. 1234567"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="pi-register-input-group">
-                <label htmlFor="cp-celular">Celular (opcional)</label>
-                <div className="pi-register-phone-wrapper">
-                  <div className="phone-country-dropdown" aria-hidden="true">
-                    <span className="flag">🇧🇴</span>
-                    <span className="code">+591</span>
-                  </div>
-                  <input
-                    id="cp-celular"
-                    type="tel"
-                    inputMode="numeric"
-                    autoComplete="tel-national"
-                    value={celular}
-                    onChange={handleCelularChange}
-                    placeholder="12345678"
-                  />
-                </div>
-              </div>
-
-              <div className="pi-register-input-group">
-                <label htmlFor="cp-nacimiento">Fecha de nacimiento (opcional)</label>
-                <div className="pi-register-input-wrapper">
-                  <span className="pi-register-icon" aria-hidden="true"><FaBirthdayCake size={16} /></span>
-                  <input
-                    id="cp-nacimiento"
-                    type="date"
-                    autoComplete="bday"
-                    value={fechaNacimiento}
-                    onChange={(e) => setFechaNacimiento(e.target.value)}
-                    max={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
-              </div>
-
-              <div className="pi-register-input-group">
-                <label htmlFor="cp-ciudad">Ciudad (opcional)</label>
-                <div className="pi-register-input-wrapper">
-                  <span className="pi-register-icon" aria-hidden="true"><FaMapMarkerAlt size={16} /></span>
-                  <input
-                    id="cp-ciudad"
-                    type="text"
-                    value={ciudad}
-                    onChange={(e) => setCiudad(e.target.value)}
-                    placeholder="Ej. Cochabamba"
-                  />
-                </div>
-              </div>
-
-              <div className="pi-register-input-group full-width">
-                <label htmlFor="cp-foto">Foto de perfil (opcional)</label>
-                <div className="pi-register-input-wrapper" style={{ gap: '12px' }}>
-                  {foto && <img src={foto} alt="Vista previa" width="40" height="40" style={{ borderRadius: '50%', objectFit: 'cover' }} />}
-                  <label className="pi-register-btn-back" style={{ cursor: 'pointer' }}>
-                    <FaCamera aria-hidden="true" /> {foto ? 'Cambiar foto' : 'Subir foto'}
-                    <input id="cp-foto" type="file" accept="image/*" onChange={handleFotoUpload} hidden />
-                  </label>
-                </div>
-              </div>
+            {/* Progreso */}
+            <div className="pi-auth__progress" aria-hidden="true">
+              {Array.from({ length: TOTAL_PASOS }, (_, i) => (
+                <span key={i} className={i + 1 <= step ? 'is-on' : ''} />
+              ))}
+              <span className="pi-auth__progress-label">Paso {step} de {TOTAL_PASOS}</span>
             </div>
 
-            {error && <p className="pi-register-error" role="alert">{error}</p>}
+            {/* ===== PASO 1: SEGURIDAD ===== */}
+            {step === 1 && (
+              <div className="animate-fade">
+                <div className="pi-auth__step-icon"><FaLock size={26} aria-hidden="true" /></div>
+                <h1 className="pi-auth__title">Cambia tu contraseña</h1>
+                <p className="pi-auth__subtitle">
+                  Te llegó una contraseña temporal por correo. Antes de continuar, cambiala por una que solo sepas vos.
+                </p>
 
-            <button type="submit" className="pi-register-btn-submit" disabled={enviando}>
-              {enviando ? 'Guardando…' : 'Guardar y continuar →'}
-            </button>
-          </form>
+                <form onSubmit={handlePaso1} className="pi-auth__form">
+                  <div className="pi-auth__field">
+                    <label htmlFor="cp-password-actual">Contraseña actual (la temporal)</label>
+                    <div className="pi-auth__control">
+                      <span className="pi-auth__icon" aria-hidden="true"><MdLock size={18} /></span>
+                      <input
+                        id="cp-password-actual"
+                        type={showPassword ? 'text' : 'password'}
+                        autoComplete="current-password"
+                        value={passwordActual}
+                        onChange={(e) => setPasswordActual(e.target.value)}
+                        placeholder="La que te llegó por correo"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pi-register-grid">
+                    <div className="pi-auth__field">
+                      <label htmlFor="cp-password-nueva">Contraseña nueva</label>
+                      <div className="pi-auth__control">
+                        <span className="pi-auth__icon" aria-hidden="true"><MdLock size={18} /></span>
+                        <input
+                          id="cp-password-nueva"
+                          type={showPassword ? 'text' : 'password'}
+                          autoComplete="new-password"
+                          value={passwordNueva}
+                          onChange={(e) => setPasswordNueva(e.target.value)}
+                          placeholder="Mínimo 6 caracteres"
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="pi-auth__ghost-btn"
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? 'Ocultar contraseñas' : 'Mostrar contraseñas'}
+                          aria-pressed={showPassword}
+                        >
+                          {showPassword ? <MdVisibilityOff size={18} aria-hidden="true" /> : <MdVisibility size={18} aria-hidden="true" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="pi-auth__field">
+                      <label htmlFor="cp-password-confirmar">Confirmar contraseña nueva</label>
+                      <div className="pi-auth__control">
+                        <span className="pi-auth__icon" aria-hidden="true"><MdLock size={18} /></span>
+                        <input
+                          id="cp-password-confirmar"
+                          type={showPassword ? 'text' : 'password'}
+                          autoComplete="new-password"
+                          value={confirmarPassword}
+                          onChange={(e) => setConfirmarPassword(e.target.value)}
+                          placeholder="Repetila"
+                          required
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {error && <p className="pi-auth__error" role="alert">{error}</p>}
+
+                  <button type="submit" className="pi-auth__submit" disabled={enviando}>
+                    {enviando ? 'Guardando…' : 'Continuar →'}
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {/* ===== PASO 2: TUS DATOS ===== */}
+            {step === 2 && (
+              <div className="animate-fade">
+                <div className="pi-auth__step-icon"><FaUserCheck size={26} aria-hidden="true" /></div>
+                <h1 className="pi-auth__title">Completa tus datos</h1>
+                <p className="pi-auth__subtitle">
+                  Cargá tu número de carnet — te lo van a pedir en la puerta para verificar tu identidad.
+                  El resto es opcional.
+                </p>
+
+                <form onSubmit={handlePaso2} className="pi-auth__form">
+                  <div className="pi-auth__field">
+                    <label htmlFor="cp-ci">Número de carnet (C.I.)</label>
+                    <div className="pi-auth__control">
+                      <span className="pi-auth__icon" aria-hidden="true"><FaIdCard size={16} /></span>
+                      <input
+                        id="cp-ci"
+                        type="text"
+                        inputMode="numeric"
+                        value={ci}
+                        onChange={(e) => setCi(e.target.value)}
+                        placeholder="Ej. 1234567"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pi-register-divider"><span>Opcional</span></div>
+
+                  <div className="pi-register-grid">
+                    <div className="pi-auth__field">
+                      <label htmlFor="cp-celular">Celular</label>
+                      <div className="pi-register-phone-wrapper">
+                        <div className="phone-country-dropdown" aria-hidden="true">
+                          <span className="flag">🇧🇴</span>
+                          <span className="code">+591</span>
+                        </div>
+                        <input
+                          id="cp-celular"
+                          type="tel"
+                          inputMode="numeric"
+                          autoComplete="tel-national"
+                          value={celular}
+                          onChange={handleCelularChange}
+                          placeholder="12345678"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pi-auth__field">
+                      <label htmlFor="cp-nacimiento">Fecha de nacimiento</label>
+                      <div className="pi-auth__control">
+                        <span className="pi-auth__icon" aria-hidden="true"><FaBirthdayCake size={16} /></span>
+                        <input
+                          id="cp-nacimiento"
+                          type="date"
+                          autoComplete="bday"
+                          value={fechaNacimiento}
+                          onChange={(e) => setFechaNacimiento(e.target.value)}
+                          max={new Date().toISOString().split('T')[0]}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pi-auth__field">
+                    <label htmlFor="cp-ciudad">Ciudad</label>
+                    <div className="pi-auth__control">
+                      <span className="pi-auth__icon" aria-hidden="true"><FaMapMarkerAlt size={16} /></span>
+                      <input
+                        id="cp-ciudad"
+                        type="text"
+                        value={ciudad}
+                        onChange={(e) => setCiudad(e.target.value)}
+                        placeholder="Ej. Cochabamba"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pi-auth__field">
+                    <label htmlFor="cp-foto">Foto de perfil</label>
+                    <div className="preview-zone">
+                      {foto && <img src={foto} alt="Vista previa" className="img-preview" />}
+                      <label htmlFor="cp-foto" className="pi-auth__link" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <FaCamera aria-hidden="true" /> {foto ? 'Cambiar foto' : 'Subir foto'}
+                      </label>
+                      <input id="cp-foto" type="file" accept="image/*" onChange={handleFotoUpload} hidden />
+                    </div>
+                  </div>
+
+                  {error && <p className="pi-auth__error" role="alert">{error}</p>}
+
+                  <button type="submit" className="pi-auth__submit" disabled={enviando}>
+                    {enviando ? 'Guardando…' : 'Guardar y continuar →'}
+                  </button>
+                </form>
+              </div>
+            )}
+          </main>
         </div>
-      </main>
+
+        <aside className="pi-auth__aside" aria-hidden="true">
+          <div className="pi-auth__tagline">
+            <p className="pi-auth__eyebrow">QPass</p>
+            <h2>Ya casi estás listo para entrar</h2>
+          </div>
+        </aside>
+      </div>
     </div>
   );
 }

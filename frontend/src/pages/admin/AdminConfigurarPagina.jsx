@@ -16,12 +16,43 @@ import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
 import './AdminConfigurarPagina.css';
 
-// Configuración por defecto (Estilo Dark / Glassmorphism)
+// Selector de color: un cuadrado grande clickeable (el <input type="color">
+// nativo va invisible encima, mismo truco que .upload-input-hidden) + un
+// campo de texto para tipear/pegar el código hex directo — antes era un
+// cuadradito nativo del navegador solo, chico e incómodo de usar.
+function ColorField({ id, label, value, onChange }) {
+  return (
+    <div className="pi-admin-form-group">
+      <label htmlFor={id}>{label}</label>
+      <div className="pi-admin-color-picker">
+        <span className="pi-admin-color-swatch" style={{ backgroundColor: value }}>
+          <input id={id} type="color" value={value} onChange={(e) => onChange(e.target.value)} />
+        </span>
+        <input
+          type="text"
+          className="pi-admin-color-hex"
+          value={value.toUpperCase()}
+          onChange={(e) => onChange(e.target.value)}
+          maxLength={7}
+          aria-label={`${label} (código hex)`}
+        />
+      </div>
+    </div>
+  );
+}
+
+// Base para un evento que todavía no tiene landing config propia, y para
+// "Restablecer": SIN texto/imagen de relleno (antes traían un párrafo y una
+// foto de stock fijos, que se veían como si ya fueran el contenido real del
+// evento) — el título es siempre el nombre del evento (ver `eventoNombre`,
+// no es un campo editable acá) y sin imagen propia cae en la portada del
+// evento (ver `eventoImagen`). Los colores sí son un punto de partida real
+// (una paleta, no "contenido"), y actividades/cronograma quedan como
+// ejemplo editable de las filas que se pueden agregar.
 const defaultLandingConfig = {
-  titulo: 'Innovación. Control. Resultados.',
-  informacion: 'Sistema centralizado para el control, monitoreo y auditoría de ingresos diarios. Optimiza los procesos de recarga mediante pulseras QR con total transparencia y datos en tiempo real.',
-  imagen: 'https://purovinotinto.com/wp-content/uploads/2022/12/Tomorrowland.jpg',
-  colorPrimario: '#00B4D8',     
+  informacion: '',
+  imagen: '',
+  colorPrimario: '#00B4D8',
   colorBoton: '#FFFFFF',        
   colorFondo: '#0b1120',        
   colorTextoTitulo: '#FFFFFF',  
@@ -52,12 +83,25 @@ const normalizarConfig = (config) => {
   return config;
 };
 
-export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, embebido = false } = {}) {
+export default function AdminConfigurarPagina({
+  eventoId: eventoIdProp = null,
+  eventoNombre: eventoNombreProp = null,
+  eventoImagen: eventoImagenProp = null,
+  embebido = false,
+} = {}) {
   useTituloPagina('Configurar página del evento', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(eventoIdProp || location.state?.eventoId || '');
+  // El nombre del evento ES el título principal de la landing (no hay un
+  // campo de título aparte para editar) y su foto de portada es la que se
+  // usa acá si no se sube una específica para la landing. Si no vienen por
+  // props (uso standalone, sin AdminGestionEventos de por medio), se sacan
+  // del selector de eventos ya cargado más abajo.
+  const eventoSeleccionado = eventosDisponibles.find(ev => ev.id === eventoId);
+  const eventoNombre = eventoNombreProp ?? eventoSeleccionado?.nombre ?? '';
+  const eventoImagen = eventoImagenProp ?? eventoSeleccionado?.imagen ?? '';
 
   // Config de la landing con estado de carga (Manual 8.9). Si la petición falla
   // se cae a los valores por defecto (comportamiento previo), por eso no hay
@@ -123,7 +167,9 @@ export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, e
   };
 
   const guardarConfiguracion = async () => {
-    const guardada = await api.landingConfig.guardar(eventoId, config);
+    // El backend todavía guarda un "titulo" — se manda el nombre del evento
+    // sin mostrar el campo (no hay dos títulos que editar por separado).
+    const guardada = await api.landingConfig.guardar(eventoId, { ...config, titulo: eventoNombre });
     setConfig(normalizarConfig(guardada));
     setMensaje({ texto: '¡Página de inicio actualizada con éxito!', tipo: 'exito' });
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
@@ -137,7 +183,7 @@ export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, e
       peligroso: true,
     });
     if (!ok) return;
-    const guardada = await api.landingConfig.guardar(eventoId, defaultLandingConfig);
+    const guardada = await api.landingConfig.guardar(eventoId, { ...defaultLandingConfig, titulo: eventoNombre });
     setConfig(normalizarConfig(guardada));
     setMensaje({ texto: 'Se han restaurado los valores por defecto.', tipo: 'aviso' });
     setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
@@ -208,69 +254,55 @@ export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, e
           <h3><FaPalette color="var(--cian-digital-texto)" /> Apariencia y Colores</h3>
           <p className="texto-ayuda">Edita la paleta de colores de tu página principal.</p>
           <div className="pi-admin-colors-grid">
-            <div className="pi-admin-form-group">
-              <label htmlFor="cfg-colorPrimario">Color de acento (detalles)</label>
-              <div className="pi-admin-color-picker">
-                <input id="cfg-colorPrimario" type="color" name="colorPrimario" value={config.colorPrimario} onChange={handleChange} />
-                <span className="hex-label">{config.colorPrimario.toUpperCase()}</span>
-              </div>
-            </div>
-            <div className="pi-admin-form-group">
-              <label htmlFor="cfg-colorBoton">Botón principal</label>
-              <div className="pi-admin-color-picker">
-                <input id="cfg-colorBoton" type="color" name="colorBoton" value={config.colorBoton} onChange={handleChange} />
-                <span className="hex-label">{config.colorBoton.toUpperCase()}</span>
-              </div>
-            </div>
-            <div className="pi-admin-form-group">
-              <label htmlFor="cfg-colorFondo">Fondo de la página</label>
-              <div className="pi-admin-color-picker">
-                <input id="cfg-colorFondo" type="color" name="colorFondo" value={config.colorFondo} onChange={handleChange} />
-                <span className="hex-label">{config.colorFondo.toUpperCase()}</span>
-              </div>
-            </div>
-            <div className="pi-admin-form-group">
-              <label htmlFor="cfg-colorTextoTitulo">Textos de títulos</label>
-              <div className="pi-admin-color-picker">
-                <input id="cfg-colorTextoTitulo" type="color" name="colorTextoTitulo" value={config.colorTextoTitulo} onChange={handleChange} />
-                <span className="hex-label">{config.colorTextoTitulo.toUpperCase()}</span>
-              </div>
-            </div>
-            <div className="pi-admin-form-group">
-              <label htmlFor="cfg-colorTextoP">Textos generales</label>
-              <div className="pi-admin-color-picker">
-                <input id="cfg-colorTextoP" type="color" name="colorTextoP" value={config.colorTextoP} onChange={handleChange} />
-                <span className="hex-label">{config.colorTextoP.toUpperCase()}</span>
-              </div>
-            </div>
+            <ColorField id="cfg-colorPrimario" label="Color de acento (detalles)" value={config.colorPrimario} onChange={(v) => setConfig({ ...config, colorPrimario: v })} />
+            <ColorField id="cfg-colorBoton" label="Botón principal" value={config.colorBoton} onChange={(v) => setConfig({ ...config, colorBoton: v })} />
+            <ColorField id="cfg-colorFondo" label="Fondo de la página" value={config.colorFondo} onChange={(v) => setConfig({ ...config, colorFondo: v })} />
+            <ColorField id="cfg-colorTextoTitulo" label="Textos de títulos" value={config.colorTextoTitulo} onChange={(v) => setConfig({ ...config, colorTextoTitulo: v })} />
+            <ColorField id="cfg-colorTextoP" label="Textos generales" value={config.colorTextoP} onChange={(v) => setConfig({ ...config, colorTextoP: v })} />
           </div>
         </div>
 
         {/* SECCIÓN 2: TEXTOS E IMAGEN */}
         <div className="pi-admin-card">
           <h3><FaTextHeight color="var(--cian-digital-texto)" /> Textos Principales e Imagen</h3>
-          
+
           <div className="pi-admin-form-group">
-            <label htmlFor="cfg-titulo">Título principal</label>
-            <input id="cfg-titulo" type="text" name="titulo" value={config.titulo} onChange={handleChange} />
+            <label>Título principal</label>
+            <p className="pi-admin-titulo-fijo">{eventoNombre || '(nombre del evento)'}</p>
+            <p className="texto-ayuda">Es el nombre del evento — se edita en Gestión de Eventos, no acá.</p>
           </div>
 
           <div className="pi-admin-form-group">
             <label htmlFor="cfg-informacion">Información / descripción</label>
-            <textarea id="cfg-informacion" name="informacion" rows="3" value={config.informacion} onChange={handleChange} />
+            <textarea
+              id="cfg-informacion" name="informacion" rows="3" value={config.informacion} onChange={handleChange}
+              placeholder="Contale a la gente de qué se trata el evento…"
+            />
           </div>
 
           <div className="pi-admin-form-group">
-            <label htmlFor="cfg-imagen"><FaImage aria-hidden="true" /> Imagen de portada</label>
-            <div className="pi-admin-image-upload-wrapper">
-              <label htmlFor="file-upload" className="pi-admin-btn-upload">
-                <FaUpload /> Subir imagen
-              </label>
-              <input id="file-upload" type="file" accept="image/*" onChange={handleImageUpload} hidden />
-              <span className="texto-ayuda" style={{ marginLeft: '10px' }}>o pega una URL abajo:</span>
-            </div>
-            <input id="cfg-imagen" type="text" name="imagen" value={config.imagen} onChange={handleChange} placeholder="https://..." style={{ marginTop: '8px' }} />
-            {config.imagen && <img width="480" height="200" src={config.imagen} alt="Vista previa" className="pi-admin-preview-img" />}
+            <label><FaImage aria-hidden="true" /> Imagen de portada de la landing</label>
+            <p className="texto-ayuda">Si no subís una acá, se usa la foto de portada del evento.</p>
+            {config.imagen ? (
+              <div className="preview-zone">
+                <img width="480" height="200" src={config.imagen} alt="Vista previa" className="pi-admin-preview-img" />
+                <button type="button" className="btn-quitar-imagen" onClick={() => setConfig({ ...config, imagen: '' })}>
+                  <FaTimes aria-hidden="true" /> Quitar (usar la del evento)
+                </button>
+              </div>
+            ) : (
+              <>
+                {eventoImagen && (
+                  <img width="480" height="200" src={eventoImagen} alt="Portada del evento" className="pi-admin-preview-img" />
+                )}
+                <div className="upload-zone">
+                  <FaUpload className="upload-icon" aria-hidden="true" />
+                  <span className="upload-text">Hacé clic para subir una foto distinta para la landing</span>
+                  <span className="upload-subtext">PNG, JPG hasta 3MB</span>
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="upload-input-hidden" />
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -337,7 +369,7 @@ export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, e
                   {/* Vista previa de la landing: no es un encabezado real de esta pantalla,
                       por eso es <div> y no <h1> (la pantalla ya tiene su único h1 arriba) */}
                   <div style={{ color: config.colorTextoTitulo, fontSize: '32px', fontWeight: '800', marginBottom: '20px', lineHeight: '1.2' }}>
-                    {config.titulo}
+                    {eventoNombre}
                   </div>
                   <p style={{ color: config.colorTextoP, fontSize: '15px', marginBottom: '30px', lineHeight: '1.6' }}>
                     {config.informacion}
@@ -351,8 +383,8 @@ export default function AdminConfigurarPagina({ eventoId: eventoIdProp = null, e
                   </button>
                 </div>
                 <div className="pi-admin-modal-image">
-                  {config.imagen ? (
-                    <img width="400" height="225" src={config.imagen} alt="Preview" style={{ borderRadius: '16px', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }} />
+                  {(config.imagen || eventoImagen) ? (
+                    <img width="400" height="225" src={config.imagen || eventoImagen} alt="Preview" style={{ borderRadius: '16px', boxShadow: '0 10px 20px rgba(0,0,0,0.5)' }} />
                   ) : (
                     <div className="no-img">Sin imagen</div>
                   )}

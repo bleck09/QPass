@@ -36,6 +36,14 @@ export class EntradasController {
     return this.entradasService.buscarPorCodigoQr(codigo);
   }
 
+  // Escáner de "Mi Perfil" (cualquier usuario logueado, cualquier evento):
+  // solo nombre + evento + tipo de entrada, sin saldo ni datos sensibles.
+  // Debe declararse ANTES de @Get(':id') para que "buscar-basico" no matchee como id.
+  @Get('buscar-basico/:codigo')
+  buscarBasico(@Param('codigo') codigo: string) {
+    return this.entradasService.buscarBasicoPorCodigoQr(codigo);
+  }
+
   @Get(':id')
   obtenerPorId(@Param('id') id: string) {
     return this.entradasService.obtenerPorId(id);

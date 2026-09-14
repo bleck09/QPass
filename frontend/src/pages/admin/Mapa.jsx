@@ -31,8 +31,10 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
 
   // Evento completo (no solo el nombre): acá salen latitud/longitud (centro del
   // mapa real en modo Contorno) y contornoMapa (la forma proyectada del modo Plano).
+  // obtenerAdmin (no obtener): esta pantalla es de Admin, y el evento puede
+  // seguir en borrador — el endpoint público 404-ea eventos sin publicar.
   const cargarEventoActual = useCallback(
-    () => api.eventos.obtener(eventoId),
+    () => api.eventos.obtenerAdmin(eventoId),
     [eventoId],
   );
   const {

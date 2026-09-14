@@ -7,8 +7,8 @@ import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
-  FaStore, FaUserTie, FaEnvelope, FaLock, FaPlus,
-  FaTrash, FaUserShield, FaUsersCog
+  FaStore, FaUserTie, FaPlus,
+  FaTrash, FaUsersCog, FaInfoCircle
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
@@ -200,92 +200,77 @@ export default function AdCreaUsuarioNegocio() {
           titulo={<><FaUsersCog color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Nuevo Usuario</>}
           onCerrar={() => setShowModal(false)}
           tamano="md"
-          className="pi-adnegocio-modal"
         >
-          <p className="pi-adnegocio-hint">
-            Asigna el rol correcto. El sistema adaptará los accesos y paneles automáticamente.
+          <p className="info-text">
+            <FaInfoCircle /> Asigna el rol correcto. El sistema adaptará los accesos y paneles automáticamente.
           </p>
 
-          <form onSubmit={handleSubmit} className="pi-adnegocio-form">
+          <form onSubmit={handleSubmit} className="formulario">
+            <div className="input-group">
+              <label htmlFor="adneg-rol">Tipo de cuenta (rol)</label>
+              <select
+                id="adneg-rol"
+                name="rol"
+                value={formData.rol}
+                onChange={handleChange}
+              >
+                {ROLES.map(rol => (
+                  <option key={rol} value={rol}>{ROLE_LABELS[rol] || rol}</option>
+                ))}
+              </select>
+            </div>
 
-                <div className="pi-adnegocio-input-group">
-                  <label htmlFor="adneg-rol">Tipo de cuenta (rol)</label>
-                  <div className="input-wrapper">
-                    <FaUserShield className="input-icon" />
-                    <select 
-                      id="adneg-rol"
-                      name="rol" 
-                      value={formData.rol} 
-                      onChange={handleChange}
-                      className="pi-select-rol"
-                    >
-                      {ROLES.map(rol => (
-                        <option key={rol} value={rol}>{rol}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
+            <div className="input-group">
+              <label htmlFor="adneg-nombre">Nombre completo / encargado</label>
+              <input
+                type="text"
+                id="adneg-nombre"
+                autoComplete="name"
+                name="nombre"
+                value={formData.nombre}
+                onChange={handleChange}
+                placeholder="Ej: Juan Pérez"
+                required
+              />
+            </div>
 
-                <div className="pi-adnegocio-input-group">
-                  <label htmlFor="adneg-nombre">Nombre completo / encargado</label>
-                  <div className="input-wrapper">
-                    <FaUserTie className="input-icon" />
-                    <input 
-                      type="text" 
-                      id="adneg-nombre"
-                      autoComplete="name"
-                      name="nombre"
-                      value={formData.nombre} 
-                      onChange={handleChange} 
-                      placeholder="Ej: Juan Pérez" 
-                      required 
-                    />
-                  </div>
-                </div>
+            <div className="input-group">
+              <label htmlFor="adneg-email">Correo electrónico</label>
+              <input
+                type="email"
+                id="adneg-email"
+                autoComplete="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                placeholder="juan@correo.com"
+                required
+              />
+            </div>
 
-                <div className="pi-adnegocio-input-group">
-                  <label htmlFor="adneg-email">Correo electrónico</label>
-                  <div className="input-wrapper">
-                    <FaEnvelope className="input-icon" />
-                    <input 
-                      type="email" 
-                      id="adneg-email"
-                      autoComplete="email"
-                      name="email"
-                      value={formData.email} 
-                      onChange={handleChange} 
-                      placeholder="juan@correo.com" 
-                      required 
-                    />
-                  </div>
-                </div>
+            <div className="input-group">
+              <label htmlFor="adneg-password">Contraseña temporal</label>
+              <input
+                type="text"
+                id="adneg-password"
+                autoComplete="new-password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                placeholder="Ej: 123456"
+                required
+              />
+            </div>
 
-                <div className="pi-adnegocio-input-group">
-                  <label htmlFor="adneg-password">Contraseña temporal</label>
-                  <div className="input-wrapper">
-                    <FaLock className="input-icon" />
-                    <input 
-                      type="text" 
-                      id="adneg-password"
-                      autoComplete="new-password"
-                      name="password"
-                      value={formData.password} 
-                      onChange={handleChange} 
-                      placeholder="Ej: 123456" 
-                      required 
-                    />
-                  </div>
-                </div>
-
-                <div className="pi-adnegocio-modal-actions">
-                  <button type="button" className="btn-cancelar" onClick={() => setShowModal(false)}>
-                    Cancelar
-                  </button>
-                  <button type="submit" className="btn-guardar">
-                    Crear Cuenta
-                  </button>
-                </div>
-              </form>
+            <div className="modal-actions">
+              <button type="button" className="btn-cancelar" onClick={() => setShowModal(false)}>
+                Cancelar
+              </button>
+              <button type="submit" className="btn-primario">
+                Crear Cuenta
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
 
