@@ -3,6 +3,7 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import Buscador from '../../components/Buscador.jsx';
+import Filtros from '../../components/Filtros.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -10,15 +11,17 @@ import {
   FaTicketAlt, FaWallet, FaQrcode, FaUpload, FaPlus, FaTrash, FaUserPlus,
   FaCheckCircle, FaHourglassHalf, FaEnvelope, FaHistory,
   FaStore, FaCoins, FaExclamationTriangle, FaUserTag, FaIdCard,
-  FaSearch, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt, FaChevronDown, FaMoon
+  FaSearch, FaPhoneAlt, FaCalendarAlt, FaMapMarkerAlt, FaChevronDown, FaMoon,
+  FaTh, FaList
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
 import CarruselEventos from '../../components/CarruselEventos.jsx';
+import FotoZoom from '../../components/FotoZoom.jsx';
 import { VERSION_TERMINOS, TEXTO_TERMINOS } from '../../constants/terminos.js';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
-import { esVigente, estadoEvento, formatearFecha, imagenEvento, nombreJornada, mostrarJornada, agruparPorJornada } from '../../utils/eventos.js';
+import { esVigente, estadoEvento, formatearFecha, imagenEvento, nombreJornada, nombreJornadaConAnio, mostrarJornada, agruparPorJornada } from '../../utils/eventos.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 
 const MAX_ENTRADAS = 6;
@@ -108,7 +111,7 @@ function BilleteraAcordeon({ b, enCurso = false, qrCodigo }) {
           tamano="sm"
         >
           <div className="pi-usr-qr-grande">
-            <img width="260" height="260" src={qrDe(qrCodigo)} alt="Tu código QR" />
+            <FotoZoom width="260" height="260" src={qrDe(qrCodigo)} alt="Tu código QR" />
             <p className="texto-ayuda">
               Mostrá este código en el punto de retiro para cobrar tus {disponible} pts disponibles.
             </p>
@@ -174,9 +177,6 @@ export default function UsuarioNormal() {
     api.entradas.mias().then(setEntradasANombreMio).catch(() => setEntradasANombreMio([])),
   ]);
   useEffect(() => { recargarCompras(); }, []);
-
-  // --- MIS ENTRADAS: mostrar u ocultar las entradas de eventos ya pasados ---
-  const [mostrarPasadas, setMostrarPasadas] = useState(false);
 
   // --- REVISAR MI SOLICITUD: edición mientras está pendiente, reporte si ya fue aprobada ---
   const [compraEnRevision, setCompraEnRevision] = useState(null);
@@ -416,11 +416,11 @@ export default function UsuarioNormal() {
   // La compra destacada solo se excluye si no tiene nada más que mostrar: si
   // trae más entradas (ej. tu propia entrada de otra jornada del mismo evento,
   // o invitados), esa compra también aparece acá para no esconder el resto.
+  // No se excluye la compra de la entrada destacada: esa entrada se repite
+  // arriba en el banner Y abajo en la lista/tabla completa, a propósito.
   const comprasOtras = useMemo(
-    () => comprasConEvento.filter(compra =>
-      compra.vigente && (compra.id !== entradaDestacada?.compraId || compra.entradas.length > 1)
-    ),
-    [comprasConEvento, entradaDestacada]
+    () => comprasConEvento.filter(compra => compra.vigente),
+    [comprasConEvento]
   );
 
   // Solicitudes de eventos que ya pasaron, solo como registro histórico.
@@ -431,14 +431,13 @@ export default function UsuarioNormal() {
 
   // Entradas de eventos próximos que compró OTRA persona a mi nombre (yo no fui el
   // comprador). Ya vienen solo de compras confirmadas desde el backend.
+  // No se excluye la que ya está destacada arriba: se repite a propósito
+  // también en la lista/tabla completa de abajo.
   const entradasDeInvitado = useMemo(
     () => entradasANombreMio
       .filter(e => e.evento && esVigente(e.evento))
-      .filter(e => e.compra?.compradorId !== usuario?.id)
-      // La más próxima ya se destaca arriba (pudo salir de acá mismo ahora
-      // que entradaDestacada también considera invitados) — no repetirla.
-      .filter(e => e.id !== entradaDestacada?.id),
-    [entradasANombreMio, usuario?.id, entradaDestacada]
+      .filter(e => e.compra?.compradorId !== usuario?.id),
+    [entradasANombreMio, usuario?.id]
   );
 
   // Igual que arriba, pero de eventos que ya pasaron: sin esto, la entrada de un
@@ -451,6 +450,99 @@ export default function UsuarioNormal() {
       .filter(e => e.compra?.compradorId !== usuario?.id),
     [entradasANombreMio, usuario?.id]
   );
+
+  // --- MIS ENTRADAS (tabla): unifica compras propias + entradas de invitado,
+  // próximas y pasadas, en filas homogéneas para un solo buscador + tabla en
+  // vez de 4 grillas de tarjetas separadas.
+  const filasMisEntradas = useMemo(() => {
+    const deCompra = (compra) => {
+      const jornadas = [...new Map(
+        (compra.entradas || []).map(e => e.diaEvento).filter(mostrarJornada).map(d => [d.id, d])
+      ).values()];
+      return {
+        key: `compra-${compra.id}`,
+        tipo: 'compra',
+        evento: compra.evento,
+        vigente: compra.vigente,
+        estado: compra.estado,
+        motivoRechazo: compra.motivoRechazo,
+        jornadas,
+        cantidad: compra.entradas.length,
+        monto: compra.montoTotal,
+        numeros: compra.entradas.map(e => e.numero).filter(n => n != null).sort((a, b) => a - b),
+        raw: compra,
+      };
+    };
+    const deInvitado = (entrada) => ({
+      key: `invitado-${entrada.id}`,
+      tipo: 'invitado',
+      evento: entrada.evento,
+      vigente: esVigente(entrada.evento),
+      estado: 'confirmado',
+      motivoRechazo: null,
+      jornadas: mostrarJornada(entrada.diaEvento) ? [entrada.diaEvento] : [],
+      cantidad: 1,
+      monto: entrada.categoriaTicket?.precio ?? null,
+      numeros: entrada.numero != null ? [entrada.numero] : [],
+      raw: entrada,
+    });
+    return [
+      ...comprasOtras.map(deCompra),
+      ...comprasPasadas.map(deCompra),
+      ...entradasDeInvitado.map(deInvitado),
+      ...entradasDeInvitadoPasadas.map(deInvitado),
+    ];
+  }, [comprasOtras, comprasPasadas, entradasDeInvitado, entradasDeInvitadoPasadas]);
+
+  const [busquedaMisEntradas, setBusquedaMisEntradas] = useState('');
+  const [filtroMisEntradas, setFiltroMisEntradas] = useState('todas');
+
+  const filtrosMisEntradas = useMemo(() => {
+    const conteo = (pred) => filasMisEntradas.filter(pred).length;
+    return [
+      { valor: 'todas', texto: 'Todas', conteo: filasMisEntradas.length },
+      { valor: 'proximas', texto: 'Próximas', conteo: conteo(f => estadoEvento(f.evento) === 'proximo') },
+      { valor: 'encurso', texto: 'En curso', conteo: conteo(f => estadoEvento(f.evento) === 'en_curso') },
+      { valor: 'pasadas', texto: 'Pasadas', conteo: conteo(f => !f.vigente) },
+      { valor: 'pendientes', texto: 'En revisión', conteo: conteo(f => f.estado === 'pendiente') },
+      { valor: 'rechazadas', texto: 'Rechazadas', conteo: conteo(f => f.estado === 'rechazado') },
+    ].filter(f => f.valor === 'todas' || f.conteo > 0);
+  }, [filasMisEntradas]);
+
+  // Filtro por tipo de manilla: aparte del de arriba (no son excluyentes
+  // entre sí — se pueden combinar, ej. "Pasadas" + "Manilla física").
+  const [filtroManilla, setFiltroManilla] = useState('todas');
+  const hayFisicaYDigital = useMemo(
+    () => new Set(filasMisEntradas.map(f => f.evento.tipoManilla)).size > 1,
+    [filasMisEntradas],
+  );
+
+  const filasMisEntradasFiltradas = useMemo(() => {
+    const q = busquedaMisEntradas.trim().toLowerCase();
+    return filasMisEntradas
+      .filter(f => {
+        if (filtroMisEntradas === 'proximas') return estadoEvento(f.evento) === 'proximo';
+        if (filtroMisEntradas === 'encurso') return estadoEvento(f.evento) === 'en_curso';
+        if (filtroMisEntradas === 'pasadas') return !f.vigente;
+        if (filtroMisEntradas === 'pendientes') return f.estado === 'pendiente';
+        if (filtroMisEntradas === 'rechazadas') return f.estado === 'rechazado';
+        return true;
+      })
+      .filter(f => filtroManilla === 'todas' || f.evento.tipoManilla === filtroManilla)
+      .filter(f => !q
+        || f.evento.nombre.toLowerCase().includes(q)
+        || (f.evento.lugar || '').toLowerCase().includes(q))
+      .sort((a, b) => new Date(b.evento.fecha) - new Date(a.evento.fecha));
+  }, [filasMisEntradas, busquedaMisEntradas, filtroMisEntradas, filtroManilla]);
+
+  // Modal liviano para el QR de una entrada de invitado (sin el flujo completo
+  // de "Revisar mi solicitud", que es solo para compras propias).
+  const [entradaInvitadaQr, setEntradaInvitadaQr] = useState(null);
+
+  // "Mis Entradas" se puede ver como tabla (más compacta, con buscador/filtros)
+  // o como tarjetas (como estaba antes) — se mantienen las dos, el usuario
+  // elige. El buscador/filtro de arriba es el mismo para ambas vistas.
+  const [vistaMisEntradas, setVistaMisEntradas] = useState('tarjetas');
 
   // --- LÓGICA DEL CARRITO ---
   // Contador local para ids de entradas del carrito (evita depender de Date.now() en el handler).
@@ -669,7 +761,7 @@ export default function UsuarioNormal() {
     </div>
   );
 
-  // Card compacta de una compra para "Otras entradas" / "Entradas pasadas": fondo con la
+  // Card compacta de una compra para la vista "Tarjetas" de Mis Entradas: fondo con la
   // imagen del evento (para diferenciarlas de un vistazo) y sin mostrar el QR ahí mismo;
   // el QR y los datos de cada persona se ven al entrar a "Ver detalles".
   const renderCompraCard = (compra) => {
@@ -721,7 +813,7 @@ export default function UsuarioNormal() {
 
   // Card de una entrada que compró otra persona a nombre del usuario logueado.
   // Aquí sí se muestra el QR (o el aviso de manilla pendiente), porque es el
-  // único lugar donde el invitado ve su entrada.
+  // único lugar donde el invitado ve su entrada sin abrir el modal de QR aparte.
   const renderEntradaInvitadoCard = (entrada) => (
     <div key={entrada.id} className="pi-usr-compra-card" style={{ backgroundImage: `url(${imagenEvento(entrada.evento)})` }}>
       <div className="pi-usr-compra-card-overlay">
@@ -741,9 +833,11 @@ export default function UsuarioNormal() {
           {entrada.categoriaTicket && <span><FaTicketAlt /> {entrada.categoriaTicket.nombre}</span>}
         </div>
 
-        <div className="pi-usr-compra-card-acciones" style={{ alignItems: 'center' }}>
+        <div className="pi-usr-compra-card-acciones">
           {entrada.codigoQrVinculado ? (
-            <img width="120" height="120" src={qrDe(entrada.codigoQrVinculado.codigo)} alt="Tu código QR" style={{ borderRadius: 12, background: '#fff', padding: 6 }} />
+            <button type="button" className="pi-usr-btn-revisar" onClick={() => setEntradaInvitadaQr(entrada)}>
+              <FaQrcode /> Ver QR
+            </button>
           ) : (
             <span className="pi-usr-badge pi-usr-badge-pend"><FaHourglassHalf /> Manilla aún sin vincular</span>
           )}
@@ -756,7 +850,12 @@ export default function UsuarioNormal() {
     <div className="pi-usr-container">
 
       <div className="pi-usr-header">
-        <h1>Panel de asistente</h1>
+        <h1>
+          {pestana === 'eventos' && 'Elige tu evento'}
+          {pestana === 'comprar' && 'Comprar entradas'}
+          {pestana === 'misentradas' && 'Mis entradas'}
+          {pestana === 'saldo' && 'Mi saldo'}
+        </h1>
         <div className="pi-usr-tabs">
           <button type="button" className={pestana === 'eventos' ? 'activo' : ''} aria-current={pestana === 'eventos' ? 'page' : undefined} onClick={() => navigate('/usuarionormal/eventos')}>
             <FaCalendarAlt aria-hidden="true" /> Eventos
@@ -873,7 +972,7 @@ export default function UsuarioNormal() {
                   {(gruposCarrito.length > 0 ? gruposCarrito : [{ dia: null, items: entradasCart }]).map((grupo) => (
                     <Fragment key={grupo.dia?.id ?? 'unica'}>
                       {grupo.dia && (
-                        <h5 className="pi-usr-cart-dia-header"><FaMoon aria-hidden="true" /> {nombreJornada(grupo.dia)}</h5>
+                        <h5 className="pi-usr-cart-dia-header"><FaMoon aria-hidden="true" /> {nombreJornadaConAnio(grupo.dia)}</h5>
                       )}
                       {grupo.items.map((entrada) => {
                         const catSeleccionada = categoriasEntradas.find(c => c.id === entrada.categoriaTicketId);
@@ -933,7 +1032,7 @@ export default function UsuarioNormal() {
                 {(gruposCategorias.length > 0 ? gruposCategorias : [{ dia: null, items: categoriasEntradas }]).map((grupo) => (
                   <Fragment key={grupo.dia?.id ?? 'unica'}>
                     {grupo.dia && (
-                      <h5 className="pi-usr-categorias-dia-header"><FaMoon aria-hidden="true" /> {nombreJornada(grupo.dia)}</h5>
+                      <h5 className="pi-usr-categorias-dia-header"><FaMoon aria-hidden="true" /> {nombreJornadaConAnio(grupo.dia)}</h5>
                     )}
                     <div className="pi-usr-categorias-grid">
                       {grupo.items.map(cat => {
@@ -1273,7 +1372,7 @@ export default function UsuarioNormal() {
             <div className="pi-usr-manilla-destacada" style={{ backgroundImage: `url(${imagenEvento(entradaDestacada.evento)})` }}>
               <div className="pi-usr-manilla-overlay">
                 {entradaDestacada.codigoQrVinculado ? (
-                  <img width="140" height="140" src={qrDe(entradaDestacada.codigoQrVinculado.codigo)} alt="Tu código QR" className="manilla-qr" />
+                  <FotoZoom width="140" height="140" src={qrDe(entradaDestacada.codigoQrVinculado.codigo)} alt="Tu código QR" className="manilla-qr" />
                 ) : (
                   <div className="manilla-qr manilla-qr-pendiente">
                     <FaHourglassHalf size={28} />
@@ -1345,51 +1444,116 @@ export default function UsuarioNormal() {
             </div>
           )}
 
-          {entradasDeInvitado.length > 0 && (
-            <>
-              <h3 className="pi-usr-mis-entradas-subtitulo">Entradas que compraron para ti</h3>
-              <div className="pi-usr-entradas-grid">
-                {entradasDeInvitado.map(renderEntradaInvitadoCard)}
-              </div>
-            </>
-          )}
-
-          <h3 className="pi-usr-mis-entradas-subtitulo">Otras entradas</h3>
-          {comprasOtras.length === 0 ? (
-            <div className="pi-usr-card" style={{ textAlign: 'center', color: 'var(--gris-medio)' }}>
-              No tienes más solicitudes de eventos próximos.
+          <div className="pi-usr-mis-entradas-cabecera">
+            <h3 className="pi-usr-mis-entradas-subtitulo">Todas tus entradas</h3>
+            <div className="pi-usr-vista-toggle" role="group" aria-label="Cambiar vista de Mis Entradas">
+              <button
+                type="button"
+                className={vistaMisEntradas === 'tarjetas' ? 'activo' : ''}
+                aria-pressed={vistaMisEntradas === 'tarjetas'}
+                onClick={() => setVistaMisEntradas('tarjetas')}
+              >
+                <FaTh aria-hidden="true" /> Tarjetas
+              </button>
+              <button
+                type="button"
+                className={vistaMisEntradas === 'tabla' ? 'activo' : ''}
+                aria-pressed={vistaMisEntradas === 'tabla'}
+                onClick={() => setVistaMisEntradas('tabla')}
+              >
+                <FaList aria-hidden="true" /> Tabla
+              </button>
             </div>
+          </div>
+
+          <Buscador
+            valor={busquedaMisEntradas}
+            onCambio={setBusquedaMisEntradas}
+            placeholder="Buscar por evento o lugar…"
+            etiqueta="Buscar en mis entradas"
+            filtros={filtrosMisEntradas}
+            filtroActivo={filtroMisEntradas}
+            onFiltro={setFiltroMisEntradas}
+            etiquetaFiltros="Filtrar entradas"
+            acciones={hayFisicaYDigital && (
+              <Filtros
+                opciones={[
+                  { valor: 'todas', texto: 'Todo tipo de manilla' },
+                  { valor: 'fisica', texto: 'Manilla física' },
+                  { valor: 'digital', texto: 'Manilla digital' },
+                ]}
+                activo={filtroManilla}
+                onCambio={setFiltroManilla}
+                etiqueta="Filtrar por tipo de manilla"
+              />
+            )}
+          />
+
+          {vistaMisEntradas === 'tabla' ? (
+            <Tabla
+              columnas={['Origen', 'Evento', 'Lugar / Detalle', 'Estado', 'Entradas', 'Fecha', { texto: 'Acción', align: 'center' }]}
+              datos={filasMisEntradasFiltradas}
+              vacio={
+                filasMisEntradas.length === 0
+                  ? 'Todavía no tienes ninguna entrada.'
+                  : 'Ninguna entrada coincide con la búsqueda.'
+              }
+              renderFila={(fila) => (
+                <tr key={fila.key}>
+                  <td>
+                    <span className="pi-usr-tipo-celda">
+                      {fila.tipo === 'invitado' ? <><FaUserPlus color="var(--cian-digital-texto)" /> Te invitaron</> : <><FaUserTag color="var(--indigo-profundo)" /> Tu compra</>}
+                    </span>
+                  </td>
+                  <td style={{ fontSize: '13px' }}>{fila.evento.nombre}</td>
+                  <td>
+                    <span className="pi-usr-detalle-consumo">
+                      <span><FaMapMarkerAlt /> {fila.evento.lugar}</span>
+                      {fila.jornadas.length > 0 && <span><FaMoon /> {fila.jornadas.map(d => nombreJornada(d)).join(', ')}</span>}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="pi-usr-tipo-celda">
+                      {fila.estado === 'confirmado' && <><FaCheckCircle color="var(--verde-recarga-texto)" /> Aprobado</>}
+                      {fila.estado === 'pendiente' && <><FaHourglassHalf color="var(--ambar-aviso-texto)" /> En revisión</>}
+                      {fila.estado === 'rechazado' && (
+                        <span title={fila.motivoRechazo || ''}><FaExclamationTriangle color="var(--rojo-error)" /> Rechazada</span>
+                      )}
+                    </span>
+                    {!fila.vigente && <span className="pi-usr-detalle-consumo">Evento pasado</span>}
+                  </td>
+                  <td>
+                    <span className="pi-usr-detalle-consumo">
+                      <strong>{fila.cantidad} entrada{fila.cantidad === 1 ? '' : 's'}{fila.monto != null && ` · Bs. ${fila.monto}`}</strong>
+                      {fila.numeros.length > 0 && <span><FaIdCard /> N.º {fila.numeros.join(', ')}</span>}
+                    </span>
+                  </td>
+                  <td style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>{formatearFecha(fila.evento.fecha)}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    {fila.tipo === 'compra' ? (
+                      <button type="button" className="pi-usr-btn-revisar" onClick={() => abrirRevision(fila.raw)}>
+                        <FaSearch /> Ver detalles
+                      </button>
+                    ) : (
+                      <button type="button" className="pi-usr-btn-revisar" onClick={() => setEntradaInvitadaQr(fila.raw)}>
+                        <FaQrcode /> Ver QR
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              )}
+            />
           ) : (
-            <div className="pi-usr-entradas-grid">
-              {comprasOtras.map(renderCompraCard)}
-            </div>
-          )}
-
-          <button type="button" className="pi-usr-btn-toggle-pasadas" onClick={() => setMostrarPasadas(v => !v)}>
-            <FaHistory /> {mostrarPasadas ? 'Ocultar entradas pasadas' : `Ver entradas pasadas (${comprasPasadas.length + entradasDeInvitadoPasadas.length})`}
-          </button>
-
-          {mostrarPasadas && (
-            comprasPasadas.length === 0 && entradasDeInvitadoPasadas.length === 0 ? (
+            filasMisEntradasFiltradas.length === 0 ? (
               <div className="pi-usr-card" style={{ textAlign: 'center', color: 'var(--gris-medio)' }}>
-                Aún no tienes entradas de eventos pasados.
+                {filasMisEntradas.length === 0 ? 'Todavía no tienes ninguna entrada.' : 'Ninguna entrada coincide con la búsqueda.'}
               </div>
             ) : (
-              <>
-                {entradasDeInvitadoPasadas.length > 0 && (
-                  <>
-                    <h3 className="pi-usr-mis-entradas-subtitulo">Entradas que compraron para ti</h3>
-                    <div className="pi-usr-entradas-grid">
-                      {entradasDeInvitadoPasadas.map(renderEntradaInvitadoCard)}
-                    </div>
-                  </>
+              <div className="pi-usr-entradas-grid">
+                {filasMisEntradasFiltradas.map(fila =>
+                  fila.tipo === 'compra' ? renderCompraCard(fila.raw) : renderEntradaInvitadoCard(fila.raw)
                 )}
-                {comprasPasadas.length > 0 && (
-                  <div className="pi-usr-entradas-grid">
-                    {comprasPasadas.map(renderCompraCard)}
-                  </div>
-                )}
-              </>
+              </div>
             )
           )}
         </div>
@@ -1539,10 +1703,22 @@ export default function UsuarioNormal() {
                           </div>
 
                           <div className="pi-usr-entrada-qr">
-                            {ent.codigoQrVinculado ? (
-                              <img width="80" height="80" src={qrDe(ent.codigoQrVinculado.codigo)} alt="QR" className="qr-miniatura" />
+                            {ent.isTitular ? (
+                              // Tu propia entrada: tu QR, lo podés ver acá igual que en Mis Entradas.
+                              ent.codigoQrVinculado ? (
+                                <img width="80" height="80" src={qrDe(ent.codigoQrVinculado.codigo)} alt="QR" className="qr-miniatura" />
+                              ) : (
+                                <span className="texto-ayuda"><FaHourglassHalf /> Manilla aún sin vincular</span>
+                              )
                             ) : (
-                              <span className="texto-ayuda"><FaHourglassHalf /> Manilla aún sin vincular</span>
+                              // Entrada de un invitado: nunca se muestra SU código acá (el
+                              // comprador no debe poder ver/usar el QR de otra persona) —
+                              // solo si ya tiene manilla vinculada o no, sin la imagen.
+                              ent.codigoQrVinculado ? (
+                                <span className="texto-ayuda"><FaCheckCircle color="var(--verde-recarga-texto)" /> Ya tiene su manilla vinculada</span>
+                              ) : (
+                                <span className="texto-ayuda"><FaHourglassHalf /> Manilla aún sin vincular</span>
+                              )
                             )}
                           </div>
 
@@ -1558,6 +1734,35 @@ export default function UsuarioNormal() {
                 </>
               ) : null}
             </div>
+        </Modal>
+      )}
+
+      {/* --- VER QR de una entrada de invitado (desde la tabla de Mis Entradas) --- */}
+      {entradaInvitadaQr && (
+        <Modal
+          titulo={<><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Tu código QR</>}
+          onCerrar={() => setEntradaInvitadaQr(null)}
+          tamano="sm"
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
+            <strong>{entradaInvitadaQr.evento?.nombre}</strong>
+            {entradaInvitadaQr.categoriaTicket && (
+              <span className="texto-ayuda">{entradaInvitadaQr.categoriaTicket.nombre}</span>
+            )}
+            {entradaInvitadaQr.codigoQrVinculado ? (
+              <FotoZoom
+                width="220"
+                height="220"
+                src={qrDe(entradaInvitadaQr.codigoQrVinculado.codigo)}
+                alt="Tu código QR"
+                className="pi-usr-qr-modal-img"
+              />
+            ) : (
+              <p className="texto-ayuda">
+                <FaHourglassHalf /> Manilla aún sin vincular — vas a poder verla apenas inicies sesión el día del evento.
+              </p>
+            )}
+          </div>
         </Modal>
       )}
     </div>

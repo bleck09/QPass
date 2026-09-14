@@ -10,6 +10,11 @@ import '../pages/publico/PaginaPrincipal.css';
 // `saldoPorEvento` es opcional (Map eventoId -> saldo disponible): solo lo pasa
 // el panel privado, para avisar "todavía te queda saldo acá". En la home pública
 // se omite y ninguna card muestra el aviso.
+// El tamaño de la tarjeta (ancho/alto/separación) lo definen las clases
+// carousel-3d-container/carousel-3d-card de cada página que lo envuelve —
+// la home pública en PaginaPrincipal.css, el panel privado del Usuario
+// Normal (mucho más ancho) en UsuarioNormal.css — este componente no decide
+// tamaños, solo la estructura y el comportamiento.
 export default function CarruselEventos({ eventos, onAdquirir, saldoPorEvento }) {
   const [activeIdx, setActiveIdx] = useState(0);
 

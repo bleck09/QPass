@@ -605,9 +605,53 @@ html {
   font-size: 5rem;
   font-weight: 900;
   color: var(--color-texto-titulo);
-  margin-bottom: 60px;
+  margin-bottom: 24px;
   letter-spacing: 2px;
   text-transform: uppercase;
+}
+
+/* Filtro por jornada: solo aparece con 2+ noches (ver mostrarJornada en
+   eventos.js) — sin esto, todas las categorías de todos los días se ven
+   mezcladas en una sola grilla larga. */
+.pricing-filtro-dias {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 48px;
+}
+.pricing-filtro-dias button {
+  border: 1px solid rgba(0, 180, 216, 0.35);
+  background: rgba(15, 23, 42, 0.5);
+  color: var(--color-texto-p);
+  padding: 10px 22px;
+  border-radius: var(--radius-full, 999px);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.pricing-filtro-dias button:hover { border-color: var(--color-primario); color: var(--color-texto-titulo); }
+.pricing-filtro-dias button.activo {
+  background: var(--color-primario);
+  border-color: var(--color-primario);
+  color: var(--color-fondo);
+}
+
+/* Insignia de jornada dentro de cada tarjeta (para no perder de vista a cuál
+   noche pertenece cuando el filtro está en "Todas las noches"). */
+.dia-badge {
+  display: inline-flex;
+  align-self: flex-start;
+  font-size: var(--text-xs);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--color-primario);
+  background: rgba(0, 180, 216, 0.12);
+  padding: 4px 12px;
+  border-radius: var(--radius-full, 999px);
+  margin-bottom: 10px;
 }
 
 .pricing-grid {
@@ -772,6 +816,7 @@ html {
   
   .pricing-title { font-size: 3.5rem; }
   .pricing-card.destacado { transform: scale(1); padding: 40px 32px; }
+  .pricing-filtro-dias button { padding: 8px 16px; font-size: var(--text-xs); }
   
   .pi-landing-volver { margin-right: 4px; width: 35px; height: 35px; }
 }

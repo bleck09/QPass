@@ -153,6 +153,36 @@ export class ComprasService {
         );
       }
     }
+
+    // Mismo problema, mirado desde el otro lado: una entrada de INVITADO en
+    // este pedido recién se vincula a una cuenta cuando se APRUEBE la compra
+    // (por correo, ver aprobar()) — pero si ese correo YA tiene cuenta y esa
+    // cuenta YA tiene una entrada para esta misma jornada (la suya propia, o
+    // una invitación anterior), no tiene sentido dejar que se apruebe una
+    // segunda; se detecta ya en este momento, antes de reservar cupo.
+    for (const e of dto.entradas) {
+      const correo = e.correo.trim().toLowerCase();
+      const usuarioExistente = await this.prisma.usuario.findUnique({
+        where: { email: correo },
+        select: { id: true },
+      });
+      if (!usuarioExistente) continue;
+      const diaEntrada = diaDe(e.categoriaTicketId);
+      const yaTiene = await this.prisma.entrada.findFirst({
+        where: {
+          eventoId: dto.eventoId,
+          usuarioId: usuarioExistente.id,
+          compra: { estado: { not: 'rechazado' } },
+          ...(diaEntrada ? { diaEventoId: diaEntrada } : {}),
+        },
+      });
+      if (yaTiene) {
+        throw new ConflictException(
+          `${e.correo} ya tiene una entrada para esa jornada de este evento`,
+        );
+      }
+    }
+
     const montoTotal = dto.entradas.reduce(
       (suma, e) => suma + Number(precioDe(e.categoriaTicketId)),
       0,
@@ -236,7 +266,15 @@ export class ComprasService {
       ...compra,
       entradas: compra.entradas.map(({ codigosQr, ...e }) => ({
         ...e,
-        codigoQrVinculado: codigosQr[0] || null,
+        // El código real del QR/manilla de un INVITADO no se manda al
+        // comprador — es de la otra persona, no suya. Solo se informa si
+        // ya está vinculada o no (boolean), nunca el código en sí; su
+        // propia entrada (isTitular) sí lo trae completo, como siempre.
+        codigoQrVinculado: e.isTitular
+          ? codigosQr[0] || null
+          : codigosQr[0]
+            ? { vinculado: true }
+            : null,
       })),
     }));
   }

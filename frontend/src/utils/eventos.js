@@ -100,6 +100,15 @@ export const nombreJornada = (dia, indice = 0) =>
 // la primera noche — en un evento de una sola jornada sería ruido redundante.
 export const mostrarJornada = (dia) => !!dia && (!!dia.nombre || (dia.orden ?? 1) > 1);
 
+// Igual que nombreJornada, pero con el año al lado ("Martes 15 (2026)"): el
+// nombre de la jornada (propio o "Día N") nunca trae fecha completa, así que
+// al separar por noches en la compra conviene aclarar de qué año se trata.
+export const nombreJornadaConAnio = (dia, indice = 0) => {
+  const nombre = nombreJornada(dia, indice);
+  const anio = dia?.inicio ? new Date(dia.inicio).getFullYear() : null;
+  return anio ? `${nombre} (${anio})` : nombre;
+};
+
 // Pastillas de filtro por jornada a partir de una lista de entradas/participantes
 // (cada ítem con `.diaEvento` y/o `.diaEventoId`). Devuelve [] si el evento tiene
 // 0 o 1 jornadas (entonces el filtro no aporta).

@@ -12,7 +12,7 @@ import {
   FaArrowLeft, FaCheck
 } from 'react-icons/fa';
 import api from '../../api/index.js';
-import { estadoStock, ESTADO_STOCK } from '../../utils/eventos.js';
+import { estadoStock, ESTADO_STOCK, nombreJornada, mostrarJornada } from '../../utils/eventos.js';
 import './App.css';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
@@ -93,10 +93,11 @@ export default function App() {
       precios: categorias.length > 0
         ? categorias.map(c => ({
             id: c.id,
-            // Con varias jornadas, el nombre lleva la noche adelante ("Día 1 · VIP").
-            tipo: c.diaEvento && (c.diaEvento.nombre || c.diaEvento.orden > 1)
-              ? `${c.diaEvento.nombre || `Día ${c.diaEvento.orden}`} · ${c.nombre}`
-              : c.nombre,
+            tipo: c.nombre,
+            // Se guarda aparte (no metido en el nombre): con 2+ noches se
+            // muestra como filtro + insignia en la tarjeta, en vez de un
+            // nombre largo tipo "Día 1 · VIP" mezclado con los demás.
+            diaEvento: c.diaEvento,
             precio: `${c.precio} Bs`, destacado: false,
             beneficios: c.beneficios?.length ? c.beneficios : ['Acceso al evento'],
             cantidad: c.cantidad, disponibles: c.disponibles,
@@ -118,6 +119,21 @@ export default function App() {
   const mapaPuestosActivos = mapaPuestos.filter(p => p.estadoActivo);
   const contornoProyectado = useMemo(() => proyectarContorno(evento?.contornoMapa), [evento]);
   const hayMapaDelEvento = mapaPuestosActivos.length > 0 || mapaElementos.length > 0 || !!contornoProyectado;
+
+  // Con 2+ noches, un listado plano de todas las categorías junto se vuelve
+  // largo y confuso (ej. 3 noches x 2 categorías = 6 tarjetas mezcladas) —
+  // se agrega un filtro por jornada arriba de la grilla. Con 0 o 1 noche
+  // (el caso más común) no aparece filtro alguno y la grilla queda igual
+  // que siempre.
+  const jornadasPrecios = useMemo(
+    () => [...new Map(precios.map(p => p.diaEvento).filter(mostrarJornada).map(d => [d.id, d])).values()],
+    [precios],
+  );
+  const [filtroDiaPrecios, setFiltroDiaPrecios] = useState(null);
+  const preciosFiltrados = useMemo(
+    () => filtroDiaPrecios ? precios.filter(p => p.diaEvento?.id === filtroDiaPrecios) : precios,
+    [precios, filtroDiaPrecios],
+  );
 
   const [puestoModal, setPuestoModal] = useState(null);
 
@@ -265,13 +281,39 @@ export default function App() {
 {/* SECCIÓN PRECIOS Y ENTRADAS */}
       <section id="entradas" className="pi-landing-section pricing-section">
         <h2 className="pricing-title">Nuestros precios</h2>
+
+        {jornadasPrecios.length > 0 && (
+          <div className="pricing-filtro-dias" role="group" aria-label="Filtrar precios por jornada">
+            <button
+              type="button"
+              className={filtroDiaPrecios === null ? 'activo' : ''}
+              onClick={() => setFiltroDiaPrecios(null)}
+            >
+              Todas las noches
+            </button>
+            {jornadasPrecios.map((dia) => (
+              <button
+                key={dia.id}
+                type="button"
+                className={filtroDiaPrecios === dia.id ? 'activo' : ''}
+                onClick={() => setFiltroDiaPrecios(dia.id)}
+              >
+                {nombreJornada(dia)}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="pricing-grid">
-          {precios.map((plan) => {
+          {preciosFiltrados.map((plan) => {
             const stk = estadoStock(plan);
             const agotado = stk === 'agotado';
             return (
               <div key={plan.id} className={`pricing-card ${plan.destacado ? 'destacado' : ''} ${agotado ? 'agotado' : ''}`}>
                 <div className="pricing-card-header">
+                  {mostrarJornada(plan.diaEvento) && (
+                    <span className="dia-badge">{nombreJornada(plan.diaEvento)}</span>
+                  )}
                   <h3>{plan.tipo}</h3>
                   {stk && (
                     <span className={`stock-badge ${ESTADO_STOCK[stk].clase}`}>
