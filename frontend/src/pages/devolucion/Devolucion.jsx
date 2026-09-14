@@ -112,6 +112,13 @@ export default function Devolucion() {
   }, [retiros, busquedaHist]);
 
   const excedeSaldo = tarjetaQR && Number(monto) > tarjetaQR.saldoDisponible;
+  // §5.2 — además del saldo cashless del asistente, el efectivo FÍSICO de la
+  // caja abierta también es finito: no se puede devolver más de lo que queda
+  // ahí (montoInicial menos lo ya devuelto con esa caja). El backend vuelve a
+  // validar esto igual (por si la caja se movió en otra pestaña/dispositivo).
+  const efectivoEnCaja = cajaAbierta ? Number(cajaAbierta.montoEsperadoParcial) : null;
+  const excedeCaja = efectivoEnCaja != null && Number(monto) > efectivoEnCaja;
+  const [errorRetiro, setErrorRetiro] = useState('');
 
   const iniciarEscaneo = () => {
     setErrorEscaneo('');
@@ -129,6 +136,7 @@ export default function Devolucion() {
       setFotoCarnet(null);
       setFotoRostro(null);
       setRetiroExitoso(null);
+      setErrorRetiro('');
     };
     try {
       let entrada = null;
@@ -180,6 +188,7 @@ export default function Devolucion() {
     setFotoRostro(null);
     setCapturandoFotoRostro(false);
     setRetiroExitoso(null);
+    setErrorRetiro('');
   };
 
   // Foco + ESC + scroll-lock de la tarjeta de devolución (look propio).
@@ -192,23 +201,35 @@ export default function Devolucion() {
 
   const confirmarRetiro = async () => {
     const valor = Number(monto);
-    if (!tarjetaQR || eventoNoCoincide || !valor || valor <= 0 || valor > tarjetaQR.saldoDisponible || !fotoCarnet) return;
+    setErrorRetiro('');
+    if (!tarjetaQR || eventoNoCoincide || !valor || valor <= 0 || valor > tarjetaQR.saldoDisponible || excedeCaja || !fotoCarnet) return;
     if (esNegocio && !fotoRostro) return; // foto de la cara obligatoria para negocios
 
-    await api.transacciones.devolucion({
-      usuarioId: tarjetaQR.usuarioId,
-      entradaId: tarjetaQR.tipo === 'Normal' ? tarjetaQR.id : undefined,
-      monto: valor,
-      fotoCarnetUrl: fotoCarnet,
-      fotoRostroUrl: fotoRostro || undefined,
-      eventoId: eventoDetalle.id,
-      motivoDevolucion: motivoDevol,
-      nota: motivoDevol === 'otro' && notaDevol.trim() ? notaDevol.trim() : undefined,
-    });
+    try {
+      await api.transacciones.devolucion({
+        usuarioId: tarjetaQR.usuarioId,
+        entradaId: tarjetaQR.tipo === 'Normal' ? tarjetaQR.id : undefined,
+        monto: valor,
+        fotoCarnetUrl: fotoCarnet,
+        fotoRostroUrl: fotoRostro || undefined,
+        eventoId: eventoDetalle.id,
+        motivoDevolucion: motivoDevol,
+        nota: motivoDevol === 'otro' && notaDevol.trim() ? notaDevol.trim() : undefined,
+      });
+    } catch (err) {
+      // Ej.: la caja se quedó sin efectivo justo ahora (otra devolución recién
+      // hecha en paralelo) o el plazo de retiro venció — el backend vuelve a
+      // validar todo esto igual, así que este error puede ser la primera
+      // noticia real del problema.
+      setErrorRetiro(err.message);
+      recargarCaja();
+      return;
+    }
 
     api.transacciones.listar({ eventoId: eventoDetalle.id, tipo: 'devolucion' }).then(lista =>
       setRetiros(lista.filter(t => t.operador.id === sesion.id))
     );
+    recargarCaja();
 
     setRetiroExitoso({ monto: valor, saldo: tarjetaQR.saldoDisponible - valor });
   };
@@ -518,6 +539,19 @@ export default function Devolucion() {
                     </div>
                   )}
 
+                  {!excedeSaldo && excedeCaja && (
+                    <div className="pi-dev-alerta-error">
+                      <FaExclamationTriangle /> Tu caja no tiene suficiente efectivo: quedan Bs. {efectivoEnCaja.toFixed(2)} disponibles.
+                      Cerrala y abrí una nueva con más fondo para seguir devolviendo.
+                    </div>
+                  )}
+
+                  {errorRetiro && (
+                    <div className="pi-dev-alerta-error">
+                      <FaExclamationTriangle /> {errorRetiro}
+                    </div>
+                  )}
+
                   <label htmlFor="dev-motivo" className="pi-dev-motivo-label">Motivo del retiro</label>
                   <select
                     id="dev-motivo"
@@ -611,7 +645,7 @@ export default function Devolucion() {
                       <button
                         className="pi-dev-btn-confirmar"
                         onClick={confirmarRetiro}
-                        disabled={!monto || Number(monto) <= 0 || excedeSaldo || !fotoCarnet || (esNegocio && !fotoRostro)}
+                        disabled={!monto || Number(monto) <= 0 || excedeSaldo || excedeCaja || !fotoCarnet || (esNegocio && !fotoRostro)}
                       >
                         <FaCheckCircle /> Confirmar Retiro
                       </button>

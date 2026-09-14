@@ -150,6 +150,36 @@ export class TransaccionesService {
     return caja.id;
   }
 
+  /**
+   * §5.2 — el efectivo físico de una caja de Devolución es finito: no se
+   * puede devolver más de lo que entró como `montoInicial` menos lo que ya
+   * se devolvió con ESA misma caja. Si se agota, hay que cerrarla (arqueo) y
+   * abrir una nueva con más fondo — no seguir pagando de una caja vacía.
+   * El Admin nunca llega hasta acá (cajaObligatoria le devuelve `null` antes).
+   */
+  private async verificarEfectivoDisponible(
+    tx: PrismaTx,
+    corteCajaId: string,
+    monto: number,
+  ) {
+    const caja = await tx.corteCaja.findUniqueOrThrow({
+      where: { id: corteCajaId },
+      select: { montoInicial: true },
+    });
+    const agg = await tx.transaccion.aggregate({
+      _sum: { monto: true },
+      where: { corteCajaId, tipo: 'devolucion' },
+    });
+    const yaDevuelto = Number(agg._sum.monto ?? 0);
+    const disponible = Number(caja.montoInicial) - yaDevuelto;
+    if (monto > disponible) {
+      throw new ConflictException(
+        `Tu caja no tiene suficiente efectivo: quedan Bs. ${disponible.toFixed(2)} disponibles. ` +
+          'Cerrala y abrí una nueva con más fondo para seguir devolviendo.',
+      );
+    }
+  }
+
   async listar(filtros: FiltrosTransaccion) {
     if (!filtros.usuarioId && !filtros.entradaId && !filtros.eventoId) {
       throw new BadRequestException(
@@ -307,6 +337,9 @@ export class TransaccionesService {
         params.eventoId,
         'registrar devoluciones',
       );
+      if (corteCajaId) {
+        await this.verificarEfectivoDisponible(tx, corteCajaId, params.monto);
+      }
 
       // §T&C — el saldo de un evento se puede retirar hasta expiraEn (fijado por
       // el cron: fechaFin + Evento.diasParaRetiro). Pasado ese plazo, no.
