@@ -22,7 +22,8 @@ export class CaducidadBilleteraCron {
   async ejecutar() {
     const filas = await this.prisma.$executeRaw(Prisma.sql`
       UPDATE "billeteras_evento" b
-      SET "expiraEn" = e."fechaFin" + (e."diasParaRetiro" || ' days')::interval
+      SET "expiraEn" = e."fechaFin" + (e."diasParaRetiro" || ' days')::interval,
+          "updatedAt" = CURRENT_TIMESTAMP
       FROM "eventos" e
       WHERE b."eventoId" = e."id" AND e."fechaFin" < now()
     `);

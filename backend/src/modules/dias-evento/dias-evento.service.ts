@@ -126,7 +126,7 @@ export class DiasEventoService {
   async eliminar(id: string) {
     const dia = await this.prisma.diaEvento.findUnique({
       where: { id },
-      include: { _count: { select: { categorias: true } } },
+      include: { _count: { select: { categorias: true, entradas: true } } },
     });
     if (!dia) throw new NotFoundException('Jornada no encontrada');
     await this.eventoPolicy.porEvento(dia.eventoId);
@@ -142,6 +142,14 @@ export class DiasEventoService {
     if (dia._count.categorias > 0) {
       throw new ConflictException(
         'Esta jornada ya tiene categorías de ticket: quitalas antes de borrarla',
+      );
+    }
+    // Entrada.diaEventoId es NOT NULL con onDelete: Restrict (el aforo legal se cuenta
+    // por jornada, así que no puede quedar una entrada suelta). La FK ya lo impide; este
+    // chequeo está para dar el motivo real en lugar del 409 genérico de violación de FK.
+    if (dia._count.entradas > 0) {
+      throw new ConflictException(
+        'Esta jornada ya tiene entradas vendidas: no se puede borrar',
       );
     }
     await this.prisma.$transaction(async (tx) => {

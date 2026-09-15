@@ -76,7 +76,7 @@ enum EstadoCaso {
   resuelto
 }
 
-// "venta" = crédito a la billetera (Usuario.saldo) del dueño del negocio (nace de una Venta).
+// "venta" = crédito a la BilleteraEvento del dueño del negocio (nace de una Venta).
 // "consumo" = débito de la billetera del dueño de la Entrada escaneada (nace de una Venta).
 // "recarga" = crédito a la billetera del dueño de la Entrada escaneada, hecho por un Recargador.
 // "devolucion" = retiro total/parcial hecho por rol Devolucion.
@@ -91,6 +91,18 @@ enum TipoTransaccion {
   ajuste
   reverso_consumo
   reverso_venta
+}
+
+// Origen de un CambioPassword. Era String libre; en BD solo existen estos dos valores.
+enum OrigenCambioPassword {
+  self          // cambio normal, sabiendo la contraseña actual
+  recuperacion  // vía código de 6 dígitos
+}
+
+// §5.4 — gravedad del AvisoStock que el Ayudante manda al negocio.
+enum TipoAvisoStock {
+  sin_stock
+  bajo
 }
 
 enum CampoReportado {
@@ -177,6 +189,8 @@ model Usuario {
   auditorias             RegistroAuditoria[]   @relation("ActorAuditoria")
   billeterasEvento       BilleteraEvento[]
   codigosRetiroNegocio   CodigoRetiroNegocio[] @relation("CodigoRetiroNegocio")
+  avisosStockEnviados    AvisoStock[]          @relation("AyudanteQueAvisa")
+  avisosStockRecibidos   AvisoStock[]          @relation("NegocioAvisado")
 
   @@index([rol])                // listados del panel admin filtrados por rol
   @@index([negocioAsignadoId])  // ayudantes de un negocio
@@ -203,7 +217,7 @@ model CodigoRecuperacion {
 model CambioPassword {
   id        String   @id @default(cuid())
   usuarioId Int
-  origen    String // 'self' (cambio normal, sabiendo la actual) | 'recuperacion' (código de 6 dígitos)
+  origen    OrigenCambioPassword
   createdAt DateTime @default(now())
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
@@ -286,6 +300,7 @@ model Evento {
   // Denormaliza la Asignacion rol=Cliente que se crea en solicitudes-evento.service.aprobar.
   clienteId   Int?
   createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @default(now()) @updatedAt
 
   creadoPor         Usuario      @relation("AdminQueCreaEvento", fields: [creadoPorId], references: [id])
   archivadoPor      Usuario?     @relation("AdminQueArchivaEvento", fields: [archivadoPorId], references: [id])
@@ -378,6 +393,9 @@ model DiaEvento {
   entradas   Entrada[]
   codigosQr  CodigoQr[]
 
+  // Clave alternativa para las FK compuestas de CategoriaTicket y Entrada: garantiza que
+  // la jornada referenciada sea del MISMO evento denormalizado en esas filas.
+  @@unique([id, eventoId])
   @@index([eventoId, orden])
   @@map("dias_evento")
 }
@@ -510,9 +528,11 @@ model CategoriaTicket {
   cantidadVendida Int      @default(0)
   precio          Decimal  @db.Decimal(10, 2)
   createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
 
   evento    Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  diaEvento DiaEvento @relation(fields: [diaEventoId], references: [id], onDelete: Cascade)
+  // FK COMPUESTA: la jornada tiene que ser de ESTE evento (ver DiaEvento.@@unique).
+  diaEvento DiaEvento @relation(fields: [diaEventoId, eventoId], references: [id, eventoId], onDelete: Cascade)
   entradas  Entrada[]
 
   @@index([eventoId])
@@ -539,10 +559,12 @@ model Compra {
   terminosAceptadosEn      DateTime?
   versionTerminos          String?
   createdAt                DateTime        @default(now())
+  updatedAt                DateTime        @default(now()) @updatedAt
 
   evento    Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   comprador Usuario   @relation("Comprador", fields: [compradorId], references: [id])
   entradas  Entrada[]
+  reportesEntrada ReporteEntrada[]
 
   @@index([eventoId, estado])
   @@index([compradorId])
@@ -559,7 +581,10 @@ model Compra {
 model Entrada {
   id                String        @id @default(cuid())
   eventoId          String
-  diaEventoId       String?       // jornada de esta entrada (hereda de la categoría). Nullable por robustez.
+  // Jornada de esta entrada (hereda de la categoría). OBLIGATORIO: el aforo legal se
+  // cuenta por jornada (ver DiaEvento.aforoMaximo), así que una entrada sin jornada
+  // sería un asistente invisible para el control de capacidad.
+  diaEventoId       String
   compraId          String?
   categoriaTicketId String?
   usuarioId         Int?          // el titular YA lo trae desde el inicio (=compradorId, ya tiene
@@ -579,9 +604,12 @@ model Entrada {
   estadoIngreso EstadoIngreso @default(pendiente) // cache, ver comentario en el enum
 
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   evento          Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  diaEvento       DiaEvento?       @relation(fields: [diaEventoId], references: [id], onDelete: SetNull)
+  // Restrict, no SetNull: anular la jornada de una entrada la sacaría del conteo de aforo.
+  // FK COMPUESTA: la jornada tiene que ser de ESTE evento (ver DiaEvento.@@unique).
+  diaEvento       DiaEvento        @relation(fields: [diaEventoId, eventoId], references: [id, eventoId], onDelete: Restrict)
   compra          Compra?          @relation(fields: [compraId], references: [id], onDelete: SetNull)
   categoriaTicket CategoriaTicket? @relation(fields: [categoriaTicketId], references: [id])
   usuario         Usuario?         @relation("TitularCuenta", fields: [usuarioId], references: [id])
@@ -647,11 +675,18 @@ model CodigoQr {
   asignadoPorId    Int?
   asignadoEn       DateTime?
   anulado          Boolean   @default(false)
-  motivoAnulacion  String?   // ej. "perdida", "dañada"
+  // Texto libre a propósito: lo escribe el Supervisor al anular, y el sistema pone
+  // "Reemplazada al vincular una nueva" cuando el reemplazo es automático
+  // (entradas.service.vincularQr). No es un enum cerrado.
+  motivoAnulacion  String?
   anuladoPorId     Int?
   anuladoEn        DateTime?
+  updatedAt        DateTime  @default(now()) @updatedAt
 
   evento      Evento     @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  // FK simple a propósito (no compuesta como en Entrada/CategoriaTicket): acá diaEventoId
+  // es nullable por diseño (el pool nace sin jornada y la adopta al vincularse), y una FK
+  // compuesta con eventoId no podría hacer SetNull porque eventoId es NOT NULL.
   diaEvento   DiaEvento? @relation(fields: [diaEventoId], references: [id], onDelete: SetNull)
   entrada     Entrada?   @relation(fields: [entradaId], references: [id])
   asignadoPor Usuario?   @relation("SupervisorQueAsigna", fields: [asignadoPorId], references: [id])
@@ -769,11 +804,13 @@ model ReporteEntrada {
   resueltoEn     DateTime?
 
   evento      Evento   @relation(fields: [eventoId], references: [id])
+  compra      Compra   @relation(fields: [compraId], references: [id], onDelete: Cascade)
   entrada     Entrada  @relation(fields: [entradaId], references: [id], onDelete: Cascade)
   resueltoPor Usuario? @relation("AdminQueCorrige", fields: [resueltoPorId], references: [id])
 
   @@index([eventoId, estado])
   @@index([entradaId])
+  @@index([compraId])
   @@map("reportes_entrada")
 }
 
@@ -794,6 +831,9 @@ model PuestoBase {
   productos ProductoBase[]
   puestos   Puesto[]
 
+  // Clave alternativa que habilita la FK compuesta de Puesto: garantiza en la BD que un
+  // negocio solo pueda activar SUS propios PuestoBase (ver Puesto.base).
+  @@unique([id, negocioId])
   @@index([negocioId])
   @@map("puestos_base")
 }
@@ -811,6 +851,7 @@ model ProductoBase {
   puestoBase PuestoBase       @relation(fields: [puestoBaseId], references: [id], onDelete: Cascade)
   estados    ProductoEstado[]
   ventaItems VentaItem[]
+  avisosStock AvisoStock[]
 
   @@index([puestoBaseId])
   @@map("productos_base")
@@ -852,12 +893,23 @@ model AvisoStock {
   ayudanteId     Int
   ayudanteNombre String
   negocioId      Int
-  tipo           String // "sin_stock" | "bajo"
+  tipo           TipoAvisoStock
   stockRestante  Int?
   visto          Boolean  @default(false)
   createdAt      DateTime @default(now())
 
+  // Los campos *Nombre de arriba son snapshot a propósito (mostrar el aviso sin joins),
+  // pero las FK abajo existen para que borrar el puesto/producto/evento se lleve el aviso
+  // en lugar de dejarlo huérfano apareciendo para siempre en el panel del negocio.
+  puesto       Puesto       @relation(fields: [puestoId], references: [id], onDelete: Cascade)
+  productoBase ProductoBase @relation(fields: [productoBaseId], references: [id], onDelete: Cascade)
+  ayudante     Usuario      @relation("AyudanteQueAvisa", fields: [ayudanteId], references: [id])
+  negocio      Usuario      @relation("NegocioAvisado", fields: [negocioId], references: [id])
+
   @@index([negocioId, visto])
+  @@index([puestoId])
+  @@index([productoBaseId])
+  @@index([ayudanteId])
   @@map("avisos_stock")
 }
 
@@ -878,13 +930,18 @@ model Puesto {
   alto         Float    @default(100)
   estadoActivo Boolean  @default(true)
   createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
 
   evento          Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   negocio         Usuario          @relation("NegocioDueno", fields: [negocioId], references: [id])
-  base            PuestoBase       @relation(fields: [puestoBaseId], references: [id])
+  // FK COMPUESTA: ata el puesto a un PuestoBase DEL MISMO negocio. Sin esto, la BD
+  // aceptaba que el negocio A activara el catálogo de B y las ventas se acreditaran
+  // a la billetera equivocada.
+  base            PuestoBase       @relation(fields: [puestoBaseId, negocioId], references: [id, negocioId])
   productosEstado ProductoEstado[]
   ayudantes       PuestoAyudante[]
   ventas          Venta[]
+  avisosStock     AvisoStock[]
 
   @@unique([eventoId, puestoBaseId])
   @@index([eventoId])
@@ -954,6 +1011,7 @@ model Venta {
   entradaId  String
   montoTotal Decimal  @db.Decimal(10, 2)
   createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
 
   // Anulación (§5.3): al anular se generan 2 Transaccion de reverso con el mismo
   // ventaId. anuladaEn != null => la venta no cuenta en los dashboards (neto).

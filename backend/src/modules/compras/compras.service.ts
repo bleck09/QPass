@@ -90,17 +90,26 @@ export class ComprasService {
     }
     const precioDe = (categoriaTicketId: string) =>
       categorias.find((c) => c.id === categoriaTicketId)?.precio ?? 0;
-    const diaDe = (categoriaTicketId: string) =>
-      categorias.find((c) => c.id === categoriaTicketId)?.diaEventoId ?? null;
+    // Toda CategoriaTicket tiene jornada (schema: diaEventoId obligatorio) y arriba ya
+    // se validó que cada id pedido exista, así que acá siempre hay jornada.
+    const diaDe = (categoriaTicketId: string): string => {
+      const dia = categorias.find((c) => c.id === categoriaTicketId)?.diaEventoId;
+      if (!dia) {
+        throw new BadRequestException(
+          'Alguna categoría de entrada no tiene jornada asignada',
+        );
+      }
+      return dia;
+    };
 
     // El correo debe ser único DENTRO de cada jornada (la misma persona puede
     // repetirse en noches distintas del mismo evento: es normal comprar para
     // "vos" y para un invitado en la noche 1 y volver a comprarles la noche 2
-    // en el mismo pedido). Sin jornada (evento de una sola noche), se agrupan
-    // todas bajo una única clave, igual que antes.
+    // en el mismo pedido). Un evento de una sola noche tiene igual su jornada única,
+    // así que siempre se agrupa por jornada real.
     const correosPorJornada = new Map<string, string[]>();
     for (const e of dto.entradas) {
-      const clave = diaDe(e.categoriaTicketId) ?? '__sin_jornada__';
+      const clave = diaDe(e.categoriaTicketId);
       const lista = correosPorJornada.get(clave) ?? [];
       lista.push(e.correo.trim().toLowerCase());
       correosPorJornada.set(clave, lista);
@@ -120,7 +129,7 @@ export class ComprasService {
     const titularesPorJornada = new Map<string, number>();
     for (const e of dto.entradas) {
       if (!e.isTitular) continue;
-      const clave = diaDe(e.categoriaTicketId) ?? '__sin_jornada__';
+      const clave = diaDe(e.categoriaTicketId);
       titularesPorJornada.set(clave, (titularesPorJornada.get(clave) ?? 0) + 1);
     }
     for (const cantidad of titularesPorJornada.values()) {
@@ -130,8 +139,7 @@ export class ComprasService {
         );
       }
     }
-    for (const [clave] of titularesPorJornada) {
-      const diaTitular = clave === '__sin_jornada__' ? null : clave;
+    for (const [diaTitular] of titularesPorJornada) {
       // OJO: sin filtrar por isTitular. Si otra persona ya te compró (y se
       // aprobó) una entrada de invitado para esta jornada, esa Entrada queda
       // vinculada a tu cuenta (usuarioId) igual que si la hubieras comprado
@@ -142,14 +150,12 @@ export class ComprasService {
           eventoId: dto.eventoId,
           usuarioId: compradorId,
           compra: { estado: { not: 'rechazado' } },
-          ...(diaTitular ? { diaEventoId: diaTitular } : {}),
+          diaEventoId: diaTitular,
         },
       });
       if (yaTiene) {
         throw new ConflictException(
-          diaTitular
-            ? 'Ya tienes una entrada para esa jornada; las demás de esta compra deben ser para invitados.'
-            : 'Ya tienes una entrada para este evento; las demás deben ser para invitados.',
+          'Ya tienes una entrada para esa jornada; las demás de esta compra deben ser para invitados.',
         );
       }
     }
@@ -173,7 +179,7 @@ export class ComprasService {
           eventoId: dto.eventoId,
           usuarioId: usuarioExistente.id,
           compra: { estado: { not: 'rechazado' } },
-          ...(diaEntrada ? { diaEventoId: diaEntrada } : {}),
+          diaEventoId: diaEntrada,
         },
       });
       if (yaTiene) {
@@ -201,7 +207,8 @@ export class ComprasService {
         // UPDATE atómico condicional: reserva cupo solo si todavía alcanza.
         const filasActualizadas = await tx.$executeRaw`
           UPDATE categorias_ticket
-          SET "cantidadVendida" = "cantidadVendida" + ${cantidad}
+          SET "cantidadVendida" = "cantidadVendida" + ${cantidad},
+              "updatedAt" = CURRENT_TIMESTAMP
           WHERE id = ${categoriaTicketId} AND "cantidadVendida" + ${cantidad} <= cantidad
         `;
         if (filasActualizadas === 0) {

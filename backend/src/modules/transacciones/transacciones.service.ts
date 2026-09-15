@@ -120,7 +120,8 @@ export class TransaccionesService {
     if (monto <= 0) return;
     await tx.$executeRaw(Prisma.sql`
       UPDATE "billeteras_evento"
-      SET "saldoBloqueado" = GREATEST("saldoBloqueado" - ${monto}, 0)
+      SET "saldoBloqueado" = GREATEST("saldoBloqueado" - ${monto}, 0),
+          "updatedAt" = CURRENT_TIMESTAMP
       WHERE "usuarioId" = ${usuarioId} AND "eventoId" = ${eventoId}
     `);
   }
