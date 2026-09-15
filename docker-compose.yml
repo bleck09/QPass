@@ -53,7 +53,12 @@ services:
   # Solo en la red interna: nunca se expone al dominio público.
   # ---------------------------------------------------------------------------
   minio:
-    image: minio/minio:RELEASE.2024-10-13T13-34-11Z
+    # Docker Hub (minio/minio) dejó de servir varias tags viejas de MinIO —
+    # quay.io es el mismo release, publicado por MinIO, todavía accesible sin
+    # login. Cambiar esto NO toca el volumen qpass_minio_data (tus archivos
+    # ya subidos): la imagen es solo el programa que lee/escribe ahí, los
+    # datos viven aparte y no se tocan por cambiar de dónde se descarga.
+    image: quay.io/minio/minio:RELEASE.2024-10-13T13-34-11Z
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
@@ -73,7 +78,9 @@ services:
 
   # Crea el bucket una vez y sale. Idempotente (--ignore-existing).
   minio-init:
-    image: minio/mc:RELEASE.2024-10-08T09-37-26Z
+    # Mismo motivo que en el servicio "minio" de arriba: minio/mc en Docker
+    # Hub daba "pull access denied" — quay.io es el mismo release.
+    image: quay.io/minio/mc:RELEASE.2024-10-08T09-37-26Z
     depends_on:
       minio:
         condition: service_healthy
