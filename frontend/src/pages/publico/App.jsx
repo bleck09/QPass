@@ -9,10 +9,14 @@ import { tipoElementoInfo } from '../../utils/elementosMapa.js';
 import {
   FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt,
   FaQrcode, FaMapMarkedAlt, FaMapMarkerAlt, FaStore, FaTimes,
-  FaArrowLeft, FaCheck
+  FaArrowLeft, FaCheck, FaCalendarAlt, FaMobileAlt, FaArrowRight
 } from 'react-icons/fa';
 import api from '../../api/index.js';
-import { estadoStock, ESTADO_STOCK, nombreJornada, mostrarJornada } from '../../utils/eventos.js';
+import {
+  estadoStock, ESTADO_STOCK, nombreJornada, mostrarJornada,
+  estadoEvento, ESTADO_EVENTO, formatearFecha, diaLocalISO,
+} from '../../utils/eventos.js';
+import { useRevelar } from '../../utils/useRevelar.js';
 import './App.css';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
@@ -98,7 +102,7 @@ export default function App() {
             // muestra como filtro + insignia en la tarjeta, en vez de un
             // nombre largo tipo "Día 1 · VIP" mezclado con los demás.
             diaEvento: c.diaEvento,
-            precio: `${c.precio} Bs`, destacado: false,
+            precio: `${c.precio} Bs`, precioNum: Number(c.precio), destacado: false,
             beneficios: c.beneficios?.length ? c.beneficios : ['Acceso al evento'],
             cantidad: c.cantidad, disponibles: c.disponibles,
           }))
@@ -170,9 +174,30 @@ export default function App() {
   const handleVolverInicio = () => navigate('/');
 
 
-  const fechaEventoMostrada = new Date(evento?.fecha || defaultLandingData.fechaEvento);
-  const diaEvento = fechaEventoMostrada.getDate();
-  const mesEvento = fechaEventoMostrada.toLocaleString('es-BO', { month: 'long' });
+  // Cada seccion entra revelandose al llegar a ella (utils/useRevelar.js), asi
+  // la pagina deja de sentirse una pila de bloques estaticos.
+  const [refEntradas, verEntradas] = useRevelar();
+  const [refActividades, verActividades] = useRevelar();
+  const [refUbicacion, verUbicacion] = useRevelar();
+  const [refMapa, verMapa] = useRevelar();
+  const [refCronograma, verCronograma] = useRevelar();
+
+  // Datos que ahora viven en el hero en vez de repartidos por la pagina.
+  const precioDesde = useMemo(() => {
+    const nums = precios.map(p => p.precioNum).filter(n => Number.isFinite(n));
+    return nums.length ? Math.min(...nums) : null;
+  }, [precios]);
+
+  const cuandoEs = useMemo(() => {
+    if (!evento?.fecha) return null;
+    const desde = diaLocalISO(evento.fecha);
+    const hasta = evento.fechaFin ? diaLocalISO(evento.fechaFin) : desde;
+    if (desde === hasta) return formatearFecha(evento.fecha, false);
+    return `${formatearFecha(evento.fecha, false)} — ${formatearFecha(evento.fechaFin, false)}`;
+  }, [evento]);
+
+  const yaEmpezo = timeLeft.dias + timeLeft.horas + timeLeft.minutos + timeLeft.seg === 0;
+
 
   const estiloDinamico = {
     '--color-primario': data.colorPrimario || defaultLandingData.colorPrimario,
@@ -260,14 +285,78 @@ export default function App() {
       {/* SECCIÓN HERO */}
       <header id="inicio" className="pi-landing-hero">
         <div className="pi-landing-hero-content">
+          <p className="ev-hero__estado">
+            <span className="ev-hero__estado-punto" aria-hidden="true" />
+            {ESTADO_EVENTO[estadoEvento(evento ?? {})]?.label ?? 'Próximo'}
+          </p>
+
           <h1>{data.titulo}</h1>
-          <p>{data.informacion}</p>
-          <div style={{display: 'flex', gap: '15px'}}>
+          <p className="ev-hero__info">{data.informacion}</p>
+
+          {/* Datos clave arriba de todo: antes habia que scrollear media pagina
+              para saber cuando, donde y cuanto costaba. */}
+          <ul className="ev-hero__datos">
+            {cuandoEs && (
+              <li>
+                <FaCalendarAlt aria-hidden="true" />
+                <span><em>Cuándo</em>{cuandoEs}</span>
+              </li>
+            )}
+            {evento?.lugar && (
+              <li>
+                <FaMapMarkerAlt aria-hidden="true" />
+                <span><em>Dónde</em>{evento.lugar}</span>
+              </li>
+            )}
+            <li>
+              {evento?.tipoManilla === 'digital'
+                ? <FaMobileAlt aria-hidden="true" />
+                : <FaQrcode aria-hidden="true" />}
+              <span>
+                <em>Acceso</em>
+                {evento?.tipoManilla === 'digital' ? 'QR en tu celular' : 'Manilla física'}
+              </span>
+            </li>
+            {precioDesde != null && (
+              <li>
+                <FaTicketAlt aria-hidden="true" />
+                <span><em>Entradas</em>Desde {precioDesde} Bs</span>
+              </li>
+            )}
+          </ul>
+
+          {/* El contador vivia en una seccion aparte, mucho mas abajo; aca
+              acompana al CTA, que es donde importa. */}
+          {!yaEmpezo && (
+            <div className="ev-hero__cuenta" aria-label="Tiempo restante para el evento">
+              <span className="ev-hero__cuenta-tag">Faltan</span>
+              <span className="ev-hero__cuenta-bloques">
+                {[['dias', 'días'], ['horas', 'hs'], ['minutos', 'min'], ['seg', 'seg']].map(([clave, etiqueta]) => (
+                  <span className="ev-hero__cuenta-bloque" key={clave}>
+                    <b>{String(timeLeft[clave]).padStart(2, '0')}</b>
+                    <em>{etiqueta}</em>
+                  </span>
+                ))}
+              </span>
+            </div>
+          )}
+
+          <div className="ev-hero__acciones">
             <button className="pi-landing-btn-primary" onClick={() => document.getElementById('entradas').scrollIntoView({behavior: 'smooth'})}>
-              Comprar Entradas
+              Comprar entradas
+              <FaArrowRight aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              className="ev-hero__btn-sec"
+              onClick={() => document.getElementById('ubicacion')?.scrollIntoView({ behavior: 'smooth' })}
+            >
+              <FaMapMarkerAlt aria-hidden="true" />
+              Cómo llegar
             </button>
           </div>
         </div>
+
         <div className="pi-landing-hero-image">
           <img
             src={data.imagen}
@@ -279,7 +368,11 @@ export default function App() {
         </div>
       </header>
 {/* SECCIÓN PRECIOS Y ENTRADAS */}
-      <section id="entradas" className="pi-landing-section pricing-section">
+      <section
+        id="entradas"
+        className={`pi-landing-section pricing-section qp-revelar${verEntradas ? ' es-visible' : ''}`}
+        ref={refEntradas}
+      >
         <h2 className="pricing-title">Nuestros precios</h2>
 
         {jornadasPrecios.length > 0 && (
@@ -339,51 +432,12 @@ export default function App() {
         </div>
       </section>
       {/* NUEVA SECCIÓN: FECHA GIGANTE Y CONTADOR */}
-      <section className="pi-landing-section date-countdown-section">
-        
-        {/* Fecha Gigante */}
-        <div className="massive-date-container">
-          <span className="date-subtitle">Tu próxima experiencia será el</span>
-          <div className="date-huge">
-            <span className="date-number">{diaEvento}</span>
-            <span className="date-month">{mesEvento.charAt(0).toUpperCase() + mesEvento.slice(1)}</span>
-          </div>
-          <p className="date-description">
-            Prepárate para vivir el mejor evento del año. Asegura tu lugar antes de que se agoten las entradas y sé parte de la historia.
-          </p>
-        </div>
-
-        {/* Contador Compacto */}
-        <div className="countdown-wrapper">
-          <h3 className="countdown-title">Tiempo Restante</h3>
-          <div className="countdown-timer small-timer">
-            <div className="time-block">
-              <span className="time-number">{String(timeLeft.dias).padStart(2, '0')}</span>
-              <span className="time-label">DÍAS</span>
-            </div>
-            <div className="time-separator">:</div>
-            <div className="time-block">
-              <span className="time-number">{String(timeLeft.horas).padStart(2, '0')}</span>
-              <span className="time-label">HORAS</span>
-            </div>
-            <div className="time-separator">:</div>
-            <div className="time-block">
-              <span className="time-number">{String(timeLeft.minutos).padStart(2, '0')}</span>
-              <span className="time-label">MINUTOS</span>
-            </div>
-            <div className="time-separator">:</div>
-            <div className="time-block">
-              <span className="time-number">{String(timeLeft.seg).padStart(2, '0')}</span>
-              <span className="time-label">SEGUNDOS</span>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      
-
       {/* SECCIÓN ACTIVIDADES */}
-      <section id="actividades" className="pi-landing-section">
+      <section
+        id="actividades"
+        className={`pi-landing-section qp-revelar${verActividades ? ' es-visible' : ''}`}
+        ref={refActividades}
+      >
         <h2 className="pi-landing-section-title">Servicios del Evento</h2>
         <div className="pi-landing-grid">
           {data.actividades.map((actividad, index) => (
@@ -403,7 +457,11 @@ export default function App() {
       {/* SECCIÓN UBICACIÓN — opcional en pantalla: solo eventos sin coordenadas
           (previos a que este campo pasara a ser obligatorio) no la muestran */}
       {evento?.latitud != null && (
-      <section id="ubicacion" className="pi-landing-section">
+      <section
+        id="ubicacion"
+        className={`pi-landing-section qp-revelar${verUbicacion ? ' es-visible' : ''}`}
+        ref={refUbicacion}
+      >
         <div className="pi-landing-section-header">
           <h2 className="pi-landing-section-title"><FaMapMarkerAlt /> Ubicación</h2>
           <p className="pi-landing-subtitle">{evento.lugar}</p>
@@ -416,7 +474,11 @@ export default function App() {
 
       {/* SECCIÓN MAPA INTERACTIVO — opcional: si Admin todavía no lo armó, no aparece */}
       {hayMapaDelEvento && (
-      <section id="mapa" className="pi-landing-section">
+      <section
+        id="mapa"
+        className={`pi-landing-section qp-revelar${verMapa ? ' es-visible' : ''}`}
+        ref={refMapa}
+      >
         <div className="pi-landing-section-header">
           <h2 className="pi-landing-section-title"><FaMapMarkedAlt /> Mapa del Evento</h2>
           <p className="pi-landing-subtitle">
@@ -497,7 +559,11 @@ export default function App() {
       )}
 
       {/* SECCIÓN CRONOGRAMA */}
-      <section id="cronograma" className="pi-landing-section">
+      <section
+        id="cronograma"
+        className={`pi-landing-section qp-revelar${verCronograma ? ' es-visible' : ''}`}
+        ref={refCronograma}
+      >
         <div className="pi-landing-section-header">
           <h2 className="pi-landing-section-title"><FaClock /> Cronograma Oficial</h2>
         </div>

@@ -1,0 +1,234 @@
+/* =========================================================================
+   CONTACTANOS — landing pública.
+   Dos columnas: canales directos a la izquierda y formulario a la derecha.
+   El formulario reusa el sistema canónico (.formulario / .input-group de
+   styles/forms.css); acá solo se re-pintan los colores, porque ese sistema
+   está hecho para fondo claro y esta landing es oscura.
+
+   COLOR: solo tokens de QPass. Ni un hex suelto.
+   ========================================================================= */
+
+.qp-contacto__grid {
+  display: grid;
+  grid-template-columns: 1fr 1.05fr;
+  gap: var(--space-10);
+  align-items: start;
+}
+
+/* =======================================================
+   CANALES
+======================================================= */
+.qp-contacto__canales {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.qp-contacto__canales-titulo {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  line-height: var(--leading-snug);
+  color: var(--blanco);
+}
+
+.qp-contacto__lista {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+}
+
+.qp-contacto__lista li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.qp-contacto__ic {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--cian-digital) 30%, transparent);
+  background: color-mix(in srgb, var(--cian-digital) 14%, transparent);
+  color: var(--cian-digital);
+  font-size: var(--text-base);
+}
+
+.qp-contacto__ic--alt {
+  border-color: color-mix(in srgb, var(--coral-compra) 35%, transparent);
+  background: color-mix(in srgb, var(--coral-compra) 16%, transparent);
+  color: var(--coral-compra);
+}
+
+.qp-contacto__dato {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  min-width: 0;
+}
+
+/* Etiqueta apagada para que el dato sea lo que resalta. */
+.qp-contacto__dato em {
+  font-style: normal;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.04em;
+  color: var(--n-400);
+}
+
+.qp-contacto__dato > span {
+  font-size: var(--text-sm);
+  color: var(--blanco);
+}
+
+.qp-contacto__dato a {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--cian-digital);
+  text-decoration: none;
+  word-break: break-word;
+}
+
+.qp-contacto__dato a:hover { text-decoration: underline; }
+
+.qp-contacto__dato a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.qp-contacto__ext { font-size: 0.7em; opacity: 0.8; }
+
+/* --- Bloque destacado para organizadores --- */
+.qp-contacto__destacado {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--coral-compra) 28%, transparent);
+  background: color-mix(in srgb, var(--coral-compra) 10%, transparent);
+}
+
+.qp-contacto__destacado > span {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.qp-contacto__destacado strong {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  color: var(--blanco);
+}
+
+.qp-contacto__destacado span span {
+  font-size: var(--text-xs);
+  line-height: var(--leading-normal);
+  color: var(--n-300);
+}
+
+/* =======================================================
+   FORMULARIO
+   Re-pinta el sistema de forms.css para fondo oscuro. Los tamaños,
+   el alto mínimo de 44px y el foco salen de ahí sin tocarse.
+======================================================= */
+.qp-contacto__form {
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+}
+
+.qp-contacto__form .input-group label {
+  color: var(--n-300);
+}
+
+.qp-contacto__form .input-group input,
+.qp-contacto__form .input-group select,
+.qp-contacto__form .input-group textarea {
+  background: color-mix(in srgb, var(--blanco) 8%, transparent);
+  border-color: color-mix(in srgb, var(--blanco) 22%, transparent);
+  color: var(--blanco);
+}
+
+.qp-contacto__form .input-group input::placeholder,
+.qp-contacto__form .input-group textarea::placeholder {
+  color: var(--n-500);
+}
+
+.qp-contacto__form .input-group input:focus,
+.qp-contacto__form .input-group select:focus,
+.qp-contacto__form .input-group textarea:focus {
+  border-color: var(--cian-digital);
+  background: color-mix(in srgb, var(--blanco) 12%, transparent);
+}
+
+/* El desplegable abre con los colores del sistema operativo: las opciones
+   necesitan fondo propio o quedan blanco sobre blanco en algunos navegadores. */
+.qp-contacto__form .input-group select option {
+  background: var(--azul-noche);
+  color: var(--blanco);
+}
+
+.qp-contacto__enviar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-1);
+  padding: var(--space-3) var(--space-6);
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--cian-digital);
+  color: var(--texto-sobre-vivo);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: background-color var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.qp-contacto__enviar:hover {
+  background: var(--cian-digital-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.qp-contacto__enviar:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+.qp-contacto__aviso {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--n-400);
+  text-align: center;
+}
+
+/* =======================================================
+   RESPONSIVE
+======================================================= */
+@media (max-width: 62rem) {
+  .qp-contacto__grid {
+    grid-template-columns: 1fr;
+    gap: var(--space-8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-contacto__enviar { transition: none; }
+  .qp-contacto__enviar:hover { transform: none; }
+}

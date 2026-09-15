@@ -1,0 +1,768 @@
+/* =========================================================================
+   HERO — QPass landing pública.
+   Escena: una manilla QR isométrica emitiendo señal al lector de puerta y
+   al punto de venta, con tarjetas de vidrio que muestran una demo en vivo.
+
+   COLOR: sale 100% de los tokens de QPass (styles/index.css). Ni un hex
+   suelto. El hero vive siempre sobre --azul-noche (la landing es oscura
+   en los dos temas), así que se usan los acentos de marca directos y el
+   texto va en --blanco / --n-300, no en los tokens de texto claros.
+   ESPACIADO/FORMA: --space-*, --radius-*, --text-* (Manual 4, 5 y 7.3).
+   ========================================================================= */
+
+.qp-hero {
+  position: relative;
+  z-index: 10;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  padding: calc(var(--space-20) + var(--space-8)) var(--space-5) var(--space-12);
+  overflow: hidden;
+}
+
+/* Halo ambiental detrás de la escena. */
+.qp-hero__resplandor {
+  position: absolute;
+  top: -10%;
+  right: 2%;
+  width: min(60vw, 52rem);
+  height: min(60vw, 52rem);
+  border-radius: var(--radius-full);
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--cian-digital) 18%, transparent) 0%,
+    color-mix(in srgb, var(--indigo-profundo) 14%, transparent) 45%,
+    transparent 72%
+  );
+  filter: blur(60px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.qp-hero__grid {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  align-items: center;
+  gap: var(--space-10);
+  width: 100%;
+  max-width: 90rem;
+  margin: 0 auto;
+}
+
+/* =======================================================
+   COLUMNA IZQUIERDA
+======================================================= */
+.qp-hero__col-texto {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 22rem;
+}
+
+.qp-hero__intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  transition: opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+  will-change: opacity, transform;
+}
+
+/* Chip de categoría */
+.qp-hero__chip,
+.qp-hero__pasos-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: fit-content;
+  margin: 0;
+  padding: var(--space-1) var(--space-4);
+  border-radius: var(--radius-full);
+  border: 1px solid color-mix(in srgb, var(--cian-digital) 40%, transparent);
+  background: color-mix(in srgb, var(--cian-digital) 12%, transparent);
+  color: var(--cian-digital);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.08em;
+}
+
+.qp-hero__chip-punto {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+  background: var(--cian-digital);
+  box-shadow: 0 0 8px var(--cian-digital);
+  animation: qpHeroLatido 2s infinite;
+}
+
+@keyframes qpHeroLatido {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+.qp-hero__titulo {
+  margin: 0;
+  max-width: 34ch;
+  font-size: var(--text-3xl);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  letter-spacing: -0.02em;
+  color: var(--blanco);
+}
+
+/* Degradés de marca: cian (escaneo) y coral (compra). */
+.qp-hero__destacado {
+  background: linear-gradient(135deg, var(--cian-digital) 0%, var(--verde-recarga) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.qp-hero__destacado--comercio {
+  background: linear-gradient(135deg, var(--coral-compra) 0%, var(--ambar-aviso) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.qp-hero__bajada {
+  margin: 0;
+  max-width: 46ch;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--n-300);
+}
+
+.qp-hero__bajada strong {
+  color: var(--blanco);
+  font-weight: var(--weight-semibold);
+}
+
+/* ---- Acciones ---- */
+.qp-hero__acciones {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.qp-hero__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-6);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+  transition: transform var(--duration-fast) var(--ease-out),
+              box-shadow var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out);
+}
+
+/* Primario: cian de marca. Texto azul-noche porque el blanco sobre cian
+   no llega a AA (ver nota de --texto-sobre-vivo en index.css). */
+.qp-hero__btn--primario {
+  background: var(--cian-digital);
+  color: var(--texto-sobre-vivo);
+  border: 1px solid color-mix(in srgb, var(--blanco) 25%, transparent);
+  box-shadow: var(--shadow-md);
+}
+
+.qp-hero__btn--primario:hover {
+  background: var(--cian-digital-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+}
+
+.qp-hero__btn:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* =======================================================
+   CAPA 2 — TARJETA "CÓMO FUNCIONA"
+   Aparece mientras la manilla gira; queda superpuesta al intro.
+======================================================= */
+.qp-hero__pasos {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  max-width: 34rem;
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  opacity: 0;
+  transform: translateY(var(--space-5)) scale(0.94);
+  transform-origin: left center;
+  margin-top: calc(var(--space-16) * -1);
+  pointer-events: none;
+  transition: opacity var(--duration-fast) var(--ease-out),
+              transform var(--duration-fast) var(--ease-out);
+  will-change: opacity, transform;
+}
+
+.qp-hero__pasos-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.qp-hero__paso {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.qp-hero__paso-num {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--cian-digital) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cian-digital) 30%, transparent);
+  color: var(--cian-digital);
+  font-size: var(--text-base);
+}
+
+.qp-hero__paso-num em {
+  position: absolute;
+  right: calc(var(--space-1) * -1);
+  bottom: calc(var(--space-1) * -1);
+  display: grid;
+  place-items: center;
+  width: 1.125rem;
+  height: 1.125rem;
+  border-radius: var(--radius-full);
+  background: var(--cian-digital);
+  color: var(--texto-sobre-vivo);
+  font-size: 0.625rem;
+  font-style: normal;
+  font-weight: var(--weight-bold);
+}
+
+.qp-hero__paso-txt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.qp-hero__paso-txt strong {
+  color: var(--blanco);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.qp-hero__paso-txt span {
+  color: var(--n-400);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+
+/* =======================================================
+   COLUMNA DERECHA — ESCENA DE LA MANILLA
+======================================================= */
+.qp-hero__col-escena {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qp-hero__escenario {
+  position: relative;
+  width: 100%;
+  max-width: 40rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qp-hero__escena {
+  position: relative;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding-block: var(--space-16);
+  transform-style: preserve-3d;
+  transform-origin: 52% 48%;
+  transition: transform var(--duration-fast) var(--ease-out);
+  will-change: transform;
+}
+
+.qp-hero__foco {
+  position: absolute;
+  top: 46%;
+  left: 50%;
+  width: 26rem;
+  height: 20rem;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(
+    ellipse at center,
+    color-mix(in srgb, var(--cian-digital) 22%, transparent) 0%,
+    color-mix(in srgb, var(--indigo-profundo) 10%, transparent) 50%,
+    transparent 74%
+  );
+  filter: blur(40px);
+  pointer-events: none;
+}
+
+/* ---- La manilla ---- */
+.qp-hero__manilla {
+  /* Lado de la chapa. Los anillos de señal lo reusan para calzar exacto
+     con el contorno del QR, también cuando cambia en móvil. */
+  --qp-chapa: 13rem;
+  position: relative;
+  display: grid;
+  place-items: center;
+  transform: rotateX(12deg) rotateZ(-8deg);
+  transform-style: preserve-3d;
+  animation: qpHeroFlotar 7s ease-in-out infinite;
+}
+
+@keyframes qpHeroFlotar {
+  0%, 100% { transform: rotateX(12deg) rotateZ(-8deg) translateY(0); }
+  50% { transform: rotateX(12deg) rotateZ(-8deg) translateY(-0.75rem); }
+}
+
+/* Las dos correas que salen de la chapa */
+.qp-hero__manilla-correa {
+  position: absolute;
+  top: 50%;
+  width: 9rem;
+  height: 3.25rem;
+  border-radius: var(--radius-full);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--indigo-profundo) 92%, var(--blanco)) 0%,
+    var(--indigo-profundo) 55%,
+    color-mix(in srgb, var(--azul-noche) 70%, var(--indigo-profundo)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--cian-digital) 22%, transparent);
+  box-shadow: var(--shadow-lg);
+}
+
+.qp-hero__manilla-correa--izq {
+  right: 55%;
+  transform: translateY(-50%) rotate(-6deg);
+}
+
+.qp-hero__manilla-correa--der {
+  left: 55%;
+  transform: translateY(-50%) rotate(6deg);
+}
+
+/* La chapa con el QR */
+.qp-hero__manilla-chapa {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: var(--qp-chapa);
+  height: var(--qp-chapa);
+  padding: var(--space-4);
+  box-sizing: border-box;
+  border-radius: var(--radius-xl);
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--blanco) 96%, var(--cian-digital)) 0%,
+    var(--blanco) 60%,
+    color-mix(in srgb, var(--blanco) 90%, var(--n-300)) 100%
+  );
+  border: 1px solid color-mix(in srgb, var(--blanco) 60%, transparent);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 0 1px color-mix(in srgb, var(--cian-digital) 25%, transparent),
+    0 0 40px color-mix(in srgb, var(--cian-digital) 22%, transparent);
+  overflow: hidden;
+}
+
+.qp-hero__qr {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.qp-hero__qr-fondo { fill: transparent; }
+.qp-hero__qr-ojo { fill: var(--indigo-profundo); }
+.qp-hero__qr-pupila { fill: var(--blanco); }
+.qp-hero__qr-modulo { fill: var(--indigo-profundo); }
+
+/* Haz de escaneo que recorre la chapa */
+.qp-hero__haz {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: 30%;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    color-mix(in srgb, var(--cian-digital) 35%, transparent) 50%,
+    transparent 100%
+  );
+  animation: qpHeroEscaneo 3.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  pointer-events: none;
+}
+
+@keyframes qpHeroEscaneo {
+  0%, 100% { transform: translateY(-40%); opacity: 0; }
+  15% { opacity: 1; }
+  85% { opacity: 1; }
+  50% { transform: translateY(300%); }
+}
+
+/* ---- Señal del QR ----
+   Anillos con la MISMA forma y tamaño que la chapa, que se expanden hacia
+   afuera: la lectura es del código entero, no de un punto suelto. */
+.qp-hero__aura {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--qp-chapa);
+  height: var(--qp-chapa);
+  margin: calc(var(--qp-chapa) / -2) 0 0 calc(var(--qp-chapa) / -2);
+  border-radius: var(--radius-xl);
+  border: 1.5px solid color-mix(in srgb, var(--cian-digital) 80%, transparent);
+  pointer-events: none;
+  z-index: 1;
+  animation: qpHeroAura 3s cubic-bezier(0.25, 1, 0.5, 1) infinite;
+}
+
+.qp-hero__aura--2 { animation-delay: 1s; }
+.qp-hero__aura--3 { animation-delay: 2s; }
+
+@keyframes qpHeroAura {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.7); opacity: 0; }
+}
+
+/* =======================================================
+   TARJETAS FLOTANTES
+   .glass-morphism (PaginaPrincipal.css) aporta el vidrio.
+======================================================= */
+.qp-hero__tarjeta {
+  position: absolute;
+  z-index: 6;
+  border-radius: var(--radius-lg);
+  color: var(--blanco);
+  opacity: var(--hero-tarjetas-op, 1);
+  transition: transform var(--duration-normal) var(--ease-out),
+              opacity var(--duration-fast) var(--ease-out);
+  will-change: opacity, transform;
+}
+
+.qp-hero__tarjeta--saldo {
+  top: 2%;
+  left: calc((var(--space-6) + var(--hero-tarjetas-sep, 0px)) * -1);
+  min-width: 14rem;
+  padding: var(--space-3) var(--space-4);
+  transform: perspective(800px) rotateY(7deg) rotateX(3deg);
+  animation: qpHeroTarjetaIzq 6s ease-in-out infinite;
+}
+
+.qp-hero__tarjeta--grafico {
+  top: 4%;
+  right: calc((var(--space-5) + var(--hero-tarjetas-sep, 0px)) * -1);
+  width: 17rem;
+  padding: var(--space-3) var(--space-4);
+  transform: perspective(800px) rotateY(-7deg) rotateX(3deg);
+  animation: qpHeroTarjetaDer 7s ease-in-out infinite;
+}
+
+.qp-hero__tarjeta--acceso {
+  bottom: 4%;
+  left: 8%;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 20rem;
+  padding: var(--space-3) var(--space-4);
+  transform: perspective(800px) rotateX(4deg);
+}
+
+@keyframes qpHeroTarjetaIzq {
+  0%, 100% { transform: perspective(800px) rotateY(7deg) rotateX(3deg) translateY(0); }
+  50% { transform: perspective(800px) rotateY(5deg) rotateX(2deg) translateY(-0.5rem); }
+}
+
+@keyframes qpHeroTarjetaDer {
+  0%, 100% { transform: perspective(800px) rotateY(-7deg) rotateX(3deg) translateY(0); }
+  50% { transform: perspective(800px) rotateY(-5deg) rotateX(2deg) translateY(0.5rem); }
+}
+
+.qp-hero__tarjeta-cab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.qp-hero__tarjeta-cab strong {
+  color: var(--blanco);
+  font-weight: var(--weight-semibold);
+}
+
+.qp-hero__tarjeta-ic {
+  color: var(--cian-digital);
+  font-size: var(--text-base);
+  flex-shrink: 0;
+}
+
+/* Indicador de dato nuevo */
+.qp-hero__vivo-punto {
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: var(--radius-full);
+  background: var(--verde-recarga);
+  opacity: 0.4;
+  margin-left: auto;
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.qp-hero__vivo-pill .qp-hero__vivo-punto { margin-left: 0; }
+
+.qp-hero__vivo-punto.es-activo {
+  opacity: 1;
+  box-shadow: 0 0 10px var(--verde-recarga);
+  animation: qpHeroDestello 0.65s var(--ease-out);
+}
+
+@keyframes qpHeroDestello {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.5); }
+}
+
+.qp-hero__vivo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--verde-recarga) 16%, transparent);
+  color: var(--verde-recarga);
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+}
+
+/* ---- Monto ---- */
+.qp-hero__monto {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.qp-hero__monto-val {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--verde-recarga);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Solo brillo, sin cambiar de escala: si cambia el tamaño, el número salta. */
+.qp-hero__monto-val.es-pulso { animation: qpHeroBrillo 0.65s var(--ease-out); }
+
+@keyframes qpHeroBrillo {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.3) drop-shadow(0 0 7px color-mix(in srgb, var(--verde-recarga) 70%, transparent)); }
+}
+
+.qp-hero__monto-tag {
+  padding: 0.125rem var(--space-2);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--cian-digital) 16%, transparent);
+  color: var(--cian-digital);
+  font-size: 0.625rem;
+  font-weight: var(--weight-bold);
+}
+
+.qp-hero__tarjeta-pie {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  margin: 0;
+  color: var(--n-400);
+  font-size: var(--text-xs);
+}
+
+.qp-hero__pie-ic { color: var(--ambar-aviso); }
+
+/* ---- Gráfico ---- */
+.qp-hero__grafico {
+  width: 100%;
+  height: 3.5rem;
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--blanco) 4%, transparent);
+  overflow: hidden;
+}
+
+.qp-hero__svg { width: 100%; height: 100%; display: block; }
+
+.qp-hero__rejilla {
+  stroke: var(--blanco);
+  stroke-opacity: 0.08;
+  stroke-dasharray: 3 3;
+}
+
+.qp-hero__area-arriba { stop-color: var(--cian-digital); stop-opacity: 0.4; }
+.qp-hero__area-abajo { stop-color: var(--cian-digital); stop-opacity: 0; }
+
+/* Líneas de 2px, la serie principal con remate redondeado. */
+.qp-hero__linea { fill: none; stroke-width: 2; }
+.qp-hero__linea--ingresos { stroke: var(--cian-digital); stroke-linecap: round; }
+.qp-hero__linea--consumos { stroke: var(--coral-compra); stroke-dasharray: 3 2; opacity: 0.92; }
+
+.qp-hero__punto--ingresos { fill: var(--cian-digital); }
+.qp-hero__punto--consumos { fill: var(--coral-compra); }
+
+/* Leyenda: obligatoria con 2 series. El texto va en tinta neutra,
+   nunca en el color de la serie (el bullet es quien porta la identidad). */
+.qp-hero__leyenda {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  font-size: 0.625rem;
+  color: var(--n-400);
+}
+
+.qp-hero__leyenda li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.qp-hero__leyenda b {
+  color: var(--blanco);
+  font-variant-numeric: tabular-nums;
+}
+
+.qp-hero__bullet {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: var(--radius-full);
+}
+
+.qp-hero__bullet--ingresos { background: var(--cian-digital); }
+.qp-hero__bullet--consumos { background: var(--coral-compra); }
+
+/* ---- Tarjeta de acceso ---- */
+.qp-hero__acceso-ic {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--verde-recarga) 16%, transparent);
+  color: var(--verde-recarga);
+  font-size: var(--text-lg);
+}
+
+.qp-hero__acceso-txt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.qp-hero__acceso-txt strong {
+  color: var(--blanco);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.qp-hero__acceso-txt span {
+  color: var(--n-400);
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+}
+
+/* =======================================================
+   RESPONSIVE
+======================================================= */
+@media (max-width: 62rem) {
+  .qp-hero__grid { grid-template-columns: 1fr; gap: var(--space-8); }
+
+  /* Sin dos columnas, la tarjeta de pasos dejaría de tener lugar propio:
+     vuelve al flujo, debajo del intro. */
+  .qp-hero__pasos {
+    position: static;
+    max-width: none;
+    margin-top: var(--space-6);
+    transform: none;
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .qp-hero__escena { padding-block: var(--space-10); }
+  .qp-hero__tarjeta--saldo { left: 0; }
+  .qp-hero__tarjeta--grafico { right: 0; }
+  .qp-hero__tarjeta--acceso { left: 50%; transform: translateX(-50%); max-width: 22rem; }
+}
+
+@media (max-width: 40rem) {
+  .qp-hero { padding-inline: var(--space-4); min-height: auto; }
+  .qp-hero__manilla { --qp-chapa: 10rem; }
+  .qp-hero__manilla-correa { width: 6rem; height: 2.5rem; }
+
+  /* En pantallas chicas las tarjetas tapaban la manilla: se apilan debajo. */
+  .qp-hero__escenario { flex-direction: column; }
+  .qp-hero__tarjeta { position: static; transform: none; animation: none; width: 100%; }
+  .qp-hero__tarjeta--grafico,
+  .qp-hero__tarjeta--acceso { width: 100%; max-width: none; margin-top: var(--space-3); }
+  .qp-hero__tarjeta--acceso { transform: none; left: auto; }
+}
+
+/* =======================================================
+   MOVIMIENTO REDUCIDO (Manual 13.1)
+   El JS ya corta la coreografía de scroll; acá se apaga el resto y
+   se deja todo en su estado final y legible.
+======================================================= */
+@media (prefers-reduced-motion: reduce) {
+  .qp-hero__chip-punto,
+  .qp-hero__manilla,
+  .qp-hero__haz,
+  .qp-hero__aura,
+  .qp-hero__tarjeta--saldo,
+  .qp-hero__tarjeta--grafico,
+  .qp-hero__vivo-punto.es-activo,
+  .qp-hero__monto-val.es-pulso {
+    animation: none;
+  }
+
+  .qp-hero__haz { opacity: 0; }
+
+  .qp-hero__intro,
+  .qp-hero__escena,
+  .qp-hero__tarjeta { transition: none; }
+
+  /* La tarjeta de pasos ya no puede aparecer por scroll: se muestra fija. */
+  .qp-hero__pasos {
+    position: static;
+    max-width: none;
+    margin-top: var(--space-6);
+    opacity: 1;
+    transform: none;
+    pointer-events: auto;
+  }
+}

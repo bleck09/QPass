@@ -27,3 +27,32 @@
 /* Celdas de tabla alineadas (para renderFila propios de <Tabla>) */
 .td-centro { text-align: center; }
 .td-derecha { text-align: right; }
+
+/* ============================================================================
+   REVELADO AL ENTRAR EN PANTALLA — se usa con el hook utils/useRevelar.js.
+   Mismo gesto que la tarjeta destacada del hero: aparece subiendo y
+   creciendo apenas, para que la seccion "entre" en vez de saltar.
+
+   CLAVE: el estado oculto SOLO se aplica si el hook marco el nodo con
+   data-revelar="armado". Asi, si el observador no llega a correr, el
+   contenido se ve igual en vez de quedar invisible para siempre. La version
+   anterior ocultaba por defecto y dejo secciones enteras en blanco.
+   ============================================================================ */
+.qp-revelar {
+  transition: opacity 600ms var(--ease-out), transform 600ms var(--ease-out);
+}
+
+.qp-revelar[data-revelar="armado"]:not(.es-visible) {
+  opacity: 0;
+  transform: translateY(var(--space-5)) scale(0.97);
+  will-change: opacity, transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-revelar,
+  .qp-revelar[data-revelar="armado"]:not(.es-visible) {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

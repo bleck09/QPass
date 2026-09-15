@@ -84,26 +84,6 @@
 .qpass-home-nav-actions .btn-solid:hover { background-color: var(--cian-digital); color: var(--azul-noche); transform: scale(1.05); }
 
 /* =======================================================
-   HERO SECTION
-======================================================= */
-.qpass-home-hero {
-  position: relative; z-index: 10;
-  display: flex; justify-content: center; align-items: center;
-  min-height: 85vh; padding: 120px 5% 48px 5%; text-align: center;
-}
-
-.hero-content { max-width: 800px; display: flex; flex-direction: column; align-items: center; gap: 24px; }
-
-.badge-tech { padding: 8px 20px; border-radius: var(--radius-xl); font-weight: 700; font-size: var(--text-xs); color: var(--cian-digital); }
-
-.hero-content h1 { font-size: 4rem; font-weight: 800; line-height: 1.1; margin: 0; text-shadow: 0 4px 20px rgba(0,0,0,0.5); }
-.hero-content p { font-size: var(--text-lg); line-height: 1.6; margin: 0; max-width: 650px; color: var(--text-secondary); }
-
-.hero-buttons { margin-top: 8px; }
-.btn-large { padding: 16px 36px; font-size: var(--text-base); border-radius: var(--radius-xl); background: var(--cian-digital); color: var(--azul-noche); text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-weight: 800; transition: all 0.3s; }
-.btn-large:hover { background: var(--bg-surface); transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0, 180, 216, 0.4); }
-
-/* =======================================================
    SECCIONES GLOBALES
 ======================================================= */
 .qpass-home-section { position: relative; z-index: 10; padding: 80px 5%; max-width: 1200px; margin: 0 auto; }
@@ -245,7 +225,9 @@
 /* =======================================================
    EVENTOS PASADOS
 ======================================================= */
-.past-events-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 24px; }
+/* min() y no 350px fijo: en un telefono de 360px el ancho util es ~324px,
+   asi que un minmax(350px) hacia desbordar la pagina en horizontal. */
+.past-events-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21.875rem, 100%), 1fr)); gap: var(--space-6); }
 .past-card { border-radius: var(--radius-xl); display: flex; align-items: center; gap: 20px; padding: 16px; transition: transform 0.2s; cursor: pointer; }
 .past-card:hover { transform: translateY(-5px); border-color: var(--cian-digital); }
 .past-card img { width: 100px; height: 100px; border-radius: var(--radius-xl); object-fit: cover; filter: grayscale(80%); transition: filter 0.3s; }
@@ -266,8 +248,6 @@
    RESPONSIVE
 ======================================================= */
 @media (max-width: 900px) {
-  .hero-content h1 { font-size: 3rem; }
-  .qpass-home-nav-links { display: none; }
   .qpass-floating-navbar { width: 95%; padding: 0 16px; }
   .feature-grid { grid-template-columns: 1fr; }
   .carousel-3d-card {
@@ -277,4 +257,112 @@
       translateZ(calc(var(--abs-offset) * -120px))
       rotateY(calc(var(--dir) * -10deg));
   }
+}
+
+/* Línea de contacto del footer (correo + ancla a la sección Contáctanos). */
+.footer-contacto {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.footer-contacto a {
+  color: var(--cian-digital);
+  text-decoration: none;
+  font-weight: var(--weight-semibold);
+}
+
+.footer-contacto a:hover { text-decoration: underline; }
+
+.footer-contacto a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.footer-contacto span { color: var(--n-500); }
+
+/* =========================================================================
+   NAVEGACIÓN EN TABLET Y MÓVIL
+   Debajo de 62rem los links no entran en la barra. Antes simplemente se
+   ocultaban y no quedaba ninguna forma de navegar; ahora se despliegan en
+   un panel bajo la barra con el botón hamburguesa.
+   ========================================================================= */
+.qpass-home-nav-toggle {
+  display: none;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--blanco) 22%, transparent);
+  background: color-mix(in srgb, var(--blanco) 10%, transparent);
+  color: var(--blanco);
+  font-size: var(--text-base);
+  cursor: pointer;
+}
+
+.qpass-home-nav-toggle:focus-visible,
+.qpass-home-nav-links a:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+@media (max-width: 62rem) {
+  .qpass-home-nav-toggle { display: grid; }
+  .qpass-home-nav-actions { gap: var(--space-2); display: flex; align-items: center; }
+
+  /* El panel cuelga de la barra, que ya es glass y fixed. */
+  .qpass-home-nav-links {
+    display: none;
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    gap: 0;
+    padding: var(--space-2);
+    border-radius: var(--radius-xl);
+    background: color-mix(in srgb, var(--azul-noche) 92%, transparent);
+    border: 1px solid color-mix(in srgb, var(--blanco) 12%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .qpass-home-nav-links.esta-abierto { display: flex; }
+
+  .qpass-home-nav-links li { width: 100%; }
+
+  /* 44px de alto mínimo: objetivo táctil cómodo. */
+  .qpass-home-nav-links a {
+    display: flex;
+    align-items: center;
+    min-height: 2.75rem;
+    padding: var(--space-2) var(--space-4);
+    border-radius: var(--radius-md);
+  }
+
+  .qpass-home-nav-links a:hover { background: color-mix(in srgb, var(--blanco) 8%, transparent); }
+}
+
+/* En pantallas chicas el botón de sesión deja solo el ícono: el texto
+   empujaba la barra y descolocaba el logo. */
+@media (max-width: 30rem) {
+  .qpass-home-nav-actions .btn-solid { padding: var(--space-3); }
+  .qpass-home-nav-actions .btn-solid span { display: none; }
+  .qpass-home-logo { font-size: var(--text-lg); }
+  .qpass-home-section { padding: var(--space-12) var(--space-4); }
+  .footer-content { padding: var(--space-8) var(--space-4); }
+}
+
+/* Mismo motivo que en la página del evento: la navbar flotante es fixed, así
+   que los saltos de ancla (Cartelera, Contáctanos, "Ver cartelera" del hero)
+   tienen que reservar su alto o el título queda tapado. */
+.qpass-home-section,
+.qp-dest {
+  scroll-margin-top: calc(var(--space-20) + var(--space-6));
 }

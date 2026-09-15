@@ -1,15 +1,19 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaSignInAlt,
-  FaBolt, FaChartPie, FaMobileAlt, FaArrowRight,
+  FaBolt, FaChartPie, FaMobileAlt, FaArrowRight, FaBars, FaTimes,
   FaMapMarkerAlt,
 } from 'react-icons/fa';
 import './PaginaPrincipal.css';
-import CarruselEventos from '../../components/CarruselEventos.jsx';
+import HeroSection from './HeroSection.jsx';
+import EventosDestacados from './EventosDestacados.jsx';
+import ContactoSection from './ContactoSection.jsx';
+import { CONTACTO } from '../../constants/contacto.js';
 import api from '../../api/index.js';
 import { esVigente, formatearFecha } from '../../utils/eventos.js';
 import { useApi } from '../../utils/useApi.js';
+import { useRevelar } from '../../utils/useRevelar.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 
 export default function PaginaPrincipal() {
@@ -25,6 +29,15 @@ export default function PaginaPrincipal() {
 
   const verEvento = (evento) => navigate(`/evento/${evento.id}`);
 
+  // La grilla de eventos pasados entra revelandose al llegar a ella
+  // (ver utils/useRevelar.js).
+  const [refPasados, pasadosVisible] = useRevelar();
+  const [refContacto, contactoVisible] = useRevelar();
+
+  // En tablet/movil los links de la navbar se ocultan por falta de espacio.
+  // Antes no quedaba NINGUNA navegacion; ahora se despliegan en un panel.
+  const [menuAbierto, setMenuAbierto] = useState(false);
+
   return (
     <div className="qpass-home-container">
       
@@ -37,45 +50,44 @@ export default function PaginaPrincipal() {
           <div className="logo-icon-bg"><FaQrcode /></div>
           <span>QPass</span>
         </div>
-        <ul className="qpass-home-nav-links">
+        <ul id="menu-navegacion" className={`qpass-home-nav-links${menuAbierto ? ' esta-abierto' : ''}`} onClick={() => setMenuAbierto(false)}>
           <li><a href="#servicios">Características</a></li>
           <li><a href="#cartelera">Cartelera</a></li>
           <li><a href="#pasados">Eventos Pasados</a></li>
+          <li><a href="#contacto">Contáctanos</a></li>
         </ul>
         <div className="qpass-home-nav-actions">
           <button className="btn-solid" onClick={() => navigate('/login')}>
-            <FaSignInAlt /> Iniciar Sesión
+            <FaSignInAlt aria-hidden="true" /> <span>Iniciar Sesión</span>
+          </button>
+          <button
+            type="button"
+            className="qpass-home-nav-toggle"
+            aria-expanded={menuAbierto}
+            aria-controls="menu-navegacion"
+            aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
+            onClick={() => setMenuAbierto(a => !a)}
+          >
+            {menuAbierto ? <FaTimes aria-hidden="true" /> : <FaBars aria-hidden="true" />}
           </button>
         </div>
       </nav>
 
       {/* Landmark principal (Manual 11): permite el salto de teclado y orienta al lector de pantalla */}
       <main id="contenido">
-      <header className="qpass-home-hero">
-        <div className="hero-content">
-          <div className="badge-tech glass-morphism">La nueva era de los eventos en Bolivia</div>
-          <h1>Revolucionamos la forma en que vives los eventos</h1>
-          <p>Olvídate de las filas eternas. Con QPass, tu celular y una manilla QR es todo lo que necesitas para acceder y comprar al instante.</p>
-          <div className="hero-buttons">
-            <a href="#cartelera" className="btn-solid btn-large">Ver Cartelera <FaArrowRight/></a>
-          </div>
-        </div>
-      </header>
+      <HeroSection />
 
-      <section id="cartelera" className="qpass-home-section">
-        <div className="section-header center">
-          <h2>Próximos Eventos</h2>
-          <p>Explora y asegura tu acceso a las mejores experiencias. (Pasa el mouse o desliza)</p>
-        </div>
-
-        {error ? (
+      {error ? (
+        <section id="cartelera" className="qpass-home-section">
           <EstadoError onReintentar={recargar} titulo="No se pudo cargar la cartelera" />
-        ) : cargando ? (
+        </section>
+      ) : cargando ? (
+        <section id="cartelera" className="qpass-home-section">
           <EstadoCarga filas={3} etiqueta="Cargando cartelera…" />
-        ) : (
-          <CarruselEventos eventos={proximosEventos} onAdquirir={verEvento} />
-        )}
-      </section>
+        </section>
+      ) : (
+        <EventosDestacados eventos={proximosEventos.slice(0, 6)} onVerEvento={verEvento} />
+      )}
 
       {/* --- Resto del código se mantiene igual... --- */}
       <section id="servicios" className="qpass-home-section feature-section">
@@ -118,7 +130,11 @@ export default function PaginaPrincipal() {
         </div>
       </section>
 
-      <section id="pasados" className="qpass-home-section">
+      <section
+        id="pasados"
+        className={`qpass-home-section qp-revelar${pasadosVisible ? ' es-visible' : ''}`}
+        ref={refPasados}
+      >
         <div className="section-header">
           <h2>Eventos Pasados</h2>
           <p>El éxito de nuestros aliados es nuestro éxito.</p>
@@ -136,6 +152,19 @@ export default function PaginaPrincipal() {
           ))}
         </div>
       </section>
+
+      <section
+        id="contacto"
+        className={`qpass-home-section qp-revelar${contactoVisible ? ' es-visible' : ''}`}
+        ref={refContacto}
+      >
+        <div className="section-header center">
+          <h2>Contáctanos</h2>
+          <p>¿Tenés un evento en mente o una consulta? Te respondemos.</p>
+        </div>
+
+        <ContactoSection />
+      </section>
       </main>
 
       <footer className="qpass-home-footer glass-morphism">
@@ -146,6 +175,11 @@ export default function PaginaPrincipal() {
               <span>QPass</span>
             </div>
             <p>La tecnología definitiva para eventos Cashless.</p>
+          <p className="footer-contacto">
+            <a href={`mailto:${CONTACTO.correo}`}>{CONTACTO.correo}</a>
+            <span aria-hidden="true">·</span>
+            <a href="#contacto">Contáctanos</a>
+          </p>
           </div>
           <p className="copyright">&copy; {new Date().getFullYear()} QPass Technologies.</p>
         </div>
