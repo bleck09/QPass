@@ -178,6 +178,8 @@ model Usuario {
   billeterasEvento       BilleteraEvento[]
   codigosRetiroNegocio   CodigoRetiroNegocio[] @relation("CodigoRetiroNegocio")
 
+  @@index([rol])                // listados del panel admin filtrados por rol
+  @@index([negocioAsignadoId])  // ayudantes de un negocio
   @@map("usuarios")
 }
 
@@ -444,6 +446,8 @@ model Asignacion {
 
   @@unique([eventoId, usuarioId])
   @@index([eventoId, rol])
+  @@index([usuarioId]) // "mis eventos" de un operador: el @@unique de arriba empieza por
+                       // eventoId, así que no sirve para filtrar solo por usuarioId
   @@map("asignaciones_eventos")
 }
 
@@ -459,7 +463,8 @@ model SolicitudEvento {
   fecha             DateTime
   fechaFin          DateTime
   descripcion       String
-  aforoEstimado     Int?                  // §5.11 — asistentes que el cliente estima; al aprobar pasa a Evento.aforoMaximo
+  aforoEstimado     Int?                  // §5.11 — asistentes que el cliente estima; al aprobar se copia a
+                                          // DiaEvento.aforoMaximo de la jornada creada (ver solicitudes-evento.service.aprobar).
   colorPrimario     String
   colorBoton        String
   colorFondo        String
@@ -548,7 +553,8 @@ model Compra {
 // cada invitado al comprar (aún sin usuarioId). Al APROBARSE la Compra, el sistema crea (o
 // vincula si el correo ya existe) una cuenta Usuario para CADA Entrada — titular e invitados
 // por igual — y manda la contraseña generada a su correo. Desde ahí, esa persona tiene su
-// propia billetera personal (Usuario.saldo) válida en cualquier evento, no solo este.
+// billetera cashless en ESTE evento (BilleteraEvento, una fila por usuario+evento): el saldo
+// que recargue acá solo sirve acá, no se arrastra a otros eventos.
 // El QR de manilla es independiente por evento (no por categoría) y se vincula después.
 model Entrada {
   id                String        @id @default(cuid())
@@ -591,6 +597,8 @@ model Entrada {
   @@index([eventoId, estadoIngreso])
   @@index([diaEventoId, estadoIngreso]) // aforo por jornada
   @@index([usuarioId]) // "mis entradas" del invitado: se buscan por Entrada.usuarioId
+  @@index([compraId])  // las entradas de una compra (aprobación/rechazo recorre todas)
+  @@index([categoriaTicketId])
   @@map("entradas")
 }
 
@@ -619,10 +627,12 @@ model RegistroIngreso {
 // de la categoría de ticket). asignadoPorId/asignadoEn auditan qué Supervisor la entregó.
 // Si se pierde o daña: Supervisor la anula (anulado=true, motivoAnulacion) y vincula un
 // CodigoQr nuevo a la MISMA Entrada — el saldo no se mueve porque nunca vivió en el CodigoQr
-// ni en la Entrada: vive en Usuario.saldo (el dueño, vía Entrada.usuarioId). El Qr es solo el
+// ni en la Entrada: vive en BilleteraEvento (del dueño vía Entrada.usuarioId + este evento).
+// El Qr es solo el
 // "lector" físico que identifica a esa Entrada/persona, no el que guarda el dinero.
 // entradaId ya NO es único: puede haber varias filas históricas para una misma Entrada (las
-// anuladas + la activa). Regla de la app: a lo sumo UNA fila con anulado=false por entradaId.
+// anuladas + la activa). A lo sumo UNA fila con anulado=false por entradaId — garantizado en la
+// BD por el índice parcial `codigos_qr_entrada_activo_unico`, no hace falta revalidarlo en la app.
 model CodigoQr {
   id          String   @id @default(cuid())
   eventoId    String
@@ -654,17 +664,17 @@ model CodigoQr {
   @@map("codigos_qr")
 }
 
-// Ledger único de movimientos de dinero. El dueño SIEMPRE es usuarioId (billetera personal en
-// Usuario.saldo) — tanto para un cliente/invitado como para un Usuario Negocio, porque ambos
-// son Usuario. entradaId es solo CONTEXTO opcional: qué manilla/evento se escaneó cuando ocurrió
+// Ledger único de movimientos de dinero. El dueño SIEMPRE es usuarioId — tanto para un
+// cliente/invitado como para un Usuario Negocio, porque ambos son Usuario. La billetera
+// afectada es la BilleteraEvento de (usuarioId, eventoId): el par de columnas de esta fila. entradaId es solo CONTEXTO opcional: qué manilla/evento se escaneó cuando ocurrió
 // (aplica a recarga/consumo; no aplica a una venta acreditada al negocio, ni siempre a devolución).
 // Una Venta genera SIEMPRE dos filas con el mismo ventaId, ambas con entradaId=la Entrada que
 // compró (es solo contexto/trazabilidad, no dueño): una tipo=consumo (usuarioId=dueño de esa
 // Entrada) y una tipo=venta (usuarioId=dueño del Puesto/negocio).
 // eventoId queda denormalizado para: (a) validar que el operador tiene Asignacion en ESE evento,
 // (b) bloquear si Evento.estado=finalizado, y (c) que los reportes financieros POR EVENTO se
-// calculen sumando Transaccion filtradas por eventoId — no sirve sumar Usuario.saldo directo,
-// porque esa billetera es compartida entre eventos.
+// calculen sumando Transaccion filtradas por eventoId. Junto con usuarioId identifica la
+// BilleteraEvento afectada, que es el saldo vivo que este ledger respalda.
 model Transaccion {
   id              String          @id @default(cuid())
   eventoId        String
@@ -699,8 +709,11 @@ model Transaccion {
   @@index([eventoId, operadorId])
   @@index([operadorId, createdAt]) // historial completo de un operador (cuadre de recarga/devolución)
   @@index([eventoId, tipo])
+  @@index([usuarioId, eventoId, createdAt]) // saldo/historial de una BilleteraEvento: toda
+                                            // consulta de saldo filtra usuario Y evento
   @@index([usuarioId, createdAt])
   @@index([entradaId, createdAt])
+  @@index([ventaId])   // las 2 filas de una venta, al anularla
   @@index([corteCajaId])
   @@map("transacciones")
 }
@@ -732,6 +745,7 @@ model IncidenciaRecarga {
   resueltoPor Usuario? @relation("AdminQueResuelve", fields: [resueltoPorId], references: [id])
 
   @@index([eventoId, estado])
+  @@index([entradaId])
   @@map("incidencias_recarga")
 }
 
@@ -759,6 +773,7 @@ model ReporteEntrada {
   resueltoPor Usuario? @relation("AdminQueCorrige", fields: [resueltoPorId], references: [id])
 
   @@index([eventoId, estado])
+  @@index([entradaId])
   @@map("reportes_entrada")
 }
 
@@ -820,6 +835,7 @@ model ProductoEstado {
 
   @@unique([puestoId, productoBaseId])
   @@index([puestoId])
+  @@index([productoBaseId]) // "en qué puestos está este producto": el @@unique empieza por puestoId
   @@map("productos_estado")
 }
 
@@ -923,13 +939,14 @@ model PuestoAyudante {
   creadoPor Usuario @relation("NegocioQueCreaAyudante", fields: [creadoPorId], references: [id])
 
   @@unique([puestoId, ayudanteId])
+  @@index([ayudanteId]) // "mis puestos" del ayudante: el @@unique de arriba empieza por puestoId
   @@map("puesto_ayudantes")
 }
 
 // Una venta cobrada por un Ayudante contra el saldo del dueño de la Entrada. SIEMPRE genera dos
 // Transaccion (partida doble, mismo ventaId): una tipo=consumo que debita al dueño de la Entrada,
-// y una tipo=venta que acredita directo la billetera del dueño del Puesto (Usuario.saldo del
-// negocio) — sin paso de confirmación intermedio.
+// y una tipo=venta que acredita directo la billetera del dueño del Puesto (su BilleteraEvento
+// en este evento) — sin paso de confirmación intermedio.
 model Venta {
   id         String   @id @default(cuid())
   puestoId   String
