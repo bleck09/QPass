@@ -32,10 +32,22 @@ export default function MapaUbicacion({ lat, lng }) {
     L.marker([lat, lng]).addTo(mapa);
     mapaRef.current = mapa;
 
-    const recalcular = () => mapaRef.current?.invalidateSize({ animate: false });
+    // invalidateSize recalcula el TAMAÑO, pero si el contenedor crecio
+    // despues de inicializar el mapa el centro queda corrido y el pin
+    // aparece abajo. Mientras la caja se asienta se vuelve a fijar la vista
+    // en el punto; despues solo se recalcula, para no pelear con el usuario
+    // si ya movio el mapa a mano.
+    let asentado = false;
+    const recalcular = () => {
+      const m = mapaRef.current;
+      if (!m) return;
+      m.invalidateSize({ animate: false });
+      if (!asentado) m.setView([lat, lng], m.getZoom(), { animate: false });
+    };
     mapa.whenReady(recalcular);
     requestAnimationFrame(() => requestAnimationFrame(recalcular));
     const timers = [80, 250, 600, 1200].map((t) => setTimeout(recalcular, t));
+    timers.push(setTimeout(() => { asentado = true; }, 1300));
     const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(recalcular) : null;
     if (ro && contenedorRef.current) ro.observe(contenedorRef.current);
     window.addEventListener('resize', recalcular);

@@ -17,6 +17,7 @@ import {
   estadoEvento, ESTADO_EVENTO, formatearFecha, diaLocalISO,
 } from '../../utils/eventos.js';
 import { useRevelar } from '../../utils/useRevelar.js';
+import { useParallax } from '../../utils/useParallax.js';
 import './App.css';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
@@ -25,6 +26,9 @@ import './App.css';
 // tiene que escalar como una imagen para que se vea entero sin scrollear —
 // por eso las cajas se ubican en % del lienzo en vez de en px fijos.
 const pct = (valor, total) => `${(valor / total) * 100}%`;
+
+/** Cuantas actividades entran en el panel del hero antes de mandar al modal. */
+const CRONO_EN_PANEL = 4;
 
 const defaultLandingData = {
   titulo: 'Tomorrowland Bolivia 2026',
@@ -140,9 +144,14 @@ export default function App() {
   );
 
   const [puestoModal, setPuestoModal] = useState(null);
+  // El panel del hero muestra 4 actividades; con mas, el resto se ve en un
+  // modal centrado. Sin tope, un cronograma largo estiraba el panel y rompia
+  // la pantalla de entrada.
+  const [verCronograma, setVerCronograma] = useState(false);
 
   // Foco + ESC + scroll-lock del modal de puesto (look "glass" propio del landing).
   const modalPuestoRef = useModal(!!puestoModal, () => setPuestoModal(null));
+  const modalCronoRef = useModal(verCronograma, () => setVerCronograma(false));
 
   // ESTADOS DEL CONTADOR
   const [timeLeft, setTimeLeft] = useState({ dias: 0, horas: 0, minutos: 0, seg: 0 });
@@ -177,10 +186,18 @@ export default function App() {
   // Cada seccion entra revelandose al llegar a ella (utils/useRevelar.js), asi
   // la pagina deja de sentirse una pila de bloques estaticos.
   const [refEntradas, verEntradas] = useRevelar();
+  // Las tarjetas llevan su PROPIO disparador, mas tardio: la seccion se
+  // revela apenas asoma su borde superior, pero la grilla esta bastante mas
+  // abajo y para cuando entraba en pantalla la animacion ya habia terminado.
+  const [refPreciosGrid, verPreciosGrid] = useRevelar({ margen: '0px 0px -25% 0px' });
+
+  // Parallax del hero: la imagen se queda atras y el texto se adelanta un
+  // poco. Van en los contenedores, no en la <img>, que ya tiene su propia
+  // animacion de transform (flotar) y se pisarian.
+  const refParallaxImagen = useParallax(0.16, 90);
+  const refParallaxTexto = useParallax(-0.05, 40);
   const [refActividades, verActividades] = useRevelar();
-  const [refUbicacion, verUbicacion] = useRevelar();
   const [refMapa, verMapa] = useRevelar();
-  const [refCronograma, verCronograma] = useRevelar();
 
   // Datos que ahora viven en el hero en vez de repartidos por la pagina.
   const precioDesde = useMemo(() => {
@@ -265,12 +282,15 @@ export default function App() {
           <FaQrcode className="logo-icon" aria-hidden="true" />
           <span>QPass</span>
         </button>
+        {/* El orden sigue al de la pagina: si el menu lista en un orden y la
+            pagina esta en otro, saltar de un link al siguiente hace subir en
+            vez de bajar. */}
         <ul className="pi-landing-nav-links">
           <li><a href="#entradas">Entradas</a></li>
-          <li><a href="#actividades">Actividades</a></li>
           {evento?.latitud != null && <li><a href="#ubicacion">Ubicación</a></li>}
-          {hayMapaDelEvento && <li><a href="#mapa">Mapa</a></li>}
           <li><a href="#cronograma">Cronograma</a></li>
+          <li><a href="#actividades">Actividades</a></li>
+          {hayMapaDelEvento && <li><a href="#mapa">Mapa</a></li>}
         </ul>
         <button className="pi-landing-btn-nav" onClick={handleLoginClick}>
           Comprar Entrada
@@ -284,7 +304,18 @@ export default function App() {
       <main id="contenido">
       {/* SECCIÓN HERO */}
       <header id="inicio" className="pi-landing-hero">
-        <div className="pi-landing-hero-content">
+        {/* La foto del evento es el fondo de toda la pantalla. Va como <div>
+            con background y no como <img> porque es decorativa: el nombre del
+            evento ya esta en el <h1>, asi que un alt seria ruido repetido. */}
+        <div
+          className="ev-hero__fondo"
+          ref={refParallaxImagen}
+          style={{ backgroundImage: `url(${data.imagen})` }}
+          aria-hidden="true"
+        />
+        <div className="ev-hero__scrim" aria-hidden="true" />
+
+        <div className="pi-landing-hero-content" ref={refParallaxTexto}>
           <p className="ev-hero__estado">
             <span className="ev-hero__estado-punto" aria-hidden="true" />
             {ESTADO_EVENTO[estadoEvento(evento ?? {})]?.label ?? 'Próximo'}
@@ -346,26 +377,53 @@ export default function App() {
               Comprar entradas
               <FaArrowRight aria-hidden="true" />
             </button>
-            <button
-              type="button"
-              className="ev-hero__btn-sec"
-              onClick={() => document.getElementById('ubicacion')?.scrollIntoView({ behavior: 'smooth' })}
-            >
-              <FaMapMarkerAlt aria-hidden="true" />
-              Cómo llegar
-            </button>
           </div>
         </div>
 
-        <div className="pi-landing-hero-image">
-          <img
-            src={data.imagen}
-            alt={data.titulo || 'Imagen del evento'}
-            className="floating-img"
-            width="520"
-            height="520"
-          />
-        </div>
+        {/* Ubicacion y cronograma viven ACA, en la mitad derecha del hero, que
+            quedo libre al pasar la foto al fondo. Asi la pantalla de entrada
+            responde todo de una: que es, cuando, donde y a que hora. */}
+        <aside className="ev-hero__panel glass-panel">
+          {evento?.latitud != null && (
+            <div className="ev-hero__panel-bloque" id="ubicacion">
+              <h2 className="ev-hero__panel-titulo">
+                <FaMapMarkerAlt aria-hidden="true" /> Ubicación
+              </h2>
+              <p className="ev-hero__panel-sub">{evento.lugar}</p>
+              <div className="ev-hero__mapa">
+                <MapaUbicacion lat={evento.latitud} lng={evento.longitud} />
+              </div>
+            </div>
+          )}
+
+          <div className="ev-hero__panel-bloque" id="cronograma">
+            <h2 className="ev-hero__panel-titulo">
+              <FaClock aria-hidden="true" /> Cronograma
+            </h2>
+            <ol className="ev-agenda ev-agenda--compacta">
+              {data.cronograma.slice(0, CRONO_EN_PANEL).map((item, index) => (
+                <li className="ev-agenda__item" key={index}>
+                  <span className="ev-agenda__num" aria-hidden="true">{index + 1}</span>
+                  <span className="ev-agenda__cuerpo">
+                    <span className="ev-agenda__hora">{item.hora}</span>
+                    <span className="ev-agenda__texto">{item.actividad}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+
+            {data.cronograma.length > CRONO_EN_PANEL && (
+              <button
+                type="button"
+                className="ev-agenda__mas"
+                onClick={() => setVerCronograma(true)}
+              >
+                Ver las {data.cronograma.length} actividades
+                <FaArrowRight aria-hidden="true" />
+              </button>
+            )}
+          </div>
+        </aside>
       </header>
 {/* SECCIÓN PRECIOS Y ENTRADAS */}
       <section
@@ -373,7 +431,10 @@ export default function App() {
         className={`pi-landing-section pricing-section qp-revelar${verEntradas ? ' es-visible' : ''}`}
         ref={refEntradas}
       >
-        <h2 className="pricing-title">Nuestros precios</h2>
+        <h2 className="pricing-title">Elegí tu entrada</h2>
+        <p className="pricing-bajada">
+          Todas incluyen tu manilla QR: entrás sin fila y pagás sin efectivo adentro.
+        </p>
 
         {jornadasPrecios.length > 0 && (
           <div className="pricing-filtro-dias" role="group" aria-label="Filtrar precios por jornada">
@@ -397,7 +458,10 @@ export default function App() {
           </div>
         )}
 
-        <div className="pricing-grid">
+        <div
+          className={`pricing-grid${verPreciosGrid ? ' es-visible' : ''}`}
+          ref={refPreciosGrid}
+        >
           {preciosFiltrados.map((plan) => {
             const stk = estadoStock(plan);
             const agotado = stk === 'agotado';
@@ -453,24 +517,6 @@ export default function App() {
           ))}
         </div>
       </section>
-
-      {/* SECCIÓN UBICACIÓN — opcional en pantalla: solo eventos sin coordenadas
-          (previos a que este campo pasara a ser obligatorio) no la muestran */}
-      {evento?.latitud != null && (
-      <section
-        id="ubicacion"
-        className={`pi-landing-section qp-revelar${verUbicacion ? ' es-visible' : ''}`}
-        ref={refUbicacion}
-      >
-        <div className="pi-landing-section-header">
-          <h2 className="pi-landing-section-title"><FaMapMarkerAlt /> Ubicación</h2>
-          <p className="pi-landing-subtitle">{evento.lugar}</p>
-        </div>
-        <div className="pi-landing-mapa-wrapper glass-panel">
-          <MapaUbicacion lat={evento.latitud} lng={evento.longitud} />
-        </div>
-      </section>
-      )}
 
       {/* SECCIÓN MAPA INTERACTIVO — opcional: si Admin todavía no lo armó, no aparece */}
       {hayMapaDelEvento && (
@@ -558,31 +604,6 @@ export default function App() {
       </section>
       )}
 
-      {/* SECCIÓN CRONOGRAMA */}
-      <section
-        id="cronograma"
-        className={`pi-landing-section qp-revelar${verCronograma ? ' es-visible' : ''}`}
-        ref={refCronograma}
-      >
-        <div className="pi-landing-section-header">
-          <h2 className="pi-landing-section-title"><FaClock /> Cronograma Oficial</h2>
-        </div>
-        
-        <div className="pi-landing-timeline">
-          {data.cronograma.map((item, index) => {
-            const isLeft = index % 2 === 0;
-            return (
-              <div key={index} className={`timeline-card ${isLeft ? 'card-left' : 'card-right'}`}>
-                <div className="timeline-badge">{index + 1}</div>
-                <div className="timeline-content">
-                  <div className="timeline-time">{item.hora}</div>
-                  <p className="timeline-actividad">{item.actividad}</p>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
       </main>
 
       {/* FOOTER */}
@@ -595,6 +616,45 @@ export default function App() {
       </footer>
 
       {/* MODAL PUESTO — role/aria-modal + cierre con ESC y clic en el fondo (Manual 8.6) */}
+      {verCronograma && (
+        <div className="pi-landing-modal-overlay" onClick={() => setVerCronograma(false)}>
+          <div
+            ref={modalCronoRef}
+            tabIndex={-1}
+            className="pi-landing-modal glass-modal"
+            onClick={e => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="modal-crono-titulo"
+          >
+            <div className="pi-landing-modal-header">
+              <h2 id="modal-crono-titulo"><FaClock aria-hidden="true" /> Cronograma</h2>
+              <button
+                type="button"
+                className="btn-close-modal"
+                onClick={() => setVerCronograma(false)}
+                aria-label="Cerrar"
+              >
+                <FaTimes aria-hidden="true" />
+              </button>
+            </div>
+            <div className="pi-landing-modal-body">
+              <ol className="ev-agenda">
+                {data.cronograma.map((item, index) => (
+                  <li className="ev-agenda__item" key={index}>
+                    <span className="ev-agenda__num" aria-hidden="true">{index + 1}</span>
+                    <span className="ev-agenda__cuerpo">
+                      <span className="ev-agenda__hora">{item.hora}</span>
+                      <span className="ev-agenda__texto">{item.actividad}</span>
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </div>
+      )}
+
       {puestoModal && (
         <div className="pi-landing-modal-overlay" onClick={() => setPuestoModal(null)}>
           <div

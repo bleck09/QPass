@@ -172,23 +172,6 @@ html {
   box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2); 
 }
 
-.pi-landing-hero-image { flex: 1; text-align: right; }
-
-.floating-img { 
-  max-width: 100%; 
-  border-radius: var(--radius-xl); 
-  box-shadow: 0 20px 40px rgba(10, 14, 39, 0.4); 
-  object-fit: cover;
-  animation: float 6s ease-in-out infinite; /* Animación flotante */
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-@keyframes float {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-20px); }
-  100% { transform: translateY(0px); }
-}
-
 /* --- SECCIONES GENERALES --- */
 .pi-landing-section { 
   padding: 5rem 5%; 
@@ -395,107 +378,6 @@ html {
   .pi-landing-hero-content h1 { font-size: 3rem; }
   .pi-landing-hero-content p { max-width: 100%; margin: 0 auto 2.5rem auto; }
 }
-/* =======================================================
-   NUEVO CRONOGRAMA - Estilo Tarjetas Alternadas
-======================================================= */
-.pi-landing-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 24px; /* Espacio vertical entre tarjetas */
-  margin-top: 40px;
-  width: 100%;
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.timeline-card {
-  position: relative;
-  width: 85%; /* No ocupa todo el ancho para dar el efecto de salto */
-  padding: 24px 36px;
-  border-radius: var(--radius-lg);
-  box-shadow: 0 10px 25px rgba(10, 14, 39, 0.2);
-  transition: transform 0.3s;
-}
-
-.timeline-card:hover {
-  transform: translateY(-5px);
-}
-
-/* Tarjetas a la izquierda (1, 3, 5...) */
-.card-left {
-  align-self: flex-start;
-  /* Fondo oscuro usando el color primario del tema */
-  background: var(--color-primario);
-  color: var(--color-fondo); 
-}
-.card-left .timeline-time { color: var(--color-fondo); opacity: 0.9; }
-.card-left .timeline-actividad { color: var(--color-fondo); font-weight: 600; }
-
-/* Tarjetas a la derecha (2, 4, 6...) */
-.card-right {
-  align-self: flex-end;
-  /* Fondo claro semitransparente como en la imagen */
-  background: rgba(245, 247, 251, 0.95);
-  color: var(--color-fondo);
-}
-.card-right .timeline-time { color: var(--color-primario); }
-.card-right .timeline-actividad { color: var(--color-fondo); font-weight: 600; }
-
-/* Insignia con el número (El círculo) */
-.timeline-badge {
-  position: absolute;
-  top: -15px; /* Sube la mitad del círculo hacia arriba */
-  width: 45px;
-  height: 45px;
-  background-color: var(--color-boton);
-  color: var(--color-primario);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: 900;
-  font-size: var(--text-lg);
-  box-shadow: 0 4px 15px rgba(10, 14, 39,0.25);
-}
-
-/* Posición de la insignia según el lado */
-.card-left .timeline-badge {
-  left: -20px; /* Sale hacia la izquierda */
-}
-.card-right .timeline-badge {
-  right: -20px; /* Sale hacia la derecha */
-}
-
-/* Textos dentro de la tarjeta */
-.timeline-time {
-  font-size: var(--text-2xl);
-  font-weight: 800;
-  margin-bottom: 8px;
-}
-
-.timeline-actividad {
-  font-size: var(--text-base);
-  line-height: 1.5;
-  margin: 0;
-}
-
-/* =======================================================
-   RESPONSIVE PARA EL CRONOGRAMA
-======================================================= */
-@media (max-width: 768px) {
-  .timeline-card {
-    width: 90%;
-    align-self: flex-end; /* Alineamos todos igual en celular para que no se vea desordenado */
-  }
-  
-  /* En celular, todas las insignias salen a la izquierda por estética */
-  .card-left .timeline-badge, 
-  .card-right .timeline-badge {
-    left: -15px;
-    right: auto;
-  }
-}
 
 /* =======================================================
    NAVBAR: BOTÓN VOLVER
@@ -673,11 +555,17 @@ html {
 
 .pricing-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 32px;
-  max-width: 1100px;
+  /* Tope de ancho por tarjeta + justify-content:center: con 4 categorias, la
+     que queda sola en la segunda fila NO se estira a todo el ancho. */
+  grid-template-columns: repeat(auto-fit, minmax(17.5rem, 21rem));
+  justify-content: center;
+  gap: var(--space-8);
+  max-width: 69rem;
   margin: 0 auto;
-  align-items: center; /* Permite que la del centro sea más alta */
+  /* stretch (no center): todas las tarjetas de una fila miden lo mismo aunque
+     tengan distinta cantidad de beneficios. Antes, con center, cada una
+     conservaba su alto y quedaban escalonadas. */
+  align-items: stretch;
 }
 
 .pricing-card {
@@ -694,13 +582,13 @@ html {
   box-shadow: 0 10px 30px rgba(10, 14, 39,0.3);
 }
 
-/* La tarjeta VIP o Destacada del Centro */
+/* Destacada: se distingue por COLOR, no por tamaño. El scale fijo que tenia
+   antes rompia la alineacion de la fila y ademas peleaba con el zoom del
+   hover (dos transforms sobre el mismo elemento). */
 .pricing-card.destacado {
-  background: rgba(10, 14, 39, 0.7);
+  background: color-mix(in srgb, var(--azul-noche) 70%, transparent);
   border-color: var(--color-primario);
-  transform: scale(1.08); /* Se hace un poco más grande */
-  box-shadow: 0 0 40px rgba(0, 180, 216, 0.3), inset 0 0 20px rgba(0, 180, 216, 0.1);
-  padding: 48px 32px; /* Más alta */
+  box-shadow: 0 0 2.5rem color-mix(in srgb, var(--color-primario) 30%, transparent);
 }
 
 .pricing-card-header h3 {
@@ -832,7 +720,7 @@ html {
   .time-separator { display: none; } /* Ocultar los dos puntos en móvil para no romper la grilla */
   
   .pricing-title { font-size: 3.5rem; }
-  .pricing-card.destacado { transform: scale(1); padding: 40px 32px; }
+
   .pricing-filtro-dias button { padding: 8px 16px; font-size: var(--text-xs); }
   
   .pi-landing-volver { margin-right: 4px; width: 35px; height: 35px; }
@@ -997,11 +885,6 @@ html {
    Solo tokens de QPass; los acentos siguen usando --color-primario, que es
    la variable que el Admin configura por evento.
    ========================================================================= */
-.pi-landing-hero {
-  min-height: auto;
-  padding: var(--space-16) 5% var(--space-12);
-  gap: var(--space-10);
-}
 
 .pi-landing-hero-content {
   padding-right: 0;
@@ -1194,10 +1077,6 @@ html {
   .ev-hero__btn-sec:hover { transform: none; }
 }
 
-/* La barra ocupa su lugar arriba, asi que el hero solo necesita su propio aire. */
-.pi-landing-hero {
-  padding-top: var(--space-12);
-}
 
 /* Barra flotante en tablet/móvil: los links no entran, se ocultan y quedan
    el volver, el logo y el CTA, que es lo que hace falta acá. */
@@ -1221,4 +1100,528 @@ html {
 .pi-landing-section,
 .pi-landing-hero {
   scroll-margin-top: calc(var(--space-20) + var(--space-6));
+}
+
+/* =========================================================================
+   TARJETAS DE ENTRADAS — foco por hover.
+   Al apuntar una tarjeta: esa hace zoom y toma un marco tipo ventana; las
+   demás se atenúan y se desenfocan apenas. Con el cursor FUERA de todas,
+   no pasa nada.
+
+   La clave es :has(): el atenuado solo se activa si hay una tarjeta
+   realmente en hover. Con `.pricing-grid:hover` a secas, pasar el cursor por
+   el HUECO entre tarjetas apagaba todas sin destacar ninguna.
+   ========================================================================= */
+.pricing-card {
+  /* Duracion en variable: la ENTRADA al hacer scroll necesita ser lenta
+     para que se aprecie, pero el hover tiene que responder al instante.
+     El bloque de hover de abajo baja este valor.
+     transform y filter se animan aparte de `all` para que el zoom no
+     arrastre al backdrop-filter, que es caro de repintar. */
+  --qp-card-dur: 620ms;
+  transition:
+    transform var(--qp-card-dur) var(--ease-out),
+    opacity var(--qp-card-dur) var(--ease-out),
+    filter 320ms var(--ease-out),
+    border-color 320ms var(--ease-out),
+    box-shadow 320ms var(--ease-out);
+  will-change: transform;
+}
+
+.pricing-grid:has(.pricing-card:hover) .pricing-card {
+  opacity: 0.45;
+  filter: blur(1.5px) saturate(0.7);
+  transform: scale(0.97);
+}
+
+.pricing-grid:has(.pricing-card:hover) .pricing-card:hover {
+  opacity: 1;
+  filter: none;
+  transform: scale(1.06);
+  z-index: 2;
+  border-color: var(--color-primario);
+  /* Marco "ventana": un anillo fino pegado al borde + el halo alrededor. */
+  box-shadow:
+    0 0 0 1px var(--color-primario),
+    0 0 0 6px color-mix(in srgb, var(--color-primario) 18%, transparent),
+    0 1.5rem 3rem color-mix(in srgb, var(--azul-noche) 70%, transparent);
+}
+
+/* La grilla necesita contexto de apilado para que la tarjeta ampliada quede
+   por encima de sus vecinas. */
+.pricing-grid { position: relative; }
+.pricing-card { position: relative; }
+
+/* Con el teclado el foco tiene que dar el mismo realce que el mouse. */
+.pricing-grid:has(.pricing-card:focus-within) .pricing-card { opacity: 0.45; filter: blur(1.5px) saturate(0.7); }
+.pricing-grid .pricing-card:focus-within { opacity: 1; filter: none; transform: scale(1.06); z-index: 2; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pricing-card { transition: none; will-change: auto; }
+  .pricing-grid:has(.pricing-card:hover) .pricing-card,
+  .pricing-grid:has(.pricing-card:focus-within) .pricing-card {
+    transform: none;
+    filter: none;
+    opacity: 0.6;
+  }
+  .pricing-grid:has(.pricing-card:hover) .pricing-card:hover,
+  .pricing-grid .pricing-card:focus-within { opacity: 1; transform: none; }
+}
+
+/* Bajada del título de entradas. */
+.pricing-bajada {
+  max-width: 44rem;
+  margin: calc(var(--space-4) * -1) auto var(--space-8);
+  text-align: center;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--color-texto-p);
+}
+
+/* =========================================================================
+   HERO — reparto de las dos columnas.
+   Era flex con space-between: la columna de texto se llevaba todo el ancho
+   sobrante pero su contenido tiene topes (48ch la bajada, 34rem los datos),
+   así que el resto quedaba como un hueco muerto en el medio. Con grid cada
+   columna recibe una fracción real y el hueco pasa a ser un gap declarado.
+   ========================================================================= */
+/* Dos columnas sobre la foto: a la izquierda la identidad del evento y el
+   CTA, a la derecha el panel de ubicacion y cronograma. La foto es el fondo
+   de toda la pantalla, no un recuadro al costado. */
+.pi-landing-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 25rem);
+  align-items: center;
+  gap: var(--space-10);
+  /* Sube por detras de la barra (que es sticky y flota encima) para que la
+     foto llegue al borde superior en vez de arrancar debajo con una franja
+     de color plano. El padding-top devuelve el aire que el margen resta. */
+  margin-top: calc((var(--space-6) + 4.375rem) * -1);
+  padding: calc(var(--space-16) + var(--space-6) + 4.375rem) 5% var(--space-10);
+  min-height: 100vh;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.pi-landing-hero-content {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 44rem;
+}
+
+
+
+/* =========================================================================
+   ENTRADA DE LAS TARJETAS AL BAJAR
+   La sección ya se revela con .qp-revelar; acá las tarjetas entran de a una
+   dentro de ella. El estado oculto cuelga de [data-revelar="armado"] igual
+   que el resto: si el observador no corre, se ven igual.
+   ========================================================================= */
+.pricing-grid[data-revelar="armado"] .pricing-card {
+  opacity: 0;
+  transform: translateY(var(--space-8)) scale(0.96);
+}
+
+.pricing-grid.es-visible .pricing-card {
+  opacity: 1;
+  transform: none;
+}
+
+/* 160ms entre tarjeta y tarjeta: con 90ms se leia como un solo bloque. */
+.pricing-grid.es-visible .pricing-card:nth-child(2) { transition-delay: 160ms; }
+.pricing-grid.es-visible .pricing-card:nth-child(3) { transition-delay: 320ms; }
+.pricing-grid.es-visible .pricing-card:nth-child(4) { transition-delay: 480ms; }
+.pricing-grid.es-visible .pricing-card:nth-child(5) { transition-delay: 640ms; }
+
+/* Una vez que entraron, el retardo no debe seguir vivo: si no, el hover de
+   las últimas tarjetas responde con medio segundo de atraso. */
+.pricing-grid:has(.pricing-card:hover) .pricing-card,
+.pricing-grid:has(.pricing-card:focus-within) .pricing-card {
+  --qp-card-dur: 320ms;
+  transition-delay: 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pricing-grid[data-revelar="armado"] .pricing-card {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* =========================================================================
+   HERO A PANTALLA COMPLETA + SEPARACIÓN DE SECCIONES
+   El hero se queda con toda la pantalla y la sección de entradas arranca
+   recién debajo, con superficie propia y una linea fina que marca el corte.
+   La profundidad del hero la da el parallax (utils/useParallax.js).
+   ========================================================================= */
+.pi-landing-hero {
+  /* Menos el alto de la barra sticky (70px) y su aire de arriba (24px). */
+  min-height: calc(100vh - 6rem);
+  position: relative;
+}
+
+/* --- Sección de entradas: superficie propia --- */
+.pricing-section {
+  position: relative;
+  /* Un tinte propio para que se lea como OTRA sección y no como continuación
+     del hero. Arranca opaco arriba (donde apoya la onda) y se disuelve. */
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--color-primario) 7%, transparent) 0%,
+      transparent 55%
+    );
+  /* Contenido: el scroll-margin-top ya reserva el alto de la barra al saltar
+     desde el menu. Si ademas se dejaban 80px de padding, el titulo aparecia
+     a casi 200px del borde y la seccion "no entraba" en la pantalla. */
+  padding-top: var(--space-10);
+}
+
+/* El corte entre hero y entradas se marca con una linea fina que se apaga
+   hacia los bordes, no con una forma. */
+.pricing-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(60rem, 90%);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--color-primario) 55%, transparent) 50%,
+    transparent 100%
+  );
+}
+
+@media (max-width: 62rem) {
+  .pi-landing-hero { min-height: 0; }
+}
+
+
+/* --- Agenda ---
+   El cronograma de siempre: tarjetas alternadas (una con el color primario
+   del evento, la siguiente clara), insignia numerada y el zigzag.
+   La seccion pasa a ser de media pantalla, asi que el salto se calcula en %
+   del ancho disponible: se lee mas sutil que a pantalla completa, pero la
+   alternancia se mantiene. */
+.ev-agenda {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* El salto: cada tarjeta ocupa el 88% y se alinea a un lado distinto. */
+.ev-agenda__item { width: 88%; }
+.ev-agenda__item:nth-child(odd) { align-self: flex-start; }
+.ev-agenda__item:nth-child(even) { align-self: flex-end; }
+
+.ev-agenda__item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  box-sizing: border-box;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0.625rem 1.5rem color-mix(in srgb, var(--azul-noche) 25%, transparent);
+  transition: transform var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.ev-agenda__item:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 1rem 2rem color-mix(in srgb, var(--azul-noche) 35%, transparent);
+}
+
+/* Impares: fondo con el color primario del evento. */
+.ev-agenda__item:nth-child(odd) {
+  background: var(--color-primario);
+  color: var(--color-fondo);
+}
+
+/* Pares: fondo claro, como las tarjetas de la derecha del diseno anterior. */
+.ev-agenda__item:nth-child(even) {
+  background: color-mix(in srgb, var(--n-50) 95%, transparent);
+  color: var(--color-fondo);
+}
+
+/* Insignia numerada. */
+.ev-agenda__num {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
+  background: var(--color-boton);
+  color: var(--color-primario);
+  font-size: var(--text-base);
+  font-weight: 900;
+  box-shadow: 0 0.25rem 0.9rem color-mix(in srgb, var(--azul-noche) 25%, transparent);
+}
+
+/* En las impares el fondo YA es el color primario: la insignia se invierte
+   para no quedar color sobre color. */
+.ev-agenda__item:nth-child(odd) .ev-agenda__num {
+  background: var(--color-fondo);
+  color: var(--color-primario);
+}
+
+.ev-agenda__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.ev-agenda__hora {
+  font-family: var(--font-mono);
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.ev-agenda__item:nth-child(odd) .ev-agenda__hora { opacity: 0.9; }
+.ev-agenda__item:nth-child(even) .ev-agenda__hora { color: var(--color-primario); }
+
+.ev-agenda__texto {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  line-height: var(--leading-snug);
+}
+
+@media (max-width: 40rem) {
+  .ev-agenda__item,
+  .ev-agenda__item:nth-child(odd),
+  .ev-agenda__item:nth-child(even) {
+    width: 100%;
+    align-self: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-agenda__item { transition: none; }
+  .ev-agenda__item:hover { transform: none; }
+}
+
+
+/* =========================================================================
+   FONDO DEL HERO — la foto del evento a pantalla completa.
+   ========================================================================= */
+.ev-hero__fondo {
+  position: absolute;
+  /* Sobresale arriba y abajo para que el parallax tenga recorrido. El hook
+     desplaza hasta 90px, asi que 8rem (128px) deja holgura de sobra; con el
+     10% anterior quedaba al limite y en algunas alturas asomaba el borde. */
+  inset: -8rem 0;
+  z-index: 0;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+/* Velo: sin esto el texto no se lee sobre una foto clara. Más denso a la
+   izquierda, que es donde vive el contenido, y hacia abajo para empalmar con
+   la sección siguiente. */
+.ev-hero__scrim {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    /* Se apaga del todo antes de la mitad: de ahi a la derecha la foto se ve
+       en su color, sin velo. */
+    linear-gradient(90deg,
+      color-mix(in srgb, var(--color-fondo) 92%, transparent) 0%,
+      color-mix(in srgb, var(--color-fondo) 72%, transparent) 30%,
+      transparent 55%),
+    /* Solo el pie, para empalmar con la seccion siguiente. */
+    linear-gradient(0deg,
+      var(--color-fondo) 0%,
+      transparent 22%);
+}
+
+/* --- Tipografía más grande: ahora hay fondo y el texto tiene que pesar --- */
+.pi-landing-hero-content h1 {
+  font-size: var(--text-4xl);
+  line-height: var(--leading-tight);
+  text-shadow: 0 2px 24px var(--color-fondo);
+}
+
+.ev-hero__info {
+  font-size: var(--text-lg);
+  max-width: 40ch;
+  text-shadow: 0 2px 12px var(--color-fondo);
+}
+
+.ev-hero__datos {
+  max-width: 40rem;
+  gap: var(--space-4) var(--space-8);
+}
+
+.ev-hero__datos li { font-size: var(--text-base); }
+.ev-hero__datos em { font-size: var(--text-sm); }
+.ev-hero__datos li > svg { font-size: var(--text-lg); }
+
+.pi-landing-hero .pi-landing-btn-primary {
+  font-size: var(--text-base);
+  padding: var(--space-4) var(--space-8);
+}
+
+@media (max-width: 62rem) {
+  .pi-landing-hero {
+    min-height: 0;
+    padding: var(--space-12) var(--space-5);
+  }
+  .pi-landing-hero-content { max-width: none; }
+  .ev-hero__datos { grid-template-columns: 1fr; max-width: none; }
+  /* En vertical el degradado lateral no sirve: el texto ocupa todo el ancho. */
+  .ev-hero__scrim {
+    background:
+      linear-gradient(0deg,
+        var(--color-fondo) 0%,
+        color-mix(in srgb, var(--color-fondo) 82%, transparent) 55%,
+        color-mix(in srgb, var(--color-fondo) 60%, transparent) 100%);
+  }
+}
+
+/* =========================================================================
+   PANEL DEL HERO — ubicación + cronograma.
+   Ocupa la mitad derecha, que quedó libre al pasar la foto al fondo. Va sobre
+   vidrio porque se apoya directamente sobre la foto.
+   ========================================================================= */
+.ev-hero__panel {
+  position: relative;
+  z-index: 2;
+  /* .glass-panel es casi transparente (2% de blanco) y se apoya en el blur.
+     Ese lado de la foto ya no lleva velo, asi que sobre una imagen clara el
+     texto del panel se perdia: necesita fondo propio. */
+  background: color-mix(in srgb, var(--color-fondo) 72%, transparent);
+  border-color: color-mix(in srgb, var(--blanco) 12%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-5);
+  border-radius: var(--radius-xl);
+  /* El hero mide 100vh: el panel no puede pasarse o empuja el resto fuera de
+     pantalla. Si el cronograma es largo, scrollea adentro. */
+  max-height: calc(100vh - 14rem);
+  overflow-y: auto;
+}
+
+.ev-hero__panel-bloque {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  /* scroll-margin: el panel es el contenedor de scroll, así que los saltos a
+     #ubicacion / #cronograma desde el menú aterrizan dentro de él. */
+  scroll-margin-top: var(--space-4);
+}
+
+.ev-hero__panel-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  color: var(--color-texto-titulo);
+}
+
+.ev-hero__panel-titulo svg { color: var(--color-primario); }
+
+.ev-hero__panel-sub {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-texto-p);
+}
+
+.ev-hero__mapa {
+  height: 11rem;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+/* --- Agenda compacta: la del panel ---
+   Sin el zigzag: el panel tiene 25rem y el salto lateral no entra. Conserva
+   el color alternado y la insignia, que es lo que le da el detalle. */
+.ev-agenda--compacta { gap: var(--space-3); }
+
+.ev-agenda--compacta .ev-agenda__item,
+.ev-agenda--compacta .ev-agenda__item:nth-child(odd),
+.ev-agenda--compacta .ev-agenda__item:nth-child(even) {
+  width: 100%;
+  align-self: stretch;
+  padding: var(--space-3) var(--space-4);
+  gap: var(--space-3);
+}
+
+.ev-agenda--compacta .ev-agenda__num {
+  width: 1.85rem;
+  height: 1.85rem;
+  font-size: var(--text-sm);
+}
+
+.ev-agenda--compacta .ev-agenda__hora { font-size: var(--text-base); }
+.ev-agenda--compacta .ev-agenda__texto { font-size: var(--text-xs); }
+
+@media (max-width: 62rem) {
+  .pi-landing-hero { grid-template-columns: 1fr; }
+  .ev-hero__panel { max-height: none; overflow-y: visible; }
+}
+
+/* Botón "ver todas" del cronograma del panel. */
+.ev-agenda__mas {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: 100%;
+  margin-top: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  border: 1px solid color-mix(in srgb, var(--color-primario) 40%, transparent);
+  background: color-mix(in srgb, var(--color-primario) 12%, transparent);
+  color: var(--color-primario);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: background-color var(--duration-fast) var(--ease-out);
+}
+
+.ev-agenda__mas:hover {
+  background: color-mix(in srgb, var(--color-primario) 22%, transparent);
+}
+
+.ev-agenda__mas:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* En el modal la agenda tiene ancho de sobra: recupera el zigzag. */
+.pi-landing-modal-body .ev-agenda__item { width: 92%; }
+
+.pi-landing-modal-header h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pi-landing-modal-header h2 svg { color: var(--color-primario); }
+
+/* El panel ya no necesita scroll propio: el cronograma está acotado a 4 y el
+   resto se ve en el modal. */
+.ev-hero__panel {
+  max-height: none;
+  overflow-y: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-agenda__mas { transition: none; }
 }
