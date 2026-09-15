@@ -92,110 +92,6 @@
 .section-header p { font-size: var(--text-lg); color: var(--text-secondary); margin: 0; }
 
 /* =======================================================
-   CARRUSEL 3D COVERFLOW (Estilo ROME APP / TRAVEL2)
-======================================================= */
-/* Busca esto en tu PaginaPrincipal.css y reemplázalo: */
-
-.carousel-3d-container {
-  position: relative;
-  height: 550px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  perspective: 1200px;
-  overflow: hidden;
-  padding: 20px 0;
-  cursor: grab; /* Muestra la manito abierta al pasar el mouse */
-}
-
-.carousel-3d-container:active {
-  cursor: grabbing; /* Muestra la manito cerrada cuando haces clic para arrastrar */
-}
-
-.card-image-bg img { 
-  width: 100%; 
-  height: 100%; 
-  object-fit: cover; 
-  /* ESTAS DOS LÍNEAS SON VITALES PARA EL DRAG */
-  pointer-events: none; 
-  user-select: none; 
-}
-
-.carousel-3d-card {
-  position: absolute;
-  width: 320px;
-  height: 480px;
-  border-radius: var(--radius-xl);
-  background-color: var(--azul-noche);
-  border: 1px solid rgba(255,255,255,0.1);
-  overflow: hidden;
-  transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-  cursor: pointer;
-  box-shadow: 0 15px 35px rgba(10, 14, 39,0.5);
-  
-  /* LA MAGIA DE LAS MATEMÁTICAS RESPONSIVAS INYECTADAS DESDE REACT */
-  transform: 
-    translateX(calc(var(--offset) * 160px)) 
-    translateZ(calc(var(--abs-offset) * -120px)) 
-    rotateY(calc(var(--dir) * -15deg));
-  opacity: calc(1 - (var(--abs-offset) * 0.3));
-}
-
-.carousel-3d-card.active { cursor: default; box-shadow: 0 20px 50px rgba(0, 180, 216, 0.3); border-color: rgba(0, 180, 216, 0.5); }
-
-/* La variante "grande" (panel privado del Usuario Normal) vive aparte, en
-   UsuarioNormal.css — acá solo quedan los estilos de la home pública, para
-   no mezclar los dos tamaños en el mismo archivo. */
-
-/* Imagen y gradiente del fondo de la tarjeta */
-.card-image-bg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
-.card-image-bg img { width: 100%; height: 100%; object-fit: cover; }
-.card-overlay-gradient {
-  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-  background: linear-gradient(to bottom, rgba(10,14,39,0.1) 0%, rgba(10,14,39,0.8) 50%, rgba(10,14,39,1) 100%);
-}
-
-.btn-expand-icon { position: absolute; top: 15px; right: 15px; width: 36px; height: 36px; border-radius: 50%; border: none; color: var(--text-on-accent); z-index: 10; display: flex; justify-content: center; align-items: center; }
-
-/* Contenido de texto en la tarjeta */
-.card-3d-content { position: absolute; bottom: 0; left: 0; width: 100%; padding: 24px; z-index: 2; display: flex; flex-direction: column; }
-.card-3d-content h3 { margin: 0 0 8px 0; font-size: var(--text-xl); font-weight: 800; line-height: 1.1; }
-/* Aviso "te queda saldo acá" (solo panel privado del Usuario Normal; opcional). */
-.card-saldo-restante {
-  display: inline-flex; align-items: center; gap: 6px; align-self: flex-start;
-  font-size: var(--text-xs); font-weight: 800; color: #fff;
-  background: var(--verde-recarga, #2e9e5b);
-  padding: 4px 10px; border-radius: var(--radius-full);
-  margin-bottom: 10px;
-}
-.card-desc { font-size: var(--text-xs); color: var(--text-secondary); margin: 0 0 20px 0; line-height: 1.4; display: none; }
-.carousel-3d-card.active .card-desc { display: block; }
-
-.card-3d-footer { display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 16px; }
-.footer-info { display: flex; flex-direction: column; gap: 8px; font-size: var(--text-xs); color: var(--text-secondary); }
-.footer-info span { display: flex; align-items: center; gap: 8px; }
-.footer-price { display: flex; flex-direction: column; align-items: flex-end; }
-.footer-price span { font-size: var(--text-xs); color: var(--text-secondary); }
-.footer-price strong { font-size: var(--text-lg); color: var(--cian-digital); font-weight: 800; }
-
-.btn-full { width: 100%; border: none; padding: 16px; border-radius: var(--radius-lg); background: var(--cian-digital); color: var(--azul-noche); font-weight: 800; cursor: pointer; transition: background 0.2s; }
-.btn-full:hover { background: var(--bg-surface); }
-.mt-15 { margin-top: 16px; }
-
-/* Pill Controlador del Carrusel */
-.carousel-control-pill {
-  margin: 20px auto 0 auto; width: max-content; padding: 8px 12px; border-radius: var(--radius-xl);
-  display: flex; align-items: center; gap: 20px;
-}
-.carousel-control-pill button { background: rgba(255,255,255,0.1); border: none; width: 40px; height: 40px; border-radius: 50%; color: var(--text-on-accent); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: all 0.2s; }
-.carousel-control-pill button:hover { background: var(--cian-digital); color: var(--azul-noche); }
-.pill-info { display: flex; align-items: center; gap: 12px; }
-.pill-info img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-.pill-text { display: flex; flex-direction: column; }
-.pill-text strong { font-size: var(--text-sm); }
-.pill-text span { font-size: var(--text-xs); color: var(--text-secondary); }
-
-/* =======================================================
    CARACTERÍSTICAS (Estilo Grid "Descargar.jfif")
 ======================================================= */
 .feature-section { padding-top: 40px; }
@@ -250,13 +146,6 @@
 @media (max-width: 900px) {
   .qpass-floating-navbar { width: 95%; padding: 0 16px; }
   .feature-grid { grid-template-columns: 1fr; }
-  .carousel-3d-card {
-    /* En móviles acercamos las tarjetas un poco más ajustando las matemáticas */
-    transform:
-      translateX(calc(var(--offset) * 110px))
-      translateZ(calc(var(--abs-offset) * -120px))
-      rotateY(calc(var(--dir) * -10deg));
-  }
 }
 
 /* Línea de contacto del footer (correo + ancla a la sección Contáctanos). */

@@ -30,28 +30,6 @@
   background: var(--azul-noche, #0b1120); color: var(--text-on-accent); border-radius: var(--radius-xl); padding: 40px 20px;
   display: flex; flex-direction: column; gap: 24px; overflow: hidden; position: relative;
 }
-/* El carrusel necesita el ancho completo del panel: sus tarjetas son position:absolute
-   y no aportan ancho intrínseco, así que con align-items:center (stretch por defecto
-   desactivado) el contenedor se encogía a 0 y las tarjetas quedaban invisibles. */
-.pi-usr-eventos-panel .carousel-3d-container { width: 100%; height: 620px; }
-
-/* Tarjetas mucho más anchas que en la home pública: el panel ya tiene el
-   ancho completo de la pestaña Eventos, así que la tarjeta activa aprovecha
-   casi todo ese ancho en vez de quedar chica en el centro. Se define acá
-   (no en PaginaPrincipal.css) para no mezclar los dos tamaños en el mismo
-   archivo — la home pública no cambia. */
-.pi-usr-eventos-panel .carousel-3d-card {
-  width: min(900px, 68%);
-  height: 560px;
-  transform:
-    translateX(calc(var(--offset) * 440px))
-    translateZ(calc(var(--abs-offset) * -260px))
-    rotateY(calc(var(--dir) * -18deg));
-}
-/* La tarjeta se ensanchó, pero el botón "Adquirir Entradas" no necesita
-   estirarse con ella (queda gigante) — se le pone un tope y se centra. */
-.pi-usr-eventos-panel .carousel-3d-card .btn-full { max-width: 280px; margin-left: auto; margin-right: auto; }
-
 .pi-usr-eventos-pasados-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
 .pi-usr-evento-pasado-card { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); background: var(--bg-page); }
 .pi-usr-evento-pasado-card img { width: 100%; height: 120px; object-fit: cover; display: block; }
@@ -387,17 +365,6 @@
 }
 
 @media (max-width: 768px) {
-  /* En pantallas chicas la tarjeta ancha no entra: vuelve al tamaño y
-     matemáticas normales del coverflow (mismos valores que la home pública). */
-  .pi-usr-eventos-panel .carousel-3d-container { height: 550px; }
-  .pi-usr-eventos-panel .carousel-3d-card {
-    width: 320px;
-    height: 480px;
-    transform:
-      translateX(calc(var(--offset) * 110px))
-      translateZ(calc(var(--abs-offset) * -120px))
-      rotateY(calc(var(--dir) * -10deg));
-  }
   .pi-usr-ticket-inputs { grid-template-columns: 1fr; }
   .pi-usr-cat-mini-group { margin-left: 0; }
   .pi-usr-qr-card { flex-direction: column; text-align: center; }

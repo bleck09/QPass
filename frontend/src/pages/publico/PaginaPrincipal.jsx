@@ -7,7 +7,7 @@ import {
 } from 'react-icons/fa';
 import './PaginaPrincipal.css';
 import HeroSection from './HeroSection.jsx';
-import EventosDestacados from './EventosDestacados.jsx';
+import EventosDestacados from '../../components/EventosDestacados.jsx';
 import ContactoSection from './ContactoSection.jsx';
 import { CONTACTO } from '../../constants/contacto.js';
 import api from '../../api/index.js';
@@ -25,7 +25,14 @@ export default function PaginaPrincipal() {
   const cargarEventos = useCallback(() => api.eventos.listar(), []);
   const { data: eventos, cargando, error, recargar } = useApi(cargarEventos, { inicial: [] });
   const proximosEventos = eventos.filter(esVigente);
-  const eventosPasados = eventos.filter(ev => !esVigente(ev));
+  // Solo los 5 mas recientes: la lista completa crece sin techo y termina
+  // ocupando mas pantalla que la cartelera. Se ordena por fecha de fin
+  // (cuando TERMINO el evento) y no por createdAt, que es cuando se cargo
+  // al sistema y no tiene por que coincidir con el orden real.
+  const eventosPasados = eventos
+    .filter(ev => !esVigente(ev))
+    .sort((a, b) => new Date(b.fechaFin || b.fecha) - new Date(a.fechaFin || a.fecha))
+    .slice(0, 5);
 
   const verEvento = (evento) => navigate(`/evento/${evento.id}`);
 

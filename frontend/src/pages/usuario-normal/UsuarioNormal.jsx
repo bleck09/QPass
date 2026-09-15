@@ -3,6 +3,8 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import Buscador from '../../components/Buscador.jsx';
+import Paginador from '../../components/Paginador.jsx';
+import { usePaginacion } from '../../utils/usePaginacion.js';
 import Filtros from '../../components/Filtros.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
@@ -15,7 +17,7 @@ import {
   FaTh, FaList
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
-import CarruselEventos from '../../components/CarruselEventos.jsx';
+import EventosDestacados from '../../components/EventosDestacados.jsx';
 import FotoZoom from '../../components/FotoZoom.jsx';
 import { VERSION_TERMINOS, TEXTO_TERMINOS } from '../../constants/terminos.js';
 import api from '../../api/index.js';
@@ -306,11 +308,15 @@ export default function UsuarioNormal() {
     [billeteras],
   );
   const [busquedaBilleteras, setBusquedaBilleteras] = useState('');
+  // Saldo por evento se muestra COMPLETO, pero de a 5: la lista crece con
+  // cada evento en el que el usuario recargo alguna vez y no tiene techo.
+  // Se pagina sobre la lista ya filtrada por el buscador, no sobre la total.
   const billeterasFiltradas = useMemo(() => {
     const q = busquedaBilleteras.trim().toLowerCase();
     if (!q) return billeteras;
     return billeteras.filter(b => b.eventoNombre.toLowerCase().includes(q));
   }, [billeteras, busquedaBilleteras]);
+  const pagBilleteras = usePaginacion(billeterasFiltradas, 5);
 
   // eventoId -> saldo disponible: para avisar en la cartelera de eventos que
   // todavía te queda plata ahí (incluidos eventos ya pasados, por el retiro).
@@ -880,10 +886,13 @@ export default function UsuarioNormal() {
             ) : cargandoEventos ? (
               <EstadoCarga filas={3} etiqueta="Cargando cartelera…" />
             ) : (
-              <CarruselEventos
+              <EventosDestacados
+                id="cartelera-usuario"
+                compacto
                 eventos={proximosEventos}
-                onAdquirir={(evento) => navigate('/usuarionormal/comprar', { state: { evento } })}
                 saldoPorEvento={saldoPorEvento}
+                textoCta="Comprar entradas"
+                onVerEvento={(evento) => navigate('/usuarionormal/comprar', { state: { evento } })}
               />
             )}
           </div>
@@ -1250,16 +1259,25 @@ export default function UsuarioNormal() {
                 {billeterasFiltradas.length === 0 ? (
                   <p className="texto-ayuda">Ningún evento coincide con la búsqueda.</p>
                 ) : (
-                  <div className="pi-usr-bill-lista">
-                    {billeterasFiltradas.map(b => (
-                      <BilleteraAcordeon
-                        key={b.eventoId}
-                        b={b}
-                        enCurso={b.eventoId === billeteraEnCurso?.eventoId}
-                        qrCodigo={qrPorEvento.get(b.eventoId)}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    <div className="pi-usr-bill-lista">
+                      {pagBilleteras.slice.map(b => (
+                        <BilleteraAcordeon
+                          key={b.eventoId}
+                          b={b}
+                          enCurso={b.eventoId === billeteraEnCurso?.eventoId}
+                          qrCodigo={qrPorEvento.get(b.eventoId)}
+                        />
+                      ))}
+                    </div>
+                    <Paginador
+                      pagina={pagBilleteras.paginaActual}
+                      totalPaginas={pagBilleteras.totalPaginas}
+                      onCambio={pagBilleteras.setPagina}
+                      total={pagBilleteras.total}
+                      unidad="eventos"
+                    />
+                  </>
                 )}
               </>
             )}

@@ -13,7 +13,10 @@ html {
   color: var(--color-texto-p);
   min-height: 100vh;
   position: relative;
-  overflow: hidden; /* Para que las luces de fondo no generen scroll */
+  /* clip, no hidden: recorta igual las luces de fondo, pero `hidden` crea un
+     contenedor de scroll y eso ANULA el position:sticky de la barra (era el
+     motivo de que la barra nunca quedara fija). `clip` no lo crea. */
+  overflow: clip;
 }
 
 /* --- EFECTOS DE LUCES (GLOW) --- */
@@ -43,11 +46,11 @@ html {
    antes era una franja dura de lado a lado con borde inferior, que no se
    parecia en nada al resto del sitio y ademas cortaba el titulo del hero. */
 .pi-landing-navbar {
-  /* EN FLUJO, no fixed. `.pi-landing-container` tiene overflow:hidden, que
-     ademas anula position:sticky, asi que la barra original tampoco quedaba
-     fija: se iba con el scroll y por eso nunca tapaba nada. Se mantiene ese
-     comportamiento y solo cambia el aspecto. */
-  position: relative;
+  /* STICKY: al principio ocupa su lugar en el flujo (no tapa el hero) y al
+     scrollear queda fija arriba, asi los links siguen a mano en una pagina
+     larga. Funciona gracias al overflow:clip del contenedor. */
+  position: sticky;
+  top: var(--space-6);
   margin: var(--space-6) auto 0;
   width: 90%;
   max-width: 69rem;
@@ -1212,9 +1215,10 @@ html {
   .pi-landing-hero { padding-top: var(--space-8); }
 }
 
-/* La barra se va con el scroll, asi que un salto de ancla no queda tapado;
-   solo se deja un respiro para que el titulo no toque el borde. */
+/* La barra queda fija al scrollear, asi que un salto de ancla (#cronograma,
+   #mapa...) dejaria el titulo debajo de ella: se reserva su alto + el aire
+   de arriba. */
 .pi-landing-section,
 .pi-landing-hero {
-  scroll-margin-top: var(--space-6);
+  scroll-margin-top: calc(var(--space-20) + var(--space-6));
 }

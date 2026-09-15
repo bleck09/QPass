@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   FaArrowRight, FaArrowLeft, FaMapMarkerAlt, FaClock,
-  FaCalendarAlt, FaQrcode, FaRegLightbulb, FaTicketAlt, FaMobileAlt,
+  FaCalendarAlt, FaQrcode, FaRegLightbulb, FaTicketAlt, FaMobileAlt, FaCoins,
 } from 'react-icons/fa';
 import {
   imagenEvento, formatearFecha, diaLocalISO, estadoEvento, ESTADO_EVENTO,
-} from '../../utils/eventos.js';
+} from '../utils/eventos.js';
 import './EventosDestacados.css';
 
 const DURACION_EXPANSION = 700; // ms — debe coincidir con la transición de .slot-expandiendo
@@ -41,8 +41,21 @@ function cuandoEs(evento) {
  * Se adapta a la cantidad real de eventos: la cola muestra como mucho los 3
  * siguientes, y con menos eventos simplemente muestra los que haya. Con menos
  * de dos no hay nada que rotar, así que el componente no se dibuja.
+ *
+ * Se usa en dos lugares:
+ *   - landing pública: completo, con encabezado y banner.
+ *   - panel del Usuario Normal: `compacto`, sin encabezado ni banner (el
+ *     panel ya tiene su propio marco) y con el saldo que le queda en cada
+ *     evento.
  */
-export default function EventosDestacados({ eventos = [], onVerEvento }) {
+export default function EventosDestacados({
+  eventos = [],
+  onVerEvento,
+  saldoPorEvento,
+  compacto = false,
+  textoCta = 'Ver evento y comprar',
+  id = 'cartelera',
+}) {
   const total = eventos.length;
 
   const [activo, setActivo] = useState(0);
@@ -154,13 +167,14 @@ export default function EventosDestacados({ eventos = [], onVerEvento }) {
 
   return (
     <section
-      id="cartelera"
-      className="qp-dest"
+      id={id}
+      className={`qp-dest${compacto ? ' qp-dest--compacto' : ''}`}
       aria-label="Cartelera destacada"
       onMouseEnter={() => setPausado(true)}
       onMouseLeave={() => setPausado(false)}
     >
-      {/* 1. Encabezado */}
+      {/* 1. Encabezado (solo en la landing: el panel ya tiene el suyo) */}
+      {!compacto && (
       <div className="qp-dest__cabecera">
         <p className="qp-dest__chip">
           <span className="qp-dest__chip-punto" aria-hidden="true" />
@@ -171,6 +185,7 @@ export default function EventosDestacados({ eventos = [], onVerEvento }) {
           Entrás con tu manilla QR y pagás sin efectivo en cualquier puesto.
         </p>
       </div>
+      )}
 
       {/* 2. Escenario con el fondo activo y la cola de tarjetas */}
       <div className="qp-dest__pista">
@@ -224,6 +239,13 @@ export default function EventosDestacados({ eventos = [], onVerEvento }) {
 
           <h3 className="qp-dest__evento-nombre">{evento.nombre}</h3>
 
+          {saldoPorEvento?.get(evento.id) > 0 && (
+            <p className="qp-dest__saldo">
+              <FaCoins aria-hidden="true" />
+              Te quedan <strong>{saldoPorEvento.get(evento.id)}</strong> pts acá
+            </p>
+          )}
+
           <p className="qp-dest__evento-lugar">
             <FaMapMarkerAlt aria-hidden="true" /> {evento.lugar}
           </p>
@@ -262,7 +284,7 @@ export default function EventosDestacados({ eventos = [], onVerEvento }) {
             className="qp-dest__cta"
             onClick={() => onVerEvento?.(evento)}
           >
-            Ver evento y comprar
+            {textoCta}
             <FaArrowRight aria-hidden="true" />
           </button>
         </div>
@@ -290,7 +312,8 @@ export default function EventosDestacados({ eventos = [], onVerEvento }) {
         )}
       </div>
 
-      {/* 4. Banner de cierre */}
+      {/* 4. Banner de cierre (solo en la landing) */}
+      {!compacto && (
       <aside className="qp-dest__banner">
         <span className="qp-dest__banner-ic" aria-hidden="true"><FaRegLightbulb /></span>
         <span className="qp-dest__banner-txt">
@@ -302,6 +325,7 @@ export default function EventosDestacados({ eventos = [], onVerEvento }) {
           </span>
         </span>
       </aside>
+      )}
     </section>
   );
 }
