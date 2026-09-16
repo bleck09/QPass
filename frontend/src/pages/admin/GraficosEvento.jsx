@@ -82,3 +82,75 @@ export function GraficoIngresosPorCategoria({ filas }) {
     </PanelGrafico>
   );
 }
+
+// Ranking de negocios por ventas (pts). Barras horizontales de mayor a menor:
+// el primero es "el que más vende".
+export function GraficoVentasPorNegocio({ filas }) {
+  const alto = Math.max(260, filas.length * 36);
+  return (
+    <PanelGrafico
+      titulo="Ventas por negocio"
+      vacio="Todavía no hay ventas de negocios en este evento."
+      tabla={{
+        columnas: ['Negocio', 'Ventas', 'Total'],
+        datos: filas,
+        renderFila: (f) => (
+          <tr key={f.nombre}>
+            <td>{f.nombre}</td>
+            <td>{f.ventas}</td>
+            <td>{fmtPts(f.total)}</td>
+          </tr>
+        ),
+      }}
+    >
+      <div style={{ height: '100%', overflowY: 'auto' }}>
+        <ResponsiveContainer width="100%" height={alto}>
+          <BarChart data={filas} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
+            {grid}
+            <XAxis type="number" tick={ejeTick} stroke="var(--border)" allowDecimals={false} />
+            <YAxis type="category" dataKey="nombre" tick={ejeTick} stroke="var(--border)" width={110} />
+            <Tooltip contentStyle={tooltipStyle} formatter={(v) => [fmtPts(v), 'Vendido']} />
+            <Bar dataKey="total" fill="var(--viz-serie-2)" radius={[0, 3, 3, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </PanelGrafico>
+  );
+}
+
+// Productos más vendidos del evento (unidades). Top 10 en el gráfico; la vista
+// tabla muestra todos, con el negocio que lo vende y lo recaudado.
+export function GraficoProductosMasVendidos({ filas }) {
+  const top = filas.slice(0, 10);
+  return (
+    <PanelGrafico
+      titulo="Productos más vendidos (unidades)"
+      vacio="Todavía no se vendieron productos en este evento."
+      tabla={{
+        columnas: ['Producto', 'Negocio', 'Unidades', 'Total'],
+        datos: filas,
+        renderFila: (p) => (
+          <tr key={p.nombre}>
+            <td>{p.nombre}</td>
+            <td>{p.negocios}</td>
+            <td>{p.unidades}</td>
+            <td>{fmtPts(p.ingresos)}</td>
+          </tr>
+        ),
+      }}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={top} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
+          {grid}
+          <XAxis type="number" tick={ejeTick} stroke="var(--border)" allowDecimals={false} />
+          <YAxis type="category" dataKey="nombre" tick={ejeTick} stroke="var(--border)" width={110} />
+          <Tooltip
+            contentStyle={tooltipStyle}
+            formatter={(v, _n, item) => [`${v} u. · ${fmtPts(item.payload.ingresos)}`, item.payload.negocios]}
+          />
+          <Bar dataKey="unidades" fill="var(--viz-serie-1)" radius={[0, 3, 3, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </PanelGrafico>
+  );
+}

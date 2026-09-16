@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { bloquearScroll } from '../utils/bloqueoScroll.js';
 import './FotoZoom.css';
 
 /**
@@ -20,11 +21,10 @@ export default function FotoZoom({ src, alt = '', className = '', width, height 
     if (!abierto) return undefined;
     const onKey = (e) => { if (e.key === 'Escape') setAbierto(false); };
     document.addEventListener('keydown', onKey);
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const liberarScroll = bloquearScroll();
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = prev;
+      liberarScroll();
     };
   }, [abierto]);
 

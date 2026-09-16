@@ -56,3 +56,35 @@
     transition: none;
   }
 }
+
+/* ============================================================================
+   PESTAÑAS DE LOS PANELES DE ROL EN MÓVIL
+   Recargador, Devolución, Ayudante, Usuario Normal y Usuario Negocio repiten el
+   mismo diseño de pestañas en fila; en celular no entraban y se salían por la
+   derecha. Acá, una sola vez para todas: grilla de 2 columnas a todo el ancho.
+   (Prefijo .pi-layout-content para ganarle a los CSS de página, que cargan
+   después con la misma especificidad.)
+   ========================================================================= */
+@media (max-width: 600px) {
+  .pi-layout-content :is(.pi-rec-tabs, .pi-dev-tabs, .pi-ayu-tabs, .pi-usr-tabs, .pi-unegocio-tabs) {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    box-sizing: border-box;
+    gap: var(--space-1);
+  }
+  .pi-layout-content :is(.pi-rec-tabs, .pi-dev-tabs, .pi-ayu-tabs, .pi-usr-tabs, .pi-unegocio-tabs) button {
+    justify-content: center;
+    min-width: 0;
+    padding: var(--space-2) var(--space-2);
+    text-align: center;
+    line-height: 1.25;
+  }
+  .pi-layout-content :is(.pi-rec-tabs, .pi-dev-tabs, .pi-ayu-tabs, .pi-usr-tabs, .pi-unegocio-tabs) button svg {
+    flex-shrink: 0;
+  }
+  /* cantidad impar: la última ocupa toda la fila */
+  .pi-layout-content :is(.pi-rec-tabs, .pi-dev-tabs, .pi-ayu-tabs, .pi-usr-tabs, .pi-unegocio-tabs) button:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}

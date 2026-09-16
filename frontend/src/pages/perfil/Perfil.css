@@ -297,16 +297,6 @@
   transform: translateY(-2px);
 }
 
-/* Animación simple */
-.animate-fade {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 /* =======================================================
    3. RESPONSIVE (MÓVILES)
 ======================================================= */
@@ -664,16 +654,6 @@
   transform: translateY(-2px);
 }
 
-/* Animación simple */
-.animate-fade {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(5px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 /* =======================================================
    3. RESPONSIVE (MÓVILES)
 ======================================================= */
@@ -787,7 +767,10 @@
 
 /* Tabs */
 .pi-perfil-tabs { display: flex; border-bottom: 1px solid var(--border); background-color: var(--bg-surface); }
-.pi-perfil-tabs button { padding: 20px 32px; background: none; border: none; font-size: var(--text-sm); font-weight: 700; color: var(--text-secondary); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; }
+.pi-perfil-tabs button { padding: 20px 32px; background: none; border: none; font-size: var(--text-sm); font-weight: 700; color: var(--text-secondary); cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s; display: flex; align-items: center; gap: 8px; }
+
+/* Botón que despliega "Completa tu perfil" — solo existe en móvil. */
+.pi-perfil-progress-toggle { display: none; }
 .pi-perfil-tabs button:hover { color: var(--text-primary); }
 .pi-perfil-tabs button.active { color: var(--cian-digital-texto); border-bottom-color: var(--cian-digital); }
 .pi-perfil-tab-content { padding: 32px; }
@@ -823,8 +806,6 @@
 .pi-perfil-btn-guardar { display: flex; align-items: center; gap: 8px; background-color: var(--indigo-profundo); color: var(--text-on-accent); border: none; padding: 12px 24px; border-radius: var(--radius-md); font-size: var(--text-sm); font-weight: 700; cursor: pointer; transition: background-color 0.2s, transform 0.2s; }
 .pi-perfil-btn-guardar:hover { background-color: var(--indigo-profundo-hover); transform: translateY(-2px); }
 
-.animate-fade { animation: fadeIn 0.3s ease-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
 /* 3. RESPONSIVE */
 @media (max-width: 900px) {
@@ -833,6 +814,43 @@
   .pi-perfil-main-card { width: 100%; }
   .pi-perfil-form-grid { grid-template-columns: 1fr; }
   .pi-perfil-tabs button { padding: 16px; flex: 1; text-align: center; justify-content: center; font-size: var(--text-xs); }
+}
+
+@media (max-width: 600px) {
+  /* Tabs: icono arriba y texto abajo, sin apretar las palabras */
+  .pi-perfil-tabs button {
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 6px;
+    min-width: 0;
+    line-height: 1.2;
+  }
+  .pi-perfil-tabs button svg { font-size: var(--text-base); }
+
+  /* "Completa tu perfil" plegado detrás de un botón chico */
+  .pi-perfil-progress-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 4px;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    background: var(--bg-page);
+    color: var(--text-primary);
+    font: inherit;
+    font-size: var(--text-xs);
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .pi-perfil-progress-toggle-num { margin-left: auto; color: var(--cian-digital-texto); }
+  .pi-perfil-progress-toggle-icono { transition: transform 0.2s; }
+  .pi-perfil-progress-toggle[aria-expanded="true"] .pi-perfil-progress-toggle-icono { transform: rotate(180deg); }
+
+  .pi-perfil-progress-widget { display: none; }
+  .pi-perfil-progress-widget.abierto { display: block; border-top: 0; padding-top: 16px; margin-top: 0; }
+  .pi-perfil-progress-widget h4 { display: none; }
 }
 
 /* =======================================================
@@ -1034,3 +1052,11 @@
 .pi-perfil-qr-icono { font-size: 40px; color: var(--verde-recarga-texto); }
 .pi-perfil-qr-nombre { font-size: var(--text-lg); font-weight: 700; color: var(--text-primary); margin: 0; }
 .pi-perfil-qr-resultado p { display: flex; align-items: center; gap: 8px; margin: 0; color: var(--text-secondary); font-size: var(--text-sm); }
+
+/* Datos de la entrada verificada (modal) */
+.pi-perfil-qr-datos { width: 100%; margin: 8px 0 0; display: flex; flex-direction: column; text-align: left; }
+.pi-perfil-qr-datos > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 10px 0; border-top: 1px solid var(--border); }
+.pi-perfil-qr-datos dt { display: flex; align-items: center; gap: 8px; margin: 0; font-size: var(--text-xs); color: var(--text-muted); white-space: nowrap; }
+.pi-perfil-qr-datos dd { margin: 0; font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); text-align: right; overflow-wrap: anywhere; }
+.pi-perfil-qr-modal-acciones { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.pi-perfil-qr-modal-acciones .btn-guardar-toggle { display: inline-flex; align-items: center; gap: 8px; }

@@ -196,6 +196,15 @@
   outline: none;
 }
 .pi-auth__control input::placeholder { color: var(--text-muted); }
+/* Autocompletado del navegador: pinta el input de celeste y rompe la píldora.
+   Se tapa con una sombra interna del mismo blanco del control. */
+.pi-auth__panel .pi-auth__control input:-webkit-autofill,
+.pi-auth__panel .pi-auth__control input:-webkit-autofill:hover,
+.pi-auth__panel .pi-auth__control input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 100px #fff inset;
+  -webkit-text-fill-color: #1b1f36;
+  caret-color: #1b1f36;
+}
 .pi-auth__control .pi-auth__icon,
 .pi-auth__control svg {
   flex: none;
@@ -357,26 +366,42 @@
 
 /* ---------- Responsive: la tarjeta se apila ---------- */
 @media (max-width: 820px) {
-  .pi-auth { padding: 0; align-items: stretch; }
+  .pi-auth { padding: 0; align-items: stretch; background-attachment: scroll; }
   .pi-auth__card {
     grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
     max-width: none;
     min-height: 100vh;
+    min-height: 100dvh;
     border: 0;
     border-radius: 0;
     box-shadow: none;
+    /* apilado: el papel roto (78% de ancho) tapaba la foto de arriba.
+       La tarjeta queda blanca y la foto pasa a la franja superior. */
+    background: #fff;
   }
   .pi-auth__panel {
     order: 2;
-    /* apilado: el papel roto de la tarjeta no cubre bien -> fondo sólido */
-    background: var(--bg-surface);
+    /* mismo blanco fijo que el papel: los colores del form están pensados para él */
+    background: #fff;
+    /* apilado scrollea la página entera, no el panel. Un scroll anidado acá
+       en iOS dejaba el formulario trabado (sobre todo en el paso 2 del registro). */
+    overflow: visible;
+    padding: var(--space-6) clamp(20px, 6vw, 44px) var(--space-8);
   }
   .pi-auth__aside {
     order: 1;
-    min-height: 160px;
-    align-items: center;
-    padding-left: clamp(24px, 6vw, 44px);
+    min-height: 190px;
+    align-items: flex-end;
+    /* deja lugar al botón "Volver al inicio" arriba */
+    padding: 72px clamp(20px, 6vw, 44px) var(--space-5);
+    background:
+      linear-gradient(to top, rgba(10, 14, 39, 0.55), rgba(10, 14, 39, 0) 70%),
+      var(--pi-auth-foto) center / cover no-repeat;
   }
-  .pi-auth__tagline h2 { font-size: var(--text-xl); }
-  .pi-auth__body { max-width: none; }
+  .pi-auth__tagline h2 { font-size: var(--text-xl); max-width: 20ch; }
+  .pi-auth__tagline .pi-auth__eyebrow { font-size: var(--text-xs); }
+  /* sin centrar vertical: evitaba un hueco grande entre la foto y el título */
+  .pi-auth__body { max-width: none; justify-content: flex-start; }
+  .pi-auth__subtitle { margin-bottom: var(--space-5); }
 }

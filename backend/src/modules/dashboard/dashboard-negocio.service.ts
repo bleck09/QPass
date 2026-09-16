@@ -46,7 +46,9 @@ export class DashboardNegocioService {
           puestoId: true,
           ayudanteId: true,
           anuladaEn: true,
-          entrada: { select: { numero: true } },
+          motivoAnulacion: true,
+          entradaId: true,
+          entrada: { select: { numero: true, nombre: true } },
           puesto: { select: { base: { select: { nombre: true } } } },
           ayudante: { select: { nombre: true } },
           items: {
@@ -160,6 +162,30 @@ export class DashboardNegocioService {
       number,
       { id: number; nombre: string; ingresos: number; ventas: number }
     >();
+    // Unidades + producto estrella por puesto / por ayudante (clave -> producto -> unidades).
+    const unidadesPor = new Map<string, Map<string, number>>();
+    const sumarUnidades = (clave: string, producto: string, n: number) => {
+      const m = unidadesPor.get(clave) ?? new Map<string, number>();
+      m.set(producto, (m.get(producto) ?? 0) + n);
+      unidadesPor.set(clave, m);
+    };
+    const resumenUnidades = (clave: string) => {
+      const m = unidadesPor.get(clave);
+      if (!m) return { unidades: 0, productoTop: null, productoTopUnidades: 0 };
+      let top: [string, number] | null = null;
+      let total = 0;
+      for (const e of m) {
+        total += e[1];
+        if (!top || e[1] > top[1]) top = e;
+      }
+      return { unidades: total, productoTop: top?.[0] ?? null, productoTopUnidades: top?.[1] ?? 0 };
+    };
+    // Clientes (entradas) que más compran en los puestos del negocio.
+    const porCliente = new Map<
+      string,
+      { id: string; nombre: string; numero: number | null; compras: number; unidades: number; gastado: number }
+    >();
+    let unidadesTotales = 0;
 
     for (const v of ventasNetas) {
       const monto = Number(v.montoTotal);
@@ -194,8 +220,24 @@ export class DashboardNegocioService {
       ayudanteFila.ingresos += monto;
       ayudanteFila.ventas += 1;
 
+      const cliente = porCliente.get(v.entradaId) ?? {
+        id: v.entradaId,
+        nombre: v.entrada?.nombre ?? '—',
+        numero: v.entrada?.numero ?? null,
+        compras: 0,
+        unidades: 0,
+        gastado: 0,
+      };
+      cliente.compras += 1;
+      cliente.gastado += monto;
+      porCliente.set(v.entradaId, cliente);
+
       for (const it of v.items) {
         const linea = it.cantidad * Number(it.precioUnitario);
+        unidadesTotales += it.cantidad;
+        cliente.unidades += it.cantidad;
+        sumarUnidades(`p:${v.puestoId}`, it.nombreProducto, it.cantidad);
+        sumarUnidades(`a:${v.ayudanteId}`, it.nombreProducto, it.cantidad);
         const prev = productos.get(it.nombreProducto) ?? {
           nombre: it.nombreProducto,
           unidades: 0,
@@ -218,33 +260,49 @@ export class DashboardNegocioService {
     }
 
     const topProductos = [...productos.values()]
-      .sort((a, b) => b.ingresos - a.ingresos)
+      .map((p) => ({
+        ...p,
+        pctUnidades: unidadesTotales ? p.unidades / unidadesTotales : 0,
+      }))
+      .sort((a, b) => b.unidades - a.unidades || b.ingresos - a.ingresos)
+      .slice(0, 10);
+
+    const topClientes = [...porCliente.values()]
+      .sort((a, b) => b.gastado - a.gastado)
       .slice(0, 10);
 
     const ventasPorCategoria = [...porCategoria.values()].sort(
       (a, b) => b.ingresos - a.ingresos,
     );
 
-    const porPuesto = [...porPuestoMap.values()].sort(
-      (a, b) => b.ingresos - a.ingresos,
-    );
+    const porPuesto = [...porPuestoMap.values()]
+      .map((p) => ({ ...p, ...resumenUnidades(`p:${p.id}`) }))
+      .sort((a, b) => b.ingresos - a.ingresos);
 
     const porAyudante = [...porAyudanteMap.values()]
       .map((a) => ({
         ...a,
+        ...resumenUnidades(`a:${a.id}`),
         ticketPromedio: a.ventas ? a.ingresos / a.ventas : 0,
       }))
       .sort((a, b) => b.ingresos - a.ingresos);
 
-    const ultimasVentas = ventas.slice(0, 20).map((v) => ({
+    const ultimasVentas = ventas.slice(0, 100).map((v) => ({
       id: v.id,
       createdAt: v.createdAt,
       puesto: v.puesto?.base?.nombre ?? '—',
       ayudante: v.ayudante?.nombre ?? '—',
+      cliente: v.entrada?.nombre ?? null,
       entradaNumero: v.entrada?.numero ?? null,
       monto: Number(v.montoTotal),
-      items: v.items.length,
+      items: v.items.reduce((s, it) => s + it.cantidad, 0),
+      detalle: v.items.map((it) => ({
+        nombreProducto: it.nombreProducto,
+        cantidad: it.cantidad,
+        precioUnitario: Number(it.precioUnitario),
+      })),
       anulada: v.anuladaEn != null,
+      motivoAnulacion: v.motivoAnulacion,
     }));
 
     return {
@@ -252,6 +310,8 @@ export class DashboardNegocioService {
         ingresoTotal,
         totalVentas,
         ticketPromedio: totalVentas ? ingresoTotal / totalVentas : 0,
+        unidadesTotales,
+        clientesUnicos: porCliente.size,
         acreditadoBilletera,
         saldoBilletera: Number(billetera?.saldo ?? 0),
         puestos: puestos.length,
@@ -266,6 +326,7 @@ export class DashboardNegocioService {
       ventasPorCategoria,
       porPuesto,
       porAyudante,
+      topClientes,
       ultimasVentas,
     };
   }

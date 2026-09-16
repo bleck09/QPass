@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
+import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Paginador from '../../components/Paginador.jsx';
@@ -294,6 +295,7 @@ export default function UsuarioNormal() {
   // --- ESTADO DE SALDO (billetera POR EVENTO: el saldo recargado en un evento
   //     solo sirve en ese evento) ---
   const [historial, setHistorial] = useState([]);
+  const [ventaDetalle, setVentaDetalle] = useState(null);
   const [billeteras, setBilleteras] = useState([]);
   const saldoTotal = useMemo(
     () => billeteras.reduce((s, b) => s + Number(b.disponible ?? b.saldo), 0),
@@ -1311,24 +1313,29 @@ export default function UsuarioNormal() {
                 let detalle;
                 if (esVenta) {
                   const items = item.venta.items || [];
+                  const unidades = items.reduce((total, i) => total + Number(i.cantidad), 0);
                   detalle = (
                     <span className="pi-usr-detalle-consumo">
                       <strong>{item.venta.puesto?.nombre || 'Puesto'}</strong>
-                      {items.length > 0 ? (
-                        <span className="pi-usr-detalle-items">
-                          {items.map((i, idx) => (
-                            <span key={idx} className="pi-usr-detalle-item">
-                              <span>{i.cantidad}× {i.nombreProducto}</span>
-                              <span className="pi-usr-detalle-precio">
-                                {Number(i.precioUnitario) * i.cantidad} pts
-                                {i.cantidad > 1 && ` (${Number(i.precioUnitario)} c/u)`}
-                              </span>
-                            </span>
-                          ))}
-                        </span>
-                      ) : (
-                        <span className="pi-usr-detalle-items">Compra sin detalle de productos</span>
-                      )}
+                      <span className="pi-usr-detalle-items">
+                        {items.length > 0
+                          ? `${unidades} ${unidades === 1 ? 'producto' : 'productos'}`
+                          : 'Compra sin detalle de productos'}
+                      </span>
+                      <button
+                        type="button"
+                        className="pi-usr-btn-revisar"
+                        onClick={() => setVentaDetalle({
+                          fecha: item.createdAt,
+                          puesto: item.venta.puesto?.nombre,
+                          anulada: item.tipo === 'reverso_consumo' || !!item.venta.anuladaEn,
+                          motivoAnulacion: item.venta.motivoAnulacion,
+                          monto: item.venta.montoTotal ?? item.monto,
+                          items,
+                        })}
+                      >
+                        Ver detalle
+                      </button>
                     </span>
                   );
                 } else if (item.tipo === 'recarga') {
@@ -1377,6 +1384,9 @@ export default function UsuarioNormal() {
                 );
               }}
             />
+            {ventaDetalle && (
+              <DetalleVentaModal venta={ventaDetalle} onCerrar={() => setVentaDetalle(null)} />
+            )}
           </div>
         </div>
       )}
@@ -1401,23 +1411,23 @@ export default function UsuarioNormal() {
                   <span className="pi-usr-qr-titulo"><FaQrcode /> Tu Manilla Digital</span>
                   <h3>{entradaDestacada.evento.nombre}</h3>
                   <div className="manilla-datos">
-                    <span>
-                      <FaCalendarAlt /> {formatearFecha(entradaDestacada.evento.fecha)}
-                    </span>
+                    <span><FaCalendarAlt aria-hidden="true" /> {formatearFecha(entradaDestacada.evento.fecha)}</span>
+                    <span><FaMapMarkerAlt aria-hidden="true" /> {entradaDestacada.evento.lugar}</span>
+                  </div>
+                  <div className="manilla-badges">
                     {mostrarJornada(entradaDestacada.diaEvento) && (
-                      <span className="pi-usr-badge" style={{ background: 'var(--indigo-profundo)', color: 'var(--blanco)' }}>
-                        <FaMoon /> {nombreJornada(entradaDestacada.diaEvento)}
+                      <span className="pi-usr-badge manilla-badge">
+                        <FaMoon aria-hidden="true" /> {nombreJornada(entradaDestacada.diaEvento)}
                       </span>
                     )}
-                    <span><FaMapMarkerAlt /> {entradaDestacada.evento.lugar}</span>
                     {entradaDestacada.categoriaTicket && (
-                      <span className="pi-usr-badge" style={{ background: 'var(--cian-digital)', color: 'var(--blanco)' }}>
+                      <span className="pi-usr-badge manilla-badge manilla-badge--categoria">
                         {entradaDestacada.categoriaTicket.nombre}
                       </span>
                     )}
                     {entradaDestacada.numero != null && (
-                      <span className="pi-usr-badge" style={{ background: 'var(--indigo-profundo)', color: 'var(--blanco)' }}>
-                        <FaIdCard /> Entrada N.º {entradaDestacada.numero}
+                      <span className="pi-usr-badge manilla-badge">
+                        <FaIdCard aria-hidden="true" /> Entrada N.º {entradaDestacada.numero}
                       </span>
                     )}
                   </div>
@@ -1427,7 +1437,7 @@ export default function UsuarioNormal() {
                   <div className="pi-usr-manilla-countdown">
                     {tiempoRestante.llego ? (
                       <div className="countdown-llego">
-                        <span className="countdown-llego-emoji">🎉</span>
+                        <FaTicketAlt className="countdown-llego-icono" aria-hidden="true" />
                         <span>¡Hoy es el evento!</span>
                       </div>
                     ) : (

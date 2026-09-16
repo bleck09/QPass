@@ -353,8 +353,12 @@ body {
   background-color: var(--bg-page);
   color: var(--text-primary);
 
-  /* Evitamos estrictamente el scroll horizontal */
+  /* Evitamos estrictamente el scroll horizontal.
+     `clip` y no `hidden`: en iOS Safari `hidden` en el body puede trabar el
+     scroll vertical táctil cuando algo se pasa de ancho. `hidden` queda de
+     respaldo para navegadores viejos que no conocen `clip`. */
   overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Utilidad opcional para bloques de texto corrido (Manual 5.1: 45-75 caracteres).
@@ -433,6 +437,52 @@ a, button, input, select, textarea, [tabindex] {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
+}
+
+/* ============================================================
+   AJUSTES MÓVILES GLOBALES (iOS / Android)
+   ============================================================ */
+/* iOS: los input de fecha/hora traen ancho y alto propios, se salen de su
+   contenedor (rompe el scroll) y no respetan el alineado. Se normalizan acá
+   para todas las pantallas. */
+input[type="date"],
+input[type="time"],
+input[type="datetime-local"],
+input[type="month"] {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 1.5em;
+}
+input[type="date"]::-webkit-date-and-time-value,
+input[type="time"]::-webkit-date-and-time-value,
+input[type="datetime-local"]::-webkit-date-and-time-value,
+input[type="month"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+
+/* iOS hace zoom automático al enfocar un campo con letra menor a 16px y
+   la página queda desplazada/trabada. En pantallas táctiles se fuerza 16px. */
+@media (hover: none) and (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
+/* ============================================================
+   ANIMACIÓN DE ENTRADA COMPARTIDA (.animate-fade)
+   Una sola definición para toda la app. SIN `forwards`: si el transform
+   final queda aplicado, el contenedor atrapa a los position:fixed de adentro
+   (modales) y se ven corridos/recortados. Al terminar, no queda transform.
+   ============================================================ */
+.animate-fade { animation: qp-fade-in 0.35s var(--ease-out); }
+@keyframes qp-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
 }
 
 /* El contenedor principal de React debe ocupar el 100% de la pantalla */

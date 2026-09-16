@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useFocoModal } from './useFocoModal.js';
+import { bloquearScroll } from './bloqueoScroll.js';
 
 /*
   Comportamiento de un modal accesible, sin imponer NADA visual — Manual 8.6.
@@ -34,12 +35,11 @@ export function useModal(abierto, onCerrar) {
     };
     window.addEventListener('keydown', alTecla);
 
-    const overflowPrevio = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
+    const liberarScroll = bloquearScroll();
 
     return () => {
       window.removeEventListener('keydown', alTecla);
-      document.body.style.overflow = overflowPrevio;
+      liberarScroll();
     };
   }, [abierto, onCerrar]);
 

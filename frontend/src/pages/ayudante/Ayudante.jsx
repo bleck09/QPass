@@ -5,6 +5,8 @@ import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import StatCard from '../../components/StatCard.jsx';
+import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
@@ -191,17 +193,32 @@ export default function Ayudante() {
     () => carrito.reduce((suma, item) => suma + item.cantidad, 0),
     [carrito]
   );
+  // Las anuladas se listan igual en el historial, pero no suman (neto).
+  const ventasNetas = useMemo(() => ventas.filter(v => !v.anuladaEn), [ventas]);
   const totalVentasHoy = useMemo(
-    () => ventas.reduce((suma, v) => suma + Number(v.montoTotal), 0),
-    [ventas]
+    () => ventasNetas.reduce((suma, v) => suma + Number(v.montoTotal), 0),
+    [ventasNetas]
   );
+  // Resumen del historial: unidades vendidas y ranking de productos del puesto.
+  const productosVendidos = useMemo(() => {
+    const porProducto = new Map();
+    ventasNetas.forEach(v => v.items.forEach(i => {
+      const p = porProducto.get(i.productoBaseId) || { id: i.productoBaseId, nombre: i.nombreProducto, unidades: 0, total: 0 };
+      p.unidades += i.cantidad;
+      p.total += i.cantidad * Number(i.precioUnitario);
+      porProducto.set(i.productoBaseId, p);
+    }));
+    return [...porProducto.values()].sort((a, b) => b.unidades - a.unidades);
+  }, [ventasNetas]);
+  const unidadesVendidas = useMemo(() => productosVendidos.reduce((s, p) => s + p.unidades, 0), [productosVendidos]);
+  const [ventaDetalle, setVentaDetalle] = useState(null);
 
   const [busquedaVentas, setBusquedaVentas] = useState('');
   const ventasFiltradas = useMemo(() => {
     const q = busquedaVentas.trim().toLowerCase();
     if (!q) return ventas;
     return ventas.filter((v) =>
-      `${v.entrada?.nombre || ''} ${ciDeEntrada(v.entrada) || ''}`.toLowerCase().includes(q),
+      `${v.entrada?.nombre || ''} ${ciDeEntrada(v.entrada) || ''} ${v.items.map(i => i.nombreProducto).join(' ')}`.toLowerCase().includes(q),
     );
   }, [ventas, busquedaVentas]);
 
@@ -656,41 +673,104 @@ export default function Ayudante() {
       {/* --- PESTAÑA: HISTORIAL --- */}
       {pestana === 'historial' && (
         <div className="pi-ayu-historial">
+          <div className="pi-ayu-hist-resumen">
+            <StatCard icon={<FaReceipt />} tono="total" valor={ventasNetas.length} label="Ventas cobradas" />
+            <StatCard icon={<FaShoppingCart />} tono="info" valor={unidadesVendidas} label="Unidades vendidas" />
+            <StatCard icon={<FaWallet />} tono="ok" valor={`${totalVentasHoy} pts`} label="Total vendido" />
+            <StatCard
+              icon={<FaHamburger />}
+              tono="warn"
+              valor={productosVendidos[0]?.nombre || '—'}
+              label="Producto más vendido"
+              nota={productosVendidos[0] ? `${productosVendidos[0].unidades} unidades` : null}
+            />
+          </div>
+
+          {productosVendidos.length > 0 && (
+            <div className="pi-ayu-hist-productos">
+              <h4>Cantidades vendidas por producto</h4>
+              <ul>
+                {productosVendidos.map(p => (
+                  <li key={p.id}>
+                    <span className="pi-ayu-hist-prod-nombre">{p.nombre}</span>
+                    <span className="pi-ayu-hist-prod-barra" aria-hidden="true">
+                      <span style={{ width: `${(p.unidades / productosVendidos[0].unidades) * 100}%` }} />
+                    </span>
+                    <span className="pi-ayu-hist-prod-cant">× {p.unidades}</span>
+                    <span className="pi-ayu-hist-prod-total">{p.total} pts</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <Buscador
             valor={busquedaVentas}
             onCambio={setBusquedaVentas}
-            placeholder="Buscar por cliente o documento…"
+            placeholder="Buscar por cliente, documento o producto…"
           />
           <Tabla
             card
-            columnas={['Cliente', 'Documento', 'Productos', 'Total', 'Fecha', 'Hora']}
+            columnas={['Cliente', 'Documento', 'Productos', 'Total', 'Fecha', 'Hora', { texto: 'Detalle', srOnly: true }]}
             datos={ventasFiltradas}
             vacio={busquedaVentas.trim()
               ? 'No hay ventas que coincidan con la búsqueda.'
               : 'Aún no has realizado ninguna venta.'}
-            renderFila={venta => {
-              const cantidadItems = venta.items.reduce((s, i) => s + i.cantidad, 0);
-              return (
-                <tr key={venta.id}>
-                  <td>
-                    <div className="pi-ayu-fila-persona">
-                      {venta.entrada?.foto && <FotoZoom width={34} height={34} src={venta.entrada.foto} alt={venta.entrada.nombre} className="pi-ayu-mini-avatar" />}
-                      <span>{venta.entrada?.nombre || '—'}</span>
-                    </div>
-                  </td>
-                  <td>{ciDeEntrada(venta.entrada) || '—'}</td>
-                  <td>
-                    <span className="pi-ayu-badge-items">
-                      {cantidadItems} {cantidadItems === 1 ? 'producto' : 'productos'}
-                    </span>
-                  </td>
-                  <td className="pi-ayu-monto-celda">-{Number(venta.montoTotal)} pts</td>
-                  <td>{new Date(venta.createdAt).toLocaleDateString('es-BO')}</td>
-                  <td>{new Date(venta.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
-                </tr>
-              );
-            }}
+            renderFila={venta => (
+              <tr
+                key={venta.id}
+                className={`pi-ayu-fila-venta${venta.anuladaEn ? ' pi-ayu-fila-anulada' : ''}`}
+                onClick={() => setVentaDetalle(venta)}
+              >
+                <td>
+                  <div className="pi-ayu-fila-persona">
+                    {venta.entrada?.foto && <FotoZoom width={34} height={34} src={venta.entrada.foto} alt={venta.entrada.nombre} className="pi-ayu-mini-avatar" />}
+                    <span>{venta.entrada?.nombre || '—'}</span>
+                  </div>
+                </td>
+                <td>{ciDeEntrada(venta.entrada) || '—'}</td>
+                <td>
+                  <ul className="pi-ayu-items-lista">
+                    {venta.items.map(i => (
+                      <li key={i.id}><strong>{i.cantidad}×</strong> {i.nombreProducto}</li>
+                    ))}
+                  </ul>
+                </td>
+                <td className="pi-ayu-monto-celda">
+                  {venta.anuladaEn
+                    ? <span className="pi-ayu-badge-anulada">Anulada</span>
+                    : `-${Number(venta.montoTotal)} pts`}
+                </td>
+                <td>{new Date(venta.createdAt).toLocaleDateString('es-BO')}</td>
+                <td>{new Date(venta.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
+                <td>
+                  <button
+                    type="button"
+                    className="btn-secundario-sm"
+                    onClick={(e) => { e.stopPropagation(); setVentaDetalle(venta); }}
+                  >
+                    Ver detalle
+                  </button>
+                </td>
+              </tr>
+            )}
           />
+          {ventaDetalle && (
+            <DetalleVentaModal
+              venta={{
+                fecha: ventaDetalle.createdAt,
+                cliente: ventaDetalle.entrada?.nombre,
+                documento: ciDeEntrada(ventaDetalle.entrada),
+                puesto: ventaDetalle.puesto?.base?.nombre,
+                ayudante: ventaDetalle.ayudante?.nombre,
+                anulada: !!ventaDetalle.anuladaEn,
+                motivoAnulacion: ventaDetalle.motivoAnulacion,
+                monto: ventaDetalle.montoTotal,
+                items: ventaDetalle.items,
+              }}
+              onCerrar={() => setVentaDetalle(null)}
+            />
+          )}
         </div>
       )}
 

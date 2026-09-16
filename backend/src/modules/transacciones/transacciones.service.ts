@@ -208,6 +208,9 @@ export class TransaccionesService {
         venta: {
           select: {
             id: true,
+            montoTotal: true,
+            anuladaEn: true,
+            motivoAnulacion: true,
             puesto: { select: { id: true, base: { select: { nombre: true } } } },
             items: {
               select: {
@@ -229,6 +232,9 @@ export class TransaccionesService {
             ...f,
             venta: {
               id: f.venta.id,
+              montoTotal: f.venta.montoTotal,
+              anuladaEn: f.venta.anuladaEn,
+              motivoAnulacion: f.venta.motivoAnulacion,
               items: f.venta.items,
               puesto: f.venta.puesto
                 ? { id: f.venta.puesto.id, nombre: f.venta.puesto.base.nombre }

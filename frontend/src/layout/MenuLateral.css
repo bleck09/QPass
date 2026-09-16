@@ -6,6 +6,9 @@
 .pi-layout-contenedor {
   display: flex;
   height: 100vh;
+  /* altura visible real: en móvil 100vh incluye la barra del navegador y
+     el final del contenido quedaba tapado */
+  height: 100dvh;
   width: 100vw;
   max-width: 100%;
   margin: 0;
@@ -257,7 +260,49 @@
 .pi-layout-dropdown-body button.btn-logout:hover { background-color: var(--rojo-error-suave); color: var(--rojo-error); }
 
 /* CONTENIDO PRINCIPAL */
-.pi-layout-content { padding: 0 32px 32px 32px; flex: 1; overflow-y: auto; }
+/* isolation: los z-index de las tarjetas de cada página quedan encerrados acá
+   adentro, así nunca tapan al header ni a su menú desplegable del perfil. */
+.pi-layout-content { padding: 0 32px 32px 32px; flex: 1; min-height: 0; overflow-y: auto; isolation: isolate; }
+
+/* =======================================================
+   TABLET / PANTALLAS TÁCTILES ANCHAS (> 900px)
+   El scroll interno de .pi-layout-content se trababa con el dedo en tablets.
+   En pantallas táctiles scrollea la PÁGINA (como en móvil): el sidebar queda
+   fijo con sticky y el header del panel también.
+======================================================= */
+@media (hover: none) and (pointer: coarse) and (min-width: 901px) {
+  .pi-layout-contenedor {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    align-items: flex-start;
+    overflow: visible;
+    overflow-x: clip;
+  }
+  .pi-layout-sidebar {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    height: 100dvh;
+  }
+  .pi-layout-main-wrapper {
+    align-self: stretch;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  /* clip (no hidden): mantiene las esquinas redondeadas sin crear un scroll
+     interno, así el header sticky funciona contra la página */
+  .pi-layout-main { overflow: clip; }
+  .pi-layout-header {
+    position: sticky;
+    top: 0;
+    background-color: var(--bg-page);
+  }
+  .pi-layout-content {
+    overflow: visible;
+    padding-bottom: calc(32px + env(safe-area-inset-bottom));
+  }
+}
 
 /* =======================================================
    RESPONSIVE DESIGN (MÓVILES)
@@ -284,7 +329,11 @@
   .pi-layout-nav-item.activo .curve-bottom { display: none; }
   .pi-layout-nav-item.activo { border-radius: var(--radius-lg); margin: 0 8px; }
   
-  .pi-layout-content { padding: 16px; }
+  /* aire al final + zona segura del iPhone (barra de inicio) */
+  .pi-layout-content {
+    padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
+    overscroll-behavior: contain;
+  }
   .pi-layout-header { padding: 0 16px; height: 60px; }
 }
 

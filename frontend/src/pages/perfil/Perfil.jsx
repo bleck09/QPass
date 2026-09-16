@@ -5,7 +5,7 @@ import {
   FaCamera, FaSave, FaCheckCircle, FaExclamationTriangle, FaUserShield,
   FaCalendarAlt, FaIdBadge, FaPhone, FaMapMarkerAlt, FaUserEdit,
   FaIdCard, FaBirthdayCake, FaEdit, FaTimes, FaCheck, FaEnvelope, FaQuoteLeft, FaUser,
-  FaQrcode, FaTicketAlt
+  FaQrcode, FaTicketAlt, FaMoon, FaChevronDown
 } from 'react-icons/fa';
 import { EVENTO_USUARIO_ACTUALIZADO } from '../../layout/MenuLateral';
 import { leerSesion, guardarSesion } from '../../api/client.js';
@@ -13,6 +13,8 @@ import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
+import Modal from '../../components/Modal.jsx';
+import { formatearFecha, nombreJornada } from '../../utils/eventos.js';
 import './Perfil.css';
 
 const getIniciales = (nombre = 'Usuario') => nombre.substring(0, 2).toUpperCase();
@@ -46,6 +48,8 @@ export default function Perfil() {
 
   // Estados de UI
   const [activeTab, setActiveTab] = useState('cuenta');
+  // Móvil: el widget "Completa tu perfil" arranca plegado detrás de un botón.
+  const [progresoAbierto, setProgresoAbierto] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
 
@@ -266,7 +270,19 @@ export default function Perfil() {
             <FaCalendarAlt style={{ marginRight: '5px' }} /> Miembro desde: {fechaCreacion}
           </div>
 
-          <div className="pi-perfil-progress-widget">
+          <button
+            type="button"
+            className="pi-perfil-progress-toggle"
+            onClick={() => setProgresoAbierto(a => !a)}
+            aria-expanded={progresoAbierto}
+            aria-controls="pi-perfil-progreso"
+          >
+            <span>Completa tu perfil</span>
+            <span className="pi-perfil-progress-toggle-num">{progreso}%</span>
+            <FaChevronDown className="pi-perfil-progress-toggle-icono" aria-hidden="true" />
+          </button>
+
+          <div id="pi-perfil-progreso" className={`pi-perfil-progress-widget${progresoAbierto ? ' abierto' : ''}`}>
             <h4>Completa tu perfil</h4>
             <div className="progress-circular-container">
               <svg className="progress-svg" viewBox="0 0 100 100">
@@ -302,14 +318,14 @@ export default function Perfil() {
         <section className="pi-perfil-main-card" aria-label="Datos del perfil">
           <div className="pi-perfil-tabs">
             <button className={activeTab === 'cuenta' ? 'active' : ''} onClick={() => setActiveTab('cuenta')}>
-              <FaUserEdit style={{marginRight: '8px'}}/> Información Personal
+              <FaUserEdit aria-hidden="true" /> <span>Información Personal</span>
             </button>
             <button className={activeTab === 'seguridad' ? 'active' : ''} onClick={() => setActiveTab('seguridad')}>
-              <FaUserShield style={{marginRight: '8px'}}/> Seguridad y Acceso
+              <FaUserShield aria-hidden="true" /> <span>Seguridad y Acceso</span>
             </button>
             {usuario.rol === 'UsuarioNormal' && (
               <button className={activeTab === 'verificar' ? 'active' : ''} onClick={() => setActiveTab('verificar')}>
-                <FaQrcode style={{marginRight: '8px'}}/> Verificar QR
+                <FaQrcode aria-hidden="true" /> <span>Verificar QR</span>
               </button>
             )}
           </div>
@@ -480,21 +496,54 @@ export default function Perfil() {
                     {errorQr && (
                       <div className="pi-perfil-alerta error"><FaExclamationTriangle /> {errorQr}</div>
                     )}
-                    {resultadoQr && (
-                      <div className="pi-perfil-qr-resultado">
-                        <FaCheckCircle className="pi-perfil-qr-icono" aria-hidden="true" />
-                        <p className="pi-perfil-qr-nombre">{resultadoQr.nombre}</p>
-                        <p><FaCalendarAlt aria-hidden="true" /> {resultadoQr.eventoNombre}</p>
-                        {resultadoQr.categoriaNombre && (
-                          <p><FaTicketAlt aria-hidden="true" /> {resultadoQr.categoriaNombre}</p>
-                        )}
-                      </div>
-                    )}
                     <button type="button" className="btn-guardar-toggle" onClick={iniciarEscaneoQr}>
                       <FaQrcode style={{ marginRight: '8px' }} />
                       {resultadoQr || errorQr ? 'Escanear otro código' : 'Escanear código QR'}
                     </button>
                   </>
+                )}
+
+                {resultadoQr && (
+                  <Modal titulo="Entrada verificada" onCerrar={() => setResultadoQr(null)} tamano="sm">
+                    <div className="pi-perfil-qr-resultado">
+                      <FaCheckCircle className="pi-perfil-qr-icono" aria-hidden="true" />
+                      <p className="pi-perfil-qr-nombre">{resultadoQr.nombre}</p>
+                      <dl className="pi-perfil-qr-datos">
+                        <div>
+                          <dt>Evento</dt>
+                          <dd>{resultadoQr.eventoNombre}</dd>
+                        </div>
+                        {resultadoQr.diaEvento && (
+                          <div>
+                            <dt><FaMoon aria-hidden="true" /> Jornada</dt>
+                            <dd>{nombreJornada(resultadoQr.diaEvento)}</dd>
+                          </div>
+                        )}
+                        <div>
+                          <dt><FaCalendarAlt aria-hidden="true" /> Fecha</dt>
+                          <dd>{formatearFecha(resultadoQr.diaEvento?.inicio || resultadoQr.eventoFecha)}</dd>
+                        </div>
+                        {resultadoQr.eventoLugar && (
+                          <div>
+                            <dt><FaMapMarkerAlt aria-hidden="true" /> Lugar</dt>
+                            <dd>{resultadoQr.eventoLugar}</dd>
+                          </div>
+                        )}
+                        {resultadoQr.categoriaNombre && (
+                          <div>
+                            <dt><FaTicketAlt aria-hidden="true" /> Tipo de entrada</dt>
+                            <dd>{resultadoQr.categoriaNombre}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </div>
+                    <div className="pi-perfil-qr-modal-acciones">
+                      <button type="button" className="btn-cancelar" onClick={() => setResultadoQr(null)}>Cerrar</button>
+                      <button type="button" className="btn-guardar-toggle" onClick={iniciarEscaneoQr}>
+                        <FaQrcode aria-hidden="true" /> Escanear otro
+                      </button>
+                    </div>
+                  </Modal>
                 )}
               </div>
             )}

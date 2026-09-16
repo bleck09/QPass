@@ -1,0 +1,106 @@
+/* Detalle de venta (components/DetalleVentaModal.jsx). Solo tokens. */
+
+.qp-dventa {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.qp-dventa__anulada {
+  margin: 0;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.qp-dventa__datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.qp-dventa__datos div {
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+  min-width: 0;
+}
+
+.qp-dventa__datos dt {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.qp-dventa__datos dd {
+  margin: var(--space-1) 0 0;
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.qp-dventa__scroll {
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.qp-dventa__tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-base);
+}
+
+.qp-dventa__tabla th,
+.qp-dventa__tabla td {
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.qp-dventa__tabla thead th {
+  background: var(--bg-sunken);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.qp-dventa__tabla .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.qp-dventa__tabla tfoot th,
+.qp-dventa__tabla tfoot td {
+  border-bottom: 0;
+  font-weight: var(--weight-bold);
+}
+
+.qp-dventa__cant {
+  display: inline-block;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--info-bg);
+  color: var(--info-text);
+  font-weight: var(--weight-bold);
+}
+
+.qp-dventa__total {
+  font-size: var(--text-lg);
+  color: var(--text-primary);
+}
+
+.qp-dventa__vacio {
+  text-align: center !important;
+  color: var(--text-muted);
+}
+
+.qp-dventa__acciones {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}

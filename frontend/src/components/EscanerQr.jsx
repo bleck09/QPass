@@ -35,6 +35,7 @@ function guardarCamara(id) {
 // sistema, por hardware, mucho más rápido y confiable que decodificar en JS puro. Si no está
 // disponible (ej. Firefox), cae a jsQR sobre un frame achicado.
 export default function EscanerQr({ onDetectado, onCancelar }) {
+  const contenedorRef = useRef(null);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   // El soporte de cámara se sabe al montar: se calcula como estado inicial en
@@ -48,6 +49,16 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
   const [camaras, setCamaras] = useState([]);
   // Arranca con la cámara que el usuario dejó elegida en una visita anterior (si hay).
   const [camaraId, setCamaraId] = useState(leerCamaraGuardada);
+
+  // Al abrir, se desplaza la pantalla para dejar el escáner centrado a la vista
+  // (en móvil suele abrirse más abajo del botón y quedaba medio fuera de pantalla).
+  useEffect(() => {
+    const reducirMovimiento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    contenedorRef.current?.scrollIntoView({
+      behavior: reducirMovimiento ? 'auto' : 'smooth',
+      block: 'center',
+    });
+  }, []);
 
   useEffect(() => {
     let activo = true;
@@ -162,7 +173,7 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
   }, [camaraId]);
 
   return (
-    <div className="pi-escaner-qr">
+    <div className="pi-escaner-qr" ref={contenedorRef}>
       {error ? (
         <p className="pi-escaner-qr-error" role="alert">{error}</p>
       ) : (

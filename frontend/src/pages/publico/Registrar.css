@@ -4,12 +4,7 @@
    Todo con tokens: funciona en claro y oscuro.
 ======================================================= */
 
-/* Animación de cambio de paso (respeta prefers-reduced-motion vía index.css). */
-.animate-fade { animation: authFadeIn 0.35s var(--ease-out) forwards; }
-@keyframes authFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
+/* Animación de cambio de paso: .animate-fade global (styles/index.css). */
 
 /* --- Grid de campos: 2 columnas cuando hay lugar, 1 si no --- */
 .pi-register-grid {

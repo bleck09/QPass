@@ -216,7 +216,8 @@ export class EntradasService {
           select: {
             nombre: true,
             compra: { select: { estado: true } },
-            evento: { select: { nombre: true } },
+            evento: { select: { nombre: true, fecha: true, lugar: true } },
+            diaEvento: { select: { nombre: true, orden: true, inicio: true } },
             categoriaTicket: { select: { nombre: true } },
           },
         },
@@ -236,6 +237,9 @@ export class EntradasService {
     return {
       nombre: entrada.nombre,
       eventoNombre: entrada.evento.nombre,
+      eventoFecha: entrada.evento.fecha,
+      eventoLugar: entrada.evento.lugar,
+      diaEvento: entrada.diaEvento,
       categoriaNombre: entrada.categoriaTicket?.nombre ?? null,
     };
   }

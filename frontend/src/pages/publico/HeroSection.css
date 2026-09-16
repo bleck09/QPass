@@ -725,12 +725,43 @@
   .qp-hero__manilla { --qp-chapa: 10rem; }
   .qp-hero__manilla-correa { width: 6rem; height: 2.5rem; }
 
-  /* En pantallas chicas las tarjetas tapaban la manilla: se apilan debajo. */
-  .qp-hero__escenario { flex-direction: column; }
-  .qp-hero__tarjeta { position: static; transform: none; animation: none; width: 100%; }
-  .qp-hero__tarjeta--grafico,
-  .qp-hero__tarjeta--acceso { width: 100%; max-width: none; margin-top: var(--space-3); }
-  .qp-hero__tarjeta--acceso { transform: none; left: auto; }
+  /* Composición como en escritorio pero en miniatura: las tarjetas siguen
+     flotando alrededor de la manilla (arriba izq / arriba der / abajo), más
+     chicas, y la escena reserva alto arriba y abajo para que no la tapen. */
+  .qp-hero__escena { padding-block: 6.5rem 5rem; }
+
+  .qp-hero__tarjeta { padding: var(--space-2) var(--space-3); }
+  .qp-hero__tarjeta-cab { gap: var(--space-1); margin-bottom: var(--space-1); font-size: 0.6875rem; }
+  .qp-hero__tarjeta-ic { font-size: var(--text-sm); }
+
+  .qp-hero__tarjeta--saldo {
+    top: 0;
+    left: 0;
+    min-width: 0;
+    width: 9.5rem;
+  }
+  .qp-hero__monto { gap: var(--space-1); margin-bottom: 0; flex-wrap: wrap; }
+  .qp-hero__monto-val { font-size: var(--text-base); }
+  .qp-hero__tarjeta--saldo .qp-hero__tarjeta-pie { display: none; }
+
+  .qp-hero__tarjeta--grafico {
+    top: 0.75rem;
+    right: 0;
+    width: 10.5rem;
+  }
+  .qp-hero__grafico { height: 2.25rem; }
+  .qp-hero__tarjeta--grafico .qp-hero__tarjeta-cab { flex-wrap: wrap; row-gap: 2px; }
+  .qp-hero__leyenda { gap: var(--space-2); margin-top: var(--space-1); }
+
+  .qp-hero__tarjeta--acceso {
+    bottom: 0;
+    left: 50%;
+    width: min(17rem, 92%);
+    max-width: none;
+    gap: var(--space-2);
+    transform: translateX(-50%);
+    font-size: var(--text-xs);
+  }
 }
 
 /* =======================================================

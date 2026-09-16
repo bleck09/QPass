@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FaDollarSign, FaShoppingCart, FaReceipt, FaWallet,
-  FaStore, FaClock, FaTrophy, FaUsers, FaBan,
+  FaStore, FaClock, FaTrophy, FaUsers, FaBan, FaBoxes, FaUserFriends,
 } from 'react-icons/fa';
+import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
 import Migas from '../../components/Migas.jsx';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
@@ -119,6 +120,8 @@ export default function UsuNegoDasboar() {
   }, [eventoId]);
 
   const volverALista = () => setEventoSeleccionado(null);
+
+  const [ventaDetalle, setVentaDetalle] = useState(null);
 
   // Anulación de venta (§5.3)
   const [ventaAnular, setVentaAnular] = useState(null);
@@ -237,6 +240,18 @@ export default function UsuNegoDasboar() {
                 extra={<ChipVar par={data.resumen.comparativa?.totalVentas} />}
               />
               <StatCard
+                icon={<FaBoxes />}
+                tono="info"
+                valor={data.resumen.unidadesTotales ?? 0}
+                label="Unidades vendidas"
+                nota={data.topProductos[0] ? `más vendido: ${data.topProductos[0].nombre}` : undefined}
+              />
+              <StatCard
+                icon={<FaUserFriends />}
+                valor={data.resumen.clientesUnicos ?? 0}
+                label="Clientes que compraron"
+              />
+              <StatCard
                 icon={<FaReceipt />}
                 valor={fmtBs(data.resumen.ticketPromedio)}
                 label="Ticket promedio"
@@ -292,23 +307,25 @@ export default function UsuNegoDasboar() {
 
           {/* --- TOP PRODUCTOS (W2) --- */}
           <section className="pi-ngd-seccion">
-            <h3 className="pi-ngd-seccion-titulo"><FaTrophy aria-hidden="true" /> Top productos</h3>
+            <h3 className="pi-ngd-seccion-titulo"><FaTrophy aria-hidden="true" /> Productos más vendidos</h3>
             <Tabla
-              columnas={['Producto', { texto: 'Unidades', align: 'center' }, 'Ingresos']}
+              columnas={['#', 'Producto', 'Unidades vendidas', { texto: '% de unidades', align: 'center' }, 'Ingresos']}
               datos={data.topProductos}
               vacio="Todavía no hay ventas con productos."
-              renderFila={(p) => {
-                const max = data.topProductos[0]?.ingresos || 1;
+              renderFila={(p, i) => {
+                const max = data.topProductos[0]?.unidades || 1;
                 return (
                   <tr key={p.nombre}>
-                    <td>{p.nombre}</td>
-                    <td style={{ textAlign: 'center' }}>{p.unidades}</td>
+                    <td><span className={`pi-ngd-rank${i < 3 ? ` pi-ngd-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
+                    <td><strong>{p.nombre}</strong></td>
                     <td>
                       <div className="pi-ngd-bar" aria-hidden="true">
-                        <div className="pi-ngd-bar-fill" style={{ width: `${Math.round((p.ingresos / max) * 100)}%` }} />
+                        <div className="pi-ngd-bar-fill" style={{ width: `${Math.round((p.unidades / max) * 100)}%` }} />
                       </div>
-                      <span className="pi-ngd-bar-txt">{fmtBs(p.ingresos)}</span>
+                      <span className="pi-ngd-bar-txt">{p.unidades} u.</span>
                     </td>
+                    <td style={{ textAlign: 'center' }}>{((p.pctUnidades ?? 0) * 100).toFixed(1)}%</td>
+                    <td>{fmtBs(p.ingresos)}</td>
                   </tr>
                 );
               }}
@@ -340,13 +357,15 @@ export default function UsuNegoDasboar() {
             <section className="pi-ngd-seccion">
               <h3 className="pi-ngd-seccion-titulo"><FaStore aria-hidden="true" /> Ventas por puesto</h3>
               <Tabla
-                columnas={['Puesto', { texto: 'Ventas', align: 'center' }, 'Ingresos']}
+                columnas={['Puesto', { texto: 'Ventas', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Producto estrella', 'Ingresos']}
                 datos={data.porPuesto}
                 vacio="Sin datos."
                 renderFila={(p) => (
                   <tr key={p.id}>
                     <td>{p.nombre}</td>
                     <td style={{ textAlign: 'center' }}>{p.ventas}</td>
+                    <td style={{ textAlign: 'center' }}>{p.unidades ?? 0}</td>
+                    <td>{p.productoTop ? `${p.productoTop} (${p.productoTopUnidades} u.)` : '—'}</td>
                     <td>{fmtBs(p.ingresos)}</td>
                   </tr>
                 )}
@@ -358,15 +377,38 @@ export default function UsuNegoDasboar() {
           <section className="pi-ngd-seccion">
             <h3 className="pi-ngd-seccion-titulo"><FaUsers aria-hidden="true" /> Ventas por ayudante</h3>
             <Tabla
-              columnas={['Ayudante', { texto: 'Ventas', align: 'center' }, 'Ingresos', 'Ticket promedio']}
+              columnas={['#', 'Ayudante', { texto: 'Ventas', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Lo que más vende', 'Ingresos', 'Ticket promedio']}
               datos={data.porAyudante}
               vacio="Todavía no hay ventas."
-              renderFila={(a) => (
+              renderFila={(a, i) => (
                 <tr key={a.id}>
-                  <td>{a.nombre}</td>
+                  <td><span className={`pi-ngd-rank${i < 3 ? ` pi-ngd-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
+                  <td><strong>{a.nombre}</strong></td>
                   <td style={{ textAlign: 'center' }}>{a.ventas}</td>
+                  <td style={{ textAlign: 'center' }}>{a.unidades ?? 0}</td>
+                  <td>{a.productoTop ? `${a.productoTop} (${a.productoTopUnidades} u.)` : '—'}</td>
                   <td>{fmtBs(a.ingresos)}</td>
                   <td>{fmtBs(a.ticketPromedio)}</td>
+                </tr>
+              )}
+            />
+          </section>
+
+          {/* --- MEJORES CLIENTES --- */}
+          <section className="pi-ngd-seccion">
+            <h3 className="pi-ngd-seccion-titulo"><FaUserFriends aria-hidden="true" /> Clientes que más compran</h3>
+            <Tabla
+              columnas={['#', 'Cliente', { texto: 'N.º entrada', align: 'center' }, { texto: 'Compras', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Gastado']}
+              datos={data.topClientes ?? []}
+              vacio="Todavía no hay ventas."
+              renderFila={(c, i) => (
+                <tr key={c.id}>
+                  <td><span className={`pi-ngd-rank${i < 3 ? ` pi-ngd-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
+                  <td>{c.nombre}</td>
+                  <td style={{ textAlign: 'center' }}>{c.numero ?? '—'}</td>
+                  <td style={{ textAlign: 'center' }}>{c.compras}</td>
+                  <td style={{ textAlign: 'center' }}>{c.unidades}</td>
+                  <td>{fmtBs(c.gastado)}</td>
                 </tr>
               )}
             />
@@ -376,18 +418,27 @@ export default function UsuNegoDasboar() {
           <section className="pi-ngd-seccion">
             <h3 className="pi-ngd-seccion-titulo"><FaShoppingCart aria-hidden="true" /> Últimas ventas</h3>
             <Tabla
-              columnas={['Hora', 'Puesto', 'Ayudante', { texto: 'N.º entrada', align: 'center' }, 'Monto', { texto: 'Ítems', align: 'center' }, { texto: 'Acciones', srOnly: true }]}
+              columnas={['Hora', 'Puesto', 'Ayudante', { texto: 'N.º entrada', align: 'center' }, 'Productos', 'Monto', { texto: 'Acciones', srOnly: true }]}
               datos={data.ultimasVentas}
               vacio="Todavía no hay ventas en este evento."
               renderFila={(v) => (
-                <tr key={v.id} className={v.anulada ? 'pi-ngd-fila-anulada' : ''}>
+                <tr key={v.id} className={`pi-ngd-fila-venta${v.anulada ? ' pi-ngd-fila-anulada' : ''}`} onClick={() => setVentaDetalle(v)}>
                   <td>{fmtHora(v.createdAt)}</td>
                   <td>{v.puesto}</td>
                   <td>{v.ayudante}</td>
                   <td style={{ textAlign: 'center' }}>{v.entradaNumero ?? '—'}</td>
+                  <td>
+                    <ul className="pi-ngd-items-lista">
+                      {(v.detalle ?? []).map((it, idx) => (
+                        <li key={idx}><strong>{it.cantidad}×</strong> {it.nombreProducto}</li>
+                      ))}
+                    </ul>
+                  </td>
                   <td>{fmtBs(v.monto)}</td>
-                  <td style={{ textAlign: 'center' }}>{v.items}</td>
-                  <td style={{ textAlign: 'right' }}>
+                  <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                    <button type="button" className="btn-secundario-sm" onClick={() => setVentaDetalle(v)}>
+                      Ver detalle
+                    </button>{' '}
                     {v.anulada
                       ? <span className="pi-ngd-badge-anulada">Anulada</span>
                       : (
@@ -401,6 +452,33 @@ export default function UsuNegoDasboar() {
             />
           </section>
         </>
+      )}
+
+      {ventaDetalle && (
+        <DetalleVentaModal
+          fmt={fmtBs}
+          venta={{
+            fecha: ventaDetalle.createdAt,
+            cliente: ventaDetalle.cliente,
+            documento: ventaDetalle.entradaNumero != null ? `Entrada N.º ${ventaDetalle.entradaNumero}` : null,
+            puesto: ventaDetalle.puesto,
+            ayudante: ventaDetalle.ayudante,
+            anulada: ventaDetalle.anulada,
+            motivoAnulacion: ventaDetalle.motivoAnulacion,
+            monto: ventaDetalle.monto,
+            items: ventaDetalle.detalle,
+          }}
+          onCerrar={() => setVentaDetalle(null)}
+          acciones={!ventaDetalle.anulada && (
+            <button
+              type="button"
+              className="pi-ngd-btn-anular"
+              onClick={() => { setVentaAnular(ventaDetalle); setVentaDetalle(null); setMotivoAnular(''); setErrAnular(''); }}
+            >
+              <FaBan aria-hidden="true" /> Anular venta
+            </button>
+          )}
+        />
       )}
 
       {ventaAnular && (

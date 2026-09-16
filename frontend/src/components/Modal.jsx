@@ -1,4 +1,5 @@
 import { useId } from 'react';
+import { createPortal } from 'react-dom';
 import { FaTimes } from 'react-icons/fa';
 import { useModal } from '../utils/useModal.js';
 import './Modal.css';
@@ -46,7 +47,10 @@ export default function Modal({
   const tituloId = useId();
   const conHeader = titulo != null || !ocultarCerrar;
 
-  return (
+  // Portal al <body>: si un ancestro tiene transform/filter/overflow (ej. una
+  // animación de entrada), un position:fixed quedaría atrapado y recortado
+  // dentro de ese contenedor en vez de cubrir toda la pantalla.
+  return createPortal(
     <div
       className="qp-modal-overlay"
       onClick={cerrarEnBackdrop ? onCerrar : undefined}
@@ -83,6 +87,7 @@ export default function Modal({
         )}
         <div className="qp-modal__body">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

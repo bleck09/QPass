@@ -176,3 +176,18 @@
   gap: 10px;
   margin-top: 14px;
 }
+
+/* Móvil: la tarjeta ocupa todo el ancho y los botones principales se agrandan
+   a lo ancho (más fáciles de tocar). */
+@media (max-width: 600px) {
+  .pi-caja-wrap { width: 100%; }
+  .pi-caja-seccion { padding: 20px 16px; }
+  .pi-caja-cerrada { align-items: stretch; }
+  .pi-caja-seccion .pi-caja-btn-primario {
+    align-self: stretch;
+    justify-content: center;
+    width: 100%;
+    padding: 14px 18px;
+    font-size: var(--text-base);
+  }
+}

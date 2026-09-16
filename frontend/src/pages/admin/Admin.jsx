@@ -16,11 +16,15 @@ import {
   FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends, FaUsers,
   FaChevronRight, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
   FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt,
-  FaKey
+  FaKey, FaListUl, FaBoxes, FaMedal
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { filtrarEventos, FILTROS_ESTADO_EVENTO, ciDeEntrada } from '../../utils/eventos.js';
-import { GraficoActividadPorHora, GraficoIngresosPorCategoria } from './GraficosEvento.jsx';
+import {
+  GraficoActividadPorHora, GraficoIngresosPorCategoria,
+  GraficoVentasPorNegocio, GraficoProductosMasVendidos,
+} from './GraficosEvento.jsx';
+import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
 import './Admin.css';
 // Marco Gráfico/Tabla (.pi-adg-grafico*) compartido con el dashboard general —
 // se reutiliza tal cual en vez de duplicar el CSS.
@@ -46,9 +50,16 @@ const agruparPorOperador = (transacciones, staffAsignado, campo) => {
     const id = t.operador.id;
     if (!porOperador.has(id)) porOperador.set(id, { id, nombre: t.operador.nombre, [campo]: [] });
     porOperador.get(id)[campo].push({
+      id: t.id,
       hora: hora(t.createdAt),
+      fecha: t.createdAt,
       participante: t.entrada?.nombre || 'Retiro de Usuario Negocio',
+      documento: ciDeEntrada(t.entrada),
+      esNegocio: !t.entrada,
       monto: Number(t.monto),
+      saldo: t.saldoResultante != null ? Number(t.saldoResultante) : null,
+      nota: t.nota,
+      motivo: t.motivoDevolucion,
     });
   });
   return [...porOperador.values()];
@@ -75,9 +86,17 @@ const agruparVentasPorNegocio = (ventas, puestos, usuariosPorId) => {
     porNegocio.get(negocioId).ventas.push({
       id: v.id,
       hora: hora(v.createdAt),
+      fecha: v.createdAt,
       cliente: v.entrada?.nombre || '—',
+      clienteId: v.entrada?.id || v.entradaId,
+      documento: ciDeEntrada(v.entrada),
+      puesto: v.puesto?.base?.nombre || '—',
+      ayudanteId: v.ayudante?.id ?? v.ayudanteId,
+      ayudante: v.ayudante?.nombre || '—',
       monto: Number(v.montoTotal),
       anulada: v.anuladaEn != null,
+      motivoAnulacion: v.motivoAnulacion,
+      items: v.items || [],
     });
   });
   return [...porNegocio.values()];
@@ -513,18 +532,89 @@ export default function Admin({
     [datos]
   );
 
-  const topClientesOrdenados = useMemo(() => {
-    const consumos = {};
+  // --- ESTADÍSTICAS DE VENTAS (solo ventas no anuladas) ---
+  // Productos del evento, producto estrella de cada negocio, ranking de
+  // ayudantes y cuánto compra cada cliente, todo desde los items de cada venta.
+  const estadisticasVentas = useMemo(() => {
+    const productos = new Map();   // nombre -> { nombre, unidades, ingresos, negocios:Set }
+    const ayudantes = new Map();   // id -> { id, nombre, negocio, puestos:Set, ventas, unidades, total, productos:Map }
+    const clientes = new Map();    // id -> { id, nombre, documento, compras, unidades, total, ventas[] }
+    const estrellas = [];          // una fila por negocio
+    let unidadesTotales = 0;
+
     datos.negocios.forEach(n => {
-      n.ventas.forEach(v => {
-        const clave = v.cliente;
-        consumos[clave] = (consumos[clave] || 0) + v.monto;
+      const prodNegocio = new Map();
+      let unidadesNegocio = 0;
+      n.ventas.filter(v => !v.anulada).forEach(v => {
+        const a = ayudantes.get(v.ayudanteId) || {
+          id: v.ayudanteId, nombre: v.ayudante, negocio: n.nombre,
+          puestos: new Set(), ventas: 0, unidades: 0, total: 0, productos: new Map(),
+        };
+        a.puestos.add(v.puesto);
+        a.ventas += 1;
+        a.total += v.monto;
+        ayudantes.set(v.ayudanteId, a);
+
+        const c = clientes.get(v.clienteId) || {
+          id: v.clienteId, nombre: v.cliente, documento: v.documento,
+          compras: 0, unidades: 0, total: 0, ventas: [],
+        };
+        c.compras += 1;
+        c.total += v.monto;
+        c.ventas.push({ ...v, negocio: n.nombre });
+        clientes.set(v.clienteId, c);
+
+        v.items.forEach(i => {
+          const cant = Number(i.cantidad);
+          const linea = cant * Number(i.precioUnitario);
+          unidadesTotales += cant;
+          unidadesNegocio += cant;
+          a.unidades += cant;
+          c.unidades += cant;
+          a.productos.set(i.nombreProducto, (a.productos.get(i.nombreProducto) || 0) + cant);
+          prodNegocio.set(i.nombreProducto, (prodNegocio.get(i.nombreProducto) || 0) + cant);
+          const p = productos.get(i.nombreProducto) || { nombre: i.nombreProducto, unidades: 0, ingresos: 0, negocios: new Set() };
+          p.unidades += cant;
+          p.ingresos += linea;
+          p.negocios.add(n.nombre);
+          productos.set(i.nombreProducto, p);
+        });
+      });
+      const [top, topUnidades] = [...prodNegocio.entries()].sort((x, y) => y[1] - x[1])[0] || [null, 0];
+      estrellas.push({
+        id: n.id,
+        negocio: n.nombre,
+        producto: top,
+        unidades: topUnidades,
+        unidadesNegocio,
+        pct: unidadesNegocio ? Math.round((topUnidades / unidadesNegocio) * 1000) / 10 : 0,
+        productosDistintos: prodNegocio.size,
       });
     });
-    return Object.entries(consumos)
-      .map(([nombre, monto]) => ({ nombre, monto }))
-      .sort((a, b) => b.monto - a.monto);
+
+    const masVendido = (m) => [...m.entries()].sort((x, y) => y[1] - x[1])[0];
+    return {
+      unidadesTotales,
+      productos: [...productos.values()]
+        .map(p => ({ ...p, negocios: [...p.negocios].join(', '), ingresos: Math.round(p.ingresos) }))
+        .sort((a, b) => b.unidades - a.unidades || b.ingresos - a.ingresos),
+      estrellas: estrellas.sort((a, b) => b.unidades - a.unidades),
+      ayudantes: [...ayudantes.values()]
+        .map(a => {
+          const [prod, cant] = masVendido(a.productos) || [null, 0];
+          return {
+            id: a.id, nombre: a.nombre, negocio: a.negocio, puestos: [...a.puestos].join(', '),
+            ventas: a.ventas, unidades: a.unidades, total: a.total, productoTop: prod, productoTopUnidades: cant,
+          };
+        })
+        .sort((a, b) => b.total - a.total),
+      clientes: [...clientes.values()].sort((a, b) => b.total - a.total),
+    };
   }, [datos]);
+
+  const topClientesOrdenados = estadisticasVentas.clientes;
+  const [clienteAbierto, setClienteAbierto] = useState(null);
+  const [ventaDetalle, setVentaDetalle] = useState(null);
 
   // --- RESUMEN FINANCIERO GENERAL (para que el dashboard no se vea vacío) ---
   const totalRecargadoEvento = useMemo(() => sumar(recargadoresOrdenados, 'totalRecargado'), [recargadoresOrdenados]);
@@ -568,19 +658,50 @@ export default function Admin({
     return [...porCategoria.values()].sort((a, b) => b.ingresos - a.ingresos);
   }, [datos]);
 
-  const actividadReciente = useMemo(() => {
-    const eventos = [];
-    datos.recargadores.forEach(r => r.recargas.forEach(t => eventos.push({
-      hora: t.hora, tipo: 'recarga', detalle: `${r.nombre} recargó a ${t.participante}`, monto: t.monto,
+  // Actividad del evento: TODOS los movimientos (recargas, devoluciones,
+  // ventas) con quién lo hizo, a quién, dónde y qué. Ordenado por fecha real
+  // (antes se ordenaba por "HH:mm" y cruzaba mal la medianoche).
+  const actividad = useMemo(() => {
+    const filas = [];
+    datos.recargadores.forEach(r => r.recargas.forEach(t => filas.push({
+      key: `r-${t.id}`, tipo: 'recarga', fecha: t.fecha, operador: r.nombre, rolOperador: 'Recargador',
+      participante: t.participante, documento: t.documento, monto: t.monto, saldo: t.saldo, nota: t.nota,
     })));
-    datos.devoluciones.forEach(d => d.retiros.forEach(t => eventos.push({
-      hora: t.hora, tipo: 'devolucion', detalle: `${d.nombre} devolvió saldo a ${t.participante}`, monto: t.monto,
+    datos.devoluciones.forEach(d => d.retiros.forEach(t => filas.push({
+      key: `d-${t.id}`, tipo: 'devolucion', fecha: t.fecha, operador: d.nombre, rolOperador: 'Devolución',
+      participante: t.participante, documento: t.documento, monto: t.monto, saldo: t.saldo,
+      nota: t.nota, motivo: t.motivo, esNegocio: t.esNegocio,
     })));
-    datos.negocios.forEach(n => n.ventas.forEach(t => eventos.push({
-      hora: t.hora, tipo: 'venta', detalle: `${n.nombre} le vendió a ${t.cliente}`, monto: t.monto,
+    datos.negocios.forEach(n => n.ventas.forEach(v => filas.push({
+      key: `v-${v.id}`, tipo: 'venta', fecha: v.fecha, operador: v.ayudante, rolOperador: 'Ayudante',
+      participante: v.cliente, documento: v.documento, monto: v.monto,
+      negocio: n.nombre, puesto: v.puesto, items: v.items, anulada: v.anulada, venta: { ...v, negocio: n.nombre },
     })));
-    return eventos.sort((a, b) => b.hora.localeCompare(a.hora)).slice(0, 8);
+    return filas.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
   }, [datos]);
+
+  const [filtroActividad, setFiltroActividad] = useState('todos');
+  const [busquedaActividad, setBusquedaActividad] = useState('');
+  const filtrosActividad = useMemo(() => {
+    const cuenta = (t) => actividad.filter(a => a.tipo === t).length;
+    return [
+      { valor: 'todos', texto: 'Todos', conteo: actividad.length },
+      { valor: 'recarga', texto: 'Recargas', conteo: cuenta('recarga') },
+      { valor: 'venta', texto: 'Ventas', conteo: cuenta('venta') },
+      { valor: 'devolucion', texto: 'Devoluciones', conteo: cuenta('devolucion') },
+      { valor: 'anulada', texto: 'Anuladas', conteo: actividad.filter(a => a.anulada).length },
+    ];
+  }, [actividad]);
+  const actividadFiltrada = useMemo(() => {
+    const q = busquedaActividad.trim().toLowerCase();
+    return actividad.filter(a =>
+      (filtroActividad === 'todos' ||
+        (filtroActividad === 'anulada' ? a.anulada : a.tipo === filtroActividad)) &&
+      (!q || [a.operador, a.participante, a.documento, a.negocio, a.puesto, a.nota,
+        ...(a.items || []).map(i => i.nombreProducto)]
+        .filter(Boolean).join(' ').toLowerCase().includes(q)),
+    );
+  }, [actividad, filtroActividad, busquedaActividad]);
 
   const iconoActividad = {
     recarga: <FaCoins color="var(--verde-recarga-texto)" />,
@@ -828,6 +949,107 @@ export default function Admin({
             </div>
           </section>
 
+          {/* --- ESTADÍSTICAS DE VENTAS (negocios, productos, ayudantes, clientes) --- */}
+          <section className="pi-dash-seccion">
+            <h3 className="pi-dash-seccion-titulo"><FaChartPie aria-hidden="true" /> Estadísticas de ventas</h3>
+            <div className="pi-dash-resumen-grid">
+              <StatCard
+                icon={<FaTrophy />} tono="total"
+                valor={negociosOrdenados[0]?.nombre || '—'}
+                label="Negocio que más vende"
+                nota={negociosOrdenados[0] ? `${negociosOrdenados[0].ventasTotal} pts` : null}
+                onClick={() => abrirDetalle('negocios')}
+              />
+              <StatCard
+                icon={<FaBoxes />} tono="info"
+                valor={estadisticasVentas.productos[0]?.nombre || '—'}
+                label="Producto más vendido"
+                nota={estadisticasVentas.productos[0] ? `${estadisticasVentas.productos[0].unidades} unidades` : null}
+              />
+              <StatCard
+                icon={<FaMedal />} tono="ok"
+                valor={estadisticasVentas.ayudantes[0]?.nombre || '—'}
+                label="Ayudante que más vende"
+                nota={estadisticasVentas.ayudantes[0]
+                  ? `${estadisticasVentas.ayudantes[0].negocio} · ${estadisticasVentas.ayudantes[0].total} pts`
+                  : null}
+              />
+              <StatCard
+                icon={<FaShoppingBag />}
+                valor={estadisticasVentas.unidadesTotales}
+                label="Unidades vendidas"
+                nota={`${estadisticasVentas.clientes.length} clientes compraron`}
+              />
+            </div>
+
+            <div className="pi-adg-graficos-grid">
+              <GraficoVentasPorNegocio
+                filas={negociosOrdenados.map(n => ({ nombre: n.nombre, total: n.ventasTotal, ventas: n.ventas.filter(v => !v.anulada).length }))}
+              />
+              <GraficoProductosMasVendidos filas={estadisticasVentas.productos} />
+            </div>
+
+            <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado"><FaTrophy color="var(--coral-compra)" /> Producto estrella de cada negocio</h4>
+            <Tabla
+              columnas={['Negocio', 'Producto más consumido', { texto: 'Unidades', align: 'center' }, { texto: '% del negocio', align: 'center' }, { texto: 'Unidades totales', align: 'center' }, { texto: 'Productos distintos', align: 'center' }]}
+              datos={estadisticasVentas.estrellas}
+              vacio="Aún no hay ventas de negocios en este evento."
+              renderFila={e => (
+                <tr key={e.id}>
+                  <td><strong>{e.negocio}</strong></td>
+                  <td>{e.producto || '—'}</td>
+                  <td style={{ textAlign: 'center' }}>{e.unidades}</td>
+                  <td style={{ textAlign: 'center' }}>
+                    <span className="pi-dash-porcentaje pi-dash-badge-ok">{e.pct}%</span>
+                  </td>
+                  <td style={{ textAlign: 'center' }}>{e.unidadesNegocio}</td>
+                  <td style={{ textAlign: 'center' }}>{e.productosDistintos}</td>
+                </tr>
+              )}
+            />
+
+            <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado"><FaMedal color="var(--cian-digital)" /> Ranking de ayudantes</h4>
+            <Tabla
+              columnas={['#', 'Ayudante', 'Negocio', 'Puesto', { texto: 'Ventas', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Lo que más vende', 'Total']}
+              datos={estadisticasVentas.ayudantes}
+              vacio="Aún no hay ventas de ayudantes en este evento."
+              renderFila={(a, i) => (
+                <tr key={a.id}>
+                  <td><span className={`pi-dash-rank${i < 3 ? ` pi-dash-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
+                  <td><strong>{a.nombre}</strong></td>
+                  <td>{a.negocio}</td>
+                  <td>{a.puestos}</td>
+                  <td style={{ textAlign: 'center' }}>{a.ventas}</td>
+                  <td style={{ textAlign: 'center' }}>{a.unidades}</td>
+                  <td>{a.productoTop ? `${a.productoTop} (${a.productoTopUnidades} u.)` : '—'}</td>
+                  <td className="pi-dash-monto-celda">{a.total} pts</td>
+                </tr>
+              )}
+            />
+
+            <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado"><FaUserFriends color="var(--indigo-profundo)" /> Cuánto compra cada cliente</h4>
+            <Tabla
+              columnas={['#', 'Cliente', 'Documento', { texto: 'Compras', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Gastado', { texto: 'Acciones', srOnly: true }]}
+              datos={estadisticasVentas.clientes}
+              vacio="Aún no hay consumo de clientes en este evento."
+              renderFila={(c, i) => (
+                <tr key={c.id}>
+                  <td><span className={`pi-dash-rank${i < 3 ? ` pi-dash-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
+                  <td>{c.nombre}</td>
+                  <td>{c.documento || '—'}</td>
+                  <td style={{ textAlign: 'center' }}>{c.compras}</td>
+                  <td style={{ textAlign: 'center' }}>{c.unidades}</td>
+                  <td className="pi-dash-monto-celda">{c.total} pts</td>
+                  <td>
+                    <button type="button" className="pi-dash-btn-ver" onClick={() => setClienteAbierto(c)}>
+                      <FaListUl /> Ver compras
+                    </button>
+                  </td>
+                </tr>
+              )}
+            />
+          </section>
+
           {/* --- ENTRADAS AL EVENTO --- */}
           <section className="pi-dash-seccion">
             <h3 className="pi-dash-seccion-titulo">Entradas al Evento</h3>
@@ -890,20 +1112,104 @@ export default function Admin({
 
           {/* --- ACTIVIDAD RECIENTE --- */}
           <section className="pi-dash-seccion">
-            <h3 className="pi-dash-seccion-titulo"><FaClock color="var(--indigo-profundo)" /> Actividad Reciente</h3>
-            <div className="pi-dash-actividad-lista">
-              {actividadReciente.length === 0 && (
-                <p className="pi-dash-sin-resultados">Todavía no hay actividad en este evento.</p>
-              )}
-              {actividadReciente.map((a, i) => (
-                <div className="pi-dash-actividad-item" key={i}>
-                  <span className="pi-dash-actividad-icono">{iconoActividad[a.tipo]}</span>
-                  <span className="pi-dash-actividad-detalle">{a.detalle}</span>
-                  {a.monto !== null && <span className="pi-dash-actividad-monto">{a.monto} pts</span>}
-                  <span className="pi-dash-actividad-hora">{a.hora}</span>
-                </div>
-              ))}
-            </div>
+            <h3 className="pi-dash-seccion-titulo"><FaClock color="var(--indigo-profundo)" /> Actividad del Evento</h3>
+            <Buscador
+              valor={busquedaActividad}
+              onCambio={setBusquedaActividad}
+              placeholder="Buscar por persona, documento, negocio o producto…"
+              etiqueta="Buscar actividad"
+              filtros={filtrosActividad}
+              filtroActivo={filtroActividad}
+              onFiltro={setFiltroActividad}
+              etiquetaFiltros="Filtrar actividad por tipo"
+            />
+            <Tabla
+              columnas={['Movimiento', 'Realizado por', 'Participante', 'Lugar / Detalle', 'Monto', 'Fecha / Hora']}
+              datos={actividadFiltrada}
+              porPagina={10}
+              vacio={actividad.length === 0
+                ? 'Todavía no hay actividad en este evento.'
+                : 'Ningún movimiento coincide con la búsqueda.'}
+              renderFila={a => {
+                const f = new Date(a.fecha);
+                let detalle;
+                if (a.tipo === 'venta') {
+                  detalle = (
+                    <span className="pi-dash-act-detalle">
+                      <strong>{a.negocio} · {a.puesto}</strong>
+                      {a.items.length > 0 ? a.items.map(i => (
+                        <span key={i.id} className="pi-dash-act-item">
+                          <span>{i.cantidad}× {i.nombreProducto}</span>
+                          <span className="pi-dash-act-precio">
+                            {Number(i.precioUnitario) * i.cantidad} pts{i.cantidad > 1 && ` (${Number(i.precioUnitario)} c/u)`}
+                          </span>
+                        </span>
+                      )) : <span className="pi-dash-act-sub">Venta sin detalle de productos</span>}
+                    </span>
+                  );
+                } else if (a.tipo === 'devolucion') {
+                  detalle = (
+                    <span className="pi-dash-act-detalle">
+                      <strong>{a.esNegocio ? 'Retiro de ganancias de negocio' : 'Retiro de saldo'}</strong>
+                      {(a.motivo || a.nota) && (
+                        <span className="pi-dash-act-sub">
+                          {[a.motivo && String(a.motivo).replaceAll('_', ' '), a.nota].filter(Boolean).join(' · ')}
+                        </span>
+                      )}
+                    </span>
+                  );
+                } else {
+                  detalle = (
+                    <span className="pi-dash-act-detalle">
+                      <strong>Carga de saldo</strong>
+                      {a.nota && <span className="pi-dash-act-sub">{a.nota}</span>}
+                    </span>
+                  );
+                }
+                const signo = a.tipo === 'recarga' ? '+' : '-';
+                return (
+                  <tr key={a.key} className={a.anulada ? 'pi-dash-fila-anulada' : ''}>
+                    <td>
+                      <span className="pi-dash-act-tipo">
+                        {iconoActividad[a.tipo]}
+                        {{ recarga: 'Recarga de saldo', devolucion: 'Devolución', venta: 'Venta en puesto' }[a.tipo]}
+                      </span>
+                      {a.anulada && <span className="pi-dash-badge-anulada">Anulada</span>}
+                    </td>
+                    <td>
+                      <span className="pi-dash-act-detalle">
+                        <strong>{a.operador}</strong>
+                        <span className="pi-dash-act-sub">{a.rolOperador}</span>
+                      </span>
+                    </td>
+                    <td>
+                      <span className="pi-dash-act-detalle">
+                        <strong>{a.participante}</strong>
+                        {a.documento && <span className="pi-dash-act-sub">Doc. {a.documento}</span>}
+                      </span>
+                    </td>
+                    <td>{detalle}</td>
+                    <td>
+                      <span className="pi-dash-act-detalle">
+                        <strong className={a.tipo === 'recarga' ? 'pi-dash-act-mas' : ''}>{signo}{a.monto} pts</strong>
+                        {a.saldo != null && <span className="pi-dash-act-sub">Saldo: {a.saldo} pts</span>}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="pi-dash-act-detalle">
+                        <span>{f.toLocaleDateString('es-BO')}</span>
+                        <span className="pi-dash-act-sub">{f.toLocaleTimeString('es-BO')}</span>
+                      </span>
+                      {a.venta && (
+                        <button type="button" className="pi-dash-btn-ver" onClick={() => setVentaDetalle(a.venta)}>
+                          Detalle
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              }}
+            />
           </section>
         </>
       )}
@@ -1057,15 +1363,24 @@ export default function Admin({
                 <span className="pi-dash-detalle-total">Ventas totales: <strong>{negocioAbierto.ventasTotal} pts</strong> · {negocioAbierto.ayudantes} ayudante(s)</span>
               </div>
               <Tabla
-                columnas={['Hora', 'Cliente', 'Monto', { texto: 'Acciones', srOnly: true }]}
+                columnas={['Hora', 'Cliente', 'Ayudante', 'Productos', 'Monto', { texto: 'Acciones', srOnly: true }]}
                 datos={negocioAbierto.ventas}
                 vacio="Este negocio no tiene ventas."
                 renderFila={(t, i) => (
                   <tr key={t.id || i} className={t.anulada ? 'pi-dash-fila-anulada' : ''}>
                     <td>{t.hora}</td>
                     <td>{t.cliente}</td>
+                    <td>{t.ayudante}</td>
+                    <td>
+                      <ul className="pi-dash-items-lista">
+                        {t.items.map(it => <li key={it.id}><strong>{it.cantidad}×</strong> {it.nombreProducto}</li>)}
+                      </ul>
+                    </td>
                     <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {t.monto} pts</td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button type="button" className="pi-dash-btn-ver" onClick={() => setVentaDetalle({ ...t, negocio: negocioAbierto.nombre })}>
+                        Detalle
+                      </button>{' '}
                       {t.anulada
                         ? <span className="pi-dash-badge-anulada">Anulada</span>
                         : !soloLectura && (
@@ -1110,13 +1425,20 @@ export default function Admin({
 
               <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado"><FaTrophy color="var(--cian-digital)" /> Top Clientes por Consumo</h4>
               <Tabla
-                columnas={['Cliente', 'Consumo Total']}
+                columnas={['Cliente', { texto: 'Compras', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Consumo Total', { texto: 'Acciones', srOnly: true }]}
                 datos={topClientesOrdenados}
                 vacio="Aún no hay consumo de clientes en este evento."
-                renderFila={(c, i) => (
-                  <tr key={i}>
+                renderFila={(c) => (
+                  <tr key={c.id}>
                     <td>{c.nombre}</td>
-                    <td className="pi-dash-monto-celda">{c.monto} pts</td>
+                    <td style={{ textAlign: 'center' }}>{c.compras}</td>
+                    <td style={{ textAlign: 'center' }}>{c.unidades}</td>
+                    <td className="pi-dash-monto-celda">{c.total} pts</td>
+                    <td>
+                      <button type="button" className="pi-dash-btn-ver" onClick={() => setClienteAbierto(c)}>
+                        <FaListUl /> Ver compras
+                      </button>
+                    </td>
                   </tr>
                 )}
               />
@@ -1547,6 +1869,53 @@ export default function Admin({
             </button>
           </div>
         </Modal>
+      )}
+
+      {clienteAbierto && !ventaDetalle && (
+        <Modal titulo={`Compras de ${clienteAbierto.nombre}`} onCerrar={() => setClienteAbierto(null)} tamano="lg">
+          <div className="pi-dash-cliente-resumen">
+            <StatCard icon={<FaShoppingBag />} valor={clienteAbierto.compras} label="Compras" />
+            <StatCard icon={<FaBoxes />} tono="info" valor={clienteAbierto.unidades} label="Unidades" />
+            <StatCard icon={<FaCoins />} tono="ok" valor={`${clienteAbierto.total} pts`} label="Gastado" />
+          </div>
+          <Tabla
+            columnas={['Hora', 'Negocio', 'Productos', 'Monto', { texto: 'Acciones', srOnly: true }]}
+            datos={clienteAbierto.ventas}
+            porPagina={8}
+            renderFila={(v) => (
+              <tr key={v.id}>
+                <td>{v.hora}</td>
+                <td>{v.negocio}</td>
+                <td>
+                  <ul className="pi-dash-items-lista">
+                    {v.items.map(it => <li key={it.id}><strong>{it.cantidad}×</strong> {it.nombreProducto}</li>)}
+                  </ul>
+                </td>
+                <td className="pi-dash-monto-celda">{v.monto} pts</td>
+                <td>
+                  <button type="button" className="pi-dash-btn-ver" onClick={() => setVentaDetalle(v)}>Detalle</button>
+                </td>
+              </tr>
+            )}
+          />
+        </Modal>
+      )}
+
+      {ventaDetalle && (
+        <DetalleVentaModal
+          venta={{
+            fecha: ventaDetalle.fecha,
+            cliente: ventaDetalle.cliente,
+            documento: ventaDetalle.documento,
+            puesto: ventaDetalle.negocio ? `${ventaDetalle.negocio} · ${ventaDetalle.puesto}` : ventaDetalle.puesto,
+            ayudante: ventaDetalle.ayudante,
+            anulada: ventaDetalle.anulada,
+            motivoAnulacion: ventaDetalle.motivoAnulacion,
+            monto: ventaDetalle.monto,
+            items: ventaDetalle.items,
+          }}
+          onCerrar={() => setVentaDetalle(null)}
+        />
       )}
 
       {ventaAnular && (

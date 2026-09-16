@@ -69,7 +69,5 @@ button.badge-puesto--btn:hover { background-color: var(--cian-digital); color: v
 /* Footer de acciones -> .modal-actions global (styles/forms.css);
    botones -> .btn-primario / .btn-cancelar global (styles/buttons.css) */
 
-.animate-fade { animation: fadeIn 0.4s ease-out forwards; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 600px) { .pi-ayudante-search { max-width: 100%; } }

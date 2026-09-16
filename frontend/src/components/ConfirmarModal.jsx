@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { FaExclamationTriangle } from 'react-icons/fa';
 import { useFocoModal } from '../utils/useFocoModal.js';
+import { bloquearScroll } from '../utils/bloqueoScroll.js';
 import './ConfirmarModal.css';
 
 /*
@@ -40,9 +41,8 @@ export function useConfirmar() {
 
   // Bloqueo de scroll del fondo mientras el diálogo está abierto (Manual 8.6).
   useEffect(() => {
-    if (!abierto) return;
-    document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = ''; };
+    if (!abierto) return undefined;
+    return bloquearScroll();
   }, [abierto]);
 
   const confirmar = useCallback((opciones = {}) => {

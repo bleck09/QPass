@@ -7,3 +7,14 @@
   font-size: var(--text-sm);
   padding: 8px 0;
 }
+
+/* Móvil: las grillas de cada vista usan columnas fijas de 300–340px alineadas
+   a la izquierda, que en celular dejaban un hueco a la derecha (o se salían en
+   pantallas muy angostas). Acá una sola columna a todo el ancho, para TODAS
+   las vistas que usan <GrillaEventos>, sin tocar cada CSS de página. */
+@media (max-width: 720px) {
+  .qp-grilla-eventos > div:first-child {
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+  }
+}

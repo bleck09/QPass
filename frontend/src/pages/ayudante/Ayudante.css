@@ -163,6 +163,50 @@
   color: var(--text-primary);
 }
 
+/* Móvil: cabecera del puesto compacta. Logo chico al lado del texto y
+   "Vendido hoy" como franja horizontal (etiqueta a la izquierda, monto a la
+   derecha) en vez de una caja alta. */
+@media (max-width: 600px) {
+  .pi-ayu-pos-header {
+    gap: var(--space-3);
+    padding: var(--space-4);
+  }
+  .pi-ayu-header-negocio {
+    align-items: flex-start;
+    gap: var(--space-3);
+  }
+  .pi-ayu-header-texto { gap: 4px; }
+  .pi-ayu-logo-negocio,
+  .pi-ayu-logo-placeholder {
+    width: 52px;
+    height: 52px;
+    font-size: var(--text-lg);
+  }
+  .pi-ayu-eyebrow { font-size: var(--text-xs); letter-spacing: 0.4px; }
+  .pi-ayu-header-negocio h1,
+  .pi-ayu-header-negocio h2 { font-size: var(--text-xl); }
+  .pi-ayu-header-negocio p { font-size: var(--text-xs); }
+  .pi-ayu-header-meta { gap: 6px; margin-top: 2px; }
+  .pi-ayu-header-chip {
+    padding: 3px 10px;
+    font-size: var(--text-xs);
+  }
+
+  .pi-ayu-pos-header .pi-ayu-kpi {
+    flex: 1 1 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+  }
+  .pi-ayu-kpi .micro-etiqueta {
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+  .pi-ayu-kpi .numero-grande { font-size: var(--text-lg); }
+}
+
 /* --- TABS --- */
 .pi-ayu-tabs {
   display: flex;
@@ -552,13 +596,110 @@
   object-fit: cover;
 }
 
-.pi-ayu-badge-items {
+/* --- Historial: resumen + cantidades por producto + detalle --- */
+.pi-ayu-hist-resumen {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.pi-ayu-hist-productos {
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
+.pi-ayu-hist-productos h4 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-base);
+  color: var(--text-primary);
+}
+
+.pi-ayu-hist-productos ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.pi-ayu-hist-productos li {
+  display: grid;
+  grid-template-columns: minmax(90px, 1.2fr) 2fr auto auto;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+}
+
+.pi-ayu-hist-prod-nombre {
+  font-weight: var(--weight-semibold);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pi-ayu-hist-prod-barra {
+  height: 10px;
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  overflow: hidden;
+}
+
+.pi-ayu-hist-prod-barra span {
+  display: block;
+  height: 100%;
+  border-radius: var(--radius-full);
+  background: var(--viz-serie-1);
+}
+
+.pi-ayu-hist-prod-cant {
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.pi-ayu-hist-prod-total {
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.pi-ayu-items-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-snug);
+}
+
+.pi-ayu-fila-venta {
+  cursor: pointer;
+}
+
+.pi-ayu-fila-anulada td {
+  color: var(--text-muted);
+}
+
+.pi-ayu-badge-anulada {
   font-size: var(--text-xs);
   font-weight: 700;
   padding: 4px 8px;
   border-radius: var(--radius-xl);
-  background-color: var(--indigo-profundo-suave);
-  color: var(--indigo-profundo);
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
+@media (max-width: 520px) {
+  .pi-ayu-hist-productos li {
+    grid-template-columns: 1fr auto auto;
+  }
+  .pi-ayu-hist-prod-barra {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }
 
 .pi-ayu-monto-celda {

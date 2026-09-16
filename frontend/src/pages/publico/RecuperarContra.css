@@ -1,11 +1,5 @@
 /* =======================================================
    RECUPERAR CONTRASEÑA — todo lo visual (split screen, panel,
    foto, campos, icono de paso, OTP) vive en auth.css.
-   Solo la animación de cambio de paso queda acá.
+   La animación de cambio de paso es la .animate-fade global (styles/index.css).
 ======================================================= */
-
-.animate-fade { animation: authFadeIn 0.35s var(--ease-out) forwards; }
-@keyframes authFadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}

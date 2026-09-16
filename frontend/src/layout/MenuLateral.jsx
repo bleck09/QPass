@@ -11,6 +11,7 @@ import { ROLES, ROLE_LABELS } from '../constants/roles.js';
 import { leerSesion, guardarSesion, cerrarSesion } from '../api/client.js';
 import api from '../api/index.js';
 import { leerTema, aplicarTema } from '../utils/tema.js';
+import { revisarBloqueoScroll } from '../utils/bloqueoScroll.js';
 import './MenuLateral.css';
 
 // Configuración de menús según el rol
@@ -86,6 +87,12 @@ export default function MenuLateral({ children }) {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Red de seguridad: al cambiar de pantalla, si no quedó ningún modal abierto,
+  // la página nunca debe seguir sin scroll.
+  useEffect(() => {
+    revisarBloqueoScroll();
+  }, [location.pathname]);
 
   useEffect(() => {
     const actualizar = () => setUsuario(leerUsuarioGuardado());

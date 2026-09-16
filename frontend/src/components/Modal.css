@@ -18,6 +18,7 @@
   flex-direction: column;
   width: 100%;
   max-height: calc(100vh - var(--space-8));
+  max-height: calc(100dvh - var(--space-8));
   background: var(--bg-surface);
   color: var(--text-primary);
   border: 1px solid var(--border);
