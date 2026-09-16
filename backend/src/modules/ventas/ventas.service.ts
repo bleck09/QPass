@@ -46,7 +46,12 @@ export class VentasService {
             base: { select: { nombre: true } },
           },
         },
-        entrada: { select: { id: true, nombre: true, documento: true, foto: true } },
+        entrada: {
+          select: {
+            id: true, nombre: true, foto: true,
+            usuario: { select: { ci: true } },
+          },
+        },
         ayudante: { select: { id: true, nombre: true } },
       },
       orderBy: { createdAt: 'desc' },

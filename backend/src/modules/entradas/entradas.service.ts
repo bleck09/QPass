@@ -25,8 +25,11 @@ const CODIGO_ACTIVO = {
 
 // El titular de la entrada. El saldo se adjunta después (adjuntarSaldoEvento),
 // porque vive en BilleteraEvento keyed por (usuarioId, eventoId de la entrada).
+// `ci` viaja porque Recargador, Devolución, Ayudante y Supervisor tienen que
+// verificar contra el carnet antes de mover plata o entregar una manilla.
+// Es EL documento de identidad del sistema: obligatorio al completar el perfil.
 const CON_SALDO = {
-  usuario: { select: { id: true, foto: true } },
+  usuario: { select: { id: true, foto: true, ci: true, nombre: true } },
 } satisfies Prisma.EntradaInclude;
 
 // Jornada (noche) a la que pertenece la entrada. Se muestra en el control de
@@ -261,7 +264,12 @@ export class EntradasService {
    * activo, se anula primero — nunca dos códigos activos por persona (además
    * está el índice único parcial de C4).
    */
-  async vincularQr(id: string, codigoQrId: string, actorId: number) {
+  async vincularQr(
+    id: string,
+    codigoQrId: string,
+    actorId: number,
+    motivo?: string,
+  ) {
     await this.eventoPolicy.porEntrada(id);
     const entradaActual = await this.prisma.entrada.findUnique({
       where: { id },
@@ -301,7 +309,10 @@ export class EntradasService {
               where: { id: anteriorActivo.id },
               data: {
                 anulado: true,
-                motivoAnulacion: 'Reemplazada al vincular una nueva',
+                // El motivo real lo da el Supervisor al hacer el cambio; si no
+                // manda ninguno queda el generico de siempre.
+                motivoAnulacion:
+                  motivo?.trim() || 'Reemplazada al vincular una nueva',
                 anuladoPorId: actorId,
                 anuladoEn: new Date(),
               },

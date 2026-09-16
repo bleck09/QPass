@@ -44,7 +44,12 @@ export class IncidenciasRecargaService {
         eventoId: filtros.eventoId,
       },
       include: {
-        entrada: { select: { nombre: true, documento: true, foto: true } },
+        entrada: {
+          select: {
+            nombre: true, foto: true,
+            usuario: { select: { ci: true } },
+          },
+        },
         evento: { select: { nombre: true } },
         recargador: { select: { nombre: true } },
         resueltoPor: { select: { nombre: true } },

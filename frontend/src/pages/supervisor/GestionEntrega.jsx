@@ -16,7 +16,8 @@ import {
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { estadoEvento, filtrarEventos, nombreJornada, mostrarJornada, opcionesJornada, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { estadoEvento, filtrarEventos, nombreJornada, mostrarJornada, opcionesJornada, FILTROS_ESTADO_EVENTO, ciDeEntrada } from '../../utils/eventos.js';
+import { MOTIVOS_CAMBIO_MANILLA, MOTIVO_OTRO } from '../../constants/manillas.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
@@ -54,6 +55,10 @@ export default function GestionEntrega() {
   const [participanteVinculando, setParticipanteVinculando] = useState(null);
   const [escaneando, setEscaneando] = useState(false);
   const [codigoValidado, setCodigoValidado] = useState(null);
+  // Motivo del cambio de manilla: se guarda como motivoAnulacion de la que se
+  // reemplaza, para poder auditar despues cuantas se perdieron o fallaron.
+  const [motivoCambio, setMotivoCambio] = useState('');
+  const [detalleMotivo, setDetalleMotivo] = useState('');
   const [errorCodigo, setErrorCodigo] = useState('');
   const [validando, setValidando] = useState(false);
 
@@ -127,11 +132,17 @@ export default function GestionEntrega() {
     { texto: 'Acciones', srOnly: true },
   ], [multiJornada]);
 
+  const esReemplazo = !!participanteVinculando?.codigoQrVinculado;
+  const motivoListo = motivoCambio !== ''
+    && (motivoCambio !== MOTIVO_OTRO || detalleMotivo.trim() !== '');
+
   const abrirVincular = (participante) => {
     setParticipanteVinculando(participante);
     setCodigoValidado(null);
     setErrorCodigo('');
     setEscaneando(false);
+    setMotivoCambio('');
+    setDetalleMotivo('');
   };
 
   const cerrarVincular = () => {
@@ -139,6 +150,8 @@ export default function GestionEntrega() {
     setCodigoValidado(null);
     setErrorCodigo('');
     setEscaneando(false);
+    setMotivoCambio('');
+    setDetalleMotivo('');
   };
 
   // Al detectar un código con la cámara, primero se le pregunta a la base si existe, si es de
@@ -167,7 +180,13 @@ export default function GestionEntrega() {
 
   const confirmarVinculo = async () => {
     if (!codigoValidado || !participanteVinculando) return;
-    await api.entradas.vincularQr(participanteVinculando.id, codigoValidado.id);
+    if (esReemplazo && !motivoListo) return;
+    // El motivo viaja SOLO en un reemplazo: en la primera entrega no hay
+    // manilla anterior que anular, asi que no hay nada que justificar.
+    const motivo = esReemplazo
+      ? (motivoCambio === MOTIVO_OTRO ? detalleMotivo.trim() : motivoCambio)
+      : undefined;
+    await api.entradas.vincularQr(participanteVinculando.id, codigoValidado.id, motivo);
     refrescarEvento(eventoIdDetalle);
     cerrarVincular();
   };
@@ -227,7 +246,7 @@ export default function GestionEntrega() {
           </div>
           <div className="pi-entrega-preview-fila">
             <span><FaIdCard /> Documento</span>
-            <strong>{p.documento || '—'}</strong>
+            <strong>{ciDeEntrada(p) || '—'}</strong>
           </div>
           <div className="pi-entrega-preview-fila">
             <span><FaEnvelope /> Correo</span>
@@ -295,9 +314,47 @@ export default function GestionEntrega() {
             </button>
           )}
 
+          {/* El motivo solo se pide cuando hay una manilla anterior que anular.
+              En la primera entrega no hay nada que justificar. */}
+          {esReemplazo && codigoValidado && (
+            <div className="pi-entrega-motivo formulario">
+              <div className="input-group">
+                <label htmlFor="motivo-cambio">¿Por qué se cambia la manilla?</label>
+                <select
+                  id="motivo-cambio"
+                  value={motivoCambio}
+                  onChange={(e) => setMotivoCambio(e.target.value)}
+                >
+                  <option value="">Elegí un motivo…</option>
+                  {MOTIVOS_CAMBIO_MANILLA.map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+
+              {motivoCambio === MOTIVO_OTRO && (
+                <div className="input-group">
+                  <label htmlFor="motivo-detalle">Contanos qué pasó</label>
+                  <input
+                    id="motivo-detalle"
+                    type="text"
+                    value={detalleMotivo}
+                    onChange={(e) => setDetalleMotivo(e.target.value)}
+                    placeholder="Ej.: se le soltó el broche"
+                    maxLength={120}
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="pi-entrega-modal-acciones">
             <button className="pi-entrega-btn-cancelar" onClick={cerrarVincular}>Cancelar</button>
-            <button className="pi-entrega-btn-confirmar" onClick={confirmarVinculo} disabled={!codigoValidado}>
+            <button
+              className="pi-entrega-btn-confirmar"
+              onClick={confirmarVinculo}
+              disabled={!codigoValidado || (esReemplazo && !motivoListo)}
+            >
               <FaLink /> {p.codigoQrVinculado ? 'Reemplazar manilla' : 'Vincular manilla'}
             </button>
           </div>
@@ -402,7 +459,7 @@ export default function GestionEntrega() {
                   </td>
                 )}
                 <td>{p.categoriaTicket?.nombre || '—'}</td>
-                <td>{p.documento || <span className="pi-entrega-dato-falta">Sin documento</span>}</td>
+                <td>{ciDeEntrada(p) || <span className="pi-entrega-dato-falta">Sin documento</span>}</td>
                 <td>
                   {p.codigoQrVinculado
                     ? <span className="pi-entrega-badge pi-entrega-badge-ok"><FaCheckCircle /> {p.codigoQrVinculado.codigo}</span>
@@ -565,7 +622,7 @@ export default function GestionEntrega() {
                   <FaIdCard className="info-icon" />
                   <div>
                     <span className="info-label">Documento</span>
-                    <span className="info-valor">{entradaVerificada.documento || '—'}</span>
+                    <span className="info-valor">{ciDeEntrada(entradaVerificada) || '—'}</span>
                   </div>
                 </div>
                 <div className="info-row">

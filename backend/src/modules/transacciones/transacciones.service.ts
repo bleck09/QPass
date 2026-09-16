@@ -196,7 +196,12 @@ export class TransaccionesService {
       },
       include: {
         operador: { select: { id: true, nombre: true } },
-        entrada: { select: { id: true, nombre: true, documento: true, foto: true } },
+        entrada: {
+          select: {
+            id: true, nombre: true, foto: true,
+            usuario: { select: { ci: true } },
+          },
+        },
         evento: { select: { id: true, nombre: true } },
         // Detalle de la compra (consumo / reverso_consumo): puesto y productos,
         // para que "Mi historial" muestre en qué se gastó y no solo el monto.

@@ -162,3 +162,16 @@ export const formatearFecha = (fechaISO, conHora = true) => {
     : { day: '2-digit', month: 'short', year: 'numeric' };
   return fecha.toLocaleString('es-BO', opciones);
 };
+
+/**
+ * CI de la persona de una entrada escaneada.
+ *
+ * Sale del Usuario titular, que es donde vive el documento de identidad real
+ * y donde es OBLIGATORIO (se exige al completar el perfil). Antes cada
+ * pantalla lo leia de `Entrada.documento`, una columna que nunca se escribia
+ * y por eso siempre mostraban vacio; esa columna ya no existe.
+ *
+ * Sigue centralizado en un helper para que si manana el dato cambia de lugar
+ * se toque un solo archivo y no las 22 pantallas que lo muestran.
+ */
+export const ciDeEntrada = (entrada) => entrada?.usuario?.ci || null;

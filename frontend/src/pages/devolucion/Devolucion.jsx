@@ -18,7 +18,7 @@ import {
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirFotoCapturada } from '../../utils/imagenes.js';
-import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO, ciDeEntrada } from '../../utils/eventos.js';
 import CorteCaja from '../../components/CorteCaja.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import AvisoSinCaja from '../../components/AvisoSinCaja.jsx';
@@ -107,7 +107,7 @@ export default function Devolucion() {
     const q = busquedaHist.trim().toLowerCase();
     if (!q) return retiros;
     return retiros.filter((item) =>
-      `${item.entrada?.nombre || ''} ${item.entrada?.documento || ''}`.toLowerCase().includes(q),
+      `${item.entrada?.nombre || ''} ${ciDeEntrada(item.entrada) || ''}`.toLowerCase().includes(q),
     );
   }, [retiros, busquedaHist]);
 
@@ -390,7 +390,7 @@ export default function Devolucion() {
                     <span>{item.entrada?.nombre || '—'}</span>
                   </div>
                 </td>
-                <td>{item.entrada?.documento || '—'}</td>
+                <td>{ciDeEntrada(item.entrada) || '—'}</td>
                 <td>
                   <span className="pi-dev-badge-tipo normal">
                     <FaUser /> Normal
@@ -464,7 +464,7 @@ export default function Devolucion() {
                       <FaIdCard />
                       <div>
                         <span className="label">Documento</span>
-                        <span className="valor">{tarjetaQR.documento || tarjetaQR.ci || '—'}</span>
+                        <span className="valor">{ciDeEntrada(tarjetaQR) || '—'}</span>
                       </div>
                     </div>
                   )}

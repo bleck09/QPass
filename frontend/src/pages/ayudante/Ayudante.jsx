@@ -11,7 +11,8 @@ import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import Migas from '../../components/Migas.jsx';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import { useApi } from '../../utils/useApi.js';
-import { estadoEvento, imagenEvento, formatearFecha, nombreJornada, mostrarJornada, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import FotoZoom from '../../components/FotoZoom.jsx';
+import { estadoEvento, imagenEvento, formatearFecha, nombreJornada, mostrarJornada, FILTROS_ESTADO_EVENTO, ciDeEntrada } from '../../utils/eventos.js';
 import { estadoStockProducto } from '../../utils/stock.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import {
@@ -200,7 +201,7 @@ export default function Ayudante() {
     const q = busquedaVentas.trim().toLowerCase();
     if (!q) return ventas;
     return ventas.filter((v) =>
-      `${v.entrada?.nombre || ''} ${v.entrada?.documento || ''}`.toLowerCase().includes(q),
+      `${v.entrada?.nombre || ''} ${ciDeEntrada(v.entrada) || ''}`.toLowerCase().includes(q),
     );
   }, [ventas, busquedaVentas]);
 
@@ -673,11 +674,11 @@ export default function Ayudante() {
                 <tr key={venta.id}>
                   <td>
                     <div className="pi-ayu-fila-persona">
-                      {venta.entrada?.foto && <img width="34" height="34" src={venta.entrada.foto} alt={venta.entrada.nombre} className="pi-ayu-mini-avatar" />}
+                      {venta.entrada?.foto && <FotoZoom width={34} height={34} src={venta.entrada.foto} alt={venta.entrada.nombre} className="pi-ayu-mini-avatar" />}
                       <span>{venta.entrada?.nombre || '—'}</span>
                     </div>
                   </td>
-                  <td>{venta.entrada?.documento || '—'}</td>
+                  <td>{ciDeEntrada(venta.entrada) || '—'}</td>
                   <td>
                     <span className="pi-ayu-badge-items">
                       {cantidadItems} {cantidadItems === 1 ? 'producto' : 'productos'}
@@ -727,7 +728,15 @@ export default function Ayudante() {
                     : <><FaCheckCircle /> Código QR Válido</>}
                 </div>
 
-                {tarjetaQR.foto && <img width="120" height="120" src={tarjetaQR.foto} alt={tarjetaQR.nombre} className="pi-ayu-tarjeta-foto" />}
+                {(tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
+                  <FotoZoom
+                    width={120}
+                    height={120}
+                    src={tarjetaQR.usuario?.foto || tarjetaQR.foto}
+                    alt={`Foto de ${tarjetaQR.nombre}`}
+                    className="pi-ayu-tarjeta-foto"
+                  />
+                )}
                 <h2 className="pi-ayu-tarjeta-nombre">{tarjetaQR.nombre}</h2>
 
                 <div className="pi-ayu-tarjeta-datos">
@@ -735,7 +744,7 @@ export default function Ayudante() {
                     <FaIdCard />
                     <div>
                       <span className="label">Documento</span>
-                      <span className="valor">{tarjetaQR.documento || '—'}</span>
+                      <span className="valor">{ciDeEntrada(tarjetaQR) || '—'}</span>
                     </div>
                   </div>
                   <div className="pi-ayu-tarjeta-dato">

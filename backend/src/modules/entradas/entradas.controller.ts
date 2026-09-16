@@ -61,7 +61,7 @@ export class EntradasController {
     @Body() dto: VincularQrDto,
     @UsuarioActual('id') actorId: number,
   ) {
-    return this.entradasService.vincularQr(id, dto.codigoQrId, actorId);
+    return this.entradasService.vincularQr(id, dto.codigoQrId, actorId, dto.motivo);
   }
 
   @Post(':id/anular-qr')

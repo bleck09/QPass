@@ -598,7 +598,6 @@ model Entrada {
   nombre    String
   correo    String
   celular   String?
-  documento String?
   foto      String?
 
   estadoIngreso EstadoIngreso @default(pendiente) // cache, ver comentario en el enum

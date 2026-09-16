@@ -112,7 +112,10 @@ export const entradas = {
   buscarPorCodigo: (codigo) => apiGet(`/entradas/buscar/${encodeURIComponent(codigo)}`),
   buscarBasico: (codigo) => apiGet(`/entradas/buscar-basico/${encodeURIComponent(codigo)}`),
   registros: (id) => apiGet(`/entradas/${id}/registros`),
-  vincularQr: (id, codigoQrId) => apiPost(`/entradas/${id}/vincular-qr`, { codigoQrId }),
+  // `motivo` solo aplica cuando la entrada YA tenia una manilla: queda como
+  // motivoAnulacion de la que se reemplaza.
+  vincularQr: (id, codigoQrId, motivo) =>
+    apiPost(`/entradas/${id}/vincular-qr`, { codigoQrId, motivo }),
   anularQr: (id, motivo) => apiPost(`/entradas/${id}/anular-qr`, { motivo }),
   ingreso: (id, foto, eventoId) => apiPost(`/entradas/${id}/ingreso`, { foto, eventoId }),
   salida: (id, foto, eventoId) => apiPost(`/entradas/${id}/salida`, { foto, eventoId }),

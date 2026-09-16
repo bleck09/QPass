@@ -16,7 +16,7 @@ import {
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
-import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO, ciDeEntrada } from '../../utils/eventos.js';
 import CorteCaja from '../../components/CorteCaja.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import AvisoSinCaja from '../../components/AvisoSinCaja.jsx';
@@ -117,7 +117,7 @@ export default function Recargador() {
     const q = busquedaHist.trim().toLowerCase();
     if (!q) return historial;
     return historial.filter((item) =>
-      `${item.entrada?.nombre || ''} ${item.entrada?.documento || ''}`.toLowerCase().includes(q),
+      `${item.entrada?.nombre || ''} ${ciDeEntrada(item.entrada) || ''}`.toLowerCase().includes(q),
     );
   }, [historial, busquedaHist]);
 
@@ -371,7 +371,7 @@ export default function Recargador() {
                     <span>{item.entrada?.nombre || '—'}</span>
                   </div>
                 </td>
-                <td>{item.entrada?.documento || '—'}</td>
+                <td>{ciDeEntrada(item.entrada) || '—'}</td>
                 <td className="pi-rec-monto-celda">+{Number(item.monto)} pts</td>
                 <td>{Number(item.saldoResultante)} pts</td>
                 <td>{new Date(item.createdAt).toLocaleDateString('es-BO')}</td>
@@ -413,7 +413,7 @@ export default function Recargador() {
                     <span>{inc.entrada.nombre}</span>
                   </div>
                 </td>
-                <td>{inc.entrada.documento || '—'}</td>
+                <td>{ciDeEntrada(inc.entrada) || '—'}</td>
                 <td>{Number(inc.montoEntregado)} pts</td>
                 <td>{inc.montoSolicitado != null ? `${Number(inc.montoSolicitado)} pts` : '—'}</td>
                 <td>{inc.nota || '—'}</td>
@@ -536,7 +536,7 @@ export default function Recargador() {
                     <FaIdCard />
                     <div>
                       <span className="label">Documento</span>
-                      <span className="valor">{tarjetaQR.documento}</span>
+                      <span className="valor">{ciDeEntrada(tarjetaQR) || '—'}</span>
                     </div>
                   </div>
                   <div className="pi-rec-tarjeta-dato">
@@ -645,7 +645,7 @@ export default function Recargador() {
                 <FaIdCard />
                 <div>
                   <span className="label">Documento</span>
-                  <span className="valor">{historialAReportar.entrada?.documento || '—'}</span>
+                  <span className="valor">{ciDeEntrada(historialAReportar.entrada) || '—'}</span>
                 </div>
               </div>
               <div className="pi-rec-tarjeta-dato">

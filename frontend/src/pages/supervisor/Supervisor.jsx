@@ -24,7 +24,7 @@ const MARGEN_INGRESO_ANTICIPADO_HORAS = 3;
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { subirFotoCapturada } from '../../utils/imagenes.js';
-import { formatearFecha, nombreJornada, mostrarJornada, opcionesJornada, estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { formatearFecha, nombreJornada, mostrarJornada, opcionesJornada, estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO, ciDeEntrada } from '../../utils/eventos.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
 import FotoZoom from '../../components/FotoZoom.jsx';
@@ -111,7 +111,7 @@ export default function Supervisor() {
         filtroJornada === 'todas' || (p.diaEventoId ?? null) === filtroJornada;
       const coincideBusqueda =
         p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        (p.documento || '').toLowerCase().includes(busqueda.toLowerCase());
+        (ciDeEntrada(p) || '').toLowerCase().includes(busqueda.toLowerCase());
       return coincideFiltro && coincideJornada && coincideBusqueda;
     });
   }, [participantes, filtro, filtroJornada, busqueda]);
@@ -427,7 +427,7 @@ export default function Supervisor() {
                   <span>{p.nombre}</span>
                 </div>
               </td>
-              <td>{p.documento || '—'}</td>
+              <td>{ciDeEntrada(p) || '—'}</td>
               {multiJornada && (
                 <td>
                   {mostrarJornada(p.diaEvento)
@@ -564,7 +564,7 @@ export default function Supervisor() {
                 <FaIdCard className="info-icon" />
                 <div>
                   <span className="info-label">DOCUMENTO</span>
-                  <span className="info-valor">{tarjetaQR.documento || '—'}</span>
+                  <span className="info-valor">{ciDeEntrada(tarjetaQR) || '—'}</span>
                 </div>
               </div>
               <div className="info-row">

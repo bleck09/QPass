@@ -19,7 +19,7 @@ import {
   FaKey
 } from 'react-icons/fa';
 import api from '../../api/index.js';
-import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
+import { filtrarEventos, FILTROS_ESTADO_EVENTO, ciDeEntrada } from '../../utils/eventos.js';
 import { GraficoActividadPorHora, GraficoIngresosPorCategoria } from './GraficosEvento.jsx';
 import './Admin.css';
 // Marco Gráfico/Tabla (.pi-adg-grafico*) compartido con el dashboard general —
@@ -456,7 +456,7 @@ export default function Admin({
     return incidencias.filter(i =>
       filtroCoincideEstado(i.estado) &&
       (!q ||
-        `${i.entrada?.nombre || ''} ${i.entrada?.documento || ''} ${i.recargador?.nombre || ''} ${i.evento?.nombre || ''}`
+        `${i.entrada?.nombre || ''} ${ciDeEntrada(i.entrada) || ''} ${i.recargador?.nombre || ''} ${i.evento?.nombre || ''}`
           .toLowerCase().includes(q)),
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -600,7 +600,7 @@ export default function Admin({
       })
       .filter(p =>
         p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        (p.documento || '').toLowerCase().includes(busqueda.toLowerCase())
+        (ciDeEntrada(p) || '').toLowerCase().includes(busqueda.toLowerCase())
       );
   }, [datos, busqueda, filtroEntradas]);
 
@@ -932,7 +932,7 @@ export default function Admin({
                     <span>{p.nombre}</span>
                   </div>
                 </td>
-                <td>{p.documento || '—'}</td>
+                <td>{ciDeEntrada(p) || '—'}</td>
                 <td>{p.categoriaTicket?.nombre || '—'}</td>
                 <td>
                   {p.estadoIngreso === 'salio'
@@ -1213,7 +1213,7 @@ export default function Admin({
                         <span>{inc.entrada.nombre}</span>
                       </div>
                     </td>
-                    <td>{inc.entrada.documento || '—'}</td>
+                    <td>{ciDeEntrada(inc.entrada) || '—'}</td>
                     <td>{inc.montoEntregado} pts</td>
                     <td>{inc.montoSolicitado != null ? `${inc.montoSolicitado} pts` : '—'}</td>
                     <td>{inc.nota || '—'}</td>
@@ -1456,7 +1456,7 @@ export default function Admin({
         >
           <div className="pi-dash-reporte-datos">
             <div><span>Participante</span><strong>{incidenciaModal.entrada.nombre}</strong></div>
-            <div><span>Documento</span><strong>{incidenciaModal.entrada.documento || '—'}</strong></div>
+            <div><span>Documento</span><strong>{ciDeEntrada(incidenciaModal.entrada) || '—'}</strong></div>
             <div><span>Recargador</span><strong>{incidenciaModal.recargador.nombre}</strong></div>
             {reportesGlobal && <div><span>Evento</span><strong>{incidenciaModal.evento?.nombre || '—'}</strong></div>}
             <div><span>Se le cargó</span><strong>{incidenciaModal.montoEntregado} pts</strong></div>

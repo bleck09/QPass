@@ -92,6 +92,19 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
     });
   }, [embebido]);
 
+  // Embebido (abierto desde Gestion de Eventos) no carga el listado, asi que
+  // `eventoActual` quedaba vacio: el titulo decia "este evento" y el PDF se
+  // bajaba como `qr-evento-...` en vez de llevar el nombre. Se trae el evento
+  // puntual. obtenerAdmin y no obtener: puede estar en borrador.
+  useEffect(() => {
+    if (!embebido || !eventoId) return;
+    let vigente = true;
+    api.eventos.obtenerAdmin(eventoId)
+      .then(ev => { if (vigente && ev) setEventosDisponibles([ev]); })
+      .catch(() => {});
+    return () => { vigente = false; };
+  }, [embebido, eventoId]);
+
 
   const anchoPx = cmAPx(anchoCm) || 180;
   const altoPx = cmAPx(altoCm) || 180;
@@ -182,7 +195,7 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
     setGenerandoPdf({ actual: 0, total: lista.length });
     try {
       const conTamano = lista.map(qr => ({ ...qr, ancho: anchoPx, alto: altoPx }));
-      await construirPdfQr(conTamano, (actual, total) => setGenerandoPdf({ actual, total }));
+      await construirPdfQr(conTamano, (actual, total) => setGenerandoPdf({ actual, total }), eventoActual);
     } finally {
       setGenerandoPdf(null);
     }
