@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
 import Buscador from '../../components/Buscador.jsx';
+import Filtros from '../../components/Filtros.jsx';
 import FiltroJornada from '../../components/FiltroJornada.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import HistorialManillas from '../../components/HistorialManillas.jsx';
 import {
   FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
   FaUsers, FaHourglassHalf, FaExclamationTriangle,
@@ -22,6 +25,8 @@ import EscanerQr from '../../components/EscanerQr.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import ManillaFalsaModal from '../../components/ManillaFalsaModal.jsx';
+import { esManillaFalsa } from '../../utils/duplicados.js';
 import './GestionEntrega.css';
 import './Supervisor.css';
 
@@ -67,6 +72,11 @@ export default function GestionEntrega() {
   // simple vista que el vínculo quedó bien (persona, evento, tipo, N.º, documento).
   const [verificando, setVerificando] = useState(false);
   const [entradaVerificada, setEntradaVerificada] = useState(null);
+  // Copia de una manilla duplicada (detalle que manda el backend).
+  const [manillaFalsa, setManillaFalsa] = useState(null);
+  // Dos vistas en la misma pantalla: la lista de entrega y el historial. Con
+  // muchos invitados, apilarlas obligaba a scrollear toda la tabla para llegar.
+  const [vista, setVista] = useState('participantes');
   const [errorVerificacion, setErrorVerificacion] = useState('');
   const [buscandoVerificacion, setBuscandoVerificacion] = useState(false);
 
@@ -196,10 +206,11 @@ export default function GestionEntrega() {
     setBuscandoVerificacion(true);
     setErrorVerificacion('');
     try {
-      const entrada = await api.entradas.buscarPorCodigo(codigo);
+      const entrada = await api.entradas.buscarPorCodigo(codigo, { contexto: 'entrega' });
       setEntradaVerificada(entrada);
     } catch (err) {
-      setErrorVerificacion(err.message);
+      if (esManillaFalsa(err)) setManillaFalsa(err.detalle);
+      else setErrorVerificacion(err.message);
     } finally {
       setBuscandoVerificacion(false);
     }
@@ -407,6 +418,18 @@ export default function GestionEntrega() {
             <StatCard icon={<FaHourglassHalf />} tono="warn" valor={stats.faltan} label="Falta Entregar" />
           </div>
 
+          <Filtros
+            opciones={[
+              { valor: 'participantes', texto: 'Participantes', conteo: stats.total },
+              { valor: 'historial', texto: 'Historial de manillas' },
+            ]}
+            activo={vista}
+            onCambio={setVista}
+            etiqueta="Ver participantes o historial de manillas"
+            className="pi-entrega-vistas"
+          />
+
+          {vista === 'participantes' && (<>
           <Buscador
             valor={busqueda}
             onCambio={setBusqueda}
@@ -473,6 +496,11 @@ export default function GestionEntrega() {
               </tr>
             )}
           />
+          </>)}
+
+          {vista === 'historial' && (
+            <HistorialManillas eventoId={eventoIdDetalle} titulo={null} />
+          )}
         </>
       ) : (
         <>
@@ -540,7 +568,9 @@ export default function GestionEntrega() {
       {/* MODAL: RESULTADO DE LA VERIFICACIÓN (solo lectura) */}
       {entradaVerificada && (() => {
         const esDeEsteEvento = entradaVerificada.eventoId === eventoIdDetalle;
-        return (
+        // Portal al <body>, igual que <Modal>: adentro de .pi-layout-content esta
+        // capa quedaba por debajo del header del panel (isolation: isolate).
+        return createPortal(
           <div className="pi-sup-modal-overlay" onClick={cerrarVerificacion}>
             <div
               ref={refVerif}
@@ -647,9 +677,14 @@ export default function GestionEntrega() {
                 </button>
               </div>
             </div>
-          </div>
+          </div>,
+          document.body,
         );
       })()}
+
+      {manillaFalsa && (
+        <ManillaFalsaModal detalle={manillaFalsa} onCerrar={() => setManillaFalsa(null)} />
+      )}
 
     </div>
   );

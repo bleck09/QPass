@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
@@ -24,6 +25,8 @@ import EscanerQr from '../../components/EscanerQr.jsx';
 import AvisoSinCaja from '../../components/AvisoSinCaja.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
 import FotoZoom from '../../components/FotoZoom.jsx';
+import ManillaFalsaModal from '../../components/ManillaFalsaModal.jsx';
+import { esManillaFalsa } from '../../utils/duplicados.js';
 import './Devolucion.css';
 import '../supervisor/GestionEntrega.css';
 
@@ -127,6 +130,9 @@ export default function Devolucion() {
 
   // Un mismo escaneo sirve para la manilla de un asistente o el código de retiro
   // de un negocio: se prueba primero como entrada, y si no, como código de negocio.
+  // Copia de una manilla duplicada (detalle que manda el backend).
+  const [manillaFalsa, setManillaFalsa] = useState(null);
+
   const handleCodigoDetectado = async (codigo) => {
     setEscaneando(false);
     setBuscando(true);
@@ -141,8 +147,13 @@ export default function Devolucion() {
     try {
       let entrada = null;
       try {
-        entrada = await api.entradas.buscarPorCodigo(codigo);
-      } catch {
+        entrada = await api.entradas.buscarPorCodigo(codigo, { contexto: 'devolucion' });
+      } catch (err) {
+        // Copia de una manilla duplicada: no se prueba como código de negocio.
+        if (esManillaFalsa(err)) {
+          setManillaFalsa(err.detalle);
+          return;
+        }
         entrada = null; // no es una manilla
       }
       if (entrada) {
@@ -209,6 +220,7 @@ export default function Devolucion() {
       await api.transacciones.devolucion({
         usuarioId: tarjetaQR.usuarioId,
         entradaId: tarjetaQR.tipo === 'Normal' ? tarjetaQR.id : undefined,
+        codigoQr: tarjetaQR.tipo === 'Normal' ? tarjetaQR.codigoQrVinculado?.codigo : undefined,
         monto: valor,
         fotoCarnetUrl: fotoCarnet,
         fotoRostroUrl: fotoRostro || undefined,
@@ -217,6 +229,11 @@ export default function Devolucion() {
         nota: motivoDevol === 'otro' && notaDevol.trim() ? notaDevol.trim() : undefined,
       });
     } catch (err) {
+      if (esManillaFalsa(err)) {
+        cerrarTarjeta();
+        setManillaFalsa(err.detalle);
+        return;
+      }
       // Ej.: la caja se quedó sin efectivo justo ahora (otra devolución recién
       // hecha en paralelo) o el plazo de retiro venció — el backend vuelve a
       // validar todo esto igual, así que este error puede ser la primera
@@ -412,7 +429,7 @@ export default function Devolucion() {
       )}
 
       {/* --- TARJETA GRANDE AL ESCANEAR QR --- */}
-      {tarjetaQR && (
+      {tarjetaQR && createPortal(
         <div className="pi-dev-modal-overlay" onClick={cerrarTarjeta}>
           <div
             ref={refTarjeta}
@@ -655,7 +672,12 @@ export default function Devolucion() {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
+      )}
+
+      {manillaFalsa && (
+        <ManillaFalsaModal detalle={manillaFalsa} onCerrar={() => setManillaFalsa(null)} />
       )}
     </div>
   );

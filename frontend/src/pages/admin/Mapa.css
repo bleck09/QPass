@@ -444,3 +444,36 @@
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--border);}
 .btn-cancelar { background: var(--bg-surface); border: 1px solid var(--border-strong); color: var(--text-primary); padding: 8px 16px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; font-size: var(--text-sm);}
 .btn-cancelar:hover { background: var(--bg-page); }
+/* ============================================================================
+   MÓVIL: la barra del plano ponía el texto de ayuda y los botones en la misma
+   fila, así que el texto quedaba en una columna de una palabra por línea y los
+   botones apretados.
+   ========================================================================= */
+@media (max-width: 640px) {
+  .plano-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 12px 14px;
+  }
+  .toolbar-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  /* El texto de ayuda arriba, a todo el ancho; los botones debajo, de a dos. */
+  .toolbar-actions .info-text,
+  .toolbar-actions .info-text-verde {
+    grid-column: 1 / -1;
+    font-size: var(--text-xs);
+  }
+  .toolbar-actions > button,
+  .plano-toolbar > button {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: var(--text-xs);
+    line-height: 1.25;
+  }
+  .plano-toolbar > .info-text { font-size: var(--text-xs); }
+}

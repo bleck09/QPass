@@ -14,6 +14,18 @@ export const cerrarSesion = () => {
   localStorage.removeItem(CLAVE_SESION);
 };
 
+// Error con el mensaje humano del backend. Algunos errores traen además un
+// `codigo` + `detalle` para que la pantalla muestre algo propio (ej.
+// MANILLA_FALSA -> components/ManillaFalsaModal.jsx).
+const crearError = (data, status) => {
+  const err = new Error(data?.error || `Error ${status}`);
+  if (data?.codigo) {
+    err.codigo = data.codigo;
+    err.detalle = data.detalle;
+  }
+  return err;
+};
+
 const request = async (method, path, body) => {
   const sesion = leerSesion();
   const headers = { 'Content-Type': 'application/json' };
@@ -34,7 +46,7 @@ const request = async (method, path, body) => {
   if (res.status === 204) return null;
 
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
+  if (!res.ok) throw crearError(data, res.status);
   return data;
 };
 
@@ -60,7 +72,7 @@ export const apiUpload = async (path, formData) => {
   }
 
   const data = await res.json().catch(() => null);
-  if (!res.ok) throw new Error(data?.error || `Error ${res.status}`);
+  if (!res.ok) throw crearError(data, res.status);
   return data;
 };
 

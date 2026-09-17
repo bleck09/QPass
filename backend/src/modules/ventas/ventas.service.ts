@@ -19,6 +19,7 @@ import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { TransaccionesService } from '../transacciones/transacciones.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
+import { CasosDuplicadoService } from '../casos-duplicado/casos-duplicado.service';
 import { CrearVentaDto } from './dto/crear-venta.dto';
 
 @Injectable()
@@ -28,6 +29,7 @@ export class VentasService {
     private readonly eventoPolicy: EventoPolicy,
     private readonly transacciones: TransaccionesService,
     private readonly auditoria: AuditoriaService,
+    private readonly casosDuplicado: CasosDuplicadoService,
   ) {}
 
   async listar(filtros: { puestoId?: string; entradaId?: string; eventoId?: string }) {
@@ -58,11 +60,18 @@ export class VentasService {
     });
   }
 
-  async crear(dto: CrearVentaDto, ayudanteId: number) {
+  async crear(dto: CrearVentaDto, actor: UsuarioJwt) {
+    const ayudanteId = actor.id;
+    await this.casosDuplicado.asegurarManillaUsable(dto.codigoQr, {
+      actor,
+      contexto: 'venta',
+      puestoId: dto.puestoId,
+    });
     await this.eventoPolicy.porEntrada(dto.entradaId);
     return this.prisma.$transaction(async (tx) => {
       const entrada = await tx.entrada.findUnique({
         where: { id: dto.entradaId },
+        include: { evento: { select: { nombre: true, estado: true } } },
       });
       if (!entrada) throw new NotFoundException('Entrada no encontrada');
       if (!entrada.usuarioId) {
@@ -71,8 +80,30 @@ export class VentasService {
         );
       }
 
-      const puesto = await tx.puesto.findUnique({ where: { id: dto.puestoId } });
+      const puesto = await tx.puesto.findUnique({
+        where: { id: dto.puestoId },
+        include: { evento: { select: { nombre: true } } },
+      });
       if (!puesto) throw new NotFoundException('Puesto no encontrado');
+
+      // El Ayudante solo cobra por los puestos donde está asignado (PuestoAyudante):
+      // si no, podría acreditarle la venta a un negocio para el que no trabaja.
+      const asignado = await tx.puestoAyudante.findUnique({
+        where: { puestoId_ayudanteId: { puestoId: dto.puestoId, ayudanteId } },
+        select: { id: true },
+      });
+      if (!asignado) {
+        throw new ForbiddenException('No estás asignado a este puesto');
+      }
+
+      // La manilla es de UN evento: su saldo (BilleteraEvento) solo vale ahí. Sin
+      // este control, una manilla de otro evento gastaba su saldo acá y la venta
+      // se acreditaba al negocio en el evento equivocado.
+      if (puesto.eventoId !== entrada.eventoId) {
+        throw new ConflictException(
+          `Esta manilla es del evento "${entrada.evento.nombre}": no se puede cobrar en un puesto de "${puesto.evento.nombre}".`,
+        );
+      }
 
       // El carrito manda ProductoBase.id; el precio/estado (activo/stock) es el
       // de ESTE puesto (ProductoEstado). Sin fila de estado => activo, sin stock.

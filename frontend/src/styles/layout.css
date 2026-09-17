@@ -88,3 +88,96 @@
     grid-column: 1 / -1;
   }
 }
+
+/* ============================================================================
+   GRILLAS DE INDICADORES (<StatCard>) EN MÓVIL
+   Todos los paneles de rol repiten el mismo bloque de KPIs, cada uno con su
+   prefijo propio pero con el MISMO componente adentro. Con columnas de 180–280px
+   caían de a una por fila y alargaban muchísimo cada pantalla en celular: acá
+   van de a dos, una sola vez para todos los roles.
+   (Prefijo .pi-layout-content para ganarle a los CSS de página, que cargan
+   después con la misma especificidad — igual que el bloque de pestañas.)
+   ========================================================================= */
+@media (max-width: 560px) {
+  .pi-layout-content :is(
+    .pi-dash-stats-grid, .pi-dash-resumen-grid, .pi-dash-cliente-resumen,
+    .pi-adqr-kpi-grid, .pi-adtick-kpi-grid, .pi-adg-grid,
+    .pi-ayu-hist-resumen, .pi-cld-grid, .pi-dev-resumen,
+    .pi-rec-historial-stats, .pi-ngd-grid,
+    .pi-sup-stats-grid, .pi-entrega-stats-grid,
+    /* Mismo problema en las grillas de tarjetas chicas (roles, productos,
+       códigos QR, resumen de billetera): una por fila en celular. */
+    .pi-dash-roles-grid, .pi-ayu-productos-grid, .pi-mcat-prod-grid,
+    .pi-usr-bill-grid, .pi-adqr-grid
+  ) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--space-3);
+  }
+}
+
+/* ============================================================================
+   TARJETAS DE ESCANEO DE LOS PANELES DE ROL EN MÓVIL
+   Recargador, Ayudante y Devolución repiten la misma tarjeta grande al escanear
+   una manilla (cada una con su prefijo). En celular entraban larguísimas: foto
+   de 120–140px y 32px de padding. Acá se compactan, una sola vez para todas.
+   (Prefijo `body` porque van por portal al <body>, y para ganarle a los CSS de
+   página que cargan después con la misma especificidad.)
+   ========================================================================= */
+@media (max-width: 560px) {
+  body :is(.pi-rec-modal-overlay, .pi-ayu-modal-overlay, .pi-dev-modal-overlay, .pi-admin-modal-overlay) {
+    padding: 10px;
+  }
+  body :is(.pi-rec-modal-tarjeta, .pi-ayu-modal-tarjeta, .pi-dev-modal-tarjeta) {
+    padding: 20px 16px 16px;
+    max-height: calc(100dvh - 20px);
+    overflow-y: auto;
+  }
+  body :is(.pi-rec-tarjeta-foto, .pi-dev-tarjeta-foto, .pi-ayu-tarjeta-foto) {
+    width: 96px;
+    height: 96px;
+    border-width: 3px;
+  }
+  body :is(.pi-rec-tarjeta-nombre, .pi-ayu-tarjeta-nombre, .pi-dev-tarjeta-nombre) {
+    margin-top: 10px;
+    font-size: var(--text-lg);
+  }
+}
+
+/* ============================================================================
+   ACCIONES DE FILA Y TABLAS EN MÓVIL
+   `.btn-acciones` (Mis Ayudantes, Gestión de Usuarios…) se apilaba en una
+   columna dentro de la celda: cuatro botones a lo alto por fila dejaban la
+   tabla altísima, y el ancho extra empujaba las primeras columnas fuera de la
+   pantalla. Acá van de a dos y las celdas pierden relleno.
+   ========================================================================= */
+@media (max-width: 560px) {
+  .btn-acciones {
+    display: flex;
+    flex-wrap: nowrap;
+    justify-content: center;
+    gap: var(--space-1);
+  }
+  /* Solo ícono: el texto no entra en la celda y se salía del botón. Sigue ahí
+     para lectores de pantalla (mismas reglas que .sr-only). */
+  .btn-acciones__texto {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  .btn-acciones .btn-secundario-sm {
+    justify-content: center;
+    gap: 0;
+    padding: 10px;
+    font-size: var(--text-base);
+  }
+  .qp-tabla th,
+  .qp-tabla td {
+    padding: 8px;
+  }
+}

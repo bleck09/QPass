@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useId, useMemo, useState } from 'react';
 import { FaChevronLeft, FaChevronRight } from 'react-icons/fa';
 import { estadoEvento, ESTADO_EVENTO, diaLocalISO } from '../utils/eventos.js';
 import './CalendarioEventos.css';
@@ -61,6 +61,13 @@ export default function CalendarioEventos({
   // Primer día clickeado de un rango nuevo, hasta que el segundo clic lo
   // cierra (ver comentario de arriba). Solo importa en modoSeleccion.
   const [anclaSeleccion, setAnclaSeleccion] = useState(null);
+
+  // 'mes' (grilla de 7x6) o 'semana' (un día por fila, a todo el ancho: en la
+  // grilla mensual el nombre del evento no entra y queda cortado). `diaVisible`
+  // es cualquier día de la semana mostrada. `mini` siempre va en mes.
+  const [vista, setVista] = useState('mes');
+  const [diaVisible, setDiaVisible] = useState(() => new Date());
+  const porSemana = vista === 'semana' && !mini;
   const clickDia = (iso) => {
     if (!modoSeleccion) return;
     if (!anclaSeleccion) {
@@ -106,26 +113,160 @@ export default function CalendarioEventos({
     });
   }, [mesVisible, eventosConRango, hoyISO]);
 
+  // Saltar a un mes/año concretos: con solo las flechas, llegar a una fecha
+  // lejana costaba muchos clics. Los años ofrecidos cubren los de los eventos
+  // cargados más una ventana alrededor del año actual.
+  const idMes = useId();
+  const idAnio = useId();
+  const anios = useMemo(() => {
+    const actual = new Date().getFullYear();
+    const set = new Set([mesVisible.getFullYear()]);
+    for (let a = actual - 2; a <= actual + 3; a++) set.add(a);
+    for (const ev of eventos) {
+      if (ev.fecha) set.add(new Date(ev.fecha).getFullYear());
+      if (ev.fechaFin) set.add(new Date(ev.fechaFin).getFullYear());
+    }
+    return [...set].sort((a, b) => a - b);
+  }, [eventos, mesVisible]);
+
+  const irAMes = (mes) => {
+    setMesVisible(m => new Date(m.getFullYear(), Number(mes), 1));
+    // En vista semanal, cambiar el mes lleva a su primera semana.
+    setDiaVisible(d => new Date(d.getFullYear(), Number(mes), 1));
+  };
+  const irAAnio = (anio) => {
+    setMesVisible(m => new Date(Number(anio), m.getMonth(), 1));
+    setDiaVisible(d => new Date(Number(anio), d.getMonth(), 1));
+  };
+
+  // Los 7 días (lunes a domingo) de la semana de `diaVisible`.
+  const diasSemana = useMemo(() => {
+    const base = new Date(diaVisible.getFullYear(), diaVisible.getMonth(), diaVisible.getDate());
+    const lunes = new Date(base.getFullYear(), base.getMonth(), base.getDate() - ((base.getDay() + 6) % 7));
+    return Array.from({ length: 7 }, (_, i) => {
+      const fecha = new Date(lunes.getFullYear(), lunes.getMonth(), lunes.getDate() + i);
+      const iso = diaLocalISO(fecha);
+      return {
+        fecha,
+        iso,
+        esHoy: iso === hoyISO,
+        eventos: eventosConRango.filter(ev => iso >= ev.desde && iso <= ev.hasta),
+      };
+    });
+  }, [diaVisible, eventosConRango, hoyISO]);
+
   const irAHoy = () => {
     const hoy = new Date();
     setMesVisible(new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+    setDiaVisible(hoy);
   };
-  const mesAnterior = () => setMesVisible(m => new Date(m.getFullYear(), m.getMonth() - 1, 1));
-  const mesSiguiente = () => setMesVisible(m => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+  // Las flechas mueven un mes o una semana, según la vista.
+  const correrSemana = (dias) => setDiaVisible(d => {
+    const sig = new Date(d.getFullYear(), d.getMonth(), d.getDate() + dias);
+    setMesVisible(new Date(sig.getFullYear(), sig.getMonth(), 1));
+    return sig;
+  });
+  const anterior = () => (porSemana
+    ? correrSemana(-7)
+    : setMesVisible(m => new Date(m.getFullYear(), m.getMonth() - 1, 1)));
+  const siguiente = () => (porSemana
+    ? correrSemana(7)
+    : setMesVisible(m => new Date(m.getFullYear(), m.getMonth() + 1, 1)));
 
   return (
     <div className={`qp-cal${mini ? ' qp-cal--mini' : ''}`}>
       <div className="qp-cal__cabecera">
         <div className="qp-cal__titulo">
-          <strong>{MESES[mesVisible.getMonth()]}</strong> {mesVisible.getFullYear()}
+          <label className="sr-only" htmlFor={idMes}>Mes</label>
+          <select
+            id={idMes}
+            className="qp-cal__select"
+            value={mesVisible.getMonth()}
+            onChange={(e) => irAMes(e.target.value)}
+          >
+            {MESES.map((nombre, i) => <option key={nombre} value={i}>{nombre}</option>)}
+          </select>
+          <label className="sr-only" htmlFor={idAnio}>Año</label>
+          <select
+            id={idAnio}
+            className="qp-cal__select"
+            value={mesVisible.getFullYear()}
+            onChange={(e) => irAAnio(e.target.value)}
+          >
+            {anios.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
         </div>
         <div className="qp-cal__nav">
+          {!mini && (
+            <div className="qp-cal__vistas" role="group" aria-label="Cómo ver el calendario">
+              <button
+                type="button"
+                className={vista === 'mes' ? 'is-on' : ''}
+                aria-pressed={vista === 'mes'}
+                onClick={() => setVista('mes')}
+              >
+                Mes
+              </button>
+              <button
+                type="button"
+                className={vista === 'semana' ? 'is-on' : ''}
+                aria-pressed={vista === 'semana'}
+                onClick={() => setVista('semana')}
+              >
+                Semana
+              </button>
+            </div>
+          )}
           <button type="button" onClick={irAHoy} className="qp-cal__hoy">Hoy</button>
-          <button type="button" onClick={mesAnterior} aria-label="Mes anterior"><FaChevronLeft aria-hidden="true" /></button>
-          <button type="button" onClick={mesSiguiente} aria-label="Mes siguiente"><FaChevronRight aria-hidden="true" /></button>
+          <button type="button" onClick={anterior} aria-label={porSemana ? 'Semana anterior' : 'Mes anterior'}><FaChevronLeft aria-hidden="true" /></button>
+          <button type="button" onClick={siguiente} aria-label={porSemana ? 'Semana siguiente' : 'Mes siguiente'}><FaChevronRight aria-hidden="true" /></button>
         </div>
       </div>
 
+      {porSemana ? (
+        <ul className="qp-cal__semana">
+          {diasSemana.map(dia => (
+            <li
+              key={dia.iso}
+              className={`qp-cal__dia${dia.esHoy ? ' qp-cal__dia--hoy' : ''}`}
+            >
+              <div className="qp-cal__dia-cab">
+                {modoSeleccion ? (
+                  <button type="button" className="qp-cal__dia-fecha" onClick={() => clickDia(dia.iso)}>
+                    {DIAS_SEMANA[(dia.fecha.getDay() + 6) % 7]} {dia.fecha.getDate()}
+                  </button>
+                ) : (
+                  <span className="qp-cal__dia-fecha">
+                    {DIAS_SEMANA[(dia.fecha.getDay() + 6) % 7]} {dia.fecha.getDate()}
+                  </span>
+                )}
+                <span className="qp-cal__dia-mes">{MESES[dia.fecha.getMonth()]}</span>
+              </div>
+              <div className="qp-cal__dia-eventos">
+                {dia.eventos.length === 0 ? (
+                  <span className="qp-cal__dia-vacio">Sin eventos</span>
+                ) : dia.eventos.map(ev => (
+                  onSeleccionar && !modoSeleccion ? (
+                    <button
+                      key={ev.id}
+                      type="button"
+                      className={`qp-cal__evento ${claseEstado(ev)}`}
+                      onClick={() => onSeleccionar(ev.id)}
+                    >
+                      {ev.nombre}
+                    </button>
+                  ) : (
+                    <span key={ev.id} className={`qp-cal__evento qp-cal__evento--inerte ${claseEstado(ev)}`}>
+                      {ev.nombre}
+                    </span>
+                  )
+                ))}
+              </div>
+            </li>
+          ))}
+        </ul>
+      ) : (
+      <>
       <div className="qp-cal__grid qp-cal__grid--dias-semana">
         {DIAS_SEMANA.map(d => <div key={d} className="qp-cal__dia-semana">{d}</div>)}
       </div>
@@ -180,6 +321,8 @@ export default function CalendarioEventos({
           );
         })}
       </div>
+      </>
+      )}
 
       {!mini && (
         <div className="qp-cal__leyenda">

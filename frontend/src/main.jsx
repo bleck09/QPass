@@ -40,6 +40,7 @@ import Perfil from './pages/perfil/Perfil.jsx'
 import Registrar from './pages/publico/Registrar.jsx'
 import RecuperarContra from './pages/publico/RecuperarContra.jsx'
 import CompletarPerfil from './pages/publico/CompletarPerfil.jsx'
+import PersonasPorEncontrar from './pages/seguridad/PersonasPorEncontrar.jsx'
 
 const router = createBrowserRouter([
   // 2. ACTUALIZAMOS LAS RUTAS PÚBLICAS PRINCIPALES
@@ -190,6 +191,11 @@ const router = createBrowserRouter([
   {
     path: "/perfil",
     element: <MenuLateral><Perfil /></MenuLateral>,
+  },
+  // Manillas duplicadas: Admin, Supervisor y Cliente (el backend filtra por evento).
+  {
+    path: "/duplicados",
+    element: <MenuLateral><PersonasPorEncontrar /></MenuLateral>,
   }
 ]);
 

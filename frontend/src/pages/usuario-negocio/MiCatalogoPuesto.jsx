@@ -361,10 +361,10 @@ export default function MiCatalogoPuesto() {
                 <td className="td-centro">
                   <div className="btn-acciones">
                     <button type="button" className="btn-secundario-sm" onClick={() => abrirEditarProducto(pr)} title="Editar producto">
-                      <FaPen aria-hidden="true" /> Editar
+                      <FaPen aria-hidden="true" /> <span className="btn-acciones__texto">Editar</span>
                     </button>
                     <button type="button" className="btn-secundario-sm btn-secundario-sm--peligro" onClick={() => eliminarProducto(pr)} title="Quitar producto">
-                      <FaTrash aria-hidden="true" /> Quitar
+                      <FaTrash aria-hidden="true" /> <span className="btn-acciones__texto">Quitar</span>
                     </button>
                   </div>
                 </td>
@@ -396,10 +396,10 @@ export default function MiCatalogoPuesto() {
               </div>
               <div className="pi-mcat-prod-card__acciones">
                 <button type="button" onClick={() => abrirEditarProducto(pr)}>
-                  <FaPen aria-hidden="true" /> Editar
+                  <FaPen aria-hidden="true" /> <span className="btn-acciones__texto">Editar</span>
                 </button>
                 <button type="button" className="pi-mcat-danger" onClick={() => eliminarProducto(pr)}>
-                  <FaTrash aria-hidden="true" /> Quitar
+                  <FaTrash aria-hidden="true" /> <span className="btn-acciones__texto">Quitar</span>
                 </button>
               </div>
             </div>

@@ -10,8 +10,13 @@
  * resolver incidencias, corregir reportes, etc. Archivado no deja NADA.
  * ========================================================================= */
 
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { UsuarioJwt } from '../decorators/usuario-actual.decorator';
 
 @Injectable()
 export class EventoPolicy {
@@ -28,6 +33,35 @@ export class EventoPolicy {
       throw new ConflictException(
         `El evento "${evento.nombre}" está archivado: quedó de solo lectura y no admite más cambios`,
       );
+    }
+  }
+
+  /**
+   * Eventos que un actor puede MIRAR: Admin todos (null), Cliente los que
+   * organiza (Evento.clienteId) y el resto los que tiene asignados. Es solo
+   * lectura: no dice nada sobre archivado (eso lo cubren los porX de arriba).
+   */
+  async eventosVisibles(actor: UsuarioJwt): Promise<string[] | null> {
+    if (actor.rol === 'Admin') return null;
+    if (actor.rol === 'Cliente') {
+      const eventos = await this.prisma.evento.findMany({
+        where: { clienteId: actor.id },
+        select: { id: true },
+      });
+      return eventos.map((e) => e.id);
+    }
+    const asignaciones = await this.prisma.asignacion.findMany({
+      where: { usuarioId: actor.id },
+      select: { eventoId: true },
+    });
+    return asignaciones.map((a) => a.eventoId);
+  }
+
+  /** Lanza 403 si el actor no tiene nada que ver con ese evento. */
+  async asegurarAcceso(actor: UsuarioJwt, eventoId: string): Promise<void> {
+    const visibles = await this.eventosVisibles(actor);
+    if (visibles && !visibles.includes(eventoId)) {
+      throw new ForbiddenException('No tenés acceso a este evento');
     }
   }
 

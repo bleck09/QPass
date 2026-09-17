@@ -12,6 +12,7 @@ import { filtrarEventos, FILTROS_ESTADO_EVENTO, estadoEvento } from '../../utils
 import StatCard from '../../components/StatCard.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import Buscador from '../../components/Buscador.jsx';
+import HistorialManillas from '../../components/HistorialManillas.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
@@ -299,6 +300,11 @@ export default function ClienteDashboard() {
               )}
             </section>
           )}
+
+          {/* Cambios de manilla del evento: entregas, reemplazos y duplicados. */}
+          <section className="pi-cld-seccion">
+            <HistorialManillas eventoId={eventoSel.id} />
+          </section>
         </>
       )}
     </div>

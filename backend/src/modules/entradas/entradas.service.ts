@@ -15,9 +15,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma, TipoRegistroIngreso } from '@prisma/client';
+import { ContextoAlertaManilla, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
+import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
+import { CasosDuplicadoService } from '../casos-duplicado/casos-duplicado.service';
+import { VerificarDuplicadoDto } from '../casos-duplicado/dto/casos-duplicado.dto';
 
 const CODIGO_ACTIVO = {
   codigosQr: { where: { anulado: false }, take: 1 },
@@ -67,6 +70,7 @@ export class EntradasService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventoPolicy: EventoPolicy,
+    private readonly casosDuplicado: CasosDuplicadoService,
   ) {}
 
   /**
@@ -139,7 +143,8 @@ export class EntradasService {
     return entradas.map(({ codigosQr, registrosIngreso, ...e }) => ({
       ...e,
       codigoQrVinculado: codigosQr[0] || null,
-      vecesIngreso: registrosIngreso.filter((r) => r.tipo === 'ingreso').length,
+      // Una verificación por duplicado es el ingreso del dueño real.
+      vecesIngreso: registrosIngreso.filter((r) => r.tipo !== 'salida').length,
       vecesSalida: registrosIngreso.filter((r) => r.tipo === 'salida').length,
     }));
   }
@@ -168,8 +173,19 @@ export class EntradasService {
     }));
   }
 
-  /** Resuelve la Entrada dueña de una pulsera/QR físico escaneado. */
-  async buscarPorCodigoQr(codigo: string) {
+  /**
+   * Resuelve la Entrada dueña de una pulsera/QR físico escaneado. Si es la copia
+   * de un duplicado, corta acá con ManillaFalsaException (y avisa a seguridad).
+   */
+  async buscarPorCodigoQr(
+    codigo: string,
+    escaneo: {
+      actor: UsuarioJwt;
+      contexto?: ContextoAlertaManilla;
+      puestoId?: string;
+    },
+  ) {
+    await this.casosDuplicado.asegurarManillaUsable(codigo, escaneo);
     const codigoQr = await this.prisma.codigoQr.findUnique({
       where: { codigo },
       include: {
@@ -315,6 +331,7 @@ export class EntradasService {
                 anulado: true,
                 // El motivo real lo da el Supervisor al hacer el cambio; si no
                 // manda ninguno queda el generico de siempre.
+                estado: 'transferida',
                 motivoAnulacion:
                   motivo?.trim() || 'Reemplazada al vincular una nueva',
                 anuladoPorId: actorId,
@@ -365,11 +382,17 @@ export class EntradasService {
    */
   async registrarMovimiento(
     id: string,
-    tipo: TipoRegistroIngreso,
+    tipo: 'ingreso' | 'salida',
     foto: string | undefined,
-    actorId: number,
+    actor: UsuarioJwt,
     eventoIdEsperado?: string,
+    codigoQr?: string,
   ) {
+    const actorId = actor.id;
+    await this.casosDuplicado.asegurarManillaUsable(codigoQr, {
+      actor,
+      contexto: 'control_acceso',
+    });
     await this.eventoPolicy.porEntrada(id);
     const entradaActual = await this.prisma.entrada.findUnique({
       where: { id },
@@ -479,5 +502,20 @@ export class EntradasService {
     await this.adjuntarSaldoEvento([entrada]);
     const { codigosQr, ...resto } = entrada;
     return { ...resto, codigoQrVinculado: codigosQr[0] || null };
+  }
+
+  /**
+   * El dueño real llegó con su manilla "ya adentro" (alguien entró con una
+   * copia). Ver CasosDuplicadoService.verificarDueno. Devuelve la entrada ya
+   * con la manilla nueva, igual que ingreso/salida.
+   */
+  async verificarDuplicado(
+    id: string,
+    dto: VerificarDuplicadoDto,
+    actorId: number,
+  ) {
+    const caso = await this.casosDuplicado.verificarDueno(id, dto, actorId);
+    const entrada = await this.obtenerPorId(id);
+    return { ...entrada, casoDuplicadoId: caso.id };
   }
 }

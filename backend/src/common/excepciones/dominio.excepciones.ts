@@ -16,3 +16,19 @@ export class SinCupoDisponibleException extends ConflictException {
     super(mensaje);
   }
 }
+
+/**
+ * Se escaneó la COPIA de una manilla duplicada (CodigoQr.estado=en_alerta). No se
+ * deja hacer nada con ella: el front reconoce `codigo` y muestra `detalle` (la foto
+ * del falso) en vez del error plano. El filtro global (C9) reenvía ambos campos.
+ */
+export class ManillaFalsaException extends ConflictException {
+  constructor(detalle: Record<string, unknown>) {
+    super({
+      message:
+        'MANILLA FALSA: esta manilla es una copia. No se puede usar para nada — retené a la persona y avisá a seguridad.',
+      codigo: 'MANILLA_FALSA',
+      detalle,
+    });
+  }
+}

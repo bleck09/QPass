@@ -3,6 +3,7 @@ import {
   ArrayNotEmpty,
   IsArray,
   IsInt,
+  IsOptional,
   IsString,
   Min,
   ValidateNested,
@@ -25,6 +26,12 @@ export class CrearVentaDto {
 
   @IsString()
   entradaId: string;
+
+  // Manilla escaneada. Si es la copia de un duplicado, se rechaza (ver
+  // CasosDuplicadoService.asegurarManillaUsable).
+  @IsOptional()
+  @IsString()
+  codigoQr?: string;
 
   @IsArray()
   @ArrayNotEmpty({ message: 'Agrega al menos un producto' })

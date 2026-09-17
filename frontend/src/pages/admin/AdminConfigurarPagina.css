@@ -66,16 +66,22 @@
   border-color: rgba(255, 176, 32, 0.2);
 }
 
-/* Grilla a dos columnas para desktop */
+/* Grilla a dos columnas para desktop.
+   minmax(0, 1fr) y min-width en los hijos: con el `1fr` a secas, el mínimo
+   automático de una columna es el ancho de su contenido, así que un campo o un
+   texto largo la estiraba y la página entera se iba de ancho (se recortaba en
+   celular). */
 .pi-admin-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
 
+.pi-admin-grid > * { min-width: 0; }
+
 @media (max-width: 900px) {
-  .pi-admin-grid { grid-template-columns: 1fr; }
+  .pi-admin-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Tarjetas */
@@ -112,11 +118,19 @@
   margin-bottom: 16px;
 }
 
-/* --- COLORES --- */
+/* --- COLORES ---
+   Cinco colores en una columna dejaban la tarjeta larguísima. Van de a dos por
+   fila (o más si hay ancho); cada campo entra en ~190px. */
 .pi-admin-colors-grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
   gap: 12px;
+}
+
+.pi-admin-colors-grid .pi-admin-form-group { min-width: 0; gap: 4px; }
+
+.pi-admin-colors-grid label {
+  font-size: var(--text-xs);
 }
 
 .pi-admin-color-picker {
@@ -130,8 +144,8 @@
    todos los navegadores en vez del cuadradito nativo chico. */
 .pi-admin-color-swatch {
   position: relative;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   flex-shrink: 0;
   border-radius: var(--radius-md);
   border: 2px solid var(--border-strong);
@@ -156,7 +170,7 @@
 .pi-admin-color-hex {
   flex: 1;
   min-width: 0;
-  padding: 8px 12px;
+  padding: 8px 10px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-md);
   outline: none;
@@ -326,4 +340,24 @@
   .pi-admin-modal-content-flex { flex-direction: column; text-align: center; }
   .pi-admin-modal-image { text-align: center; }
   .modal-scrollable { padding: 20px; }
+}
+/* ============================================================================
+   MÓVIL: tarjetas y barra de acciones más compactas.
+   ========================================================================= */
+@media (max-width: 560px) {
+  .pi-admin-card { padding: var(--space-4); }
+  .pi-admin-header { align-items: stretch; margin-bottom: 16px; }
+  .pi-admin-header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+  .pi-admin-header-actions > button {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 8px;
+  }
+  /* La hora y el texto del cronograma, uno debajo del otro (no entran al lado). */
+  .pi-admin-time-input { width: 100%; }
 }

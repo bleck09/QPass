@@ -28,4 +28,10 @@ export class MovimientoDto {
   @IsOptional()
   @IsString()
   eventoId?: string;
+
+  // Manilla escaneada. Si es la copia de un duplicado, se rechaza (ver
+  // CasosDuplicadoService.asegurarManillaUsable).
+  @IsOptional()
+  @IsString()
+  codigoQr?: string;
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
@@ -352,7 +353,7 @@ export default function AdminConfigurarPagina({
       )}
 
       {/* --- MODAL DE VISTA PREVIA COMPLETA --- */}
-      {showPreview && (
+      {showPreview && createPortal(
         <div className="pi-admin-modal-overlay" onClick={() => setShowPreview(false)}>
           <div ref={modalPreviewRef} tabIndex={-1} className="pi-admin-modal dark-glass-preview" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="cfg-preview-titulo">
             
@@ -424,7 +425,8 @@ export default function AdminConfigurarPagina({
 
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {DialogoConfirmar}

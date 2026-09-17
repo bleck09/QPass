@@ -48,7 +48,7 @@ function SelectorPuestos({ grupos, estaSeleccionado, onToggle, defaultOpen = fal
   return (
     <details className="pi-ma-selector" open={seccionAbierta} onToggle={(e) => setSeccionAbierta(e.currentTarget.open)}>
       <summary>
-        <FaMapMarkerAlt aria-hidden="true" /> Puestos
+        <FaMapMarkerAlt aria-hidden="true" /> <span className="btn-acciones__texto">Puestos</span>
         <span className="celda-secundaria">· {nSel} de {total} seleccionados</span>
       </summary>
       <div className="pi-ma-selector-cuerpo">
@@ -290,16 +290,16 @@ export default function MisAyudantes() {
                 <td>
                   <div className="btn-acciones">
                     <button type="button" className="btn-secundario-sm" onClick={() => { setAsignandoId(a.id); setErr(''); }} title="Asignar a puestos">
-                      <FaMapMarkerAlt aria-hidden="true" /> Puestos
+                      <FaMapMarkerAlt aria-hidden="true" /> <span className="btn-acciones__texto">Puestos</span>
                     </button>
                     <button type="button" className="btn-secundario-sm" onClick={() => abrirEditar(a)} title="Editar nombre / foto">
-                      <FaPen aria-hidden="true" /> Editar
+                      <FaPen aria-hidden="true" /> <span className="btn-acciones__texto">Editar</span>
                     </button>
                     <button type="button" className="btn-secundario-sm" onClick={() => { setReseteandoId(a.id); setPassNueva(''); setErr(''); }} title="Resetear contraseña">
-                      <FaKey aria-hidden="true" /> Contraseña
+                      <FaKey aria-hidden="true" /> <span className="btn-acciones__texto">Contraseña</span>
                     </button>
                     <button type="button" className="btn-secundario-sm btn-secundario-sm--peligro" onClick={() => desvincular(a)} title="Desvincular del negocio">
-                      <FaUnlink aria-hidden="true" /> Desvincular
+                      <FaUnlink aria-hidden="true" /> <span className="btn-acciones__texto">Desvincular</span>
                     </button>
                   </div>
                 </td>

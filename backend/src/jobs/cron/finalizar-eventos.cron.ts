@@ -17,12 +17,24 @@ export class FinalizarEventosCron {
 
   @Cron(CronExpression.EVERY_MINUTE)
   async ejecutar() {
-    const { count } = await this.prisma.evento.updateMany({
+    const vencidos = await this.prisma.evento.findMany({
       where: { estado: 'activo', fechaFin: { lt: new Date() } },
-      data: { estado: 'finalizado' },
+      select: { id: true },
     });
-    if (count > 0) {
-      this.logger.log(`${count} evento(s) pasaron a finalizado.`);
-    }
+    if (vencidos.length === 0) return;
+    const ids = vencidos.map((e) => e.id);
+    await this.prisma.$transaction([
+      this.prisma.evento.updateMany({
+        where: { id: { in: ids }, estado: 'activo' },
+        data: { estado: 'finalizado' },
+      }),
+      // Manillas vigentes -> cerrada (siguen sirviendo para la devolución). Las
+      // en_alerta NO se tocan: la copia de un duplicado sigue bloqueada y avisando.
+      this.prisma.codigoQr.updateMany({
+        where: { eventoId: { in: ids }, estado: 'activa' },
+        data: { estado: 'cerrada' },
+      }),
+    ]);
+    this.logger.log(`${ids.length} evento(s) pasaron a finalizado.`);
   }
 }

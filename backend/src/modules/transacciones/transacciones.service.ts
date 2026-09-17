@@ -23,6 +23,10 @@ import { MotivoDevolucion, Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { SaldoInsuficienteException } from '../../common/excepciones/dominio.excepciones';
+import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
+import { AuditoriaService } from '../auditoria/auditoria.service';
+import { CasosDuplicadoService } from '../casos-duplicado/casos-duplicado.service';
+import { AjusteManualDto } from './dto/transacciones.dto';
 
 type PrismaTx = Prisma.TransactionClient;
 
@@ -38,6 +42,8 @@ export class TransaccionesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventoPolicy: EventoPolicy,
+    private readonly casosDuplicado: CasosDuplicadoService,
+    private readonly auditoria: AuditoriaService,
   ) {}
 
   /**
@@ -254,7 +260,12 @@ export class TransaccionesService {
     eventoId?: string;
     monto: number;
     operador: { id: number; rol: string };
+    codigoQr?: string;
   }) {
+    await this.casosDuplicado.asegurarManillaUsable(params.codigoQr, {
+      actor: params.operador as UsuarioJwt,
+      contexto: 'recarga',
+    });
     await this.eventoPolicy.porEntrada(params.entradaId);
     return this.prisma.$transaction(async (tx) => {
       const entrada = await tx.entrada.findUnique({
@@ -322,7 +333,12 @@ export class TransaccionesService {
     operador: { id: number; rol: string };
     motivoDevolucion?: MotivoDevolucion;
     nota?: string;
+    codigoQr?: string;
   }) {
+    await this.casosDuplicado.asegurarManillaUsable(params.codigoQr, {
+      actor: params.operador as UsuarioJwt,
+      contexto: 'devolucion',
+    });
     await this.eventoPolicy.porEvento(params.eventoId);
     return this.prisma.$transaction(async (tx) => {
       const usuario = await tx.usuario.findUnique({
@@ -493,6 +509,66 @@ export class TransaccionesService {
         operadorId: params.operadorId,
         nota: params.nota,
       },
+    });
+  }
+
+  /**
+   * Ajuste MANUAL de Admin (tipo=ajuste_manual): crédito a la billetera del
+   * dueño de la Entrada en su evento. Caso típico: el organizador decide
+   * reponer lo que consumió el falso de un CasoDuplicado. Es una fila NUEVA del
+   * ledger; las ventas/consumos originales quedan como estaban.
+   */
+  async ajusteManual(dto: AjusteManualDto, adminId: number) {
+    await this.eventoPolicy.porEntrada(dto.entradaId);
+    return this.prisma.$transaction(async (tx) => {
+      const entrada = await tx.entrada.findUnique({
+        where: { id: dto.entradaId },
+      });
+      if (!entrada) throw new NotFoundException('Entrada no encontrada');
+      if (!entrada.usuarioId) {
+        throw new BadRequestException(
+          'Esta entrada todavía no tiene una cuenta vinculada',
+        );
+      }
+      if (dto.casoDuplicadoId) {
+        const caso = await tx.casoDuplicado.findUnique({
+          where: { id: dto.casoDuplicadoId },
+          select: { entradaId: true },
+        });
+        if (!caso || caso.entradaId !== dto.entradaId) {
+          throw new BadRequestException('Ese caso de duplicado no es de esta entrada');
+        }
+      }
+
+      const saldo = await this.acreditar(
+        tx,
+        entrada.usuarioId,
+        entrada.eventoId,
+        dto.monto,
+      );
+      const nota = dto.casoDuplicadoId
+        ? `[Caso duplicado ${dto.casoDuplicadoId}] ${dto.nota.trim()}`
+        : dto.nota.trim();
+      const transaccion = await tx.transaccion.create({
+        data: {
+          eventoId: entrada.eventoId,
+          tipo: 'ajuste_manual',
+          monto: dto.monto,
+          saldoResultante: saldo,
+          usuarioId: entrada.usuarioId,
+          entradaId: dto.entradaId,
+          operadorId: adminId,
+          nota,
+        },
+      });
+      await this.auditoria.registrar(tx, {
+        actorId: adminId,
+        entidad: 'transaccion',
+        entidadId: transaccion.id,
+        accion: 'ajuste_manual',
+        despues: transaccion,
+      });
+      return { transaccion, saldo };
     });
   }
 

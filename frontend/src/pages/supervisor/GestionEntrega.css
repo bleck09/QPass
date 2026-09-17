@@ -649,3 +649,26 @@
   padding-top: var(--space-4);
   border-top: 1px solid var(--border);
 }
+
+/* Conmutador Participantes / Historial (components/Filtros.jsx). */
+.pi-entrega-vistas {
+  align-self: flex-start;
+  margin-bottom: var(--space-3);
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+
+/* =======================================================
+   MÓVIL: entraba muy alargada (una tarjeta de estadística por fila, botón y
+   encabezado con mucho aire).
+======================================================= */
+@media (max-width: 560px) {
+  .pi-entrega-container { gap: var(--space-4); }
+  .pi-entrega-header p { font-size: var(--text-sm); }
+  .pi-entrega-header-fila { align-items: stretch; gap: var(--space-3); }
+  .pi-entrega-btn-verificar { width: 100%; justify-content: center; }
+  /* Dos tarjetas por fila en vez de una debajo de otra. */
+  .pi-entrega-stats-grid { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-3); }
+  .pi-entrega-vistas { width: 100%; }
+}

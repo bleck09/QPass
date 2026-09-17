@@ -444,7 +444,10 @@ export class DashboardService {
           txAgg.find((t) => t.eventoId === eventoId && t.tipo === tipo)?._sum
             .monto ?? 0,
         );
-      return d('recarga') - d('consumo') - d('devolucion') + d('reverso_consumo');
+      return (
+        d('recarga') + d('ajuste') + d('ajuste_manual') -
+        d('consumo') - d('devolucion') + d('reverso_consumo')
+      );
     };
 
     const alertas: Alerta[] = [];
@@ -649,7 +652,7 @@ export class DashboardService {
             (m.createdAt.getTime() - haceUnaHora.getTime()) / 60_000,
           );
           if (idx < 0 || idx > 59) continue;
-          if (m.tipo === 'ingreso') porMinuto[idx].ingresos += 1;
+          if (m.tipo !== 'salida') porMinuto[idx].ingresos += 1; // verificacion_duplicado cuenta como ingreso
           else porMinuto[idx].salidas += 1;
         }
 

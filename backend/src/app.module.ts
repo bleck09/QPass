@@ -47,6 +47,7 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { CorteCajaModule } from './modules/corte-caja/corte-caja.module';
 import { AvisosStockModule } from './modules/avisos-stock/avisos-stock.module';
+import { CasosDuplicadoModule } from './modules/casos-duplicado/casos-duplicado.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { AvisosStockModule } from './modules/avisos-stock/avisos-stock.module';
     DashboardModule,
     CorteCajaModule,
     AvisosStockModule,
+    CasosDuplicadoModule,
   ],
   controllers: [HealthController],
   providers: [

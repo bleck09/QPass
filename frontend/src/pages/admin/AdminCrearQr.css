@@ -114,8 +114,11 @@
   margin-bottom: 16px;
 }
 
+/* Sin `wrap`, los cuatro botones (ver QR, dos PDF y vaciar) se salían de la
+   tarjeta en pantallas angostas en vez de pasar a la línea de abajo. */
 .pi-adqr-acciones-lista {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
@@ -427,3 +430,24 @@
   cursor: pointer;
 }
 .pi-adqr-btn-sugerido:hover { background: var(--indigo-profundo-suave, rgba(26,43,107,0.08)); }
+
+/* ============================================================================
+   MÓVIL: la barra de acciones de los códigos no entraba a lo ancho.
+   ========================================================================= */
+@media (max-width: 560px) {
+  .pi-adqr-card-header { align-items: stretch; gap: 10px; }
+  /* Dos botones por fila, a todo el ancho y con el texto centrado. */
+  .pi-adqr-acciones-lista {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+    gap: 8px;
+  }
+  .pi-adqr-acciones-lista > button {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    padding: 10px 8px;
+    line-height: 1.25;
+  }
+}

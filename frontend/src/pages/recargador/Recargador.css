@@ -162,7 +162,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: var(--z-modal);
   animation: pi-rec-fadeIn 0.15s ease-out;
 }
 

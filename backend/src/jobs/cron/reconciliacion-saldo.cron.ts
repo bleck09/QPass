@@ -16,6 +16,7 @@ const SIGNO: Record<string, number> = {
   recarga: 1,
   venta: 1,
   ajuste: 1,
+  ajuste_manual: 1,
   reverso_consumo: 1, // reintegra saldo al comprador
   consumo: -1,
   devolucion: -1,

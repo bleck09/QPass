@@ -6,6 +6,7 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  MinLength,
 } from 'class-validator';
 import { MotivoDevolucion } from '@prisma/client';
 
@@ -23,6 +24,12 @@ export class RecargaDto {
   @IsNumber()
   @IsPositive({ message: 'Monto inválido' })
   monto: number;
+
+  // Manilla escaneada. Si es la copia de un duplicado, se rechaza (ver
+  // CasosDuplicadoService.asegurarManillaUsable).
+  @IsOptional()
+  @IsString()
+  codigoQr?: string;
 }
 
 export class DevolucionDto {
@@ -51,6 +58,12 @@ export class DevolucionDto {
   @IsString()
   entradaId?: string;
 
+  // Manilla escaneada. Si es la copia de un duplicado, se rechaza (ver
+  // CasosDuplicadoService.asegurarManillaUsable).
+  @IsOptional()
+  @IsString()
+  codigoQr?: string;
+
   // §5.11 — motivo tipado del retiro. `otro` => detalle libre en `nota`.
   @IsOptional()
   @IsEnum(MotivoDevolucion)
@@ -59,4 +72,26 @@ export class DevolucionDto {
   @IsOptional()
   @IsString()
   nota?: string;
+}
+
+/**
+ * Crédito manual de Admin (TipoTransaccion.ajuste_manual). Ej.: reponer lo que
+ * consumió el falso de un CasoDuplicado. Nunca toca filas viejas del ledger.
+ */
+export class AjusteManualDto {
+  @IsString()
+  entradaId: string;
+
+  @Type(() => Number)
+  @IsNumber()
+  @IsPositive({ message: 'Monto inválido' })
+  monto: number;
+
+  @IsString()
+  @MinLength(5, { message: 'Explicá el motivo del ajuste' })
+  nota: string;
+
+  @IsOptional()
+  @IsString()
+  casoDuplicadoId?: string;
 }

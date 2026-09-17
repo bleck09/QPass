@@ -5,6 +5,9 @@
 .qp-tabla-wrap {
   display: flex;
   flex-direction: column;
+  /* Dentro de un flex/grid, el mínimo automático del contenido hace que la tabla
+     estire a su padre y desborde la pantalla en vez de scrollear acá adentro. */
+  min-width: 0;
 }
 
 .qp-tabla-wrap--card {
@@ -17,6 +20,8 @@
 
 .qp-tabla-scroll {
   overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .qp-tabla {

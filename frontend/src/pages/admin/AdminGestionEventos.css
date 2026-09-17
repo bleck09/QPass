@@ -247,7 +247,10 @@
   margin: 0 0 8px 0;
 }
 
-.pi-ges-detalle-info span {
+/* `> span`: solo la línea de lugar/fecha. Sin el `>`, los badges de dentro del
+   <h1> (Publicado / Manilla física) también quedaban en flex y se estiraban a
+   todo el ancho, uno por línea. */
+.pi-ges-detalle-info > span {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -917,4 +920,44 @@
 
 .pi-ges-btn-guardar:hover {
   background: var(--indigo-profundo-hover);
+}
+
+/* ============================================================================
+   MÓVIL
+   El detalle del evento entraba muy alargado: imagen de 96px, título con los
+   badges apilados y los botones de acción uno debajo de otro.
+   ========================================================================= */
+@media (max-width: 560px) {
+  .pi-ges-detalle-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px;
+  }
+  .pi-ges-detalle-imagen { width: 64px; height: 64px; }
+  .pi-ges-detalle-info { flex: 1 1 160px; min-width: 0; }
+  .pi-ges-detalle-info h1,
+  .pi-ges-detalle-info h2 {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-base);
+    margin-bottom: 6px;
+  }
+  /* Los botones de acción: dos por fila, a todo el ancho de la tarjeta. */
+  .pi-ges-detalle-acciones {
+    width: 100%;
+    margin-left: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .pi-ges-detalle-acciones > button {
+    width: 100%;
+    justify-content: center;
+    padding: 10px 8px;
+  }
+  .pi-ges-tab { padding: 10px 12px; font-size: var(--text-xs); }
+  .pi-ges-seccion { padding: 16px 14px; }
 }

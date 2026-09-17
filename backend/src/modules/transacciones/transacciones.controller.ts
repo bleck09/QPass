@@ -6,7 +6,11 @@ import {
   UsuarioJwt,
 } from '../../common/decorators/usuario-actual.decorator';
 import { TransaccionesService } from './transacciones.service';
-import { DevolucionDto, RecargaDto } from './dto/transacciones.dto';
+import {
+  AjusteManualDto,
+  DevolucionDto,
+  RecargaDto,
+} from './dto/transacciones.dto';
 
 @Controller('transacciones')
 export class TransaccionesController {
@@ -36,6 +40,7 @@ export class TransaccionesController {
       eventoId: dto.eventoId,
       monto: dto.monto,
       operador: { id: actor.id, rol: actor.rol },
+      codigoQr: dto.codigoQr,
     });
   }
 
@@ -53,6 +58,15 @@ export class TransaccionesController {
       operador: { id: actor.id, rol: actor.rol },
       motivoDevolucion: dto.motivoDevolucion,
       nota: dto.nota,
+      codigoQr: dto.codigoQr,
     });
+  }
+
+  /** Crédito manual (ajuste_manual). Solo Admin; queda como fila nueva del ledger. */
+  @Post('ajuste-manual')
+  @Roles('Admin')
+  @Idempotente()
+  ajusteManual(@Body() dto: AjusteManualDto, @UsuarioActual('id') adminId: number) {
+    return this.transaccionesService.ajusteManual(dto, adminId);
   }
 }

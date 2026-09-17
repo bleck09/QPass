@@ -4,7 +4,7 @@ import {
   FaChartPie, FaChartBar, FaUsers, FaSignOutAlt, FaUserCircle,
   FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet, FaMoneyBillWave,
   FaExclamationTriangle, FaBars, FaCalendarAlt, FaLink, FaHistory,
-  FaSun, FaMoon
+  FaSun, FaMoon, FaUserSecret
 } from 'react-icons/fa';
 import { MdAccountBalance, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'react-icons/md';
 import { ROLES, ROLE_LABELS } from '../constants/roles.js';
@@ -12,6 +12,8 @@ import { leerSesion, guardarSesion, cerrarSesion } from '../api/client.js';
 import api from '../api/index.js';
 import { leerTema, aplicarTema } from '../utils/tema.js';
 import { revisarBloqueoScroll } from '../utils/bloqueoScroll.js';
+import AlertasDuplicados from '../components/AlertasDuplicados.jsx';
+import { ROLES_SEGURIDAD } from '../utils/duplicados.js';
 import './MenuLateral.css';
 
 // Configuración de menús según el rol
@@ -24,11 +26,13 @@ const menuConfig = {
     // Tickets del Evento, Generar QR, Configurar Página y Mapa se acceden desde
     // Gestión de Eventos (accesos rápidos del detalle), no desde la barra lateral.
     { titulo: 'Reportes', ruta: '/admin/reportes', icono: <FaExclamationTriangle /> },
+    { titulo: 'Personas por encontrar', ruta: '/duplicados', icono: <FaUserSecret /> },
     { titulo: 'Auditoría', ruta: '/admin/auditoria', icono: <FaHistory /> }
   ],
   [ROLES.CLIENTE]: [
     { titulo: 'Mi Propuesta', ruta: '/Cliente', icono: <FaCashRegister /> },
-    { titulo: 'Dashboard General', ruta: '/Cliente/dashboard', icono: <FaChartPie /> }
+    { titulo: 'Dashboard General', ruta: '/Cliente/dashboard', icono: <FaChartPie /> },
+    { titulo: 'Personas por encontrar', ruta: '/duplicados', icono: <FaUserSecret /> }
   ],
   [ROLES.RECARGADOR]: [
     { titulo: 'Recargar', ruta: '/recargador', icono: <FaCashRegister /> },
@@ -38,7 +42,8 @@ const menuConfig = {
   ],
   [ROLES.SUPERVISOR]: [
     { titulo: 'Panel de Control', ruta: '/supervisor', icono: <FaChartPie /> },
-    { titulo: 'Gestión de Entrega', ruta: '/supervisor/entrega', icono: <FaLink /> }
+    { titulo: 'Gestión de Entrega', ruta: '/supervisor/entrega', icono: <FaLink /> },
+    { titulo: 'Personas por encontrar', ruta: '/duplicados', icono: <FaUserSecret /> }
   ],
   [ROLES.DEVOLUCION]: [
     { titulo: 'Gestión Devoluciones', ruta: '/devolucion', icono: <FaBoxOpen /> },
@@ -150,6 +155,9 @@ export default function MenuLateral({ children }) {
     <div className="pi-layout-contenedor">
       {/* Primer elemento enfocable: saltar directo al contenido (Manual 11.2) */}
       <a href="#contenido" className="skip-link">Saltar al contenido</a>
+
+      {/* Avisos de manillas copiadas (polling cada 10 s) */}
+      {ROLES_SEGURIDAD.includes(usuario.rol) && <AlertasDuplicados usuarioId={usuario.id} />}
       
       {isMobileOpen && (
         <div

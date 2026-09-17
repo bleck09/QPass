@@ -8,7 +8,13 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { UsuarioActual } from '../../common/decorators/usuario-actual.decorator';
+import { ContextoAlertaManilla } from '@prisma/client';
+import { Roles } from '../../common/decorators/roles.decorator';
+import {
+  UsuarioActual,
+  UsuarioJwt,
+} from '../../common/decorators/usuario-actual.decorator';
+import { VerificarDuplicadoDto } from '../casos-duplicado/dto/casos-duplicado.dto';
 import { EntradasService } from './entradas.service';
 import { AnularQrDto, MovimientoDto, VincularQrDto } from './dto/entradas.dto';
 
@@ -31,9 +37,24 @@ export class EntradasController {
   }
 
   // Debe declararse ANTES de @Get(':id') para que "buscar" no matchee como id.
+  // `contexto`/`puestoId` solo sirven para ubicar al falso si la manilla es una
+  // copia (AlertaManilla). Sin contexto se deduce del rol.
   @Get('buscar/:codigo')
-  buscarPorCodigo(@Param('codigo') codigo: string) {
-    return this.entradasService.buscarPorCodigoQr(codigo);
+  buscarPorCodigo(
+    @Param('codigo') codigo: string,
+    @UsuarioActual() actor: UsuarioJwt,
+    @Query('contexto') contexto?: string,
+    @Query('puestoId') puestoId?: string,
+  ) {
+    return this.entradasService.buscarPorCodigoQr(codigo, {
+      actor,
+      contexto: Object.values(ContextoAlertaManilla).includes(
+        contexto as ContextoAlertaManilla,
+      )
+        ? (contexto as ContextoAlertaManilla)
+        : undefined,
+      puestoId: puestoId || undefined,
+    });
   }
 
   // Escáner de "Mi Perfil" (cualquier usuario logueado, cualquier evento):
@@ -79,9 +100,9 @@ export class EntradasController {
   ingreso(
     @Param('id') id: string,
     @Body() dto: MovimientoDto,
-    @UsuarioActual('id') actorId: number,
+    @UsuarioActual() actor: UsuarioJwt,
   ) {
-    return this.entradasService.registrarMovimiento(id, 'ingreso', dto.foto, actorId, dto.eventoId);
+    return this.entradasService.registrarMovimiento(id, 'ingreso', dto.foto, actor, dto.eventoId, dto.codigoQr);
   }
 
   @Post(':id/salida')
@@ -89,8 +110,20 @@ export class EntradasController {
   salida(
     @Param('id') id: string,
     @Body() dto: MovimientoDto,
+    @UsuarioActual() actor: UsuarioJwt,
+  ) {
+    return this.entradasService.registrarMovimiento(id, 'salida', dto.foto, actor, dto.eventoId, dto.codigoQr);
+  }
+
+  /** El dueño real llegó y su manilla ya figuraba adentro (copia del QR). */
+  @Post(':id/verificar-duplicado')
+  @Roles('Supervisor', 'Admin')
+  @HttpCode(HttpStatus.OK)
+  verificarDuplicado(
+    @Param('id') id: string,
+    @Body() dto: VerificarDuplicadoDto,
     @UsuarioActual('id') actorId: number,
   ) {
-    return this.entradasService.registrarMovimiento(id, 'salida', dto.foto, actorId, dto.eventoId);
+    return this.entradasService.verificarDuplicado(id, dto, actorId);
   }
 }

@@ -1,0 +1,75 @@
+/* Avisos flotantes de manilla copiada (components/AlertasDuplicados.jsx). Solo tokens. */
+
+.qp-alertas-dup {
+  position: fixed;
+  top: var(--space-4);
+  right: var(--space-4);
+  z-index: var(--z-modal);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: min(380px, calc(100vw - var(--space-8)));
+}
+
+.qp-alertas-dup__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  background: var(--bg-surface);
+  border: 1px solid var(--rojo-error);
+  border-left-width: 6px;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.qp-alertas-dup__item img,
+.qp-alertas-dup__icono {
+  flex-shrink: 0;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+
+.qp-alertas-dup__icono {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--rojo-error-suave);
+  color: var(--rojo-error-texto);
+  font-size: var(--text-xl);
+}
+
+.qp-alertas-dup__texto {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+
+.qp-alertas-dup__texto strong {
+  color: var(--rojo-error-texto);
+}
+
+.qp-alertas-dup__meta {
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.qp-alertas-dup__cerrar {
+  flex-shrink: 0;
+  padding: var(--space-1);
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.qp-alertas-dup__cerrar:hover {
+  color: var(--text-primary);
+}

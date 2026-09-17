@@ -12,7 +12,57 @@ import {
 import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
+import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 import { GenerarCodigosQrDto } from './dto/generar-codigos-qr.dto';
+
+// Una manilla vinculada produce hasta dos movimientos de historial: la entrega
+// (asignadoPor/asignadoEn) y la baja (anuladoPor/anuladoEn + motivo). No hay
+// tabla aparte: sale de la propia CodigoQr.
+const SELECT_HISTORIAL = {
+  entrada: { select: { id: true, nombre: true, numero: true } },
+  evento: { select: { id: true, nombre: true } },
+  asignadoPor: { select: { id: true, nombre: true, rol: true } },
+  anuladoPor: { select: { id: true, nombre: true, rol: true } },
+} satisfies Prisma.CodigoQrInclude;
+
+type CodigoConHistorial = Prisma.CodigoQrGetPayload<{
+  include: typeof SELECT_HISTORIAL;
+}>;
+
+const aMovimientos = (codigos: CodigoConHistorial[]) =>
+  codigos
+    .flatMap((c) => {
+      const comun = {
+        manilla: { id: c.id, codigo: c.codigo, numero: c.numero, estado: c.estado },
+        entrada: c.entrada,
+        evento: c.evento,
+      };
+      const filas = [];
+      if (c.asignadoEn) {
+        filas.push({
+          id: `${c.id}-entrega`,
+          tipo: 'entrega' as const,
+          fecha: c.asignadoEn,
+          actor: c.asignadoPor,
+          motivo: null as string | null,
+          ...comun,
+        });
+      }
+      if (c.anuladoEn) {
+        filas.push({
+          // La copia de un duplicado se distingue de una baja normal
+          // (perdida/dañada/reemplazo) para que se lea de un vistazo.
+          id: `${c.id}-baja`,
+          tipo: c.estado === 'en_alerta' ? ('duplicado' as const) : ('baja' as const),
+          fecha: c.anuladoEn,
+          actor: c.anuladoPor,
+          motivo: c.motivoAnulacion,
+          ...comun,
+        });
+      }
+      return filas;
+    })
+    .sort((a, b) => b.fecha.getTime() - a.fecha.getTime());
 
 // Sin 0/O/1/I para no confundir al leer un código a mano.
 const CARACTERES_ALEATORIOS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -53,6 +103,33 @@ export class CodigosQrService {
       throw new NotFoundException('Ese código no existe en el sistema');
     }
     return codigoQr;
+  }
+
+  /**
+   * Historial de entrega/cambio de manillas del evento (Gestión de Entrega,
+   * panel de Admin y del Cliente organizador). Solo lectura: Supervisor ve los
+   * eventos que tiene asignados y Cliente los que organiza (EventoPolicy).
+   */
+  async historial(eventoId: string | undefined, actor: UsuarioJwt) {
+    if (!eventoId) throw new BadRequestException('eventoId es requerido');
+    await this.eventoPolicy.asegurarAcceso(actor, eventoId);
+    const codigos = await this.prisma.codigoQr.findMany({
+      where: { eventoId, entradaId: { not: null } },
+      include: SELECT_HISTORIAL,
+    });
+    return aMovimientos(codigos);
+  }
+
+  /**
+   * "Mis manillas": los cambios de manilla de las entradas del usuario logueado,
+   * de todos sus eventos. Mismo formato que el historial por evento.
+   */
+  async historialDelUsuario(usuarioId: number) {
+    const codigos = await this.prisma.codigoQr.findMany({
+      where: { entrada: { usuarioId } },
+      include: SELECT_HISTORIAL,
+    });
+    return aMovimientos(codigos);
   }
 
   /**

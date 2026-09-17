@@ -214,7 +214,7 @@ export class DashboardClienteService {
     // ---- E1: aforo dentro del recinto por hora (ingresos - salidas acumulado) ----
     const netoPorHora = new Array(24).fill(0);
     for (const m of movimientos) {
-      netoPorHora[horaBolivia(m.createdAt)] += m.tipo === 'ingreso' ? 1 : -1;
+      netoPorHora[horaBolivia(m.createdAt)] += m.tipo === 'salida' ? -1 : 1; // verificacion_duplicado = ingreso
     }
     let acum = 0;
     const aforoPorHora = netoPorHora.map((n, hora) => {

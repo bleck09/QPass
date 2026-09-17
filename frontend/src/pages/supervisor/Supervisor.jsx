@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
@@ -15,7 +16,7 @@ import {
   FaUsers, FaCheckCircle, FaQrcode, FaTimes,
   FaIdCard, FaTicketAlt,  FaUserCheck, FaExclamationTriangle,
   FaSignOutAlt, FaCamera, FaHistory, FaSignInAlt, FaUserSecret, FaSyncAlt,
-  FaArrowLeft, FaCalendarAlt, FaMoon
+  FaArrowLeft, FaCalendarAlt, FaMoon, FaUserShield
 } from 'react-icons/fa';
 
 // Debe coincidir con MARGEN_INGRESO_ANTICIPADO_HORAS del backend
@@ -28,6 +29,9 @@ import { formatearFecha, nombreJornada, mostrarJornada, opcionesJornada, estadoE
 import EscanerQr from '../../components/EscanerQr.jsx';
 import CapturarFoto from '../../components/CapturarFoto.jsx';
 import FotoZoom from '../../components/FotoZoom.jsx';
+import ManillaFalsaModal from '../../components/ManillaFalsaModal.jsx';
+import VerificarDuenoModal from '../../components/VerificarDuenoModal.jsx';
+import { esManillaFalsa } from '../../utils/duplicados.js';
 import './Supervisor.css';
 import './GestionEntrega.css';
 
@@ -73,6 +77,10 @@ export default function Supervisor() {
   // que se cierra a mano o sola a los 5 s (tarjetaAutoCierre).
   const [confirmacion, setConfirmacion] = useState(null);
   const [tarjetaAutoCierre, setTarjetaAutoCierre] = useState(false);
+  // Manillas duplicadas: la copia escaneada (detalle del backend) y el flujo de
+  // verificación del dueño real cuando su entrada ya figura adentro.
+  const [manillaFalsa, setManillaFalsa] = useState(null);
+  const [verificandoDueno, setVerificandoDueno] = useState(false);
 
 
   const eventoDetalle = eventos.find(ev => ev.id === eventoIdDetalle) || null;
@@ -128,7 +136,7 @@ export default function Supervisor() {
     setEscaneando(false);
     setBuscando(true);
     try {
-      const entrada = await api.entradas.buscarPorCodigo(codigo);
+      const entrada = await api.entradas.buscarPorCodigo(codigo, { contexto: 'control_acceso' });
       setFotoCapturadaTemporal(null);
       setAlertaToggle('');
       setConfirmacion(null);
@@ -136,7 +144,8 @@ export default function Supervisor() {
       setTarjetaQR(entrada);
       api.entradas.registros(entrada.id).then(setHistorialTarjeta);
     } catch (err) {
-      setErrorEscaneo(err.message);
+      if (esManillaFalsa(err)) setManillaFalsa(err.detalle);
+      else setErrorEscaneo(err.message);
     } finally {
       setBuscando(false);
     }
@@ -176,10 +185,10 @@ export default function Supervisor() {
   // Paso 2: esa tarjeta reabierta tras registrar se cierra sola a los 5 s, salvo que el
   // operador la cierre antes o se ponga a tomar otra foto.
   useEffect(() => {
-    if (!tarjetaAutoCierre || !tarjetaQR || capturandoFoto) return;
+    if (!tarjetaAutoCierre || !tarjetaQR || capturandoFoto || verificandoDueno) return;
     const t = setTimeout(() => cerrarTarjeta(), 5000);
     return () => clearTimeout(t);
-  }, [tarjetaAutoCierre, tarjetaQR, capturandoFoto]);
+  }, [tarjetaAutoCierre, tarjetaQR, capturandoFoto, verificandoDueno]);
 
   // ========================================================
   // REGISTRAR INGRESO / SALIDA — la foto es UNA sola por Entrada (persona-evento), guardada en
@@ -255,7 +264,7 @@ export default function Supervisor() {
       return;
     }
     if (tipo === 'ingreso' && tarjetaQR.estadoIngreso === 'ingresado') {
-      setAlertaToggle('Esta entrada ya figura como ingresada. Si la persona salió, registrá primero su salida.');
+      setAlertaToggle('Esta entrada ya figura como ingresada. Si la persona salió, registrá primero su salida. Si dice que nunca entró, puede que alguien haya usado una copia de su manilla: verificá si es el dueño.');
       return;
     }
     if (tipo === 'ingreso' && !ingresoDentroDeVentana) {
@@ -280,9 +289,10 @@ export default function Supervisor() {
     }
     setAlertaToggle('');
     try {
+      const codigoQr = tarjetaQR.codigoQrVinculado?.codigo;
       const actualizado = tipo === 'salida'
-        ? await api.entradas.salida(tarjetaQR.id, fotoCapturadaTemporal, eventoDetalle.id)
-        : await api.entradas.ingreso(tarjetaQR.id, fotoCapturadaTemporal, eventoDetalle.id);
+        ? await api.entradas.salida(tarjetaQR.id, fotoCapturadaTemporal, eventoDetalle.id, codigoQr)
+        : await api.entradas.ingreso(tarjetaQR.id, fotoCapturadaTemporal, eventoDetalle.id, codigoQr);
       setFotoCapturadaTemporal(null);
       // Refresca la fila en la tabla/estadísticas y deja la tarjeta abierta pero
       // actualizada (nuevo estado + historial); encima va el flash de confirmación.
@@ -292,8 +302,25 @@ export default function Supervisor() {
       setTarjetaAutoCierre(false);
       setConfirmacion({ tipo, nombre: actualizado.nombre });
     } catch (err) {
-      setAlertaToggle(err.message);
+      if (esManillaFalsa(err)) {
+        cerrarTarjeta();
+        setManillaFalsa(err.detalle);
+      } else {
+        setAlertaToggle(err.message);
+      }
     }
+  };
+
+  // El dueño real quedó verificado: entra con la manilla nueva (cuenta como ingreso).
+  const alVerificarDueno = (actualizado) => {
+    setVerificandoDueno(false);
+    setFotoCapturadaTemporal(null);
+    setAlertaToggle('');
+    setParticipantes(prev => prev.map(p => (p.id === actualizado.id ? { ...p, ...actualizado, vecesIngreso: (p.vecesIngreso ?? 0) + 1 } : p)));
+    setTarjetaQR(actualizado);
+    api.entradas.registros(actualizado.id).then(setHistorialTarjeta);
+    setTarjetaAutoCierre(false);
+    setConfirmacion({ tipo: 'ingreso', nombre: actualizado.nombre });
   };
 
   if (!eventoDetalle) {
@@ -462,7 +489,10 @@ export default function Supervisor() {
       {/* =========================================================
           MODAL DE CONTROL DINÁMICO (INTERRUPTOR)
       ========================================================= */}
-      {tarjetaQR && (
+      {/* Portal al <body>, igual que <Modal>: el contenido de la página vive en un
+          contexto de apilado propio (.pi-layout-content tiene isolation), así que
+          acá adentro esta capa quedaba POR DEBAJO del header del panel. */}
+      {tarjetaQR && createPortal(
         <div className="pi-sup-modal-overlay" onClick={cerrarTarjeta}>
           <div
             ref={refTarjeta}
@@ -583,12 +613,14 @@ export default function Supervisor() {
               ) : (
                 <div className="historial-list">
                   {historialTarjeta.map((mov) => (
-                    <div key={mov.id} className={`historial-item ${mov.tipo === 'ingreso' ? 'item-in' : 'item-out'}`}>
+                    <div key={mov.id} className={`historial-item ${mov.tipo === 'salida' ? 'item-out' : 'item-in'}`}>
                       {mov.foto
                         ? <FotoZoom width={32} height={32} src={mov.foto} alt="Foto del registro" className="historial-foto-thumb" />
-                        : (mov.tipo === 'ingreso' ? <FaSignInAlt/> : <FaSignOutAlt/>)}
+                        : (mov.tipo === 'salida' ? <FaSignOutAlt/> : <FaSignInAlt/>)}
                       <span>
-                        {mov.tipo === 'ingreso' ? 'Entrada' : 'Salida'} registrada el {formatearFecha(mov.createdAt)}
+                        {mov.tipo === 'verificacion_duplicado'
+                          ? 'Dueño verificado (manilla duplicada) y entró con manilla nueva'
+                          : `${mov.tipo === 'ingreso' ? 'Entrada' : 'Salida'} registrada`} el {formatearFecha(mov.createdAt)}
                         {' '}por {mov.registradoPor?.nombre}
                       </span>
                     </div>
@@ -643,16 +675,35 @@ export default function Supervisor() {
                   {requiereFoto && !fotoCapturadaTemporal && (
                     <p className="pi-sup-hint-foto">Toma la foto de la puerta (arriba) para poder registrar el ingreso o salida.</p>
                   )}
+                  {tarjetaQR.estadoIngreso === 'ingresado' && eventoDetalle.estado !== 'finalizado' && (
+                    <button type="button" className="btn-secundario-sm pi-sup-btn-duplicado" onClick={() => setVerificandoDueno(true)}>
+                      <FaUserShield aria-hidden="true" /> ¿Dice que nunca entró? Verificar dueño (posible copia)
+                    </button>
+                  )}
                 </>
               )}
             </div>
 
           </div>
-        </div>
+        </div>,
+        document.body,
+      )}
+
+      {verificandoDueno && tarjetaQR && (
+        <VerificarDuenoModal
+          entrada={tarjetaQR}
+          evento={eventoDetalle}
+          onVerificado={alVerificarDueno}
+          onCerrar={() => setVerificandoDueno(false)}
+        />
+      )}
+
+      {manillaFalsa && (
+        <ManillaFalsaModal detalle={manillaFalsa} onCerrar={() => setManillaFalsa(null)} />
       )}
 
       {/* --- FLASH DE CONFIRMACIÓN (~1 s) TRAS REGISTRAR INGRESO / SALIDA --- */}
-      {confirmacion && (
+      {confirmacion && createPortal(
         <div className="pi-sup-modal-overlay pi-sup-confirm-overlay">
           <div
             className={`pi-sup-confirm ${confirmacion.tipo === 'ingreso' ? 'confirm-in' : 'confirm-out'}`}
@@ -665,7 +716,8 @@ export default function Supervisor() {
             <h3>{confirmacion.tipo === 'ingreso' ? 'Ingreso registrado' : 'Salida registrada'}</h3>
             <p>{confirmacion.nombre}</p>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );

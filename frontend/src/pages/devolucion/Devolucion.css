@@ -184,7 +184,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: var(--z-modal);
   padding: 20px;
   animation: pi-dev-fadeIn 0.15s ease-out;
 }

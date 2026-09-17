@@ -30,7 +30,7 @@ export class ExcepcionHttpFilter implements ExceptionFilter {
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
 
-    const { status, error } = this.resolver(excepcion);
+    const { status, error, codigo, detalle } = this.resolver(excepcion);
 
     if (status >= HttpStatus.INTERNAL_SERVER_ERROR) {
       // Se loguea completo en el servidor; al cliente solo va el mensaje humano.
@@ -42,17 +42,29 @@ export class ExcepcionHttpFilter implements ExceptionFilter {
       this.logger.warn(`${request.method} ${request.url} -> ${status}: ${error}`);
     }
 
-    response.status(status).json({ error });
+    // `codigo`/`detalle` solo viajan cuando la excepción los trae (ej.
+    // ManillaFalsaException); el resto sigue respondiendo { error } a secas.
+    response.status(status).json(codigo ? { error, codigo, detalle } : { error });
   }
 
-  private resolver(excepcion: unknown): { status: number; error: string } {
+  private resolver(excepcion: unknown): {
+    status: number;
+    error: string;
+    codigo?: string;
+    detalle?: unknown;
+  } {
     if (excepcion instanceof HttpException) {
       const respuesta = excepcion.getResponse();
-      const mensaje =
-        typeof respuesta === 'string'
-          ? respuesta
-          : this.extraerMensaje((respuesta as Record<string, unknown>)?.['message']);
-      return { status: excepcion.getStatus(), error: mensaje ?? 'Ocurrió un error.' };
+      if (typeof respuesta === 'string') {
+        return { status: excepcion.getStatus(), error: respuesta };
+      }
+      const cuerpo = respuesta as Record<string, unknown>;
+      return {
+        status: excepcion.getStatus(),
+        error: this.extraerMensaje(cuerpo?.['message']) ?? 'Ocurrió un error.',
+        codigo: typeof cuerpo?.['codigo'] === 'string' ? cuerpo['codigo'] : undefined,
+        detalle: cuerpo?.['detalle'],
+      };
     }
 
     if (excepcion instanceof Prisma.PrismaClientKnownRequestError) {

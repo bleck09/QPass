@@ -303,10 +303,17 @@ export class EventosService {
     if (evento.archivadoEn) {
       throw new ConflictException('El evento ya está archivado.');
     }
-    const actualizado = await this.prisma.evento.update({
-      where: { id },
-      data: { estado: 'finalizado' },
-    });
+    const [actualizado] = await this.prisma.$transaction([
+      this.prisma.evento.update({
+        where: { id },
+        data: { estado: 'finalizado' },
+      }),
+      // Igual que FinalizarEventosCron: las en_alerta quedan como están.
+      this.prisma.codigoQr.updateMany({
+        where: { eventoId: id, estado: 'activa' },
+        data: { estado: 'cerrada' },
+      }),
+    ]);
     await this.auditoria.registrar(null, {
       actorId: adminId,
       entidad: 'evento',

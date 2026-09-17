@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
 import { useApi } from '../../utils/useApi.js';
@@ -21,6 +22,8 @@ import CorteCaja from '../../components/CorteCaja.jsx';
 import EscanerQr from '../../components/EscanerQr.jsx';
 import AvisoSinCaja from '../../components/AvisoSinCaja.jsx';
 import FotoZoom from '../../components/FotoZoom.jsx';
+import ManillaFalsaModal from '../../components/ManillaFalsaModal.jsx';
+import { esManillaFalsa } from '../../utils/duplicados.js';
 import './Recargador.css';
 import '../supervisor/GestionEntrega.css';
 
@@ -126,11 +129,14 @@ export default function Recargador() {
     setEscaneando(true);
   };
 
+  // Copia de una manilla duplicada (detalle que manda el backend).
+  const [manillaFalsa, setManillaFalsa] = useState(null);
+
   const handleCodigoDetectado = async (codigo) => {
     setEscaneando(false);
     setBuscando(true);
     try {
-      const entrada = await api.entradas.buscarPorCodigo(codigo);
+      const entrada = await api.entradas.buscarPorCodigo(codigo, { contexto: 'recarga' });
       if (!entrada.usuarioId) {
         setErrorEscaneo('Este participante no tiene una cuenta con billetera — no se le puede recargar.');
         return;
@@ -139,7 +145,8 @@ export default function Recargador() {
       setRecargaExitosa(null);
       setTarjetaQR({ ...entrada, saldo: Number(entrada.usuario?.saldo ?? 0) });
     } catch (err) {
-      setErrorEscaneo(err.message);
+      if (esManillaFalsa(err)) setManillaFalsa(err.detalle);
+      else setErrorEscaneo(err.message);
     } finally {
       setBuscando(false);
     }
@@ -162,7 +169,20 @@ export default function Recargador() {
     const valor = Number(monto);
     if (!tarjetaQR || eventoNoCoincide || !valor || valor <= 0) return;
 
-    const { transaccion } = await api.transacciones.recarga({ entradaId: tarjetaQR.id, eventoId: eventoDetalle.id, monto: valor });
+    let transaccion;
+    try {
+      ({ transaccion } = await api.transacciones.recarga({
+        entradaId: tarjetaQR.id,
+        eventoId: eventoDetalle.id,
+        monto: valor,
+        codigoQr: tarjetaQR.codigoQrVinculado?.codigo,
+      }));
+    } catch (err) {
+      if (!esManillaFalsa(err)) throw err;
+      cerrarTarjeta();
+      setManillaFalsa(err.detalle);
+      return;
+    }
     api.transacciones.listar({ eventoId: eventoDetalle.id, tipo: 'recarga' }).then(lista =>
       setHistorial(lista.filter(t => t.operador.id === sesion.id))
     );
@@ -430,7 +450,7 @@ export default function Recargador() {
       )}
 
       {/* --- TARJETA GRANDE AL ESCANEAR QR --- */}
-      {tarjetaQR && (
+      {tarjetaQR && createPortal(
         <div className="pi-rec-modal-overlay" onClick={cerrarTarjeta}>
           <div
             ref={refTarjeta}
@@ -614,11 +634,12 @@ export default function Recargador() {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
 
       {/* --- REPORTAR INCIDENCIA DESDE UNA RECARGA YA PASADA (Historial) --- */}
-      {historialAReportar && (
+      {historialAReportar && createPortal(
         <div className="pi-rec-modal-overlay" onClick={cerrarReporteHistorial}>
           <div
             ref={refReporte}
@@ -701,7 +722,12 @@ export default function Recargador() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
+      )}
+
+      {manillaFalsa && (
+        <ManillaFalsaModal detalle={manillaFalsa} onCerrar={() => setManillaFalsa(null)} />
       )}
     </div>
   );

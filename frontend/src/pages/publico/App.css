@@ -245,8 +245,11 @@ html {
 }
 
 /* --- MAPA INTERACTIVO PÚBLICO --- */
+/* min-width/max-width: sin ellos, el lienzo de 800px de ancho mínimo (cuando el
+   evento no tiene contorno dibujado) estiraba al panel y desbordaba la página
+   entera en vez de scrollear acá adentro. */
 .pi-landing-mapa-wrapper {
-  width: 100%; max-width: 1000px; margin: 0 auto; overflow-x: auto; 
+  width: 100%; max-width: min(1000px, 100%); min-width: 0; margin: 0 auto; overflow-x: auto;
 }
 
 .pi-landing-mapa-canvas {
@@ -291,7 +294,13 @@ html {
 .pi-landing-contorno-svg polygon { fill: color-mix(in srgb, var(--color-primario) 10%, transparent); stroke: var(--color-primario); stroke-width: 2; stroke-dasharray: 6 4; }
 
 .box-fondo-img { width: 100%; height: 100%; background-size: cover; background-position: center; position: relative; }
-.box-overlay-texto { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0, 0, 0, 0.8); padding: 8px; color: #ffffff; text-align: center; }
+/* Degradado en vez de una franja negra al 80%: en un puesto chico esa franja
+   tapaba casi toda la foto y el logo no se veía. */
+.box-overlay-texto {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.85), rgba(0, 0, 0, 0));
+  padding: 10px 6px 4px; color: #ffffff; text-align: center;
+}
 .box-overlay-texto strong { font-size: var(--text-xs); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block;}
 
 .box-fondo-color { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 8px; }
@@ -1624,4 +1633,21 @@ html {
 
 @media (prefers-reduced-motion: reduce) {
   .ev-agenda__mas { transition: none; }
+}
+
+/* ============================================================================
+   MÓVIL: las tarjetas de servicios ocupaban toda la pantalla cada una.
+   ========================================================================= */
+@media (max-width: 600px) {
+  .pi-landing-section { padding: 3rem 5%; }
+  .pi-landing-section-header { margin-bottom: 2rem; }
+  .pi-landing-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 0.75rem;
+  }
+  .pi-landing-glass-card { padding: 1.1rem; }
+  .pi-landing-card-header { margin-bottom: 0.75rem; }
+  .pi-landing-card-icon { width: 38px; height: 38px; font-size: var(--text-base); }
+  .pi-landing-glass-card h3 { font-size: var(--text-base); }
+  .pi-landing-glass-card p { font-size: var(--text-sm); }
 }

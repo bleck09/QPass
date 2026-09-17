@@ -34,8 +34,8 @@ export class VentasController {
   @Post()
   @Roles('Ayudante')
   @Idempotente()
-  crear(@Body() dto: CrearVentaDto, @UsuarioActual('id') ayudanteId: number) {
-    return this.ventasService.crear(dto, ayudanteId);
+  crear(@Body() dto: CrearVentaDto, @UsuarioActual() actor: UsuarioJwt) {
+    return this.ventasService.crear(dto, actor);
   }
 
   /** Anular una venta (§5.3): Admin o el Usuario Negocio dueño del puesto. */

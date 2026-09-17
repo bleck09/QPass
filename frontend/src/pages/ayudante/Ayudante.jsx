@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useModal } from '../../utils/useModal.js';
@@ -26,6 +27,8 @@ import {
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
+import ManillaFalsaModal from '../../components/ManillaFalsaModal.jsx';
+import { esManillaFalsa } from '../../utils/duplicados.js';
 import './Ayudante.css';
 import '../supervisor/GestionEntrega.css';
 
@@ -223,6 +226,11 @@ export default function Ayudante() {
   }, [ventas, busquedaVentas]);
 
   const saldoInsuficiente = tarjetaQR && totalCarrito > Number(tarjetaQR.saldo);
+  // La manilla es de UN evento y su saldo solo vale ahí: si es de otro, no se
+  // cobra acá (el backend lo rechaza igual, ver ventas.service.crear).
+  const eventoNoCoincide = !!(
+    tarjetaQR && puesto?.eventoId && tarjetaQR.eventoId && tarjetaQR.eventoId !== puesto.eventoId
+  );
 
   // --- LÓGICA DEL CARRITO (respeta el stock que queda) ---
   // Tope de unidades para un producto: su stock actual, o Infinity si no controla stock.
@@ -286,11 +294,14 @@ export default function Ayudante() {
     setEscaneando(true);
   };
 
+  // Copia de una manilla duplicada (detalle que manda el backend).
+  const [manillaFalsa, setManillaFalsa] = useState(null);
+
   const handleCodigoDetectado = async (codigo) => {
     setEscaneando(false);
     setBuscando(true);
     try {
-      const entrada = await api.entradas.buscarPorCodigo(codigo);
+      const entrada = await api.entradas.buscarPorCodigo(codigo, { contexto: 'venta', puestoId: puesto?.id });
       if (!entrada.usuarioId) {
         setErrorEscaneo('Este participante no tiene una cuenta con billetera — no se le puede cobrar.');
         return;
@@ -302,7 +313,8 @@ export default function Ayudante() {
         saldoBloqueado: Number(entrada.usuario?.saldoBloqueado ?? 0),
       });
     } catch (err) {
-      setErrorEscaneo(err.message);
+      if (esManillaFalsa(err)) setManillaFalsa(err.detalle);
+      else setErrorEscaneo(err.message);
     } finally {
       setBuscando(false);
     }
@@ -319,7 +331,7 @@ export default function Ayudante() {
   const refTarjeta = useModal(!!tarjetaQR, cerrarTarjeta);
 
   const confirmarCobro = async () => {
-    if (!tarjetaQR || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
+    if (!tarjetaQR || eventoNoCoincide || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
 
     const nuevoSaldo = Number(tarjetaQR.saldo) - totalCarrito;
     setErrorCobro('');
@@ -327,9 +339,15 @@ export default function Ayudante() {
       await api.ventas.crear({
         puestoId: puesto.id,
         entradaId: tarjetaQR.id,
+        codigoQr: tarjetaQR.codigoQrVinculado?.codigo,
         items: carrito.map(i => ({ productoId: i.id, cantidad: i.cantidad })),
       });
     } catch (err) {
+      if (esManillaFalsa(err)) {
+        cerrarTarjeta();
+        setManillaFalsa(err.detalle);
+        return;
+      }
       // Ej: "Sin stock suficiente de X (quedan N)" — el ayudante se entera acá.
       setErrorCobro(err.message);
       recargarProductos();
@@ -775,7 +793,7 @@ export default function Ayudante() {
       )}
 
       {/* --- TARJETA GRANDE AL ESCANEAR QR --- */}
-      {tarjetaQR && (
+      {tarjetaQR && createPortal(
         <div className="pi-ayu-modal-overlay" onClick={cerrarTarjeta}>
           <div
             ref={refTarjeta}
@@ -802,10 +820,12 @@ export default function Ayudante() {
               </div>
             ) : (
               <>
-                <div className={`pi-ayu-tarjeta-estado ${saldoInsuficiente ? 'aviso' : 'ok'}`}>
-                  {saldoInsuficiente
-                    ? <><FaExclamationTriangle /> Saldo insuficiente</>
-                    : <><FaCheckCircle /> Código QR Válido</>}
+                <div className={`pi-ayu-tarjeta-estado ${saldoInsuficiente || eventoNoCoincide ? 'aviso' : 'ok'}`}>
+                  {eventoNoCoincide
+                    ? <><FaExclamationTriangle /> Manilla de otro evento</>
+                    : saldoInsuficiente
+                      ? <><FaExclamationTriangle /> Saldo insuficiente</>
+                      : <><FaCheckCircle /> Código QR Válido</>}
                 </div>
 
                 {(tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
@@ -887,7 +907,15 @@ export default function Ayudante() {
                   </div>
                 </div>
 
-                {saldoInsuficiente && (
+                {eventoNoCoincide && (
+                  <div className="pi-ayu-alerta-error">
+                    <FaExclamationTriangle /> Esta manilla es de «{tarjetaQR.evento?.nombre || 'otro evento'}» y
+                    este puesto es de «{puesto.evento?.nombre || 'este evento'}»: su saldo solo sirve en su
+                    propio evento, así que no se puede cobrar acá.
+                  </div>
+                )}
+
+                {!eventoNoCoincide && saldoInsuficiente && (
                   <div className="pi-ayu-alerta-error">
                     <FaExclamationTriangle /> El saldo disponible ({tarjetaQR.saldo} pts) no alcanza para cubrir esta venta.
                   </div>
@@ -904,7 +932,7 @@ export default function Ayudante() {
                   <button
                     className="pi-ayu-btn-confirmar"
                     onClick={confirmarCobro}
-                    disabled={saldoInsuficiente}
+                    disabled={saldoInsuficiente || eventoNoCoincide}
                   >
                     <FaCheckCircle /> Confirmar Cobro
                   </button>
@@ -912,7 +940,12 @@ export default function Ayudante() {
               </>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
+      )}
+
+      {manillaFalsa && (
+        <ManillaFalsaModal detalle={manillaFalsa} onCerrar={() => setManillaFalsa(null)} />
       )}
     </div>
   );

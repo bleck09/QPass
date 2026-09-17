@@ -274,10 +274,10 @@ export default function UsuarioNegocio() {
               <td className="td-centro">
                 <div className="btn-acciones">
                   <button type="button" className="btn-secundario-sm" onClick={() => abrirDetallePuesto(puesto)}>
-                    <FaListUl aria-hidden="true" /> Detalles
+                    <FaListUl aria-hidden="true" /> <span className="btn-acciones__texto">Detalles</span>
                   </button>
                   <button type="button" className="btn-secundario-sm btn-secundario-sm--peligro" onClick={() => desactivarPuesto(puesto)} title="Quitar del evento">
-                    <FaTrash aria-hidden="true" /> Quitar
+                    <FaTrash aria-hidden="true" /> <span className="btn-acciones__texto">Quitar</span>
                   </button>
                 </div>
               </td>

@@ -2,6 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
+import HistorialManillas from '../../components/HistorialManillas.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Paginador from '../../components/Paginador.jsx';
@@ -1360,6 +1361,7 @@ export default function UsuarioNormal() {
                         {item.tipo === 'consumo' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
                         {item.tipo === 'devolucion' && <><FaTicketAlt color="var(--coral-compra)" /> Devolución</>}
                         {item.tipo === 'ajuste' && <><FaCoins color="var(--verde-recarga-texto)" /> Ajuste</>}
+                        {item.tipo === 'ajuste_manual' && <><FaCoins color="var(--verde-recarga-texto)" /> Reposición de saldo</>}
                         {item.tipo === 'reverso_consumo' && <><FaCoins color="var(--verde-recarga-texto)" /> Reintegro por venta anulada</>}
                       </span>
                     </td>
@@ -1372,7 +1374,7 @@ export default function UsuarioNormal() {
                       // una magnitud positiva y el signo lo da el tipo de movimiento.
                       const positivo = item.tipo === 'ajuste'
                         ? monto >= 0
-                        : ['recarga', 'reverso_consumo'].includes(item.tipo);
+                        : ['recarga', 'reverso_consumo', 'ajuste_manual'].includes(item.tipo);
                       return (
                         <td className={positivo ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
                           {positivo ? '+' : '-'}{Math.abs(monto)} pts
@@ -1387,6 +1389,16 @@ export default function UsuarioNormal() {
             {ventaDetalle && (
               <DetalleVentaModal venta={ventaDetalle} onCerrar={() => setVentaDetalle(null)} />
             )}
+          </div>
+
+          {/* Cambios de manilla de sus entradas: si le cambiaron la manilla (perdida,
+              dañada o duplicada), acá ve cuándo y por qué. */}
+          <div className="pi-usr-card mt-20">
+            <HistorialManillas
+              mias
+              titulo="Mis manillas"
+              descripcion="Cada manilla que te entregaron y cada cambio, con el motivo."
+            />
           </div>
         </div>
       )}

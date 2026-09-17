@@ -159,3 +159,14 @@
     transform: none;
   }
 }
+
+/* Móvil: la grilla pone dos tarjetas por fila (ver GrillaEventos.css), así que
+   la tarjeta se compacta para que el título y los chips sigan entrando. */
+@media (max-width: 720px) {
+  .qp-evento-card { min-height: 220px; }
+  .qp-evento-card__top { padding: 10px; }
+  .qp-evento-card__body { padding: 12px; gap: 8px; }
+  .qp-evento-card__title { font-size: var(--text-base); }
+  .qp-evento-card__chip { padding: 4px 8px; gap: 4px; }
+  .qp-evento-card__cta { padding: 8px 12px; font-size: var(--text-xs); }
+}

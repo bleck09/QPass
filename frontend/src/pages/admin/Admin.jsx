@@ -25,6 +25,7 @@ import {
   GraficoVentasPorNegocio, GraficoProductosMasVendidos,
 } from './GraficosEvento.jsx';
 import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
+import HistorialManillas from '../../components/HistorialManillas.jsx';
 import './Admin.css';
 // Marco Gráfico/Tabla (.pi-adg-grafico*) compartido con el dashboard general —
 // se reutiliza tal cual en vez de duplicar el CSS.
@@ -1108,6 +1109,11 @@ export default function Admin({
                 <span className="label">Ayudantes (total)</span>
               </button>
             </div>
+          </section>
+
+          {/* --- HISTORIAL DE MANILLAS --- */}
+          <section className="pi-dash-seccion">
+            <HistorialManillas eventoId={eventoId} />
           </section>
 
           {/* --- ACTIVIDAD RECIENTE --- */}

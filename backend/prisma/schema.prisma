@@ -26,9 +26,42 @@ enum EstadoIngreso {
   salio
 }
 
+// verificacion_duplicado = el dueño real llegó y su manilla ya figuraba adentro (alguien
+// entró con una copia del QR). El Supervisor lo verificó (foto nueva + CI + cuenta abierta
+// en el celular), le dio una manilla nueva y lo dejó pasar: cuenta como un ingreso. Ver
+// CasoDuplicado.
 enum TipoRegistroIngreso {
   ingreso
   salida
+  verificacion_duplicado
+}
+
+// Estado de una manilla (CodigoQr), aparte de `anulado` (que sigue significando "ya no es
+// la manilla oficial de su entrada"):
+//   activa       -> normal.
+//   transferida  -> se reemplazó por una nueva (perdida/dañada, entradas.service.vincularQr).
+//                   Anulada, ya no se puede escanear.
+//   en_alerta    -> es la COPIA de un duplicado (CasoDuplicado). Se puede escanear pero no
+//                   deja hacer nada: muestra la foto del falso y avisa a Supervisor/Admin/
+//                   Cliente del evento (AlertaManilla).
+//   recuperada   -> seguridad ya se la quitó al falso. Ya no se puede escanear.
+//   cerrada      -> el evento finalizó (cron finalizar-eventos / eventos.service.cerrar). Se
+//                   sigue pudiendo escanear para la devolución de saldo.
+enum EstadoManilla {
+  activa
+  transferida
+  en_alerta
+  recuperada
+  cerrada
+}
+
+// Desde qué pantalla se escaneó una manilla en_alerta (AlertaManilla.contexto).
+enum ContextoAlertaManilla {
+  control_acceso
+  entrega
+  recarga
+  venta
+  devolucion
 }
 
 // Usado por Compra: aprobación del comprobante de pago.
@@ -81,6 +114,8 @@ enum EstadoCaso {
 // "recarga" = crédito a la billetera del dueño de la Entrada escaneada, hecho por un Recargador.
 // "devolucion" = retiro total/parcial hecho por rol Devolucion.
 // "ajuste" = corrección manual (ej. tras resolver una IncidenciaRecarga).
+// "ajuste_manual" = crédito que Admin da a mano (ej. reponer lo que consumió el falso de un
+//   CasoDuplicado). Nunca edita filas viejas: siempre es una fila nueva con `nota` obligatoria.
 // "reverso_consumo" / "reverso_venta" = las dos filas que revierten una Venta anulada (§5.3):
 //   reverso_consumo reintegra el saldo al comprador, reverso_venta se lo quita al negocio.
 enum TipoTransaccion {
@@ -91,6 +126,7 @@ enum TipoTransaccion {
   ajuste
   reverso_consumo
   reverso_venta
+  ajuste_manual
 }
 
 // Origen de un CambioPassword. Era String libre; en BD solo existen estos dos valores.
@@ -191,6 +227,9 @@ model Usuario {
   codigosRetiroNegocio   CodigoRetiroNegocio[] @relation("CodigoRetiroNegocio")
   avisosStockEnviados    AvisoStock[]          @relation("AyudanteQueAvisa")
   avisosStockRecibidos   AvisoStock[]          @relation("NegocioAvisado")
+  casosDuplicadoAbiertos CasoDuplicado[]       @relation("SupervisorQueVerificaDuplicado")
+  casosDuplicadoCerrados CasoDuplicado[]       @relation("QuienRecuperaManilla")
+  alertasManillaEscaneadas AlertaManilla[]     @relation("OperadorQueEscaneaAlerta")
 
   @@index([rol])                // listados del panel admin filtrados por rol
   @@index([negocioAsignadoId])  // ayudantes de un negocio
@@ -323,6 +362,7 @@ model Evento {
   dias              DiaEvento[]
   billeterasEvento  BilleteraEvento[]
   codigosRetiroNegocio CodigoRetiroNegocio[]
+  casosDuplicado    CasoDuplicado[]
 
   @@index([clienteId])
   @@map("eventos")
@@ -619,6 +659,7 @@ model Entrada {
   incidencias       IncidenciaRecarga[]
   reportesDatos     ReporteEntrada[]
   registrosIngreso  RegistroIngreso[] // historial completo de reingresos, cada uno con su foto
+  casosDuplicado    CasoDuplicado[]
 
   @@unique([eventoId, numero])
   @@index([eventoId, estadoIngreso])
@@ -641,10 +682,15 @@ model RegistroIngreso {
                            // el historial de auditoría. La foto de referencia vigente vive en
                            // Entrada.foto (una sola por persona-evento, ver entradas.routes.js).
   registradoPorId Int
+  // Solo en tipo=verificacion_duplicado: lo que el Supervisor comprobó del dueño real.
+  ultimosDigitosCi String?
+  mostroCarnet     Boolean?
+  cuentaVerificada Boolean? // mostró su cuenta QPass abierta en el celular
   createdAt       DateTime            @default(now())
 
   entrada       Entrada @relation(fields: [entradaId], references: [id], onDelete: Cascade)
   registradoPor Usuario @relation("SupervisorQueRegistraIngreso", fields: [registradoPorId], references: [id])
+  casoDuplicado CasoDuplicado?
 
   @@index([entradaId, createdAt])
   @@map("registros_ingreso")
@@ -680,6 +726,7 @@ model CodigoQr {
   motivoAnulacion  String?
   anuladoPorId     Int?
   anuladoEn        DateTime?
+  estado           EstadoManilla @default(activa)
   updatedAt        DateTime  @default(now()) @updatedAt
 
   evento      Evento     @relation(fields: [eventoId], references: [id], onDelete: Cascade)
@@ -690,11 +737,15 @@ model CodigoQr {
   entrada     Entrada?   @relation(fields: [entradaId], references: [id])
   asignadoPor Usuario?   @relation("SupervisorQueAsigna", fields: [asignadoPorId], references: [id])
   anuladoPor  Usuario?   @relation("SupervisorQueAnula", fields: [anuladoPorId], references: [id])
+  casosComoCopia CasoDuplicado[] @relation("ManillaCopiada")
+  casosComoNueva CasoDuplicado[] @relation("ManillaNuevaDelDueno")
+  alertas        AlertaManilla[]
 
   @@unique([eventoId, numero])
   @@index([entradaId])
   @@index([eventoId, anulado])
   @@index([eventoId, diaEventoId])
+  @@index([eventoId, estado])
   @@map("codigos_qr")
 }
 
@@ -811,6 +862,74 @@ model ReporteEntrada {
   @@index([entradaId])
   @@index([compraId])
   @@map("reportes_entrada")
+}
+
+// Manilla duplicada: alguien entró con una COPIA del QR (foto, fotocopia) antes que el
+// dueño. Cuando el dueño llega y su manilla ya figura adentro, el Supervisor lo verifica
+// (RegistroIngreso tipo=verificacion_duplicado) y se abre este caso:
+//   - la manilla vieja (codigoCopiaId) queda anulada + estado=en_alerta: la copia que
+//     tiene el falso ya no sirve para nada y cada escaneo avisa (AlertaManilla);
+//   - el dueño recibe una manilla nueva (codigoNuevoId) para la MISMA Entrada, así que su
+//     saldo (BilleteraEvento) no se mueve;
+//   - fotoSospechoso = la foto que tenía Entrada.foto antes de la verificación (la que se
+//     le sacó al falso en la puerta). Entrada.foto pasa a ser la del dueño.
+// "Personas por encontrar" = casos pendientes. Al atrapar al falso, Supervisor/Admin marca
+// la manilla recuperada: estado=resuelto + quién/cuándo + la sanción que decida el
+// organizador (texto libre; el sistema NO aplica sanciones). Lo que el falso haya
+// consumido antes de detectarse queda en el ledger tal cual; si el organizador decide
+// reponerlo, Admin hace un ajuste_manual (Transaccion) con este caso en `nota`.
+model CasoDuplicado {
+  id                     String     @id @default(cuid())
+  eventoId               String
+  entradaId              String
+  codigoCopiaId          String
+  codigoNuevoId          String
+  registroVerificacionId String     @unique
+  fotoSospechoso         String?
+  estado                 EstadoCaso @default(pendiente)
+  abiertoPorId           Int
+  recuperadoEn           DateTime?
+  recuperadoPorId        Int?
+  sancion                String?
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @default(now()) @updatedAt
+
+  evento               Evento          @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  entrada              Entrada         @relation(fields: [entradaId], references: [id], onDelete: Cascade)
+  codigoCopia          CodigoQr        @relation("ManillaCopiada", fields: [codigoCopiaId], references: [id], onDelete: Cascade)
+  codigoNuevo          CodigoQr        @relation("ManillaNuevaDelDueno", fields: [codigoNuevoId], references: [id], onDelete: Cascade)
+  registroVerificacion RegistroIngreso @relation(fields: [registroVerificacionId], references: [id], onDelete: Cascade)
+  abiertoPor           Usuario         @relation("SupervisorQueVerificaDuplicado", fields: [abiertoPorId], references: [id])
+  recuperadoPor        Usuario?        @relation("QuienRecuperaManilla", fields: [recuperadoPorId], references: [id])
+  alertas              AlertaManilla[]
+
+  @@index([eventoId, estado])
+  @@index([entradaId])
+  @@index([codigoCopiaId])
+  @@map("casos_duplicado")
+}
+
+// Cada vez que alguien escanea una manilla en_alerta (la copia de un CasoDuplicado). El
+// escaneo se rechaza (el operador ve la foto del falso) y queda esta fila, que es la
+// "última ubicación" del falso: quién escaneó, desde qué pantalla y en qué puesto.
+// Supervisor/Admin/Cliente del evento la reciben consultando cada ~10 s (no hay websockets).
+model AlertaManilla {
+  id         String                @id @default(cuid())
+  casoId     String
+  codigoQrId String
+  contexto   ContextoAlertaManilla
+  operadorId Int
+  puestoId   String? // solo si el escaneo fue en un punto de venta
+  createdAt  DateTime              @default(now())
+
+  caso     CasoDuplicado @relation(fields: [casoId], references: [id], onDelete: Cascade)
+  codigoQr CodigoQr      @relation(fields: [codigoQrId], references: [id], onDelete: Cascade)
+  operador Usuario       @relation("OperadorQueEscaneaAlerta", fields: [operadorId], references: [id])
+  puesto   Puesto?       @relation(fields: [puestoId], references: [id], onDelete: SetNull)
+
+  @@index([casoId, createdAt])
+  @@index([createdAt])
+  @@map("alertas_manilla")
 }
 
 // Catálogo del negocio definido UNA sola vez, reutilizable entre eventos.
@@ -941,6 +1060,7 @@ model Puesto {
   ayudantes       PuestoAyudante[]
   ventas          Venta[]
   avisosStock     AvisoStock[]
+  alertasManilla  AlertaManilla[]
 
   @@unique([eventoId, puestoBaseId])
   @@index([eventoId])

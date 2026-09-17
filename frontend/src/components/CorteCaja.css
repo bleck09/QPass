@@ -181,7 +181,9 @@
    a lo ancho (más fáciles de tocar). */
 @media (max-width: 600px) {
   .pi-caja-wrap { width: 100%; }
-  .pi-caja-seccion { padding: 20px 16px; }
+  .pi-caja-seccion { padding: 16px 14px; }
+  /* Los datos del arqueo caían de a uno por fila y la pantalla quedaba larguísima. */
+  .pi-caja-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .pi-caja-cerrada { align-items: stretch; }
   .pi-caja-seccion .pi-caja-btn-primario {
     align-self: stretch;

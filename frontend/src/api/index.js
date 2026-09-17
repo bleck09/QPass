@@ -109,7 +109,9 @@ export const entradas = {
   // la haya hecho otra persona.
   mias: () => apiGet('/entradas/mias'),
   obtener: (id) => apiGet(`/entradas/${id}`),
-  buscarPorCodigo: (codigo) => apiGet(`/entradas/buscar/${encodeURIComponent(codigo)}`),
+  // `params` = { contexto, puestoId }: solo sirven para ubicar al falso si la
+  // manilla escaneada es una copia (el backend responde MANILLA_FALSA).
+  buscarPorCodigo: (codigo, params) => apiGet(`/entradas/buscar/${encodeURIComponent(codigo)}${qs(params)}`),
   buscarBasico: (codigo) => apiGet(`/entradas/buscar-basico/${encodeURIComponent(codigo)}`),
   registros: (id) => apiGet(`/entradas/${id}/registros`),
   // `motivo` solo aplica cuando la entrada YA tenia una manilla: queda como
@@ -117,13 +119,26 @@ export const entradas = {
   vincularQr: (id, codigoQrId, motivo) =>
     apiPost(`/entradas/${id}/vincular-qr`, { codigoQrId, motivo }),
   anularQr: (id, motivo) => apiPost(`/entradas/${id}/anular-qr`, { motivo }),
-  ingreso: (id, foto, eventoId) => apiPost(`/entradas/${id}/ingreso`, { foto, eventoId }),
-  salida: (id, foto, eventoId) => apiPost(`/entradas/${id}/salida`, { foto, eventoId }),
+  ingreso: (id, foto, eventoId, codigoQr) => apiPost(`/entradas/${id}/ingreso`, { foto, eventoId, codigoQr }),
+  salida: (id, foto, eventoId, codigoQr) => apiPost(`/entradas/${id}/salida`, { foto, eventoId, codigoQr }),
+  // El dueño real llegó y su manilla ya figuraba adentro (alguien entró con una copia).
+  verificarDuplicado: (id, datos) => apiPost(`/entradas/${id}/verificar-duplicado`, datos),
+};
+
+// Manillas duplicadas: "Personas por encontrar" + alertas (polling cada 10 s).
+export const casosDuplicado = {
+  listar: (params) => apiGet(`/casos-duplicado${qs(params)}`),
+  alertas: (params) => apiGet(`/casos-duplicado/alertas${qs(params)}`),
+  recuperar: (id, sancion) => apiPost(`/casos-duplicado/${id}/recuperar`, { sancion }),
 };
 
 export const codigosQr = {
   listar: (params) => apiGet(`/codigos-qr${qs(params)}`),
   buscarPorCodigo: (codigo) => apiGet(`/codigos-qr/buscar/${encodeURIComponent(codigo)}`),
+  // Quién entregó / cambió cada manilla del evento (Gestión de Entrega).
+  historial: (eventoId) => apiGet(`/codigos-qr/historial${qs({ eventoId })}`),
+  // "Mis manillas": los cambios de manilla de las entradas del usuario logueado.
+  historialMias: () => apiGet('/codigos-qr/historial/mias'),
   generar: (datos) => apiPost('/codigos-qr/generar', datos),
   eliminarNoVinculados: (eventoId) => apiDelete(`/codigos-qr${qs({ eventoId })}`),
 };
@@ -132,6 +147,8 @@ export const transacciones = {
   listar: (params) => apiGet(`/transacciones${qs(params)}`),
   recarga: (datos) => apiPost('/transacciones/recarga', datos),
   devolucion: (datos) => apiPost('/transacciones/devolucion', datos),
+  // Solo Admin: crédito nuevo en el ledger (nunca edita movimientos viejos).
+  ajusteManual: (datos) => apiPost('/transacciones/ajuste-manual', datos),
 };
 
 export const incidencias = {
@@ -259,7 +276,7 @@ const api = {
   auth, usuarios, eventos, asignaciones, diasEvento, billeterasEvento, codigosRetiroNegocio, categoriasTicket, compras, entradas,
   codigosQr, transacciones, incidencias, reportesEntrada, puestosBase, puestos, elementosMapa, productos,
   puestoAyudantes, ventas, avisosStock, landingConfig, solicitudesEvento, cortesCaja,
-  auditoria, dashboard,
+  auditoria, dashboard, casosDuplicado,
 };
 
 export default api;
