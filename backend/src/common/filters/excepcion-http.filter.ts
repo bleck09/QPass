@@ -20,6 +20,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Request, Response } from 'express';
+import { firmarProfundo } from '../interceptors/firmar-imagenes.interceptor';
 
 @Catch()
 export class ExcepcionHttpFilter implements ExceptionFilter {
@@ -44,7 +45,13 @@ export class ExcepcionHttpFilter implements ExceptionFilter {
 
     // `codigo`/`detalle` solo viajan cuando la excepción los trae (ej.
     // ManillaFalsaException); el resto sigue respondiendo { error } a secas.
-    response.status(status).json(codigo ? { error, codigo, detalle } : { error });
+    // El detalle pasa por el mismo firmado de /uploads que las respuestas OK
+    // (FirmarImagenesInterceptor no corre en el camino del error, así que sin
+    // esto la foto que viaja en el error llegaba sin firma y el estático la
+    // rechazaba con 403).
+    response
+      .status(status)
+      .json(codigo ? { error, codigo, detalle: firmarProfundo(detalle) } : { error });
   }
 
   private resolver(excepcion: unknown): {

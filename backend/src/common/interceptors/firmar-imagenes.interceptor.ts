@@ -23,7 +23,7 @@ const RUTA_UPLOAD = /^\/uploads\//;
 // esto — es solo un freno de seguridad ante un ciclo o payload raro.
 const PROFUNDIDAD_MAXIMA = 12;
 
-function firmarProfundo(valor: unknown, profundidad = 0): unknown {
+export function firmarProfundo(valor: unknown, profundidad = 0): unknown {
   if (valor == null || profundidad > PROFUNDIDAD_MAXIMA) return valor;
 
   if (typeof valor === 'string') {

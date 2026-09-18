@@ -9,14 +9,19 @@ const PX_POR_CM = 96 / 2.54;
    La manilla es una tarjeta con dos ranuras (arriba y abajo) por donde pasa
    la tela que la sujeta a la muñeca.
    ============================================================================ */
+// Manilla de 2.4 x 3 cm: QR cuadrado de 2 x 2 cm y TODO el material de 0.2 cm.
+//   A lo ancho: 0.2 + QR 2 + 0.2 = 2.4  (y la ranura: 0.2 + 2.0 + 0.2)
+//   A lo alto:  0.2 + ranura 0.1 + 0.2 + QR 2 + 0.2 + ranura 0.1 + 0.2 = 3
+// Antes era 3 x 5 cm con el QR estirado a 2 x 3 (menos legible y ocupaba casi
+// el doble de hoja).
 export const ETIQUETA = {
-  ancho: 3,
-  alto: 5,
-  radio: 0.4,        // esquinas redondeadas
-  qrAncho: 2,        // el QR ocupa este bloque completo...
-  qrAlto: 3,         // ...y este alto (igualar a qrAncho para volverlo cuadrado)
-  aberturaLargo: 2.3,   // lo que mide la ranura a lo largo
-  aberturaGrosor: 0.3,  // lo que mide de lado a lado (por donde entra la tela)
+  ancho: 2.4,
+  alto: 3,
+  radio: 0.3,        // esquinas redondeadas
+  qrAncho: 2,        // QR cuadrado: igual ancho que alto
+  qrAlto: 2,
+  aberturaLargo: 2,     // lo que mide la ranura a lo largo (deja 0.2 cm de material a cada lado)
+  aberturaGrosor: 0.1,  // lo que mide de lado a lado: pasa una sola tela fina
   separacion: 0.3,      // aire entre etiquetas al imponerlas en la hoja
   textoFuera: 0.5,      // franja debajo del troquel donde se imprime el codigo
 };
@@ -38,9 +43,9 @@ const aNombreArchivo = (texto) => (texto || 'evento')
 /**
  * Dibuja UNA etiqueta con su troquel en (x, y).
  *
- * El QR ocupa el bloque de 2 x 3 cm completo. El codigo en texto va FUERA del
- * troquel (debajo), asi la pulsera ya cortada queda limpia y el texto solo
- * sirve como referencia en la hoja impresa.
+ * El QR (cuadrado, ETIQUETA.qrAncho x qrAlto) va centrado. El codigo en texto
+ * va FUERA del troquel (debajo), asi la pulsera ya cortada queda limpia y el
+ * texto solo sirve como referencia en la hoja impresa.
  */
 const dibujarEtiqueta = (doc, x, y, dataUrl, codigo) => {
   const { ancho, alto, radio, qrAncho, qrAlto, aberturaLargo, aberturaGrosor } = ETIQUETA;
@@ -50,11 +55,8 @@ const dibujarEtiqueta = (doc, x, y, dataUrl, codigo) => {
   doc.setLineWidth(0.02);
   doc.roundedRect(x, y, ancho, alto, radio, radio, 'S');
 
-  // El QR es lo unico que va DENTRO del troquel y ocupa el bloque completo de
-  // 2 x 3 cm, centrado. OJO: al no ser cuadrado los modulos quedan estirados
-  // (1.5x a lo alto). Es lo pedido, pero es el punto a mirar si algun lector
-  // falla en puerta; para volver a QR cuadrado basta con igualar qrAlto a
-  // qrAncho en la constante ETIQUETA.
+  // El QR es lo unico que va DENTRO del troquel, centrado. Es cuadrado: con un
+  // QR chico, estirarlo (como antes, 2 x 3) hace que algunos lectores fallen.
   doc.addImage(
     dataUrl, 'PNG',
     x + (ancho - qrAncho) / 2,
@@ -72,11 +74,10 @@ const dibujarEtiqueta = (doc, x, y, dataUrl, codigo) => {
     maxWidth: ancho,
   });
 
-  // Aberturas para la tela, ARRIBA y ABAJO (no en los laterales).
-  // Motivo: el bloque del QR mide 2 de los 3 cm de ancho, asi que a los lados
-  // solo quedan 0.5 cm de margen y una ranura de 0.3 dejaria 1 mm de material
-  // por lado: se rompe al pasar la tela. Arriba y abajo el margen es de 1 cm,
-  // asi que la misma ranura deja 3.5 mm firmes de cada lado.
+  // Aberturas para la tela, ARRIBA y ABAJO (no en los laterales): a los lados
+  // el QR deja solo 0.2 cm de margen, no entra una ranura. Arriba y abajo el
+  // margen es de 0.5 cm; la ranura de 0.1 va centrada ahi y deja 2 mm de
+  // material a cada lado (hacia el QR y hacia el borde).
   const margenVertical = (alto - qrAlto) / 2;
   const aberturaX = x + (ancho - aberturaLargo) / 2;
   const centroArriba = y + margenVertical / 2;
