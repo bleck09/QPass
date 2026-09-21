@@ -57,6 +57,26 @@
   }
 }
 
+/* Variante escalonada: los HIJOS entran de a uno. Cada hijo lleva su orden
+   en style={{ '--i': n }}. Se usa animation con fill "backwards" (no
+   transition) para que el retardo no quede vivo después: con transition el
+   hover de los últimos hijos respondía con medio segundo de atraso. */
+.qp-escalonado[data-revelar="armado"]:not(.es-visible) > * { opacity: 0; }
+
+.qp-escalonado.es-visible > * {
+  animation: qpEntrarEscalonado 650ms var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 110ms);
+}
+
+@keyframes qpEntrarEscalonado {
+  from { opacity: 0; transform: translateY(var(--space-6)) scale(0.97); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-escalonado[data-revelar="armado"]:not(.es-visible) > * { opacity: 1; }
+  .qp-escalonado.es-visible > * { animation: none; }
+}
+
 /* ============================================================================
    PESTAÑAS DE LOS PANELES DE ROL EN MÓVIL
    Recargador, Devolución, Ayudante, Usuario Normal y Usuario Negocio repiten el

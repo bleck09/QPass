@@ -1,0 +1,79 @@
+/* =========================================================================
+   BARRA DE COMPRA FIJA — página pública del evento. Colores del evento.
+   ========================================================================= */
+
+.ev-barra {
+  position: fixed;
+  left: 50%;
+  bottom: var(--space-5);
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: min(92%, 40rem);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5);
+  border-radius: var(--radius-full);
+  border: 1px solid color-mix(in srgb, var(--color-primario) 45%, transparent);
+  background: color-mix(in srgb, var(--color-fondo) 88%, transparent);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.45), 0 0 30px color-mix(in srgb, var(--color-primario) 20%, transparent);
+  opacity: 0;
+  transform: translate(-50%, 150%);
+  pointer-events: none;
+  transition: opacity var(--duration-normal) var(--ease-out), transform 450ms var(--ease-out);
+}
+
+.ev-barra.es-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  pointer-events: auto;
+}
+
+.ev-barra__info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.ev-barra__info svg { flex-shrink: 0; color: var(--color-primario); font-size: var(--text-lg); }
+
+.ev-barra__info > span { display: flex; flex-direction: column; min-width: 0; }
+
+.ev-barra__info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  color: var(--color-texto-titulo);
+}
+
+.ev-barra__info small { font-size: var(--text-xs); color: var(--color-texto-p); }
+
+.ev-barra__cta {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--space-6);
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--color-boton);
+  color: var(--color-fondo);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.ev-barra__cta:hover { transform: scale(1.04); }
+.ev-barra__cta:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-barra { transition: opacity var(--duration-fast); }
+  .ev-barra__cta:hover { transform: none; }
+}

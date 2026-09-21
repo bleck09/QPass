@@ -1651,3 +1651,82 @@ html {
   .pi-landing-glass-card h3 { font-size: var(--text-base); }
   .pi-landing-glass-card p { font-size: var(--text-sm); }
 }
+
+/* =========================================================================
+   CUPO DISPONIBLE EN CADA TARJETA DE ENTRADA
+   Reemplaza el texto genérico ("La mejor opción…") por el dato real: cuántas
+   quedan. La barra se llena al entrar la grilla en pantalla.
+   ========================================================================= */
+.pricing-cupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.pricing-cupo-txt { font-size: var(--text-sm); color: var(--color-texto-p); }
+.pricing-cupo-txt b { color: var(--color-texto-titulo); font-variant-numeric: tabular-nums; }
+
+.pricing-cupo-pista {
+  display: block;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--color-texto-titulo) 10%, transparent);
+  overflow: hidden;
+}
+
+.pricing-cupo-pista span {
+  display: block;
+  height: 100%;
+  width: var(--vendido);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--color-primario), color-mix(in srgb, var(--color-primario) 60%, var(--coral-compra)));
+  transform-origin: left;
+  transition: transform 1.1s var(--ease-out) 300ms;
+}
+
+.pricing-grid[data-revelar="armado"]:not(.es-visible) .pricing-cupo-pista span { transform: scaleX(0); }
+
+/* =========================================================================
+   EVENTO TERMINADO (hero)
+   ========================================================================= */
+.ev-terminado {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.ev-terminado__titulo,
+.ev-terminado__retiro {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+}
+
+.ev-terminado__titulo {
+  border: 1px solid color-mix(in srgb, var(--color-texto-titulo) 20%, transparent);
+  background: color-mix(in srgb, var(--color-fondo) 70%, transparent);
+  color: var(--color-texto-titulo);
+  font-weight: var(--weight-semibold);
+}
+
+.ev-terminado__retiro {
+  border: 1px solid color-mix(in srgb, var(--verde-recarga) 40%, transparent);
+  background: color-mix(in srgb, var(--verde-recarga) 12%, transparent);
+  color: var(--color-texto-titulo);
+}
+
+.ev-terminado svg { flex-shrink: 0; margin-top: 0.2em; color: var(--color-primario); }
+.ev-terminado__retiro svg { color: var(--verde-recarga); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pricing-cupo-pista span { transition: none; }
+  .pricing-grid[data-revelar="armado"]:not(.es-visible) .pricing-cupo-pista span { transform: none; }
+}

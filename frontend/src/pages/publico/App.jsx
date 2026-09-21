@@ -9,7 +9,8 @@ import { tipoElementoInfo } from '../../utils/elementosMapa.js';
 import {
   FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt,
   FaQrcode, FaMapMarkedAlt, FaMapMarkerAlt, FaStore, FaTimes,
-  FaArrowLeft, FaCheck, FaCalendarAlt, FaMobileAlt, FaArrowRight
+  FaArrowLeft, FaCheck, FaCalendarAlt, FaMobileAlt, FaArrowRight,
+  FaWallet, FaUndoAlt, FaFlagCheckered,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import {
@@ -18,6 +19,10 @@ import {
 } from '../../utils/eventos.js';
 import { useRevelar } from '../../utils/useRevelar.js';
 import { useParallax } from '../../utils/useParallax.js';
+import EventoAcciones from './evento/EventoAcciones.jsx';
+import EventoInfoUtil from './evento/EventoInfoUtil.jsx';
+import EventoPuestos from './evento/EventoPuestos.jsx';
+import EventoBarraCompra from './evento/EventoBarraCompra.jsx';
 import './App.css';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
@@ -40,11 +45,14 @@ const defaultLandingData = {
   colorFondo: '#0b1120',        
   colorTextoTitulo: '#FFFFFF',  
   colorTextoP: '#94A3B8',       
+  // Se muestran cuando el organizador no cargó actividades propias: por eso
+  // hablan de lo que el ASISTENTE tiene en cualquier evento QPass (antes
+  // decían "Recaudación diaria" o "Auditoría continua", textos de operador).
   actividades: [
-    { icono: 'ticket', titulo: 'Recaudación Diaria', descripcion: 'Registro exacto de ingresos.' },
-    { icono: 'chart', titulo: 'Auditoría Continua', descripcion: 'Supervisión en tiempo real.' },
-    { icono: 'sync', titulo: 'Devoluciones', descripcion: 'Reembolsos rápidos y seguros.' },
-    { icono: 'store', titulo: 'Gestión de Puestos', descripcion: 'Control total de inventario.' }
+    { icono: 'qr', titulo: 'Acceso con QR', descripcion: 'Entrás en segundos mostrando tu manilla o tu QR.' },
+    { icono: 'wallet', titulo: 'Pagos sin efectivo', descripcion: 'Recargás saldo y pagás con tu manilla en cada puesto.' },
+    { icono: 'sync', titulo: 'Devolución de saldo', descripcion: 'Lo que no gastes se devuelve después del evento.' },
+    { icono: 'store', titulo: 'Puestos conectados', descripcion: 'Comida, bebida y más, todos cobrando con QPass.' }
   ],
   precios: [
     { 
@@ -198,6 +206,8 @@ export default function App() {
   const refParallaxTexto = useParallax(-0.05, 40);
   const [refActividades, verActividades] = useRevelar();
   const [refMapa, verMapa] = useRevelar();
+  const [refInfo, verInfo] = useRevelar();
+  const [refPuestos, verPuestos] = useRevelar();
 
   // Datos que ahora viven en el hero en vez de repartidos por la pagina.
   const precioDesde = useMemo(() => {
@@ -215,6 +225,20 @@ export default function App() {
 
   const yaEmpezo = timeLeft.dias + timeLeft.horas + timeLeft.minutos + timeLeft.seg === 0;
 
+  // Un evento terminado se sigue pudiendo ver (se llega desde "Eventos
+  // pasados" de la landing), pero sin nada que invite a comprar.
+  const estado = estadoEvento(evento ?? {});
+  const terminado = estado === 'finalizado' || estado === 'archivado';
+  const diasParaRetiro = evento?.diasParaRetiro ?? 30;
+  // Fecha límite para retirar saldo; solo se avisa mientras no venció.
+  const limiteRetiro = useMemo(() => {
+    if (!evento?.fechaFin) return null;
+    const d = new Date(evento.fechaFin);
+    d.setDate(d.getDate() + diasParaRetiro);
+    return d > new Date() ? d : null;
+  }, [evento, diasParaRetiro]);
+  const hayMenu = mapaPuestosActivos.some(p => (p.productos || []).some(pr => pr.activo !== false));
+
 
   const estiloDinamico = {
     '--color-primario': data.colorPrimario || defaultLandingData.colorPrimario,
@@ -230,6 +254,7 @@ export default function App() {
       case 'chart': return <FaChartLine />;
       case 'sync': return <FaExchangeAlt />;
       case 'store': return <FaStore />;
+      case 'wallet': return <FaWallet />;
       default: return <FaQrcode />;
     }
   };
@@ -289,12 +314,20 @@ export default function App() {
           <li><a href="#entradas">Entradas</a></li>
           {evento?.latitud != null && <li><a href="#ubicacion">Ubicación</a></li>}
           <li><a href="#cronograma">Cronograma</a></li>
+          {!terminado && <li><a href="#info">Antes de ir</a></li>}
           <li><a href="#actividades">Actividades</a></li>
+          {!terminado && hayMenu && <li><a href="#puestos">Menú</a></li>}
           {hayMapaDelEvento && <li><a href="#mapa">Mapa</a></li>}
         </ul>
-        <button className="pi-landing-btn-nav" onClick={handleLoginClick}>
-          Comprar Entrada
-        </button>
+        {terminado ? (
+          <button className="pi-landing-btn-nav" onClick={handleVolverInicio}>
+            Próximos eventos
+          </button>
+        ) : (
+          <button className="pi-landing-btn-nav" onClick={handleLoginClick}>
+            Comprar Entrada
+          </button>
+        )}
       </nav>
 
       <div className="bg-glow glow-top-left"></div>
@@ -372,12 +405,31 @@ export default function App() {
             </div>
           )}
 
-          <div className="ev-hero__acciones">
-            <button className="pi-landing-btn-primary" onClick={() => document.getElementById('entradas').scrollIntoView({behavior: 'smooth'})}>
-              Comprar entradas
-              <FaArrowRight aria-hidden="true" />
-            </button>
-          </div>
+          {terminado ? (
+            <div className="ev-terminado">
+              <p className="ev-terminado__titulo">
+                <FaFlagCheckered aria-hidden="true" /> Este evento ya terminó. ¡Gracias a todos los que vinieron!
+              </p>
+              {limiteRetiro && (
+                <p className="ev-terminado__retiro">
+                  <FaUndoAlt aria-hidden="true" />
+                  <span>¿Te quedó saldo? Podés retirarlo hasta el <b>{formatearFecha(limiteRetiro, false)}</b>.</span>
+                </p>
+              )}
+              <button className="pi-landing-btn-primary" onClick={handleVolverInicio}>
+                Ver próximos eventos
+                <FaArrowRight aria-hidden="true" />
+              </button>
+            </div>
+          ) : (
+            <div className="ev-hero__acciones">
+              <button className="pi-landing-btn-primary" onClick={() => document.getElementById('entradas').scrollIntoView({behavior: 'smooth'})}>
+                Comprar entradas
+                <FaArrowRight aria-hidden="true" />
+              </button>
+              {evento && <EventoAcciones evento={evento} />}
+            </div>
+          )}
         </div>
 
         {/* Ubicacion y cronograma viven ACA, en la mitad derecha del hero, que
@@ -477,7 +529,16 @@ export default function App() {
                       {ESTADO_STOCK[stk].label}
                     </span>
                   )}
-                  <p>La mejor opción para disfrutar el evento.</p>
+                  {plan.cantidad > 0 && plan.disponibles != null && !agotado && (
+                    <div className="pricing-cupo">
+                      <span className="pricing-cupo-txt">
+                        Quedan <b>{plan.disponibles}</b> de {plan.cantidad}
+                      </span>
+                      <span className="pricing-cupo-pista" aria-hidden="true">
+                        <span style={{ '--vendido': `${Math.min(100, ((plan.cantidad - plan.disponibles) / plan.cantidad) * 100)}%` }} />
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <ul className="pricing-features">
                   {plan.beneficios.map((ben, idx) => (
@@ -487,15 +548,29 @@ export default function App() {
                 <div className="pricing-price">
                   <span className="price-amount">{plan.precio}</span>
                 </div>
-                <button className="btn-pricing" onClick={handleLoginClick} disabled={agotado}>
-                  {agotado ? 'Agotado' : 'Adquirir ahora'}
+                <button className="btn-pricing" onClick={handleLoginClick} disabled={agotado || terminado}>
+                  {terminado ? 'Evento finalizado' : agotado ? 'Agotado' : 'Adquirir ahora'}
                 </button>
               </div>
             );
           })}
         </div>
       </section>
-      {/* NUEVA SECCIÓN: FECHA GIGANTE Y CONTADOR */}
+      {/* ANTES DE IR: cómo se compra y qué tener en cuenta en ESTE evento */}
+      {!terminado && (
+        <section
+          id="info"
+          className={`pi-landing-section qp-revelar${verInfo ? ' es-visible' : ''}`}
+          ref={refInfo}
+        >
+          <div className="pi-landing-section-header">
+            <h2 className="pi-landing-section-title">Antes de ir</h2>
+            <p className="pi-landing-subtitle">Cómo conseguís tu entrada y lo que conviene saber para este evento.</p>
+          </div>
+          <EventoInfoUtil evento={evento} diasParaRetiro={diasParaRetiro} />
+        </section>
+      )}
+
       {/* SECCIÓN ACTIVIDADES */}
       <section
         id="actividades"
@@ -517,6 +592,23 @@ export default function App() {
           ))}
         </div>
       </section>
+
+      {/* PUESTOS Y MENÚ + CALCULADORA — solo si hay puestos con productos */}
+      {!terminado && hayMenu && (
+        <section
+          id="puestos"
+          className={`pi-landing-section qp-revelar${verPuestos ? ' es-visible' : ''}`}
+          ref={refPuestos}
+        >
+          <div className="pi-landing-section-header">
+            <h2 className="pi-landing-section-title"><FaStore aria-hidden="true" /> Qué vas a encontrar adentro</h2>
+            <p className="pi-landing-subtitle">
+              Mirá los puestos y sus precios, y calculá cuánto saldo te conviene cargar.
+            </p>
+          </div>
+          <EventoPuestos puestos={mapaPuestosActivos} diasParaRetiro={diasParaRetiro} />
+        </section>
+      )}
 
       {/* SECCIÓN MAPA INTERACTIVO — opcional: si Admin todavía no lo armó, no aparece */}
       {hayMapaDelEvento && (
@@ -614,6 +706,10 @@ export default function App() {
         </div>
         <p>&copy; {new Date().getFullYear()} QPass - Gestión de Accesos Inteligente. Todos los derechos reservados.</p>
       </footer>
+
+      {!terminado && evento && (
+        <EventoBarraCompra nombre={data.titulo} precioDesde={precioDesde} />
+      )}
 
       {/* MODAL PUESTO — role/aria-modal + cierre con ESC y clic en el fondo (Manual 8.6) */}
       {verCronograma && (

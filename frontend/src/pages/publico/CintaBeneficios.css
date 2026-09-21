@@ -1,0 +1,71 @@
+/* =========================================================================
+   CINTA DE BENEFICIOS — landing, bajo el hero. Marquesina infinita.
+   ========================================================================= */
+
+.qp-cinta {
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+  padding: var(--space-4) 0;
+  border-block: 1px solid color-mix(in srgb, var(--blanco) 10%, transparent);
+  background: color-mix(in srgb, var(--azul-noche) 70%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  /* Bordes que se desvanecen: la cinta "sale" de la nada. */
+  /* En una máscara solo cuenta la opacidad: el color da igual. */
+  -webkit-mask-image: linear-gradient(90deg, transparent, var(--azul-noche) 10%, var(--azul-noche) 90%, transparent);
+  mask-image: linear-gradient(90deg, transparent, var(--azul-noche) 10%, var(--azul-noche) 90%, transparent);
+}
+
+.qp-cinta__pista {
+  display: flex;
+  width: max-content;
+  animation: qpCintaCorrer 40s linear infinite;
+}
+
+.qp-cinta:hover .qp-cinta__pista { animation-play-state: paused; }
+
+@keyframes qpCintaCorrer {
+  to { transform: translateX(-50%); }
+}
+
+.qp-cinta__lista {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.qp-cinta__lista li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-right: var(--space-10);
+  white-space: nowrap;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.02em;
+  color: var(--n-200);
+}
+
+.qp-cinta__lista svg { color: var(--cian-digital); }
+
+/* Separador entre ítems. */
+.qp-cinta__lista li::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-left: var(--space-10);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--cian-digital) 50%, transparent);
+}
+
+/* Sin movimiento: se ve la lista una vez, envuelta y centrada. */
+@media (prefers-reduced-motion: reduce) {
+  .qp-cinta { -webkit-mask-image: none; mask-image: none; }
+  .qp-cinta__pista { width: auto; animation: none; justify-content: center; }
+  .qp-cinta__lista { flex-wrap: wrap; justify-content: center; gap: var(--space-3) var(--space-6); padding: 0 var(--space-4); }
+  .qp-cinta__lista li { margin-right: 0; }
+  .qp-cinta__lista[aria-hidden] { display: none; }
+  .qp-cinta__lista li::after { display: none; }
+}

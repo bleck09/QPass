@@ -1,0 +1,142 @@
+/* =========================================================================
+   "ANTES DE IR" — página pública del evento. Colores del evento (--color-*).
+   ========================================================================= */
+
+.ev-info__pasos {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-6);
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 0;
+  list-style: none;
+}
+
+/* Trazo que une los pasos. */
+.ev-info__pasos::before {
+  content: '';
+  position: absolute;
+  top: 1.75rem;
+  left: 12.5%;
+  right: 12.5%;
+  height: 2px;
+  background: linear-gradient(90deg,
+    transparent, color-mix(in srgb, var(--color-primario) 60%, transparent) 15%,
+    color-mix(in srgb, var(--color-primario) 60%, transparent) 85%, transparent);
+}
+
+.ev-info__pasos li {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+}
+
+.ev-info__paso-ic {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin-bottom: var(--space-2);
+  border-radius: 50%;
+  background: var(--color-fondo);
+  border: 2px solid var(--color-primario);
+  color: var(--color-primario);
+  font-size: var(--text-lg);
+  box-shadow: 0 0 0 6px var(--color-fondo), 0 0 24px color-mix(in srgb, var(--color-primario) 35%, transparent);
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.ev-info__pasos li:hover .ev-info__paso-ic { transform: translateY(-4px) scale(1.06); }
+
+.ev-info__paso-ic em {
+  position: absolute;
+  top: -0.35rem;
+  right: -0.35rem;
+  display: grid;
+  place-items: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--color-primario);
+  color: var(--color-fondo);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: var(--weight-bold);
+}
+
+.ev-info__pasos strong { font-size: var(--text-base); color: var(--color-texto-titulo); }
+
+.ev-info__pasos li > span:last-child {
+  max-width: 15rem;
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-texto-p);
+}
+
+.ev-info__cartas {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(19rem, 100%), 1fr));
+  gap: var(--space-4);
+  max-width: 68rem;
+  margin: var(--space-12) auto 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ev-info__cartas li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding: var(--space-5);
+  border-radius: var(--radius-xl);
+  border: 1px solid color-mix(in srgb, var(--color-texto-titulo) 10%, transparent);
+  background: color-mix(in srgb, var(--color-texto-titulo) 4%, transparent);
+  transition: border-color var(--duration-normal), transform var(--duration-normal) var(--ease-out);
+}
+
+.ev-info__cartas li:hover {
+  border-color: color-mix(in srgb, var(--color-primario) 50%, transparent);
+  transform: translateY(-3px);
+}
+
+.ev-info__carta-ic {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--color-primario) 16%, transparent);
+  color: var(--color-primario);
+  font-size: var(--text-base);
+}
+
+.ev-info__cartas li > span:last-child { display: flex; flex-direction: column; gap: var(--space-1); }
+.ev-info__cartas strong { font-size: var(--text-base); color: var(--color-texto-titulo); }
+
+.ev-info__cartas li span span {
+  font-size: var(--text-sm);
+  line-height: var(--leading-normal);
+  color: var(--color-texto-p);
+}
+
+@media (max-width: 62rem) {
+  .ev-info__pasos { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: var(--space-10); }
+  .ev-info__pasos::before { display: none; }
+}
+
+@media (max-width: 30rem) {
+  .ev-info__pasos { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-info__paso-ic,
+  .ev-info__cartas li { transition: none; }
+  .ev-info__pasos li:hover .ev-info__paso-ic,
+  .ev-info__cartas li:hover { transform: none; }
+}

@@ -1,22 +1,33 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import {
-  FaQrcode, FaSignInAlt,
-  FaBolt, FaChartPie, FaMobileAlt, FaArrowRight, FaBars, FaTimes,
-  FaMapMarkerAlt,
+  FaQrcode, FaSignInAlt, FaBars, FaTimes, FaMapMarkerAlt, FaWhatsapp, FaCheckCircle,
 } from 'react-icons/fa';
 import './PaginaPrincipal.css';
 import HeroSection from './HeroSection.jsx';
+import CintaBeneficios from './CintaBeneficios.jsx';
 import EventosDestacados from '../../components/EventosDestacados.jsx';
-import ContactoSection from './ContactoSection.jsx';
+import EcosistemaSection from './EcosistemaSection.jsx';
 import AsistentesSection from './AsistentesSection.jsx';
 import OrganizadoresSection from './OrganizadoresSection.jsx';
+import ContactoSection from './ContactoSection.jsx';
+import PiePagina from './PiePagina.jsx';
 import { CONTACTO, MOTIVOS_CONTACTO } from '../../constants/contacto.js';
 import api from '../../api/index.js';
 import { esVigente, formatearFecha } from '../../utils/eventos.js';
 import { useApi } from '../../utils/useApi.js';
 import { useRevelar } from '../../utils/useRevelar.js';
+import { useSeccionActiva } from '../../utils/useSeccionActiva.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+
+const LINKS_NAV = [
+  { id: 'servicios', texto: 'Características' },
+  { id: 'cartelera', texto: 'Cartelera' },
+  { id: 'asistentes', texto: 'Asistentes' },
+  { id: 'organizadores', texto: 'Organizadores' },
+  { id: 'contacto', texto: 'Contáctanos' },
+];
+const IDS_NAV = LINKS_NAV.map((l) => l.id);
 
 export default function PaginaPrincipal() {
   const navigate = useNavigate();
@@ -27,25 +38,27 @@ export default function PaginaPrincipal() {
   const cargarEventos = useCallback(() => api.eventos.listar(), []);
   const { data: eventos, cargando, error, recargar } = useApi(cargarEventos, { inicial: [] });
   const proximosEventos = eventos.filter(esVigente);
-  // Solo los 5 mas recientes: la lista completa crece sin techo y termina
+  const todosPasados = eventos.filter(ev => !esVigente(ev));
+  // Solo los 6 mas recientes: la lista completa crece sin techo y termina
   // ocupando mas pantalla que la cartelera. Se ordena por fecha de fin
   // (cuando TERMINO el evento) y no por createdAt, que es cuando se cargo
   // al sistema y no tiene por que coincidir con el orden real.
-  const eventosPasados = eventos
-    .filter(ev => !esVigente(ev))
+  const eventosPasados = [...todosPasados]
     .sort((a, b) => new Date(b.fechaFin || b.fecha) - new Date(a.fechaFin || a.fecha))
-    .slice(0, 5);
+    .slice(0, 6);
+  // Sin eventos pasados la sección no se dibuja: antes quedaba el título solo.
+  const hayPasados = !cargando && !error && eventosPasados.length > 0;
 
   const verEvento = (evento) => navigate(`/evento/${evento.id}`);
 
-  // La grilla de eventos pasados entra revelandose al llegar a ella
-  // (ver utils/useRevelar.js).
+  // Las secciones entran revelandose al llegar a ellas (ver utils/useRevelar.js).
+  const [refServicios, serviciosVisible] = useRevelar();
   const [refPasados, pasadosVisible] = useRevelar();
   const [refContacto, contactoVisible] = useRevelar();
   const [refAsistentes, asistentesVisible] = useRevelar();
   const [refOrganizadores, organizadoresVisible] = useRevelar();
 
-  // Los CTA de Organizadores llevan al formulario con el motivo ya elegido.
+  // Los CTA de Organizadores y del pie llevan al formulario con el motivo ya elegido.
   const [motivoContacto, setMotivoContacto] = useState(MOTIVOS_CONTACTO.organizar);
   const irAContacto = (tipo) => {
     setMotivoContacto(MOTIVOS_CONTACTO[tipo]);
@@ -56,24 +69,73 @@ export default function PaginaPrincipal() {
   // Antes no quedaba NINGUNA navegacion; ahora se despliegan en un panel.
   const [menuAbierto, setMenuAbierto] = useState(false);
 
+  // Link resaltado según la sección que se está leyendo. `cargando` va como
+  // versión: la cartelera cambia de nodo al terminar de cargar.
+  const seccionActiva = useSeccionActiva(IDS_NAV, cargando);
+
+  /**
+   * Estado de scroll: navbar compacta, WhatsApp flotante y barra de progreso.
+   * La barra se escribe directo en el DOM (como el hero) para no re-renderizar
+   * en cada frame; los dos booleanos solo re-renderizan cuando cambian.
+   */
+  const [scrolleado, setScrolleado] = useState(false);
+  const [pasoHero, setPasoHero] = useState(false);
+  const progresoRef = useRef(null);
+
+  useEffect(() => {
+    let pendiente = false;
+    const medir = () => {
+      if (pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(() => {
+        pendiente = false;
+        const y = window.scrollY || 0;
+        const alto = document.documentElement.scrollHeight - window.innerHeight;
+        progresoRef.current?.style.setProperty('--progreso', alto > 0 ? (y / alto).toFixed(4) : '0');
+        setScrolleado(y > 40);
+        setPasoHero(y > window.innerHeight * 0.9);
+      });
+    };
+    window.addEventListener('scroll', medir, { passive: true });
+    window.addEventListener('resize', medir, { passive: true });
+    medir();
+    return () => {
+      window.removeEventListener('scroll', medir);
+      window.removeEventListener('resize', medir);
+    };
+  }, []);
+
+  const subir = (e) => {
+    e.preventDefault();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="qpass-home-container">
-      
+
       <div className="qpass-home-bg-image"></div>
       <div className="qpass-home-glow glow-1"></div>
       <div className="qpass-home-glow glow-2"></div>
 
-      <nav className="qpass-floating-navbar glass-morphism">
-        <div className="qpass-home-logo">
-          <div className="logo-icon-bg"><FaQrcode /></div>
+      <div className="qp-home-progreso" ref={progresoRef} aria-hidden="true" />
+
+      <nav className={`qpass-floating-navbar glass-morphism${scrolleado ? ' esta-scrolleada' : ''}`}>
+        <a href="#contenido" className="qpass-home-logo" onClick={subir} aria-label="QPass, volver al inicio">
+          <div className="logo-icon-bg"><FaQrcode aria-hidden="true" /></div>
           <span>QPass</span>
-        </div>
+        </a>
         <ul id="menu-navegacion" className={`qpass-home-nav-links${menuAbierto ? ' esta-abierto' : ''}`} onClick={() => setMenuAbierto(false)}>
-          <li><a href="#servicios">Características</a></li>
-          <li><a href="#cartelera">Cartelera</a></li>
-          <li><a href="#asistentes">Asistentes</a></li>
-          <li><a href="#organizadores">Organizadores</a></li>
-          <li><a href="#contacto">Contáctanos</a></li>
+          {LINKS_NAV.map(({ id, texto }) => (
+            <li key={id}>
+              <a
+                href={`#${id}`}
+                className={seccionActiva === id ? 'es-activo' : undefined}
+                aria-current={seccionActiva === id ? 'location' : undefined}
+              >
+                {texto}
+              </a>
+            </li>
+          ))}
         </ul>
         <div className="qpass-home-nav-actions">
           <button className="btn-solid" onClick={() => navigate('/login')}>
@@ -95,6 +157,7 @@ export default function PaginaPrincipal() {
       {/* Landmark principal (Manual 11): permite el salto de teclado y orienta al lector de pantalla */}
       <main id="contenido">
       <HeroSection />
+      <CintaBeneficios />
 
       {error ? (
         <section id="cartelera" className="qpass-home-section">
@@ -108,45 +171,12 @@ export default function PaginaPrincipal() {
         <EventosDestacados eventos={proximosEventos.slice(0, 6)} onVerEvento={verEvento} />
       )}
 
-      {/* --- Resto del código se mantiene igual... --- */}
-      <section id="servicios" className="qpass-home-section feature-section">
-        <div className="feature-grid">
-          <div className="feature-main-card glass-morphism">
-            <h2>El Ecosistema <br/>Perfecto</h2>
-            <p>Conectamos a organizadores y asistentes a través de tecnología de punta. Desde la validación en puerta hasta la compra de una bebida, todo en milisegundos.</p>
-            
-            <div className="feature-stats">
-              <div className="stat-item">
-                <strong>10K+</strong>
-                <span>Entradas vendidas</span>
-              </div>
-              <div className="stat-users">
-                <img src="https://i.pravatar.cc/100?img=1" alt="" width="100" height="100" />
-                <img src="https://i.pravatar.cc/100?img=2" alt="" width="100" height="100" />
-                <img src="https://i.pravatar.cc/100?img=3" alt="" width="100" height="100" />
-                <div className="more-users"><FaArrowRight/></div>
-              </div>
-            </div>
-          </div>
-
-          <div className="feature-side-cards">
-            <div className="side-card glass-morphism">
-              <div className="icon-circle"><FaMobileAlt /></div>
-              <h4>Manillas Inteligentes</h4>
-              <p>Tu dinero y entrada en un QR seguro.</p>
-            </div>
-            <div className="side-card glass-morphism">
-              <div className="icon-circle"><FaBolt /></div>
-              <h4>Cero Filas</h4>
-              <p>Compras ultrarrápidas en puntos de venta.</p>
-            </div>
-            <div className="side-card glass-morphism">
-              <div className="icon-circle"><FaChartPie /></div>
-              <h4>Auditoría Real</h4>
-              <p>Métricas exactas para el organizador.</p>
-            </div>
-          </div>
-        </div>
+      <section
+        id="servicios"
+        className={`qpass-home-section qp-revelar${serviciosVisible ? ' es-visible' : ''}`}
+        ref={refServicios}
+      >
+        <EcosistemaSection enCartelera={proximosEventos.length} realizados={todosPasados.length} />
       </section>
 
       <section
@@ -165,28 +195,36 @@ export default function PaginaPrincipal() {
         <OrganizadoresSection onContactar={irAContacto} />
       </section>
 
-      <section
-        id="pasados"
-        className={`qpass-home-section qp-revelar${pasadosVisible ? ' es-visible' : ''}`}
-        ref={refPasados}
-      >
-        <div className="section-header">
-          <h2>Eventos Pasados</h2>
-          <p>El éxito de nuestros aliados es nuestro éxito.</p>
-        </div>
+      {hayPasados && (
+        <section
+          id="pasados"
+          className={`qpass-home-section qp-revelar${pasadosVisible ? ' es-visible' : ''}`}
+          ref={refPasados}
+        >
+          <div className="section-header qp-pasados__header">
+            <span className="qp-info__eyebrow">Eventos pasados</span>
+            <h2>Ya confiaron en QPass</h2>
+            <p>El éxito de nuestros aliados es nuestro éxito.</p>
+          </div>
 
-        <div className="past-events-grid">
-          {eventosPasados.map((evento) => (
-            <div key={evento.id} className="past-card glass-morphism">
-              <img src={evento.imagen} alt={evento.nombre} width="100" height="100" loading="lazy" />
-              <div className="past-card-info">
-                <h4>{evento.nombre}</h4>
-                <span><FaMapMarkerAlt/> {evento.lugar} · {formatearFecha(evento.fecha)}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+          <ul className="past-events-grid">
+            {eventosPasados.map((evento) => (
+              <li key={evento.id}>
+                <Link to={`/evento/${evento.id}`} className="past-card glass-morphism">
+                  <span className="past-card-img">
+                    <img src={evento.imagen} alt="" width="100" height="100" loading="lazy" />
+                    <span className="past-card-badge"><FaCheckCircle aria-hidden="true" /> Realizado</span>
+                  </span>
+                  <span className="past-card-info">
+                    <h3>{evento.nombre}</h3>
+                    <span><FaMapMarkerAlt aria-hidden="true" /> {evento.lugar} · {formatearFecha(evento.fecha)}</span>
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       <section
         id="contacto"
@@ -194,6 +232,7 @@ export default function PaginaPrincipal() {
         ref={refContacto}
       >
         <div className="section-header center">
+          <span className="qp-info__eyebrow">Contacto</span>
           <h2>Contáctanos</h2>
           <p>¿Tenés un evento en mente o una consulta? Te respondemos.</p>
         </div>
@@ -202,24 +241,20 @@ export default function PaginaPrincipal() {
       </section>
       </main>
 
-      <footer className="qpass-home-footer glass-morphism">
-        <div className="footer-content">
-          <div className="footer-brand">
-            <div className="qpass-home-logo">
-              <div className="logo-icon-bg"><FaQrcode /></div>
-              <span>QPass</span>
-            </div>
-            <p>La tecnología definitiva para eventos Cashless.</p>
-          <p className="footer-contacto">
-            <a href={`mailto:${CONTACTO.correo}`}>{CONTACTO.correo}</a>
-            <span aria-hidden="true">·</span>
-            <a href="#contacto">Contáctanos</a>
-          </p>
-          </div>
-          <p className="copyright">&copy; {new Date().getFullYear()} QPass Technologies.</p>
-        </div>
-      </footer>
+      <PiePagina onContactar={irAContacto} hayPasados={hayPasados} />
 
+      {/* WhatsApp flotante: aparece recién pasado el hero para no tapar sus botones. */}
+      <a
+        href={CONTACTO.whatsappUrl}
+        target="_blank"
+        rel="noreferrer"
+        className={`qp-home-whatsapp${pasoHero ? ' es-visible' : ''}`}
+        aria-label="Escribinos por WhatsApp"
+        tabIndex={pasoHero ? undefined : -1}
+      >
+        <FaWhatsapp aria-hidden="true" />
+        <span>¿Dudas? Escribinos</span>
+      </a>
     </div>
   );
 }

@@ -1,0 +1,286 @@
+/* =========================================================================
+   PANEL DE EJEMPLO — landing, sección Organizadores.
+   Maqueta del dashboard del organizador. Una sola serie por gráfico, en un
+   solo tono (cian): no hace falta leyenda y el texto va en tinta neutra,
+   nunca en el color de la serie.
+   ========================================================================= */
+
+.qp-panel {
+  position: relative;
+  margin: 0;
+  border-radius: var(--radius-xl);
+  border: 1px solid color-mix(in srgb, var(--blanco) 14%, transparent);
+  background: color-mix(in srgb, var(--n-900) 88%, transparent);
+  box-shadow: 0 30px 70px color-mix(in srgb, var(--azul-noche) 85%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  transform: perspective(1400px) rotateY(-6deg) rotateX(3deg);
+  transition: transform 700ms var(--ease-out);
+}
+
+.qp-panel:hover { transform: perspective(1400px) rotateY(0) rotateX(0); }
+
+/* ---------- Barra tipo ventana ---------- */
+.qp-panel__barra {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid color-mix(in srgb, var(--blanco) 10%, transparent);
+}
+
+.qp-panel__puntos { display: flex; gap: 6px; }
+.qp-panel__puntos i { width: 10px; height: 10px; border-radius: 50%; background: var(--n-700); }
+.qp-panel__puntos i:first-child { background: var(--rojo-error); }
+.qp-panel__puntos i:nth-child(2) { background: var(--ambar-aviso); }
+.qp-panel__puntos i:last-child { background: var(--verde-recarga); }
+
+.qp-panel__titulo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-xs);
+  color: var(--n-400);
+}
+
+.qp-panel__vivo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--verde-recarga) 16%, transparent);
+  font-size: 0.7rem;
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--verde-recarga);
+}
+
+.qp-panel__vivo i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--verde-recarga);
+  animation: qpPanelLatido 1.6s ease-in-out infinite;
+}
+
+@keyframes qpPanelLatido {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--verde-recarga) 70%, transparent); }
+  50%      { box-shadow: 0 0 0 5px transparent; }
+}
+
+/* ---------- Cuerpo ---------- */
+.qp-panel__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.qp-panel__kpis {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.qp-panel__kpi,
+.qp-panel__tarjeta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--blanco) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--blanco) 8%, transparent);
+}
+
+.qp-panel__kpi-etq,
+.qp-panel__sub {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: 0.72rem;
+  color: var(--n-400);
+}
+
+.qp-panel__kpi-etq svg,
+.qp-panel__sub svg { color: var(--cian-digital); }
+
+.qp-panel__kpi strong {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--blanco);
+}
+
+.qp-panel__kpi small { font-size: 0.7em; font-weight: var(--weight-regular); color: var(--n-400); }
+
+.qp-panel__graficos {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: var(--space-3);
+}
+
+.qp-panel__tarjeta { gap: var(--space-3); }
+
+/* ---------- Columnas (entradas por semana) ---------- */
+.qp-panel__columnas {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: var(--space-2);
+  height: 8.5rem;
+  padding-top: var(--space-4);
+  /* Grilla recesiva: dos líneas guía muy tenues. */
+  background: linear-gradient(to bottom,
+    transparent calc(33% - 1px), color-mix(in srgb, var(--blanco) 6%, transparent) 33%, transparent calc(33% + 1px),
+    transparent calc(66% - 1px), color-mix(in srgb, var(--blanco) 6%, transparent) 66%, transparent calc(66% + 1px));
+}
+
+.qp-panel__col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-1);
+  outline: none;
+  cursor: default;
+}
+
+.qp-panel__col-barra {
+  width: 70%;
+  max-width: 1.75rem;
+  height: var(--alto);
+  border-radius: 4px 4px 0 0;
+  background: var(--cian-digital);
+  transform-origin: bottom;
+  transition: transform 900ms var(--ease-out), filter var(--duration-fast);
+  transition-delay: calc(var(--i) * 90ms);
+}
+
+.qp-panel[data-revelar="armado"]:not(.es-visible) .qp-panel__col-barra { transform: scaleY(0); }
+
+.qp-panel__col:hover .qp-panel__col-barra,
+.qp-panel__col:focus-visible .qp-panel__col-barra { filter: brightness(1.25); transition-delay: 0s; }
+
+.qp-panel__col-etq { font-size: 0.65rem; color: var(--n-400); white-space: nowrap; }
+
+/* Tooltip por barra (hover o foco). */
+.qp-panel__tip {
+  position: absolute;
+  bottom: calc(var(--alto) + 1.6rem);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--blanco);
+  color: var(--azul-noche);
+  font-size: 0.7rem;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity var(--duration-fast), transform var(--duration-fast);
+}
+
+.qp-panel__col:hover .qp-panel__tip,
+.qp-panel__col:focus-visible .qp-panel__tip { opacity: 1; transform: none; }
+
+/* ---------- Ranking de puestos ---------- */
+.qp-panel__ranking {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.qp-panel__rank-fila {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+  font-size: 0.72rem;
+  color: var(--n-200);
+}
+
+.qp-panel__rank-fila span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.qp-panel__rank-fila b { font-variant-numeric: tabular-nums; color: var(--blanco); }
+
+.qp-panel__rank-pista {
+  display: block;
+  height: 6px;
+  margin-top: var(--space-1);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--blanco) 8%, transparent);
+}
+
+.qp-panel__rank-pista span {
+  display: block;
+  height: 100%;
+  width: var(--ancho);
+  border-radius: var(--radius-full);
+  background: var(--cian-digital);
+  transform-origin: left;
+  transition: transform 1s var(--ease-out);
+  transition-delay: calc(300ms + var(--i) * 120ms);
+}
+
+.qp-panel[data-revelar="armado"]:not(.es-visible) .qp-panel__rank-pista span { transform: scaleX(0); }
+
+/* ---------- Marcas numeradas (se explican al costado) ---------- */
+.qp-panel__marca {
+  position: absolute;
+  top: -0.6rem;
+  right: -0.6rem;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: 50%;
+  background: var(--coral-compra);
+  color: var(--texto-sobre-vivo);
+  font-size: 0.75rem;
+  font-weight: var(--weight-bold);
+  box-shadow: 0 0 0 3px var(--n-900);
+  animation: qpPanelMarca 2.4s ease-in-out infinite;
+}
+
+@keyframes qpPanelMarca {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.15); }
+}
+
+.qp-panel__nota {
+  position: absolute;
+  bottom: var(--space-2);
+  right: var(--space-4);
+  font-size: 0.65rem;
+  font-style: italic;
+  color: var(--n-500);
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 62rem) {
+  .qp-panel,
+  .qp-panel:hover { transform: none; }
+}
+
+@media (max-width: 36rem) {
+  .qp-panel__graficos { grid-template-columns: 1fr; }
+  .qp-panel__cuerpo { padding: var(--space-4) var(--space-3) var(--space-6); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-panel,
+  .qp-panel:hover { transform: none; transition: none; }
+  .qp-panel__col-barra,
+  .qp-panel__rank-pista span { transform: none; transition: none; }
+  .qp-panel__vivo i,
+  .qp-panel__marca { animation: none; }
+}

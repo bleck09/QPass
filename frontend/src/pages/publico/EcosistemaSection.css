@@ -1,0 +1,338 @@
+/* =========================================================================
+   ECOSISTEMA — landing, "Una plataforma, todos conectados".
+   Órbita con los 8 roles alrededor del QR + detalle del rol activo.
+   La posición de cada nodo sale de su ángulo (--ang) y del radio (--radio):
+     rotate(ang) translateX(radio) rotate(-ang)
+   el segundo rotate endereza el nodo para que el texto no quede torcido.
+   ========================================================================= */
+
+.qp-eco__header { max-width: 46rem; margin: 0 auto var(--space-12); text-align: center; }
+.qp-eco__header h2 { line-height: var(--leading-tight); }
+.qp-eco__header p { margin-top: var(--space-4); line-height: var(--leading-normal); }
+
+.qp-eco__cuerpo {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-12);
+  align-items: center;
+}
+
+/* =======================================================
+   ÓRBITA
+======================================================= */
+.qp-eco__orbita {
+  --tam: 30rem;
+  --radio: calc(var(--tam) * 0.4);
+  position: relative;
+  width: var(--tam);
+  height: var(--tam);
+  margin: 0 auto;
+}
+
+.qp-eco__anillo {
+  position: absolute;
+  inset: calc(var(--tam) * 0.1);
+  border-radius: 50%;
+  border: 1px dashed color-mix(in srgb, var(--cian-digital) 35%, transparent);
+  animation: qpEcoGirar 60s linear infinite;
+}
+
+.qp-eco__anillo--int {
+  inset: calc(var(--tam) * 0.28);
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--blanco) 8%, transparent);
+  animation-direction: reverse;
+  animation-duration: 40s;
+}
+
+@keyframes qpEcoGirar { to { transform: rotate(360deg); } }
+
+/* Rayos del centro a cada nodo; el activo lleva un flujo de "datos". */
+.qp-eco__rayo {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--radio);
+  height: 2px;
+  margin-top: -1px;
+  transform-origin: 0 50%;
+  transform: rotate(var(--ang));
+  background: color-mix(in srgb, var(--blanco) 6%, transparent);
+  transition: background-color var(--duration-normal);
+}
+
+.qp-eco__rayo.es-activo {
+  background: repeating-linear-gradient(90deg,
+    var(--cian-digital) 0 8px, transparent 8px 16px);
+  background-size: 32px 2px;
+  animation: qpEcoFlujo 600ms linear infinite;
+}
+
+@keyframes qpEcoFlujo { to { background-position: 32px 0; } }
+
+.qp-eco__centro {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: calc(var(--tam) * 0.26);
+  height: calc(var(--tam) * 0.26);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle at 35% 30%, var(--indigo-profundo), var(--azul-noche));
+  border: 2px solid var(--cian-digital);
+  color: var(--blanco);
+  font-size: calc(var(--tam) * 0.08);
+  animation: qpEcoAura 3s ease-out infinite;
+}
+
+.qp-eco__centro svg { color: var(--cian-digital); }
+.qp-eco__centro b { font-size: var(--text-sm); letter-spacing: 0.04em; }
+
+@keyframes qpEcoAura {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--cian-digital) 45%, transparent); }
+  100% { box-shadow: 0 0 0 calc(var(--tam) * 0.06) transparent; }
+}
+
+.qp-eco__roles { margin: 0; padding: 0; list-style: none; }
+
+.qp-eco__roles li {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  transform: translate(-50%, -50%) rotate(var(--ang)) translateX(var(--radio)) rotate(calc(var(--ang) * -1));
+}
+
+.qp-eco__nodo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--n-300);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.qp-eco.es-visible .qp-eco__nodo {
+  animation: qpEcoAparecer 600ms var(--ease-out) backwards;
+  animation-delay: calc(200ms + var(--i) * 80ms);
+}
+
+@keyframes qpEcoAparecer {
+  from { opacity: 0; transform: scale(0.4); }
+}
+
+.qp-eco__nodo-ic {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  border: 1px solid color-mix(in srgb, var(--blanco) 18%, transparent);
+  background: color-mix(in srgb, var(--azul-noche) 85%, transparent);
+  color: var(--cian-digital);
+  font-size: var(--text-base);
+  transition: transform var(--duration-normal) var(--ease-out),
+              background-color var(--duration-normal) var(--ease-out),
+              color var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out);
+}
+
+.qp-eco__nodo-txt {
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--azul-noche) 70%, transparent);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+}
+
+.qp-eco__nodo:hover .qp-eco__nodo-ic { transform: scale(1.1); }
+.qp-eco__nodo:hover { color: var(--blanco); }
+
+.qp-eco__nodo.es-activo { color: var(--blanco); }
+
+.qp-eco__nodo.es-activo .qp-eco__nodo-ic {
+  transform: scale(1.18);
+  background: var(--cian-digital);
+  color: var(--texto-sobre-vivo);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--cian-digital) 22%, transparent),
+              0 0 30px color-mix(in srgb, var(--cian-digital) 50%, transparent);
+}
+
+.qp-eco__nodo:focus-visible { outline: none; }
+.qp-eco__nodo:focus-visible .qp-eco__nodo-ic {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+/* =======================================================
+   DETALLE + CIFRAS
+======================================================= */
+.qp-eco__lado {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.qp-eco__detalle {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-8);
+  border-radius: var(--radius-xl);
+  animation: qpEcoDetalle 450ms var(--ease-out);
+}
+
+@keyframes qpEcoDetalle {
+  from { opacity: 0; transform: translateX(var(--space-4)); }
+}
+
+.qp-eco__detalle-cab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.qp-eco__detalle-cab > span:last-child { display: flex; flex-direction: column; }
+
+.qp-eco__detalle-cab small {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cian-digital);
+}
+
+.qp-eco__detalle-cab strong { font-size: var(--text-xl); color: var(--blanco); }
+
+.qp-eco__detalle-ic {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--cian-digital), var(--verde-recarga));
+  color: var(--texto-sobre-vivo);
+  font-size: var(--text-xl);
+}
+
+.qp-eco__detalle p {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: var(--leading-normal);
+  color: var(--text-secondary);
+}
+
+.qp-eco__detalle ul {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.qp-eco__detalle li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-sm);
+  color: var(--n-200);
+}
+
+.qp-eco__detalle li svg {
+  flex-shrink: 0;
+  padding: 0.25rem;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--verde-recarga) 20%, transparent);
+  color: var(--verde-recarga);
+}
+
+/* Debe durar lo mismo que INTERVALO en EcosistemaSection.jsx. */
+.qp-eco__tiempo {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--cian-digital);
+  transform-origin: left;
+  animation: qpEcoTiempo 3.5s linear forwards;
+}
+
+.qp-eco__tiempo.esta-pausada { animation-play-state: paused; }
+
+@keyframes qpEcoTiempo {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+.qp-eco__cifras {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.qp-eco__cifra {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in srgb, var(--blanco) 10%, transparent);
+  background: color-mix(in srgb, var(--blanco) 4%, transparent);
+}
+
+.qp-eco__cifra strong {
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--blanco);
+}
+
+.qp-eco__cifra span {
+  font-size: var(--text-xs);
+  line-height: var(--leading-snug);
+  color: var(--text-secondary);
+}
+
+/* =======================================================
+   RESPONSIVE
+======================================================= */
+@media (max-width: 62rem) {
+  .qp-eco__cuerpo { grid-template-columns: 1fr; gap: var(--space-10); }
+  .qp-eco__orbita { --tam: 26rem; }
+}
+
+@media (max-width: 30rem) {
+  .qp-eco__orbita { --tam: 19.5rem; }
+  .qp-eco__nodo-ic { width: 2.6rem; height: 2.6rem; font-size: var(--text-sm); }
+  .qp-eco__nodo-txt { font-size: 0.68rem; }
+  .qp-eco__detalle { padding: var(--space-6); }
+  .qp-eco__cifra { padding: var(--space-3); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-eco__anillo,
+  .qp-eco__rayo.es-activo,
+  .qp-eco__centro,
+  .qp-eco.es-visible .qp-eco__nodo,
+  .qp-eco__detalle { animation: none; }
+  .qp-eco__tiempo { display: none; }
+  .qp-eco__nodo-ic { transition: none; }
+}

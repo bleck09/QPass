@@ -103,46 +103,64 @@
 .section-header h2 { font-size: var(--text-3xl); margin: 0 0 8px 0; font-weight: 800; }
 .section-header p { font-size: var(--text-lg); color: var(--text-secondary); margin: 0; }
 
-/* =======================================================
-   CARACTERÍSTICAS (Estilo Grid "Descargar.jfif")
-======================================================= */
-.feature-section { padding-top: 40px; }
-.feature-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 24px; }
-
-.feature-main-card { padding: 40px; border-radius: var(--radius-xl); display: flex; flex-direction: column; justify-content: center; }
-.feature-main-card h2 { font-size: 3rem; margin: 0 0 20px 0; line-height: 1.1; font-weight: 800; }
-.feature-main-card p { font-size: var(--text-lg); color: var(--text-secondary); line-height: 1.6; margin-bottom: 40px; }
-
-.feature-stats { display: flex; align-items: center; gap: 32px; background: rgba(255,255,255,0.05); padding: 20px; border-radius: var(--radius-xl); width: max-content; }
-.stat-item { display: flex; flex-direction: column; }
-.stat-item strong { font-size: var(--text-2xl); font-weight: 800; color: var(--cian-digital); }
-.stat-item span { font-size: var(--text-xs); color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;}
-
-.stat-users { display: flex; align-items: center; }
-.stat-users img { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--azul-noche); margin-left: -16px; }
-.stat-users img:first-child { margin-left: 0; }
-.more-users { width: 40px; height: 40px; border-radius: 50%; background: var(--bg-surface); color: var(--azul-noche); display: flex; justify-content: center; align-items: center; margin-left: -16px; z-index: 4; font-size: var(--text-xs); }
-
-.feature-side-cards { display: flex; flex-direction: column; gap: 24px; }
-.side-card { padding: 24px; border-radius: var(--radius-xl); display: flex; flex-direction: column; gap: 8px; transition: transform 0.2s; }
-.side-card:hover { transform: translateX(-10px); border-color: var(--cian-digital); }
+/* Ícono redondo con tinte cian: lo usan las secciones informativas
+   (servicios de Organizadores, etc.). */
 .icon-circle { width: 45px; height: 45px; background: rgba(0, 180, 216, 0.2); color: var(--cian-digital); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: var(--text-lg); margin-bottom: 4px; }
-.side-card h4 { margin: 0; font-size: var(--text-lg); }
-.side-card p { margin: 0; font-size: var(--text-xs); color: var(--text-secondary); }
 
 /* =======================================================
    EVENTOS PASADOS
 ======================================================= */
+.qp-pasados__header { margin-bottom: var(--space-10); }
+
 /* min() y no 350px fijo: en un telefono de 360px el ancho util es ~324px,
    asi que un minmax(350px) hacia desbordar la pagina en horizontal. */
-.past-events-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(21.875rem, 100%), 1fr)); gap: var(--space-6); }
-.past-card { border-radius: var(--radius-xl); display: flex; align-items: center; gap: 20px; padding: 16px; transition: transform 0.2s; cursor: pointer; }
+.past-events-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(21.875rem, 100%), 1fr));
+  gap: var(--space-6);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.past-card {
+  height: 100%;
+  border-radius: var(--radius-xl);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: transform var(--duration-normal) var(--ease-out), border-color var(--duration-normal) var(--ease-out);
+}
 .past-card:hover { transform: translateY(-5px); border-color: var(--cian-digital); }
-.past-card img { width: 100px; height: 100px; border-radius: var(--radius-xl); object-fit: cover; filter: grayscale(80%); transition: filter 0.3s; }
-.past-card:hover img { filter: grayscale(0%); }
-.past-card-info { display: flex; flex-direction: column; gap: 8px; }
-.past-card-info h4 { margin: 0; font-size: var(--text-lg); }
-.past-card-info span { font-size: var(--text-xs); color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+.past-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+
+.past-card-img { position: relative; flex-shrink: 0; overflow: hidden; border-radius: var(--radius-xl); }
+.past-card img { display: block; width: 100px; height: 100px; object-fit: cover; filter: grayscale(80%); transition: filter 0.3s, transform 0.5s var(--ease-out); }
+.past-card:hover img { filter: grayscale(0%); transform: scale(1.08); }
+
+.past-card-badge {
+  position: absolute;
+  left: 50%;
+  bottom: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  transform: translateX(-50%);
+  background: color-mix(in srgb, var(--azul-noche) 80%, transparent);
+  color: var(--verde-recarga);
+  font-size: 0.65rem;
+  font-weight: var(--weight-bold);
+  white-space: nowrap;
+}
+
+.past-card-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.past-card-info h3 { margin: 0; font-size: var(--text-lg); }
+.past-card-info > span { font-size: var(--text-xs); color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
 
 /* Móvil: 2 columnas de tarjetas compactas (imagen arriba, datos abajo) en vez
    de una fila alta por evento. */
@@ -156,64 +174,29 @@
     border-radius: var(--radius-lg);
   }
   .past-card:hover { transform: none; }
+  .past-card-img { border-radius: var(--radius-md); }
   .past-card img {
     width: 100%;
     height: auto;
     aspect-ratio: 4 / 3;
-    border-radius: var(--radius-md);
   }
-  .past-card-info { gap: 4px; padding: 0 var(--space-1) var(--space-1); min-width: 0; }
-  .past-card-info h4 {
+  .past-card-info { gap: 4px; padding: 0 var(--space-1) var(--space-1); }
+  .past-card-info h3 {
     font-size: var(--text-sm);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .past-card-info span { align-items: flex-start; gap: 4px; line-height: 1.35; }
-  .past-card-info span svg { flex-shrink: 0; margin-top: 2px; }
+  .past-card-info > span { align-items: flex-start; gap: 4px; line-height: 1.35; }
+  .past-card-info > span svg { flex-shrink: 0; margin-top: 2px; }
 }
-
-/* =======================================================
-   FOOTER
-======================================================= */
-.qpass-home-footer { margin-top: 48px; border-radius: var(--radius-xl) var(--radius-xl) 0 0; border-bottom: none; border-left: none; border-right: none; }
-.footer-content { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; padding: 40px 5%; max-width: 1200px; margin: 0 auto; gap: 20px; }
-.footer-brand p { margin: 8px 0 0 8px; font-size: var(--text-sm); color: var(--text-secondary); }
-.copyright { font-size: var(--text-xs); color: var(--text-secondary); }
 
 /* =======================================================
    RESPONSIVE
 ======================================================= */
 @media (max-width: 900px) {
   .qpass-floating-navbar { width: 95%; padding: 0 16px; }
-  .feature-grid { grid-template-columns: 1fr; }
 }
-
-/* Línea de contacto del footer (correo + ancla a la sección Contáctanos). */
-.footer-contacto {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  font-size: var(--text-sm);
-}
-
-.footer-contacto a {
-  color: var(--cian-digital);
-  text-decoration: none;
-  font-weight: var(--weight-semibold);
-}
-
-.footer-contacto a:hover { text-decoration: underline; }
-
-.footer-contacto a:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 3px;
-  border-radius: var(--radius-sm);
-}
-
-.footer-contacto span { color: var(--n-500); }
 
 /* =========================================================================
    NAVEGACIÓN EN TABLET Y MÓVIL
@@ -286,7 +269,6 @@
   .qpass-home-nav-actions .btn-solid span { display: none; }
   .qpass-home-logo { font-size: var(--text-lg); }
   .qpass-home-section { padding: var(--space-12) var(--space-4); }
-  .footer-content { padding: var(--space-8) var(--space-4); }
 }
 
 /* Mismo motivo que en la página del evento: la navbar flotante es fixed, así
@@ -295,4 +277,140 @@
 .qpass-home-section,
 .qp-dest {
   scroll-margin-top: calc(var(--space-20) + var(--space-6));
+}
+
+/* =========================================================================
+   NAVBAR: ESTADO AL BAJAR + SECCIÓN ACTIVA
+   ========================================================================= */
+.qpass-floating-navbar {
+  transition: top var(--duration-normal) var(--ease-out),
+              height var(--duration-normal) var(--ease-out),
+              background-color var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out);
+}
+
+/* Al bajar se pega más arriba, se achica y se vuelve más opaca: deja de
+   competir con el contenido que pasa por detrás. */
+.qpass-floating-navbar.esta-scrolleada {
+  top: 12px;
+  height: 60px;
+  background: color-mix(in srgb, var(--azul-noche) 82%, transparent);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--azul-noche) 70%, transparent);
+}
+
+/* El logo ahora es un link (vuelve arriba). */
+a.qpass-home-logo { text-decoration: none; border-radius: var(--radius-md); }
+a.qpass-home-logo:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+a.qpass-home-logo .logo-icon-bg { transition: transform var(--duration-normal) var(--ease-out); }
+a.qpass-home-logo:hover .logo-icon-bg { transform: rotate(-12deg) scale(1.08); }
+
+.qpass-home-nav-links a { position: relative; }
+
+/* Subrayado del link activo (escritorio). */
+.qpass-home-nav-links a::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -6px;
+  height: 2px;
+  border-radius: var(--radius-full);
+  background: var(--cian-digital);
+  transform: scaleX(0);
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.qpass-home-nav-links a.es-activo { color: var(--cian-digital); }
+.qpass-home-nav-links a.es-activo::after,
+.qpass-home-nav-links a:hover::after { transform: scaleX(1); }
+
+@media (max-width: 62rem) {
+  /* En el panel desplegable el subrayado no se lee: se marca con fondo. */
+  .qpass-home-nav-links a::after { display: none; }
+  .qpass-home-nav-links a.es-activo { background: color-mix(in srgb, var(--cian-digital) 14%, transparent); }
+}
+
+/* =========================================================================
+   BARRA DE PROGRESO DE LECTURA
+   ========================================================================= */
+.qp-home-progreso {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: calc(var(--z-dropdown) + 1);
+  height: 3px;
+  background: linear-gradient(90deg, var(--cian-digital), var(--verde-recarga));
+  transform-origin: left;
+  transform: scaleX(var(--progreso, 0));
+  pointer-events: none;
+}
+
+/* =========================================================================
+   WHATSAPP FLOTANTE
+   ========================================================================= */
+.qp-home-whatsapp {
+  position: fixed;
+  right: var(--space-6);
+  bottom: var(--space-6);
+  z-index: var(--z-dropdown);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  height: 3.25rem;
+  padding: 0 var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--verde-recarga);
+  color: var(--texto-sobre-vivo);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  text-decoration: none;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(1.5rem) scale(0.9);
+  pointer-events: none;
+  transition: opacity var(--duration-normal) var(--ease-out),
+              transform var(--duration-normal) var(--ease-out),
+              background-color var(--duration-fast);
+}
+
+.qp-home-whatsapp.es-visible {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.qp-home-whatsapp svg { font-size: 1.5rem; }
+
+/* Onda que late alrededor del botón para llamar la atención sin molestar. */
+.qp-home-whatsapp.es-visible::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  animation: qpHomeOnda 2.6s ease-out infinite;
+}
+
+@keyframes qpHomeOnda {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--verde-recarga) 55%, transparent); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+
+.qp-home-whatsapp:hover { background: var(--verde-recarga-hover); }
+.qp-home-whatsapp:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+
+/* En móvil queda solo el ícono. */
+@media (max-width: 36rem) {
+  .qp-home-whatsapp { right: var(--space-4); bottom: var(--space-4); width: 3.25rem; padding: 0; justify-content: center; }
+  .qp-home-whatsapp span { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qpass-floating-navbar,
+  .qp-home-whatsapp,
+  .qpass-home-nav-links a::after,
+  a.qpass-home-logo .logo-icon-bg { transition: none; }
+  .qp-home-whatsapp.es-visible::before { animation: none; }
+  a.qpass-home-logo:hover .logo-icon-bg { transform: none; }
 }
