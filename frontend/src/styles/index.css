@@ -110,6 +110,7 @@
   --bg-sunken:   var(--n-100);  /* franjas alternas, code, zonas hundidas */
   --bg-hover:    var(--n-100);  /* hover de fila / ítem de lista */
   --bg-overlay:  rgba(10, 14, 39, 0.5); /* backdrop de modal (azul-noche, no negro) */
+  --sidebar-bg:  var(--azul-noche);     /* menú lateral: oscuro en los dos temas */
 
   /* Texto */
   --text-primary:    var(--n-950);            /* títulos y cuerpo (= azul-noche) */
@@ -239,22 +240,25 @@
   :root:not([data-theme="light"]) {
     color-scheme: dark;
 
-    --bg-page:     #0C0F17;
-    --bg-surface:  #161A24;
-    --bg-raised:   #1E2330;
-    --bg-sunken:   #0A0D14;
-    --bg-hover:    rgba(255, 255, 255, 0.05);
+    --bg-page:     #141924;
+    --bg-surface:  #191E29;
+    --bg-raised:   #222836;
+    --bg-sunken:   #0D1017;
+    --bg-hover:    rgba(255, 255, 255, 0.08);
     --bg-overlay:  rgba(4, 6, 14, 0.6);
+    /* Más azul y más claro que --bg-page: así el menú se distingue del
+       contenido sin necesidad de una línea divisoria. */
+    --sidebar-bg:  #1B2550;
 
-    --text-primary:   #E7E9F0;
-    --text-secondary: #9AA1B7;
-    --text-muted:     #6B7488;
-    --text-link:      #4DD0E8;
+    --text-primary:   #E9ECF3;
+    --text-secondary: #A7AFC4;
+    --text-muted:     #8B93A8;
+    --text-link:      #5FD4EA;
 
-    --border:        #2A2F3D;
-    --border-strong: #3A4152;
-    --border-focus:  #4DD0E8;
-    --focus-ring:    #4DD0E8;
+    --border:        #4A5468;
+    --border-strong: #6A7389;
+    --border-focus:  #5FD4EA;
+    --focus-ring:    #5FD4EA;
 
     --viz-serie-1:   #3987e5;
     --viz-serie-2:   #d95926;
@@ -268,15 +272,15 @@
        en oscuro el índigo navy se pierde sobre superficies oscuras.
        Se aclara a un índigo medio legible como texto/ícono (AA sobre
        --bg-surface) y aún válido como fondo de botón con texto claro. */
-    --indigo-profundo:       #6E80C8;
-    --indigo-profundo-hover:  #8291D2;
-    --indigo-profundo-suave: rgba(110, 128, 200, 0.16);
+    --indigo-profundo:       #8294DC;
+    --indigo-profundo-hover:  #9AA8E4;
+    --indigo-profundo-suave: rgba(130, 148, 220, 0.20);
 
     --ok:     #34D399;  --ok-text:     #34D399;  --ok-bg:     rgba(0, 196, 140, 0.15);
     --warn:   #FBBF24;  --warn-text:   #FBBF24;  --warn-bg:   rgba(255, 176, 32, 0.15);
     --danger: #F87171;  --danger-text: #F87171;  --danger-bg: rgba(229, 72, 77, 0.16);
     --info:   #38C7E6;  --info-text:   #38C7E6;  --info-bg:   rgba(0, 180, 216, 0.15);
-    --brand-bg: rgba(110, 130, 200, 0.16);
+    --brand-bg: rgba(130, 148, 220, 0.20);
 
     --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);
@@ -287,22 +291,25 @@
 :root[data-theme="dark"] {
   color-scheme: dark;
 
-  --bg-page:     #0C0F17;
-  --bg-surface:  #161A24;
-  --bg-raised:   #1E2330;
-  --bg-sunken:   #0A0D14;
-  --bg-hover:    rgba(255, 255, 255, 0.05);
+  --bg-page:     #141924;
+  --bg-surface:  #191E29;
+  --bg-raised:   #222836;
+  --bg-sunken:   #0D1017;
+  --bg-hover:    rgba(255, 255, 255, 0.08);
   --bg-overlay:  rgba(4, 6, 14, 0.6);
+  /* Más azul y más claro que --bg-page: así el menú se distingue del
+     contenido sin necesidad de una línea divisoria. */
+  --sidebar-bg:  #1B2550;
 
-  --text-primary:   #E7E9F0;
-  --text-secondary: #9AA1B7;
-  --text-muted:     #6B7488;
-  --text-link:      #4DD0E8;
+  --text-primary:   #E9ECF3;
+  --text-secondary: #A7AFC4;
+  --text-muted:     #8B93A8;
+  --text-link:      #5FD4EA;
 
-  --border:        #2A2F3D;
-  --border-strong: #3A4152;
-  --border-focus:  #4DD0E8;
-  --focus-ring:    #4DD0E8;
+  --border:        #4A5468;
+  --border-strong: #6A7389;
+  --border-focus:  #5FD4EA;
+  --focus-ring:    #5FD4EA;
 
   --viz-serie-1:   #3987e5;
   --viz-serie-2:   #d95926;
@@ -316,15 +323,15 @@
      en oscuro el índigo navy se pierde sobre superficies oscuras.
      Se aclara a un índigo medio legible como texto/ícono (AA sobre
      --bg-surface) y aún válido como fondo de botón con texto claro. */
-  --indigo-profundo:       #6E80C8;
-  --indigo-profundo-hover:  #8291D2;
-  --indigo-profundo-suave: rgba(110, 128, 200, 0.16);
+  --indigo-profundo:       #8294DC;
+  --indigo-profundo-hover:  #9AA8E4;
+  --indigo-profundo-suave: rgba(130, 148, 220, 0.20);
 
   --ok:     #34D399;  --ok-text:     #34D399;  --ok-bg:     rgba(0, 196, 140, 0.15);
   --warn:   #FBBF24;  --warn-text:   #FBBF24;  --warn-bg:   rgba(255, 176, 32, 0.15);
   --danger: #F87171;  --danger-text: #F87171;  --danger-bg: rgba(229, 72, 77, 0.16);
   --info:   #38C7E6;  --info-text:   #38C7E6;  --info-bg:   rgba(0, 180, 216, 0.15);
-  --brand-bg: rgba(110, 130, 200, 0.16);
+  --brand-bg: rgba(130, 148, 220, 0.20);
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.45);

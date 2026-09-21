@@ -55,6 +55,9 @@ async function bootstrap() {
           new GetObjectCommand({
             Bucket: BUCKET_UPLOADS,
             Key: keyDesdeRuta(req.path),
+            // Si el navegador ya tiene el archivo, el bucket contesta 304 (cae en
+            // el .catch de abajo) y no se transfiere el cuerpo.
+            IfNoneMatch: req.headers['if-none-match'],
           }),
         )
         .then((objeto) => {
@@ -63,9 +66,12 @@ async function bootstrap() {
             res.setHeader('Content-Length', String(objeto.ContentLength));
           }
           if (objeto.ETag) res.setHeader('ETag', objeto.ETag);
-          // maxAge corto: la URL trae su propia firma con vencimiento (30 min,
-          // ver firma-uploads.ts), no tiene sentido cachearla más tiempo.
-          res.setHeader('Cache-Control', 'private, max-age=1800');
+          // Caché larga e `immutable`: el contenido de una key NUNCA cambia (cada
+          // subida genera un UUID nuevo, ver uploads.controller.ts) y la URL ahora
+          // es estable dentro de su ventana de firma (ver firma-uploads.ts), así
+          // que el navegador puede reusarla sin volver a pedirla. Sigue siendo
+          // `private`: es contenido de un solo usuario, no lo guardan los proxies.
+          res.setHeader('Cache-Control', 'private, max-age=31536000, immutable');
 
           if (req.method === 'HEAD') {
             res.end();
@@ -74,6 +80,10 @@ async function bootstrap() {
           (objeto.Body as Readable).pipe(res);
         })
         .catch((error: { name?: string; $metadata?: { httpStatusCode?: number } }) => {
+          if (error?.$metadata?.httpStatusCode === 304) {
+            res.status(304).end();
+            return;
+          }
           if (
             error?.name === 'NoSuchKey' ||
             error?.$metadata?.httpStatusCode === 404

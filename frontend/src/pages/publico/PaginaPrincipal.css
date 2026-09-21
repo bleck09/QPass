@@ -3,9 +3,18 @@
 ============================================================ */
 
 .qpass-home-container {
+  /* Esta página es SIEMPRE oscura (hero azul noche), pase lo que pase con el
+     tema de la app: por eso re-apunta acá los tokens de texto/superficie a los
+     valores del modo oscuro. Sin esto, en tema claro los textos secundarios
+     salían gris oscuro sobre el fondo oscuro (ilegibles) y al revés en oscuro. */
+  --text-secondary: #C3CAD9;
+  --text-muted:     #9AA2B6;
+  --bg-surface:     var(--n-0);
+  --border:         rgba(255, 255, 255, 0.16);
+
   width: 100%;
   min-height: 100vh;
-  background-color: var(--azul-noche); 
+  background-color: var(--azul-noche);
   color: var(--text-on-accent);
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
@@ -77,8 +86,11 @@
 .qpass-home-nav-links a { color: var(--text-on-accent); text-decoration: none; font-weight: 600; font-size: var(--text-sm); transition: color 0.2s; }
 .qpass-home-nav-links a:hover { color: var(--cian-digital); }
 
+/* La landing es SIEMPRE oscura (hero azul noche), no sigue el tema de la app:
+   por eso este botón usa los primitivos fijos (blanco + azul noche) y no
+   --bg-surface, que en modo oscuro se volvía casi del color del texto. */
 .qpass-home-nav-actions .btn-solid {
-  background-color: var(--bg-surface); color: var(--azul-noche); border: none; padding: 12px 24px; border-radius: var(--radius-xl);
+  background-color: var(--n-0); color: var(--azul-noche); border: none; padding: 12px 24px; border-radius: var(--radius-xl);
   font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s;
 }
 .qpass-home-nav-actions .btn-solid:hover { background-color: var(--cian-digital); color: var(--azul-noche); transform: scale(1.05); }

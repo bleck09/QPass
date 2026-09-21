@@ -18,6 +18,11 @@ import { createHash, createHmac, timingSafeEqual } from 'crypto';
  * si el usuario la deja abierta más tiempo y la imagen no estaba ya cacheada
  * por el navegador, un refresco de los datos (nueva llamada al backend) trae
  * una URL fresca.
+ *
+ * El vencimiento se redondea a ventanas fijas del reloj (ver firmarUrlUpload):
+ * dentro de una misma ventana, un archivo siempre recibe la MISMA URL, que es
+ * lo que permite que el navegador la cachee en vez de volver a descargar cada
+ * imagen en cada refresco de datos.
  * -------------------------------------------------------------------------- */
 
 const TTL_MS = 30 * 60 * 1000; // 30 minutos
@@ -33,8 +38,13 @@ const firmarComponentes = (ruta: string, exp: number): string =>
   createHmac('sha256', claveFirma()).update(`${ruta}:${exp}`).digest('hex');
 
 // ruta: SIEMPRE la ruta completa tal como se guarda en la BD, ej. "/uploads/comprobantes/xxx.jpg".
+// El vencimiento NO es "ahora + TTL" sino el próximo múltiplo exacto de TTL_MS del
+// reloj (14:30, 15:00, 15:30...): así todas las respuestas de la misma ventana
+// firman la MISMA URL y el navegador puede servirla de su caché en vez de volver a
+// bajar cada foto en cada refresco de datos (ver Cache-Control en main.ts). El
+// precio es que un enlace vive entre TTL_MS y 2×TTL_MS según cuándo se emitió.
 export const firmarUrlUpload = (ruta: string): string => {
-  const exp = Date.now() + TTL_MS;
+  const exp = (Math.floor(Date.now() / TTL_MS) + 1) * TTL_MS;
   return `${ruta}?exp=${exp}&firma=${firmarComponentes(ruta, exp)}`;
 };
 
