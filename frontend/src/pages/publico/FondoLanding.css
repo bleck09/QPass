@@ -1,0 +1,72 @@
+/* =========================================================================
+   FONDO DINÁMICO DE LA LANDING
+   Capas fijas a pantalla completa; solo la activa es visible y el cambio es
+   un fundido lento. La foto activa además se acerca muy despacio (Ken Burns)
+   para que el fondo no se sienta una imagen congelada.
+   ========================================================================= */
+
+.qp-fondo {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.qp-fondo__capa {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 1.4s ease-in-out;
+}
+
+/* ---------- Fotos ---------- */
+.qp-fondo__foto {
+  background-size: cover;
+  background-position: center;
+  transform: scale(1.08);
+  transition: opacity 1.4s ease-in-out, transform 20s linear;
+}
+
+/* Algo más visible que el 0.2 original para que el cambio entre secciones
+   se note, sin competir con las tarjetas de encima. */
+.qp-fondo__foto.es-activa {
+  opacity: 0.26;
+  transform: scale(1);
+}
+
+/* ---------- Aurora de marca (fondo sin foto) ----------
+   Tres manchas de color que se mueven lento, más una grilla de puntos
+   tenue: da un aire "tecnológico" a la sección de la plataforma. */
+.qp-fondo__aurora {
+  background-image: radial-gradient(color-mix(in srgb, var(--blanco) 9%, transparent) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.qp-fondo__aurora.es-activa { opacity: 1; }
+
+.qp-fondo__aurora span {
+  position: absolute;
+  width: 55vmax;
+  height: 55vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.32;
+  animation: qpFondoDerivar 22s ease-in-out infinite alternate;
+}
+
+.qp-fondo__aurora span:nth-child(1) { top: -15%; left: -10%; background: var(--cian-digital); }
+.qp-fondo__aurora span:nth-child(2) { bottom: -20%; right: -15%; background: var(--indigo-profundo); opacity: 0.45; animation-delay: -7s; }
+.qp-fondo__aurora span:nth-child(3) { top: 35%; left: 40%; width: 35vmax; height: 35vmax; background: var(--verde-recarga); opacity: 0.12; animation-delay: -14s; }
+
+@keyframes qpFondoDerivar {
+  from { transform: translate(0, 0) scale(1); }
+  to   { transform: translate(8vw, 6vh) scale(1.15); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-fondo__capa,
+  .qp-fondo__foto { transition: none; transform: none; }
+  .qp-fondo__foto.es-activa { transform: none; }
+  .qp-fondo__aurora span { animation: none; }
+}

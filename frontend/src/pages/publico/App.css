@@ -1355,9 +1355,13 @@ html {
   color: var(--color-fondo);
 }
 
-/* Pares: fondo claro, como las tarjetas de la derecha del diseno anterior. */
+/* Pares: fondo con el color de los TÍTULOS y texto con el color de FONDO,
+   o sea la paleta invertida. Antes el fondo era siempre blanco y el texto el
+   color de fondo del evento: con paletas claras (Día claro, Arena...) quedaba
+   blanco sobre blanco. Títulos vs fondo es un par que el editor ya valida
+   (contraste >= 4.5:1), así que se lee con cualquier paleta. */
 .ev-agenda__item:nth-child(even) {
-  background: color-mix(in srgb, var(--n-50) 95%, transparent);
+  background: var(--color-texto-titulo);
   color: var(--color-fondo);
 }
 
@@ -1369,8 +1373,11 @@ html {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: var(--radius-full);
-  background: var(--color-boton);
-  color: var(--color-primario);
+  /* Acento de fondo + número en el color de fondo: par validado por el
+     editor. Antes era botón + acento, y en las paletas donde botón y acento
+     son el mismo color (Bosque, Rock...) el número desaparecía. */
+  background: var(--color-primario);
+  color: var(--color-fondo);
   font-size: var(--text-base);
   font-weight: 900;
   box-shadow: 0 0.25rem 0.9rem color-mix(in srgb, var(--azul-noche) 25%, transparent);
@@ -1398,7 +1405,9 @@ html {
 }
 
 .ev-agenda__item:nth-child(odd) .ev-agenda__hora { opacity: 0.9; }
-.ev-agenda__item:nth-child(even) .ev-agenda__hora { color: var(--color-primario); }
+/* La hora va en el color del texto de la tarjeta: el acento sobre el fondo
+   invertido no siempre llegaba a leerse (ej. verde sobre blanco). */
+.ev-agenda__item:nth-child(even) .ev-agenda__hora { color: var(--color-fondo); }
 
 .ev-agenda__texto {
   font-size: var(--text-sm);
@@ -1431,9 +1440,24 @@ html {
      10% anterior quedaba al limite y en algunas alturas asomaba el borde. */
   inset: -8rem 0;
   z-index: 0;
+  overflow: hidden; /* el zoom de la capa interna no se sale del encabezado */
+}
+
+/* Capa con la foto: encuadre, zoom y desenfoque vienen inline desde
+   estilosImagenHero() (constants/landingEvento.js). */
+.ev-hero__fondo-img {
+  position: absolute;
+  inset: 0;
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
+}
+
+/* "Oscurecer" del editor: capa pareja del color de fondo sobre toda la foto. */
+.ev-hero__oscurecer {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
 }
 
 /* Velo: sin esto el texto no se lee sobre una foto clara. Más denso a la

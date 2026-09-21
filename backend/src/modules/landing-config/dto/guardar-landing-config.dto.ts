@@ -34,4 +34,9 @@ export class GuardarLandingConfigDto {
   // [{ hora, actividad }]
   @Allow()
   cronograma: Prisma.InputJsonValue;
+
+  // { x, y, zoom, oscurecer, desenfoque } — el servicio lo acota a rangos válidos.
+  @IsOptional()
+  @Allow()
+  imagenAjuste?: Record<string, unknown> | null;
 }

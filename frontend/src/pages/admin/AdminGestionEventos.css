@@ -308,15 +308,6 @@
   box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
 }
 
-/* Crear/Editar Evento: página propia (ya no modal), ancho de formulario cómodo
-   y centrada — .pi-ges-container es flex-column (align-items: stretch por
-   defecto), así que sin el margin/width acá quedaba pegada a la izquierda. */
-.pi-ges-form-pagina {
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-}
-
 .pi-ges-seccion-titulo {
   display: flex;
   align-items: center;

@@ -1,0 +1,214 @@
+/* =========================================================================
+   GESTIÓN DE EVENTOS — navegación guiada del detalle del evento.
+   Pestañas agrupadas (Preparar / Operación), checklist de publicación
+   clickeable y "Siguiente paso". Complementa AdminGestionEventos.css.
+   ========================================================================= */
+
+/* ============================================================================
+   NAVEGACIÓN DEL DETALLE: PESTAÑAS AGRUPADAS
+   "Preparar el evento" (pasos numerados con estado listo / pendiente /
+   opcional) y "Operación". Antes eran 8 pestañas sueltas en una sola fila.
+   ========================================================================= */
+.pi-ges-nav {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.pi-ges-nav-grupo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: var(--space-3) var(--space-3) 0;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+.pi-ges-nav-titulo {
+  padding-left: var(--space-2);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.pi-ges-nav .pi-ges-tabs { border-bottom: none; }
+
+.pi-ges-tab { position: relative; }
+
+.pi-ges-tab-num {
+  display: grid;
+  place-items: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  border: 2px solid var(--border-strong);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  transition: background-color var(--duration-normal), border-color var(--duration-normal), color var(--duration-normal);
+}
+
+.pi-ges-tab.paso-listo .pi-ges-tab-num {
+  border-color: transparent;
+  color: var(--ok);
+  font-size: var(--text-base);
+}
+
+/* Pendiente: punto ámbar que late, para que salte a la vista qué falta. */
+.pi-ges-tab.paso-pendiente .pi-ges-tab-num {
+  border-color: var(--warn);
+  color: var(--warn-text);
+  animation: piGesLatido 2s ease-in-out infinite;
+}
+
+@keyframes piGesLatido {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--warn) 45%, transparent); }
+  50%      { box-shadow: 0 0 0 5px transparent; }
+}
+
+.pi-ges-tab.activo .pi-ges-tab-num {
+  border-color: var(--action);
+  background: var(--action);
+  color: var(--text-on-accent);
+  animation: none;
+}
+
+.pi-ges-tab.activo.paso-listo .pi-ges-tab-num { background: var(--ok); border-color: var(--ok); color: var(--text-on-vivid); font-size: var(--text-xs); }
+
+.pi-ges-tab-opcional {
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--bg-sunken);
+  font-size: 0.68rem;
+  font-weight: var(--weight-semibold);
+  color: var(--text-secondary);
+}
+
+/* El contenido de la pestaña entra con un fundido corto al cambiar. */
+.pi-ges-panel-pestana { animation: piGesPanel 300ms var(--ease-out); }
+
+@keyframes piGesPanel {
+  from { opacity: 0; transform: translateY(var(--space-2)); }
+}
+
+/* "Siguiente paso" al pie de cada pestaña de Preparar. */
+.pi-ges-siguiente-paso {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
+  padding: var(--space-4) var(--space-5);
+  border-radius: var(--radius-lg);
+  border: 1px dashed var(--border-strong);
+  background: var(--bg-surface);
+}
+
+.pi-ges-siguiente-paso > span {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+.pi-ges-siguiente-paso > span svg { color: var(--ok); }
+
+.pi-ges-siguiente-paso button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.75rem;
+  padding: 0 var(--space-5);
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--action);
+  color: var(--text-on-accent);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  cursor: pointer;
+  transition: background-color var(--duration-fast);
+}
+
+.pi-ges-siguiente-paso button:hover { background: var(--action-hover); }
+.pi-ges-siguiente-paso button svg { transition: transform var(--duration-fast) var(--ease-out); }
+.pi-ges-siguiente-paso button:hover svg { transform: translateX(3px); }
+
+/* ============================================================================
+   CHECKLIST DE PUBLICACIÓN CLICKEABLE
+   Cada requisito pendiente lleva directo a su pestaña.
+   ========================================================================= */
+.pi-ges-progreso-lista li button,
+.pi-ges-progreso-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: 2.5rem;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: inherit;
+  text-align: left;
+}
+
+.pi-ges-progreso-lista li button { cursor: pointer; transition: border-color var(--duration-fast), transform var(--duration-fast) var(--ease-out); }
+.pi-ges-progreso-lista li:not(.listo) button { border-color: color-mix(in srgb, var(--warn) 55%, transparent); }
+.pi-ges-progreso-lista li button:hover { border-color: var(--action); transform: translateY(-1px); }
+
+.pi-ges-progreso-lista li button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.pi-ges-progreso-lista li button > span,
+.pi-ges-progreso-item > span { flex: 1; }
+
+.pi-ges-progreso-lista li button em {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-style: normal;
+  font-weight: var(--weight-bold);
+  color: var(--action);
+  white-space: nowrap;
+}
+
+.pi-ges-progreso-lista li:not(.listo) svg:first-child { color: var(--warn-text); }
+
+.pi-ges-progreso-listo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--ok-bg);
+  color: var(--ok-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  animation: piGesPanel 400ms var(--ease-out);
+}
+
+.pi-ges-progreso-listo > span { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+@media (max-width: 62rem) {
+  .pi-ges-nav { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-ges-tab.paso-pendiente .pi-ges-tab-num,
+  .pi-ges-panel-pestana,
+  .pi-ges-progreso-listo { animation: none; }
+  .pi-ges-progreso-lista li button:hover,
+  .pi-ges-siguiente-paso button:hover svg { transform: none; }
+}

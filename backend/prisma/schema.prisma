@@ -1182,6 +1182,9 @@ model LandingConfig {
   colorTextoP      String
   actividades      Json     // [{ icono, titulo, descripcion }]
   cronograma       Json     // [{ hora, actividad }]
+  // Encuadre de la imagen del encabezado: { x, y (punto focal, 0-100 %), zoom
+  // (100-200 %), oscurecer (0-80 %), desenfoque (0-8 px) }. null = sin ajustar.
+  imagenAjuste     Json?
   updatedAt        DateTime @updatedAt
 
   evento Evento @relation(fields: [eventoId], references: [id], onDelete: Cascade)

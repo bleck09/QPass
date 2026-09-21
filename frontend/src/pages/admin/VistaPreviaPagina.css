@@ -1,0 +1,242 @@
+/* =========================================================================
+   VISTA PREVIA DE LA PÁGINA DEL EVENTO (editor de Admin).
+   Los colores salen de la config que se está editando (--p-*), no de los
+   tokens de QPass: es una maqueta de la página del ORGANIZADOR.
+   Se adapta con container queries al ancho de su marco (escritorio/celular).
+   ========================================================================= */
+
+.pi-prev {
+  container-type: inline-size;
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  background: var(--p-fondo);
+  color: var(--p-texto);
+  font-size: 0.8rem;
+  transition: background-color var(--duration-normal), outline-color var(--duration-normal);
+  outline: 3px solid transparent;
+  outline-offset: 3px;
+}
+
+/* Zona que se está editando: borde de acento + pulso suave. */
+.pi-prev.es-resaltada,
+.pi-prev .es-resaltada {
+  outline: 2px dashed var(--accent);
+  outline-offset: 3px;
+  animation: pPrevPulso 1.6s ease-in-out infinite;
+}
+
+@keyframes pPrevPulso {
+  0%, 100% { outline-color: var(--accent); }
+  50%      { outline-color: transparent; }
+}
+
+/* ---------- Barra ---------- */
+.pi-prev__nav {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--p-fondo) 70%, transparent);
+  border: 1px solid color-mix(in srgb, var(--p-titulo) 12%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.pi-prev__logo { display: flex; align-items: center; gap: var(--space-1); font-weight: 800; color: var(--p-titulo); }
+.pi-prev__logo svg { color: var(--p-primario); }
+
+.pi-prev__links { display: flex; gap: var(--space-2); margin-left: auto; }
+.pi-prev__links i { width: 2rem; height: 0.35rem; border-radius: var(--radius-full); background: color-mix(in srgb, var(--p-texto) 45%, transparent); }
+
+.pi-prev__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  align-self: flex-start;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--p-boton);
+  color: var(--p-fondo);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pi-prev__btn--chico { padding: var(--space-1) var(--space-3); font-size: 0.7rem; }
+
+/* ---------- Hero ---------- */
+.pi-prev__hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--space-4);
+  align-items: end;
+  min-height: 15rem;
+  margin-top: -3.5rem;
+  padding: 4.5rem var(--space-5) var(--space-5);
+}
+
+.pi-prev__hero-foto,
+.pi-prev__hero-oscurecer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden; /* el zoom no se sale del encabezado */
+}
+
+.pi-prev__hero-img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Sin transición en object-position: al arrastrar el punto focal la foto
+     tiene que seguir al dedo sin retraso. */
+  transition: transform var(--duration-normal) var(--ease-out), filter var(--duration-normal);
+}
+
+/* Velo que funde la foto con el color de fondo (igual que la página real). */
+.pi-prev__hero-velo {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, var(--p-fondo) 5%, color-mix(in srgb, var(--p-fondo) 55%, transparent) 60%, color-mix(in srgb, var(--p-fondo) 20%, transparent)),
+              linear-gradient(0deg, var(--p-fondo), transparent 45%);
+}
+
+.pi-prev__hero-txt,
+.pi-prev__crono { position: relative; z-index: 1; border-radius: var(--radius-md); }
+
+.pi-prev__hero-txt { display: flex; flex-direction: column; gap: var(--space-2); }
+
+.pi-prev__estado {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: flex-start;
+  padding: 1px var(--space-2);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--p-primario) 18%, transparent);
+  color: var(--p-titulo);
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.pi-prev__estado i { width: 6px; height: 6px; border-radius: 50%; background: var(--p-primario); }
+
+.pi-prev__titulo {
+  font-size: clamp(1.1rem, 6cqi, 1.9rem);
+  font-weight: 800;
+  line-height: 1.15;
+  color: var(--p-titulo);
+  overflow-wrap: anywhere;
+}
+
+.pi-prev__info { margin: 0; line-height: 1.5; color: var(--p-texto); }
+.pi-prev__info.vacio { font-style: italic; opacity: 0.65; }
+
+.pi-prev__datos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.7rem;
+  color: var(--p-titulo);
+}
+
+.pi-prev__datos li { display: flex; align-items: center; gap: var(--space-1); }
+.pi-prev__datos svg { color: var(--p-primario); }
+
+/* ---------- Cronograma ---------- */
+.pi-prev__crono {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid color-mix(in srgb, var(--p-titulo) 12%, transparent);
+  background: color-mix(in srgb, var(--p-fondo) 65%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+.pi-prev__panel-tit { display: flex; align-items: center; gap: var(--space-1); font-weight: 700; color: var(--p-titulo); }
+.pi-prev__panel-tit svg { color: var(--p-primario); }
+
+.pi-prev__crono ol { display: flex; flex-direction: column; gap: var(--space-1); margin: 0; padding: 0; list-style: none; }
+
+.pi-prev__crono li {
+  display: grid;
+  grid-template-columns: 2.6rem minmax(0, 1fr);
+  gap: var(--space-2);
+  font-size: 0.7rem;
+  animation: pPrevEntrar 250ms var(--ease-out);
+}
+
+.pi-prev__crono li b { color: var(--p-primario); font-variant-numeric: tabular-nums; }
+.pi-prev__crono li span { color: var(--p-titulo); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.pi-prev__mas { font-size: 0.65rem; color: var(--p-primario); }
+
+/* ---------- Actividades ---------- */
+.pi-prev__seccion {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: var(--space-2) var(--space-3) var(--space-4);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+}
+
+.pi-prev__seccion-tit { text-align: center; font-size: 1rem; font-weight: 700; color: var(--p-titulo); }
+
+.pi-prev__actividades {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+  gap: var(--space-2);
+}
+
+.pi-prev__actividad {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--p-titulo) 5%, transparent);
+  border: 1px solid color-mix(in srgb, var(--p-titulo) 8%, transparent);
+  animation: pPrevEntrar 250ms var(--ease-out);
+}
+
+.pi-prev__actividad-ic {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  margin-bottom: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--p-primario) 15%, transparent);
+  color: var(--p-primario);
+}
+
+.pi-prev__actividad b { font-size: 0.75rem; color: var(--p-titulo); overflow-wrap: anywhere; }
+.pi-prev__actividad span { font-size: 0.68rem; line-height: 1.35; color: var(--p-texto); overflow-wrap: anywhere; }
+
+.pi-prev__vacio { font-size: 0.7rem; font-style: italic; opacity: 0.7; text-align: center; }
+
+@keyframes pPrevEntrar { from { opacity: 0; transform: translateY(4px); } }
+
+/* ---------- Marco angosto (modo celular / columna chica) ---------- */
+@container (max-width: 30rem) {
+  .pi-prev__links { display: none; }
+  .pi-prev__nav .pi-prev__btn--chico { margin-left: auto; }
+  .pi-prev__hero { grid-template-columns: 1fr; min-height: 0; padding-top: 7rem; }
+  .pi-prev__actividades { grid-template-columns: 1fr 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-prev.es-resaltada, .pi-prev .es-resaltada { animation: none; }
+  .pi-prev__crono li, .pi-prev__actividad { animation: none; }
+}
+
+/* Cronograma vacío: en la página real no aparece; acá queda como aviso tenue. */
+.pi-prev__crono--oculto { border-style: dashed; opacity: 0.6; }

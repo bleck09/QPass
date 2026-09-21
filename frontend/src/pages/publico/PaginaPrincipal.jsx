@@ -6,6 +6,7 @@ import {
 import './PaginaPrincipal.css';
 import HeroSection from './HeroSection.jsx';
 import CintaBeneficios from './CintaBeneficios.jsx';
+import FondoLanding from './FondoLanding.jsx';
 import EventosDestacados from '../../components/EventosDestacados.jsx';
 import EcosistemaSection from './EcosistemaSection.jsx';
 import AsistentesSection from './AsistentesSection.jsx';
@@ -113,7 +114,8 @@ export default function PaginaPrincipal() {
   return (
     <div className="qpass-home-container">
 
-      <div className="qpass-home-bg-image"></div>
+      {/* Fondo que cambia por sección (antes, una sola foto fija para toda la página). */}
+      <FondoLanding version={cargando} />
       <div className="qpass-home-glow glow-1"></div>
       <div className="qpass-home-glow glow-2"></div>
 

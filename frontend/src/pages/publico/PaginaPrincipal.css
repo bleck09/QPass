@@ -21,19 +21,6 @@
   position: relative;
 }
 
-/* Fondo Fijo (Efecto Parallax sutil) */
-.qpass-home-bg-image {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  /* Puedes cambiar esta imagen por una foto de un concierto */
-  background-image: url('https://images.unsplash.com/photo-1459749411175-04bf5292ceea?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
-  background-size: cover;
-  background-position: center;
-  opacity: 0.2; /* Lo oscurecemos para que resalten las tarjetas */
-  z-index: 0;
-  pointer-events: none;
-}
-
 /* Luces Neón de Fondo */
 .qpass-home-glow {
   position: absolute;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
@@ -11,10 +11,10 @@ import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import {
-  FaPlus, FaTimes, FaArrowLeft, FaMapMarkerAlt,
-  FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaImage, FaUpload, FaQrcode,
+  FaPlus, FaArrowLeft, FaArrowRight, FaMapMarkerAlt,
+  FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaQrcode,
   FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen,
-  FaRegCircle, FaRocket, FaEyeSlash, FaCalendarAlt, FaListUl, FaInfoCircle
+  FaRegCircle, FaRocket, FaEyeSlash, FaCalendarAlt, FaListUl
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
@@ -22,30 +22,40 @@ import { subirImagenDeInput } from '../../utils/imagenes.js';
 import { formatearFecha, estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
-import MapaSelector from '../../components/MapaSelector.jsx';
 import AdminCrearTickets from './AdminCrearTickets.jsx';
 import AdminJornadas from './AdminJornadas.jsx';
 import AdminCrearQr from './AdminCrearQr.jsx';
 import AdminConfigurarPagina from './AdminConfigurarPagina.jsx';
 import Mapa from './Mapa.jsx';
 import Admin from './Admin.jsx';
+import FormularioEventoPasos from './FormularioEventoPasos.jsx';
 import './AdminGestionEventos.css';
+import './GestionEventosNav.css';
 
-// Pestañas del detalle de evento (todo se ve acá mismo, sin cambiar de página).
-// Orden = el flujo sugerido para armar un evento de punta a punta: primero
-// cuándo es (jornadas), después qué se vende y con qué acceso, y al final lo
-// que no bloquea publicar (mapa, opcional) ni depende de tener ya compras
-// (asignar gente, reportes, solicitudes).
+// Pestañas del detalle de evento (todo se ve acá mismo, sin cambiar de página),
+// en dos grupos:
+//  - "Preparar el evento": el flujo sugerido para armarlo de punta a punta,
+//    en orden (primero cuándo es, después qué se vende y con qué acceso, y al
+//    final el mapa, que es opcional). Cada paso muestra si ya está listo.
+//  - "Operación": lo que se usa una vez armado (gente, reportes, compras).
+// `paso` = clave de progresoEvento.pasos que lo da por listo (backend).
 const PESTANAS = [
-  { id: 'jornadas', label: 'Jornadas', icono: <FaCalendarAlt /> },
-  { id: 'tickets', label: 'Tickets del Evento', icono: <FaTicketAlt /> },
-  { id: 'qr', label: 'Generar QR', icono: <FaQrcode /> },
-  { id: 'config', label: 'Configurar Página', icono: <FaCog /> },
-  { id: 'mapa', label: 'Mapa (opcional)', icono: <FaMapMarkedAlt /> },
-  { id: 'asignados', label: 'Usuarios asignados', icono: <FaUsers /> },
-  { id: 'reportes', label: 'Reportes', icono: <FaExclamationTriangle /> },
-  { id: 'solicitudes', label: 'Solicitudes de Entradas', icono: <FaClipboardList /> },
+  { id: 'jornadas', label: 'Jornadas', icono: <FaCalendarAlt />, grupo: 'preparar' },
+  { id: 'tickets', label: 'Tickets', icono: <FaTicketAlt />, grupo: 'preparar', paso: 'tickets' },
+  { id: 'qr', label: 'Códigos QR', icono: <FaQrcode />, grupo: 'preparar', paso: 'qr' },
+  { id: 'config', label: 'Página pública', icono: <FaCog />, grupo: 'preparar', paso: 'landing' },
+  { id: 'mapa', label: 'Mapa', icono: <FaMapMarkedAlt />, grupo: 'preparar', opcional: true },
+  { id: 'asignados', label: 'Usuarios asignados', icono: <FaUsers />, grupo: 'operacion' },
+  { id: 'reportes', label: 'Reportes', icono: <FaExclamationTriangle />, grupo: 'operacion' },
+  { id: 'solicitudes', label: 'Solicitudes de entradas', icono: <FaClipboardList />, grupo: 'operacion' },
 ];
+
+// Qué hace cada paso de "Preparar", para el checklist de publicación.
+const TEXTO_PASO = {
+  tickets: 'Crear al menos un tipo de entrada',
+  qr: 'Generar los códigos QR',
+  landing: 'Configurar la página del evento',
+};
 
 const ROLES_ASIGNABLES = ['Cliente', 'Supervisor', 'UsuarioNegocio', 'Recargador', 'Devolucion'];
 const FORM_EVENTO_VACIO = {
@@ -86,13 +96,6 @@ const isoADatetimeLocal = (iso) => {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
-// 'YYYY-MM-DD' -> "domingo 13 de septiembre", para mostrar el rango elegido
-// en el calendario de Crear Evento (sin depender de formatearFecha, que espera
-// un ISO con hora).
-const diaLocalLegible = (diaISO) => diaISO
-  ? new Date(`${diaISO}T00:00`).toLocaleDateString('es-BO', { weekday: 'long', day: 'numeric', month: 'long' })
-  : '';
-
 export default function AdminGestionEventos() {
   useTituloPagina('Gestión de eventos');
   const location = useLocation();
@@ -127,7 +130,8 @@ export default function AdminGestionEventos() {
   // navegador vuelve a la lista en vez de salir de la página, y el enlace es
   // compartible / sobrevive un refresco.
   const [eventoIdDetalle, abrirEventoUrl, cerrarDetalle] = useDetalleUrl('evento');
-  const [pestana, setPestana] = useState('asignados');
+  // 'auto' = se decide sola al abrir un evento (ver pestanaActiva más abajo).
+  const [pestana, setPestana] = useState('auto');
   // Crear/editar evento vivía en un modal; ahora es su propia vista de página
   // (?formulario=crear o ?formulario=<id>), con el mismo soporte de "Atrás".
   const [formularioParam, abrirFormularioUrl, cerrarFormularioUrl] = useDetalleUrl('formulario');
@@ -151,7 +155,7 @@ export default function AdminGestionEventos() {
   }, []);
 
   const abrirDetalle = (id) => {
-    setPestana('asignados');
+    setPestana('auto');
     abrirEventoUrl(id);
   };
   const [modalSolicitudesAbierto, setModalSolicitudesAbierto] = useState(false);
@@ -165,7 +169,6 @@ export default function AdminGestionEventos() {
   // la vista en vez de solo mostrar un texto de error al fondo del formulario
   // — si no, con un formulario largo parece que el botón "no hizo nada".
   const [faltaUbicacion, setFaltaUbicacion] = useState(false);
-  const ubicacionRef = useRef(null);
 
   const abrirCrearEvento = () => abrirFormularioUrl('crear');
   const abrirEditarEvento = (ev) => abrirFormularioUrl(ev.id);
@@ -272,6 +275,10 @@ export default function AdminGestionEventos() {
   if (eventoDetalle && pestana === 'qr' && eventoDetalle.tipoManilla === 'digital') {
     setPestana('jornadas');
   }
+  const pestanasVisibles = eventoDetalle
+    ? PESTANAS.filter(p => p.id !== 'qr' || eventoDetalle.tipoManilla !== 'digital')
+    : PESTANAS;
+  const pasosPreparar = pestanasVisibles.filter(p => p.grupo === 'preparar');
 
   // Qué le falta al evento para poder publicarse (tickets, QR, página, mapa).
   // Se recarga cada vez que se cambia de pestaña: es el punto natural en el que
@@ -285,6 +292,24 @@ export default function AdminGestionEventos() {
     activo: !!eventoDetalle,
   });
   useEffect(() => { recargarProgreso(); }, [pestana, recargarProgreso]);
+
+  // Estado de un paso de "Preparar": 'listo' | 'pendiente' | 'opcional'.
+  // Jornadas siempre está lista (el evento nace con una).
+  const estadoPaso = (p) => {
+    if (p.opcional) return 'opcional';
+    if (!p.paso) return 'listo';
+    return progresoEvento?.pasos?.[p.paso] ? 'listo' : 'pendiente';
+  };
+
+  // Al abrir un evento sin elegir pestaña: si está en borrador, el primer
+  // paso que falta (es lo que el Admin viene a hacer); si ya se publicó,
+  // la operación del día a día.
+  const pestanaActiva = pestana !== 'auto' ? pestana
+    : !eventoDetalle ? 'asignados'
+    : eventoDetalle.publicadoEn || eventoDetalle.archivadoEn ? 'asignados'
+    : (pasosPreparar.find(p => estadoPaso(p) === 'pendiente')?.id ?? 'jornadas');
+  const indicePaso = pasosPreparar.findIndex(p => p.id === pestanaActiva);
+  const pasoSiguiente = indicePaso >= 0 ? pasosPreparar[indicePaso + 1] : null;
 
   const asignacionesDelEvento = useMemo(
     () => asignaciones.filter(a => a.eventoId === eventoIdDetalle),
@@ -346,7 +371,6 @@ export default function AdminGestionEventos() {
     if (!formEvento.diaInicio || !formEvento.diaFin) return;
     if (!formEvento.coordenadas) {
       setFaltaUbicacion(true);
-      ubicacionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     setFaltaUbicacion(false);
@@ -538,169 +562,29 @@ export default function AdminGestionEventos() {
           <div className="pi-ges-header">
             <div>
               <h1>{editandoId ? <><FaPen aria-hidden="true" /> Editar Evento</> : <><FaPlus aria-hidden="true" /> Crear Evento</>}</h1>
-              <p>{editandoId ? `Estás editando "${formEvento.nombre}".` : 'Completa los datos para crear un evento nuevo.'}</p>
+              <p>{editandoId ? `Estás editando "${formEvento.nombre}". Podés saltar a cualquier paso.` : 'Te guiamos en 5 pasos. Lo que completes se ve en la vista previa.'}</p>
             </div>
           </div>
 
-          <section className="pi-ges-seccion pi-ges-form-pagina">
-            <form className="pi-ges-form" onSubmit={handleGuardarEvento}>
-              <div className="pi-ges-input-group">
-                <label htmlFor="ev-nombre">Nombre del evento</label>
-                <input
-                  id="ev-nombre" type="text" name="nombre" value={formEvento.nombre} onChange={handleChangeFormEvento}
-                  placeholder="Ej: Festival de Verano 2027" required
-                />
-              </div>
-              <div className="pi-ges-input-group">
-                <label htmlFor="ev-lugar">Lugar</label>
-                <input
-                  id="ev-lugar" type="text" name="lugar" value={formEvento.lugar} onChange={handleChangeFormEvento}
-                  placeholder="Ej: Campo Ferial, Cbba" required
-                />
-              </div>
-              <div className="pi-ges-input-group">
-                <label htmlFor="ev-tipo-manilla">Tipo de manilla / control de acceso</label>
-                <select
-                  id="ev-tipo-manilla" name="tipoManilla" value={formEvento.tipoManilla} onChange={handleChangeFormEvento}
-                >
-                  <option value="fisica">Física — Supervisor entrega y vincula la manilla</option>
-                  <option value="digital">Digital — el QR se asigna solo al aprobar la compra</option>
-                </select>
-                <p className="pi-ges-ayuda-campo">
-                  {formEvento.tipoManilla === 'digital'
-                    ? 'Cada asistente ve su código QR en su perfil apenas se aprueba su compra; entra mostrándolo desde el celular. No hace falta imprimir ni entregar nada en Gestión de Entrega.'
-                    : 'Admin genera un lote de códigos QR imprimibles y Supervisor entrega + vincula la manilla física a cada asistente en Gestión de Entrega.'}
-                </p>
-              </div>
-              <div className="pi-ges-input-group">
-                <label htmlFor="ev-cliente">Cliente organizador (opcional)</label>
-                <select
-                  id="ev-cliente" name="clienteId" value={formEvento.clienteId} onChange={handleChangeFormEvento}
-                >
-                  <option value="">Sin cliente asignado</option>
-                  {clientes.map(c => (
-                    <option key={c.id} value={c.id}>{c.nombre} ({c.email})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="pi-ges-input-group">
-                <label htmlFor="ev-retiro">Días para retirar el saldo tras el cierre</label>
-                <input
-                  id="ev-retiro" type="number" min="1" step="1" name="diasParaRetiro"
-                  value={formEvento.diasParaRetiro} onChange={handleChangeFormEvento}
-                  placeholder="30 (por defecto)"
-                />
-              </div>
-              <div className={`pi-ges-input-group${faltaUbicacion ? ' pi-ges-campo-error' : ''}`} ref={ubicacionRef}>
-                <label>Ubicación en el mapa</label>
-                <MapaSelector
-                  value={formEvento.coordenadas}
-                  onChange={(coords) => {
-                    setFormEvento(f => ({ ...f, coordenadas: coords }));
-                    if (coords) setFaltaUbicacion(false);
-                  }}
-                />
-                {faltaUbicacion && (
-                  <p className="pi-ges-error-fechas"><FaExclamationTriangle aria-hidden="true" /> Hacé clic en el mapa para marcar el lugar — es obligatorio.</p>
-                )}
-              </div>
-              <div className="pi-ges-input-group">
-                <label>Días del evento</label>
-                <p className="pi-ges-ayuda-campo">
-                  <FaInfoCircle aria-hidden="true" /> Elegí en el calendario qué día(s) abarca — un clic marca un
-                  solo día, un segundo clic cierra el rango. La hora exacta de cada noche se ajusta después en
-                  "Jornadas".
-                </p>
-                <CalendarioEventos
-                  eventos={eventos.filter(ev => ev.id !== editandoId)}
-                  modoSeleccion
-                  rangoSeleccionado={formEvento.diaInicio ? { desde: formEvento.diaInicio, hasta: formEvento.diaFin } : null}
-                  onCambiarRango={(rango) => setFormEvento(f => ({ ...f, diaInicio: rango.desde, diaFin: rango.hasta }))}
-                />
-                {formEvento.diaInicio && (
-                  <p className="pi-ges-ayuda-campo">
-                    {formEvento.diaInicio === formEvento.diaFin
-                      ? `Elegido: ${diaLocalLegible(formEvento.diaInicio)}`
-                      : `Elegido: del ${diaLocalLegible(formEvento.diaInicio)} al ${diaLocalLegible(formEvento.diaFin)}`}
-                  </p>
-                )}
-
-                {/* Solo al crear: recién ahí el evento nace con una única
-                    jornada sin nada enganchado todavía, así que dividirla es
-                    seguro. Al editar, las jornadas puntuales (con su hora
-                    real) se siguen tocando en la pestaña "Jornadas". */}
-                {!editandoId && formEvento.diaInicio && formEvento.diaInicio !== formEvento.diaFin && (
-                  <div className="pi-ges-radio-jornadas">
-                    <label className="pi-ges-radio-opcion">
-                      <input
-                        type="radio" name="dividirJornadas" checked={!formEvento.dividirJornadas}
-                        onChange={() => setFormEvento(f => ({ ...f, dividirJornadas: false }))}
-                      />
-                      <span>
-                        <strong>Una sola jornada para todo el rango</strong>
-                        <small>Una entrada sirve para cualquiera de esos días (ej. un pase de fin de semana).</small>
-                      </span>
-                    </label>
-                    <label className="pi-ges-radio-opcion">
-                      <input
-                        type="radio" name="dividirJornadas" checked={formEvento.dividirJornadas}
-                        onChange={() => setFormEvento(f => ({ ...f, dividirJornadas: true }))}
-                      />
-                      <span>
-                        <strong>Una jornada por cada día</strong>
-                        <small>Se crea una jornada separada por día (ej. entrada solo para el viernes, otra solo para el sábado). Después en "Jornadas" ajustás la hora real de cada una.</small>
-                      </span>
-                    </label>
-                  </div>
-                )}
-              </div>
-              <div className="pi-ges-input-group">
-                <label htmlFor="ev-imagen"><FaImage aria-hidden="true" /> Imagen del evento (opcional)</label>
-                {!formEvento.imagen ? (
-                  <div className="upload-zone">
-                    <FaUpload className="upload-icon" aria-hidden="true" />
-                    <span className="upload-text">Haz clic para subir una foto</span>
-                    <span className="upload-subtext">PNG, JPG hasta 3MB</span>
-                    <input id="ev-imagen" type="file" accept="image/*" onChange={handleImagenUpload} className="upload-input-hidden" />
-                  </div>
-                ) : previewFallo ? (
-                  <p className="pi-ges-error-imagen">
-                    No se puede mostrar esta imagen. Probá con otra en formato JPG o PNG.
-                  </p>
-                ) : (
-                  <div className="preview-zone">
-                    <img
-                      width="320" height="100" src={formEvento.imagen} alt="Vista previa"
-                      className="pi-ges-imagen-preview"
-                      onError={() => setPreviewFallo(true)}
-                      onLoad={() => setPreviewFallo(false)}
-                    />
-                    <button
-                      type="button"
-                      className="btn-quitar-imagen"
-                      onClick={() => { setErrorImagen(''); setFormEvento(f => ({ ...f, imagen: '' })); }}
-                    >
-                      <FaTimes aria-hidden="true" /> Quitar imagen
-                    </button>
-                  </div>
-                )}
-                {errorImagen && <p className="pi-ges-error-imagen">{errorImagen}</p>}
-              </div>
-
-              {errorFormEvento && (
-                <p className="pi-ges-error-fechas"><FaExclamationTriangle aria-hidden="true" /> {errorFormEvento}</p>
-              )}
-
-              <div className="pi-ges-modal-actions">
-                <button type="button" className="pi-ges-btn-cancelar" onClick={cerrarFormularioUrl}>
-                  Cancelar
-                </button>
-                <button type="submit" className="pi-ges-btn-guardar">
-                  {editandoId ? 'Guardar cambios' : 'Crear Evento'}
-                </button>
-              </div>
-            </form>
-          </section>
+          <FormularioEventoPasos
+            key={formularioParam}
+            formEvento={formEvento}
+            setFormEvento={setFormEvento}
+            onChange={handleChangeFormEvento}
+            editando={!!editandoId}
+            onImagen={handleImagenUpload}
+            onQuitarImagen={() => { setErrorImagen(''); setFormEvento(f => ({ ...f, imagen: '' })); }}
+            errorImagen={errorImagen}
+            previewFallo={previewFallo}
+            setPreviewFallo={setPreviewFallo}
+            errorGuardar={errorFormEvento}
+            faltaUbicacion={faltaUbicacion}
+            setFaltaUbicacion={setFaltaUbicacion}
+            eventosOtros={eventos.filter(ev => ev.id !== editandoId)}
+            clientes={clientes}
+            onGuardar={handleGuardarEvento}
+            onCancelar={cerrarFormularioUrl}
+          />
         </>
       ) : eventoDetalle ? (
         <>
@@ -803,19 +687,38 @@ export default function AdminGestionEventos() {
                 />
               </div>
               <ul className="pi-ges-progreso-lista">
-                <li className={progresoEvento.pasos.tickets ? 'listo' : ''}>
-                  {progresoEvento.pasos.tickets ? <FaCheckCircle /> : <FaRegCircle />} Crear al menos un tipo de entrada
-                </li>
-                <li className={progresoEvento.pasos.qr ? 'listo' : ''}>
-                  {progresoEvento.pasos.qr ? <FaCheckCircle /> : <FaRegCircle />}{' '}
-                  {eventoDetalle.tipoManilla === 'digital'
-                    ? 'Códigos QR: automáticos (manilla digital, no hace falta generarlos)'
-                    : 'Generar los códigos QR'}
-                </li>
-                <li className={progresoEvento.pasos.landing ? 'listo' : ''}>
-                  {progresoEvento.pasos.landing ? <FaCheckCircle /> : <FaRegCircle />} Configurar la página del evento
-                </li>
+                {Object.entries(progresoEvento.pasos).map(([clave, listo]) => {
+                  const destino = PESTANAS.find(p => p.paso === clave);
+                  const texto = clave === 'qr' && eventoDetalle.tipoManilla === 'digital'
+                    ? 'Códigos QR: automáticos (manilla digital)'
+                    : TEXTO_PASO[clave] ?? clave;
+                  const irAlPaso = destino && !(clave === 'qr' && eventoDetalle.tipoManilla === 'digital');
+                  return (
+                    <li key={clave} className={listo ? 'listo' : ''}>
+                      {irAlPaso ? (
+                        <button type="button" onClick={() => setPestana(destino.id)}>
+                          {listo ? <FaCheckCircle aria-hidden="true" /> : <FaRegCircle aria-hidden="true" />}
+                          <span>{texto}</span>
+                          {!listo && <em>Ir ahora <FaArrowRight aria-hidden="true" /></em>}
+                        </button>
+                      ) : (
+                        <span className="pi-ges-progreso-item">
+                          {listo ? <FaCheckCircle aria-hidden="true" /> : <FaRegCircle aria-hidden="true" />}
+                          <span>{texto}</span>
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
+              {progresoEvento.listoParaPublicar && (
+                <div className="pi-ges-progreso-listo">
+                  <span><FaRocket aria-hidden="true" /> ¡Todo listo! Ya podés publicar el evento.</span>
+                  <button type="button" className="pi-ges-btn-publicar" onClick={handlePublicar}>
+                    <FaRocket aria-hidden="true" /> Publicar ahora
+                  </button>
+                </div>
+              )}
               <p className="pi-ges-progreso-nota">
                 El mapa es opcional: los puestos los activa cada Usuario Negocio y podés armarlo
                 antes o después de publicar. Si queda sin configurar, simplemente no se muestra en la página del evento.
@@ -826,42 +729,64 @@ export default function AdminGestionEventos() {
             </div>
           )}
 
-          <div className="pi-ges-tabs" role="tablist" aria-label="Secciones del evento">
-            {/* Manilla digital: el QR nace solo al aprobar cada compra, no hay
-                pool que generar — ese paso no aplica, así que no se muestra. */}
-            {PESTANAS.filter(p => p.id !== 'qr' || eventoDetalle.tipoManilla !== 'digital').map(p => (
-              <button
-                key={p.id}
-                type="button"
-                role="tab"
-                aria-selected={pestana === p.id}
-                className={`pi-ges-tab${pestana === p.id ? ' activo' : ''}`}
-                onClick={() => setPestana(p.id)}
-              >
-                {p.icono} {p.label}
-                {p.id === 'solicitudes' && comprasPendientes > 0 && (
-                  <span className="pi-ges-badge-contador">{comprasPendientes}</span>
-                )}
-              </button>
+          <nav className="pi-ges-nav" aria-label="Secciones del evento">
+            {[
+              { grupo: 'preparar', titulo: 'Preparar el evento' },
+              { grupo: 'operacion', titulo: 'Operación' },
+            ].map(({ grupo, titulo }) => (
+              <div key={grupo} className={`pi-ges-nav-grupo pi-ges-nav-grupo--${grupo}`}>
+                <span className="pi-ges-nav-titulo">{titulo}</span>
+                <div className="pi-ges-tabs" role="tablist" aria-label={titulo}>
+                  {pestanasVisibles.filter(p => p.grupo === grupo).map((p, i) => {
+                    const est = grupo === 'preparar' ? estadoPaso(p) : null;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={pestanaActiva === p.id}
+                        className={`pi-ges-tab${pestanaActiva === p.id ? ' activo' : ''}${est ? ` paso-${est}` : ''}`}
+                        onClick={() => setPestana(p.id)}
+                      >
+                        {grupo === 'preparar' && (
+                          <span className="pi-ges-tab-num" aria-hidden="true">
+                            {est === 'listo' ? <FaCheckCircle /> : i + 1}
+                          </span>
+                        )}
+                        {grupo === 'operacion' && p.icono}
+                        {p.label}
+                        {est === 'opcional' && <small className="pi-ges-tab-opcional">opcional</small>}
+                        {est === 'pendiente' && <span className="sr-only"> (pendiente)</span>}
+                        {est === 'listo' && <span className="sr-only"> (listo)</span>}
+                        {p.id === 'solicitudes' && comprasPendientes > 0 && (
+                          <span className="pi-ges-badge-contador">{comprasPendientes}</span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             ))}
-          </div>
+          </nav>
 
-          {pestana === 'jornadas' && <AdminJornadas eventoId={eventoDetalle.id} soloLectura={!!eventoDetalle.archivadoEn} />}
-          {pestana === 'tickets' && <AdminCrearTickets eventoId={eventoDetalle.id} embebido />}
-          {pestana === 'qr' && <AdminCrearQr eventoId={eventoDetalle.id} tipoManilla={eventoDetalle.tipoManilla} embebido />}
-          {pestana === 'config' && (
+          <div key={pestanaActiva} className="pi-ges-panel-pestana">
+          {pestanaActiva === 'jornadas' && <AdminJornadas eventoId={eventoDetalle.id} soloLectura={!!eventoDetalle.archivadoEn} />}
+          {pestanaActiva === 'tickets' && <AdminCrearTickets eventoId={eventoDetalle.id} embebido />}
+          {pestanaActiva === 'qr' && <AdminCrearQr eventoId={eventoDetalle.id} tipoManilla={eventoDetalle.tipoManilla} embebido />}
+          {pestanaActiva === 'config' && (
             <AdminConfigurarPagina
               eventoId={eventoDetalle.id}
               eventoNombre={eventoDetalle.nombre}
               eventoImagen={eventoDetalle.imagen}
+              evento={eventoDetalle}
               embebido
             />
           )}
-          {pestana === 'mapa' && <Mapa eventoId={eventoDetalle.id} embebido />}
-          {pestana === 'reportes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="incidencias" />}
-          {pestana === 'solicitudes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="solicitudesEntradas" />}
+          {pestanaActiva === 'mapa' && <Mapa eventoId={eventoDetalle.id} embebido />}
+          {pestanaActiva === 'reportes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="incidencias" />}
+          {pestanaActiva === 'solicitudes' && <Admin eventoIdFijo={eventoDetalle.id} vistaFija="solicitudesEntradas" />}
 
-          {pestana === 'asignados' && (
+          {pestanaActiva === 'asignados' && (
           <section className="pi-ges-seccion">
             <h3 className="pi-ges-seccion-titulo"><FaUsers /> Usuarios asignados</h3>
 
@@ -927,6 +852,19 @@ export default function AdminGestionEventos() {
             </div>
           </section>
           )}
+
+          {pasoSiguiente && (
+            <div className="pi-ges-siguiente-paso">
+              <span>
+                Paso {indicePaso + 1} de {pasosPreparar.length}
+                {estadoPaso(pasosPreparar[indicePaso]) === 'listo' && <> · <FaCheckCircle aria-hidden="true" /> listo</>}
+              </span>
+              <button type="button" onClick={() => { setPestana(pasoSiguiente.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                Siguiente: {pasoSiguiente.label} <FaArrowRight aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          </div>
         </>
       ) : (
         <>

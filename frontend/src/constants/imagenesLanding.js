@@ -15,3 +15,19 @@ export const IMAGENES_LANDING = {
   confeti: unsplash('1492684223066-81342ee5ff30', 1600),
   escenario: unsplash('1470229722913-7c0e2dbbafd3', 600),
 };
+
+// Fondos de la landing: van cambiando según la sección que se está leyendo
+// (ver FondoLanding.jsx). `null` = fondo sin foto (aurora de marca).
+// La foto original de concierto abre y cierra la página (hero y contacto/pie).
+// Las del medio son a propósito de TEMA y COLOR distintos: al 25% de opacidad
+// sobre azul noche, cuatro fotos de "público en un concierto" se veían iguales.
+const FOTO_CONCIERTO = 'https://images.unsplash.com/photo-1459749411175-04bf5292ceea?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80';
+
+export const FONDOS_LANDING = {
+  inicio: FOTO_CONCIERTO,
+  servicios: null,
+  asistentes: unsplash('1467810563316-b5476525c0f9', 1920),    // bengalas, tonos ámbar
+  organizadores: unsplash('1522202176988-66273c2fd55f', 1920), // equipo planificando con laptops
+  pasados: unsplash('1566737236500-c8ac43014a67', 1920),       // túnel de luces neón rosa
+  contacto: FOTO_CONCIERTO,
+};

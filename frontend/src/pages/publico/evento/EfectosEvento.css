@@ -1,0 +1,323 @@
+/* =========================================================================
+   EFECTOS DE LA PÁGINA DEL EVENTO (publico/App.jsx)
+   Movimiento y respuesta al puntero sobre la estructura que ya existía:
+   entrada del hero, luz que sigue al mouse, partículas, cuenta regresiva
+   animada, barra de progreso, subrayado de títulos, brillo en las
+   tarjetas y entrada escalonada de actividades y puestos.
+   Colores del evento (--color-*). Todo se apaga con movimiento reducido.
+   ========================================================================= */
+
+/* ---------- Hero: entrada al cargar ---------- */
+.pi-landing-hero-content > * {
+  animation: evHeroEntrar 700ms var(--ease-out) backwards;
+}
+
+.pi-landing-hero-content > :nth-child(1) { animation-delay: 80ms; }
+.pi-landing-hero-content > :nth-child(2) { animation-delay: 180ms; }
+.pi-landing-hero-content > :nth-child(3) { animation-delay: 280ms; }
+.pi-landing-hero-content > :nth-child(4) { animation-delay: 380ms; }
+.pi-landing-hero-content > :nth-child(5) { animation-delay: 480ms; }
+.pi-landing-hero-content > :nth-child(n+6) { animation-delay: 580ms; }
+
+@keyframes evHeroEntrar {
+  from { opacity: 0; transform: translateY(1.5rem); filter: blur(4px); }
+}
+
+.ev-hero__panel { animation: evPanelEntrar 900ms var(--ease-out) 350ms backwards; }
+
+@keyframes evPanelEntrar {
+  from { opacity: 0; transform: translateX(2.5rem) scale(0.97); }
+}
+
+/* ---------- Hero: luz que sigue al mouse ---------- */
+.ev-hero__luz {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: radial-gradient(38rem circle at var(--mx, 25%) var(--my, 40%),
+    color-mix(in srgb, var(--color-primario) 16%, transparent), transparent 60%);
+  transition: background-position var(--duration-fast);
+}
+
+/* ---------- Hero: partículas que suben ---------- */
+.ev-hero__particulas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ev-hero__particulas span {
+  position: absolute;
+  bottom: -1rem;
+  left: calc(var(--i) * 8.1% + 2%);
+  width: var(--t, 5px); /* tamaño por partícula, viene del JSX */
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--color-primario);
+  box-shadow: 0 0 10px var(--color-primario);
+  opacity: 0;
+  animation: evParticula calc(9s + var(--i) * 0.9s) linear infinite;
+  animation-delay: calc(var(--i) * -1.7s);
+}
+
+@keyframes evParticula {
+  0%   { transform: translate(0, 0); opacity: 0; }
+  10%  { opacity: 0.7; }
+  80%  { opacity: 0.35; }
+  100% { transform: translate(2rem, -90vh); opacity: 0; }
+}
+
+/* ---------- Cuenta regresiva: cada número "cae" al cambiar ---------- */
+.ev-hero__cuenta-bloque { overflow: hidden; }
+.ev-hero__cuenta-bloque b { display: inline-block; animation: evDigito 450ms var(--ease-out); }
+
+@keyframes evDigito {
+  from { transform: translateY(-70%); opacity: 0; }
+}
+
+/* Los segundos laten para que se note que corre. */
+.ev-hero__cuenta-bloque:last-child {
+  animation: evLatido 1s ease-in-out infinite;
+}
+
+@keyframes evLatido {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primario) 0%, transparent); }
+  50%      { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-primario) 25%, transparent); }
+}
+
+/* ---------- Barra de progreso de lectura ---------- */
+.ev-progreso {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 60;
+  height: 3px;
+  background: linear-gradient(90deg, var(--color-primario), color-mix(in srgb, var(--color-primario) 40%, var(--color-texto-titulo)));
+  box-shadow: 0 0 10px var(--color-primario);
+  transform-origin: left;
+  transform: scaleX(var(--progreso, 0));
+  pointer-events: none;
+}
+
+/* ---------- Títulos de sección: subrayado que crece al aparecer ---------- */
+.pi-landing-section-title,
+.pricing-title { position: relative; padding-bottom: var(--space-4); }
+
+.pi-landing-section-title::after,
+.pricing-title::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 4rem;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, transparent, var(--color-primario), transparent);
+  transform: translateX(-50%);
+  transition: transform 900ms var(--ease-out) 250ms, width 900ms var(--ease-out) 250ms;
+}
+
+.qp-revelar[data-revelar="armado"]:not(.es-visible) .pi-landing-section-title::after,
+.qp-revelar[data-revelar="armado"]:not(.es-visible) .pricing-title::after {
+  transform: translateX(-50%) scaleX(0);
+}
+
+/* ---------- Tarjetas de entrada: brillo que sigue al mouse ---------- */
+.pricing-card { overflow: hidden; }
+
+.pricing-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(22rem circle at var(--mx, 50%) var(--my, 0%),
+    color-mix(in srgb, var(--color-primario) 20%, transparent), transparent 55%);
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out);
+}
+
+.pricing-card:hover::after { opacity: 1; }
+
+/* Botón de compra: un destello lo cruza al pasar el mouse. */
+.btn-pricing { position: relative; overflow: hidden; }
+
+.btn-pricing::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--color-texto-titulo) 55%, transparent), transparent);
+  transform: skewX(-20deg);
+  transition: left 650ms var(--ease-out);
+  pointer-events: none;
+}
+
+.btn-pricing:hover:not(:disabled)::before { left: 130%; }
+
+/* ---------- Actividades: entrada escalonada + luz + ícono vivo ---------- */
+.pi-landing-glass-card { position: relative; overflow: hidden; }
+
+.pi-landing-glass-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: radial-gradient(16rem circle at var(--mx, 50%) var(--my, 0%),
+    color-mix(in srgb, var(--color-primario) 16%, transparent), transparent 60%);
+  opacity: 0;
+  transition: opacity 300ms;
+}
+
+.pi-landing-glass-card:hover::before { opacity: 1; }
+.pi-landing-glass-card:hover { border-color: color-mix(in srgb, var(--color-primario) 45%, transparent); }
+
+.pi-landing-card-icon { transition: transform 450ms cubic-bezier(0.34, 1.56, 0.64, 1), background-color 300ms, box-shadow 300ms; }
+
+.pi-landing-glass-card:hover .pi-landing-card-icon {
+  transform: rotate(-8deg) scale(1.12);
+  background: color-mix(in srgb, var(--color-primario) 20%, transparent);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--color-primario) 40%, transparent);
+}
+
+/* ---------- Mapa: los puestos aparecen de a uno ---------- */
+.qp-revelar.es-visible .pi-landing-puesto-box {
+  animation: evPuestoPop 500ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  animation-delay: calc(200ms + var(--i, 0) * 60ms);
+}
+
+@keyframes evPuestoPop {
+  from { opacity: 0; transform: scale(0.6); }
+}
+
+/* ---------- Movimiento reducido: todo quieto, todo visible ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .pi-landing-hero-content > *,
+  .ev-hero__panel,
+  .ev-hero__cuenta-bloque b,
+  .ev-hero__cuenta-bloque:last-child,
+  .qp-revelar.es-visible .pi-landing-puesto-box { animation: none; }
+  .ev-hero__particulas { display: none; }
+  .pi-landing-section-title::after,
+  .pricing-title::after { transition: none; }
+  .qp-revelar[data-revelar="armado"]:not(.es-visible) .pi-landing-section-title::after,
+  .qp-revelar[data-revelar="armado"]:not(.es-visible) .pricing-title::after { transform: translateX(-50%); }
+  .btn-pricing::before { display: none; }
+  .pi-landing-card-icon { transition: none; }
+  .pi-landing-glass-card:hover .pi-landing-card-icon { transform: none; }
+}
+
+/* =========================================================================
+   TÍTULO: letras que entran de a una + resplandor que "respira".
+   El color sigue siendo el sólido de la paleta (sin degradé en el texto:
+   eso dejaba el título grisáceo).
+   ========================================================================= */
+
+/* El h1 entero no se anima como bloque: ya se animan sus letras. */
+.pi-landing-hero-content > h1 { animation: none; }
+
+.ev-titulo__palabra { display: inline-block; white-space: nowrap; }
+
+.ev-titulo__letra {
+  display: inline-block;
+  /* 1) entrada al cargar; 2) una ola que recorre el título cada 6 s, sola
+     (casi nadie pasa el mouse por el título). Las dos animan transform pero
+     nunca a la vez: la ola arranca a los 3 s, cuando la entrada ya terminó. */
+  animation:
+    evLetra 650ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards,
+    evOlaLetra 6s ease-in-out infinite;
+  animation-delay:
+    calc(250ms + var(--n) * 35ms),
+    calc(3s + var(--n) * 55ms);
+}
+
+@keyframes evLetra {
+  from { opacity: 0; transform: translateY(0.7em) rotate(10deg); filter: blur(6px); }
+}
+
+/* La ola ocupa el primer 12% del ciclo (~0,7 s por letra) y el resto queda quieto. */
+@keyframes evOlaLetra {
+  0%, 12%, 100% { transform: translateY(0); color: var(--color-texto-titulo); }
+  6% {
+    transform: translateY(-0.22em);
+    color: var(--color-primario);
+    text-shadow: 0 0 1rem color-mix(in srgb, var(--color-primario) 60%, transparent);
+  }
+}
+
+
+/* Resplandor suave del color de acento, en bucle lento. */
+.pi-landing-hero .ev-hero__titulo {
+  animation: evTituloResplandor 5s ease-in-out 1.8s infinite;
+}
+
+@keyframes evTituloResplandor {
+  0%, 100% { text-shadow: 0 0 0 transparent; }
+  50%      { text-shadow: 0 0 1.5rem color-mix(in srgb, var(--color-primario) 55%, transparent),
+                          0 0 0.3rem color-mix(in srgb, var(--color-primario) 35%, transparent); }
+}
+
+/* =========================================================================
+   IMAGEN: acercamiento lento y continuo (Ken Burns).
+   Va en su propia capa, entre el parallax y el ajuste del organizador.
+   ========================================================================= */
+.ev-hero__fondo-mov {
+  position: absolute;
+  inset: 0;
+  animation: evKenBurns 30s ease-in-out infinite alternate;
+}
+
+@keyframes evKenBurns {
+  from { transform: scale(1) translate(0, 0); }
+  to   { transform: scale(1.1) translate(-2%, -1.5%); }
+}
+
+/* =========================================================================
+   CRONOGRAMA: entrada alternada + ola en los números.
+   La ola usa la propiedad `scale` y el giro del hover usa `rotate`: son
+   propiedades separadas de `transform`, así no se pisan entre sí ni con el
+   translateY del hover de la fila.
+   ========================================================================= */
+.ev-agenda__item {
+  animation: evAgendaIzq 650ms var(--ease-out) backwards;
+  animation-delay: calc(700ms + var(--i, 0) * 130ms);
+}
+
+.ev-agenda__item:nth-child(even) { animation-name: evAgendaDer; }
+
+@keyframes evAgendaIzq { from { opacity: 0; transform: translateX(-2rem); } }
+@keyframes evAgendaDer { from { opacity: 0; transform: translateX(2rem); } }
+
+.ev-agenda__num {
+  animation: evNumOla 5s ease-in-out infinite;
+  animation-delay: calc(2.2s + var(--i, 0) * 0.35s);
+  transition: rotate 600ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes evNumOla {
+  0%, 16%, 100% { scale: 1; }
+  8%            { scale: 1.22; box-shadow: 0 0 0 6px color-mix(in srgb, var(--color-primario) 30%, transparent); }
+}
+
+.ev-agenda__item:hover .ev-agenda__num { rotate: 360deg; }
+
+/* La hora "se enciende" al pasar el mouse por la fila. */
+.ev-agenda__hora { transition: letter-spacing 300ms var(--ease-out); }
+.ev-agenda__item:hover .ev-agenda__hora { letter-spacing: 0.06em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ev-titulo__letra,
+  .pi-landing-hero .ev-hero__titulo,
+  .ev-hero__fondo-mov,
+  .ev-agenda__item,
+  .ev-agenda__num { animation: none; }
+  .ev-agenda__num, .ev-agenda__hora { transition: none; }
+  .ev-agenda__item:hover .ev-agenda__num { rotate: none; }
+}

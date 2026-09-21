@@ -26,6 +26,12 @@ export default function ContactoSection({ motivo = MOTIVOS[0] }) {
     setForm((f) => ({ ...f, motivo }));
   }
 
+  const elegirOrganizar = () => {
+    setForm((f) => ({ ...f, motivo: MOTIVOS_CONTACTO.organizar }));
+    setEnviado(false);
+    document.getElementById('contacto-nombre')?.focus();
+  };
+
   const cambiar = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
@@ -87,18 +93,21 @@ export default function ContactoSection({ motivo = MOTIVOS[0] }) {
           </li>
         </ul>
 
-        <aside className="qp-contacto__destacado">
+        {/* Atajo: elige el motivo "organizar" en el formulario y lleva el foco
+            al primer campo. Antes era un recuadro solo informativo. */}
+        <button type="button" className="qp-contacto__destacado" onClick={elegirOrganizar}>
           <span className="qp-contacto__ic qp-contacto__ic--alt" aria-hidden="true">
             <FaCalendarCheck />
           </span>
-          <span>
+          <span className="qp-contacto__destacado-txt">
             <strong>¿Organizás un evento?</strong>
             <span>
               Contanos la fecha y el lugar y te armamos el cashless completo: entradas,
               manillas QR, puntos de recarga y cierre de caja.
             </span>
+            <em>Completá el formulario <FaArrowRight aria-hidden="true" /></em>
           </span>
-        </aside>
+        </button>
       </div>
 
       {/* --- Formulario --- */}

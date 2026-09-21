@@ -1,12 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   FaArrowRight, FaArrowLeft, FaMapMarkerAlt, FaClock,
-  FaCalendarAlt, FaQrcode, FaRegLightbulb, FaTicketAlt, FaMobileAlt, FaCoins,
+  FaCalendarAlt, FaQrcode, FaRegLightbulb, FaTicketAlt, FaMobileAlt, FaCoins, FaHourglassHalf,
 } from 'react-icons/fa';
 import {
   imagenEvento, formatearFecha, diaLocalISO, estadoEvento, ESTADO_EVENTO,
 } from '../utils/eventos.js';
+import { useCuentaRegresiva } from '../utils/useCuentaRegresiva.js';
 import './EventosDestacados.css';
+import './EventosDestacadosTicket.css';
 
 const DURACION_EXPANSION = 700; // ms — debe coincidir con la transición de .slot-expandiendo
 const DURACION_CROSSFADE = 200;
@@ -30,6 +32,100 @@ function cuandoEs(evento) {
     texto: `${formatearFecha(evento.fecha, false)} — ${formatearFecha(evento.fechaFin, false)}`,
     dias,
   };
+}
+
+const dos = (n) => String(n).padStart(2, '0');
+
+/** Cuenta regresiva en bloques (días / hs / min / seg). */
+function BloquesCuenta({ fecha, className }) {
+  const c = useCuentaRegresiva(fecha);
+  if (!c || c.terminada) return null;
+  return (
+    <div className={className} aria-label={`Faltan ${c.dias} días, ${c.horas} horas y ${c.minutos} minutos`}>
+      {[[c.dias, 'días'], [c.horas, 'hs'], [c.minutos, 'min'], [c.segundos, 'seg']].map(([v, u]) => (
+        <span key={u} aria-hidden="true">
+          <b key={v}>{u === 'días' ? v : dos(v)}</b>
+          <em>{u}</em>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/**
+ * Lado derecho de la cartelera: la entrada flotante del evento activo y, si
+ * hay más eventos, una columna "Otros eventos" para saltar a cualquiera.
+ * Reemplaza a la cola de tarjetas grandes (con la entrada al lado no había
+ * lugar para las dos, y la cola sola dejaba sin entrada a los eventos).
+ *
+ * La entrada se inclina en 3D siguiendo al mouse (posición escrita directo en
+ * el DOM) y se re-monta con cada evento (key) para girar al cambiar.
+ */
+function Escaparate({ evento, cuando, otros, onElegir }) {
+  const inclinar = (e) => {
+    if (e.pointerType === 'touch') return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    const px = (e.clientX - r.left) / r.width - 0.5;
+    const py = (e.clientY - r.top) / r.height - 0.5;
+    e.currentTarget.style.setProperty('--ry', `${px * 14}deg`);
+    e.currentTarget.style.setProperty('--rx', `${py * -14}deg`);
+    e.currentTarget.style.setProperty('--mx', `${(px + 0.5) * 100}%`);
+    e.currentTarget.style.setProperty('--my', `${(py + 0.5) * 100}%`);
+  };
+  const soltar = (e) => {
+    e.currentTarget.style.setProperty('--rx', '0deg');
+    e.currentTarget.style.setProperty('--ry', '0deg');
+  };
+
+  return (
+    <div className="qp-dest__escaparate">
+    <aside className="qp-dest__ticket" onPointerMove={inclinar} onPointerLeave={soltar} aria-label={`Entrada para ${evento.nombre}`}>
+      <div key={evento.id} className="qp-dest__ticket-cuerpo">
+        <div className="qp-dest__ticket-img" style={{ backgroundImage: `url(${imagenEvento(evento)})` }}>
+          <span className="qp-dest__ticket-tag"><FaTicketAlt aria-hidden="true" /> Entrada</span>
+        </div>
+        <div className="qp-dest__ticket-info">
+          <strong>{evento.nombre}</strong>
+          <span><FaCalendarAlt aria-hidden="true" /> {cuando.texto}</span>
+          <span><FaMapMarkerAlt aria-hidden="true" /> {evento.lugar}</span>
+        </div>
+        <div className="qp-dest__ticket-corte" aria-hidden="true" />
+        <div className="qp-dest__ticket-pie">
+          <span className="qp-dest__ticket-cuenta-tit"><FaHourglassHalf aria-hidden="true" /> Faltan</span>
+          <BloquesCuenta fecha={evento.fecha} className="qp-dest__ticket-cuenta" />
+          {/* Sin botón propio: el de compra ya está en el panel de la izquierda. */}
+          <div className="qp-dest__ticket-compra">
+            <em>Entradas desde</em>
+            <b>{evento.precioDesde != null ? `Bs ${evento.precioDesde}` : 'Consultar'}</b>
+          </div>
+        </div>
+        <span className="qp-dest__ticket-brillo" aria-hidden="true" />
+      </div>
+    </aside>
+
+    {otros.length > 0 && (
+      <nav className="qp-dest__otros" aria-label="Otros eventos">
+        <span className="qp-dest__otros-tit">Otros eventos</span>
+        {otros.map(({ ev, idx }, i) => (
+          <button
+            key={ev.id}
+            type="button"
+            className="qp-dest__otro"
+            style={{ '--i': i }}
+            onClick={() => onElegir(idx)}
+          >
+            <span className="qp-dest__otro-img" style={{ backgroundImage: `url(${imagenEvento(ev)})` }} aria-hidden="true" />
+            <span className="qp-dest__otro-txt">
+              <strong>{ev.nombre}</strong>
+              <small>{formatearFecha(ev.fecha, false)}</small>
+            </span>
+          </button>
+        ))}
+      </nav>
+    )}
+    </div>
+  );
 }
 
 /**
@@ -168,7 +264,7 @@ export default function EventosDestacados({
   return (
     <section
       id={id}
-      className={`qp-dest${compacto ? ' qp-dest--compacto' : ''}`}
+      className={`qp-dest${compacto ? ' qp-dest--compacto' : ' qp-dest--con-ticket'}`}
       aria-label="Cartelera destacada"
       onMouseEnter={() => setPausado(true)}
       onMouseLeave={() => setPausado(false)}
@@ -228,6 +324,18 @@ export default function EventosDestacados({
         })}
       </div>
 
+      {!compacto && (
+        <Escaparate
+          evento={evento}
+          cuando={cuando}
+          otros={Array.from({ length: Math.min(3, total - 1) }, (_, k) => {
+            const idx = (activo + k + 1) % total;
+            return { ev: eventos[idx], idx };
+          })}
+          onElegir={elegirTarjeta}
+        />
+      )}
+
       {/* 3. Panel de información con cross-fade */}
       <div className="qp-dest__panel">
         <div className={`qp-dest__info${textoSaliendo ? ' es-saliendo' : ''}`}>
@@ -279,6 +387,8 @@ export default function EventosDestacados({
             </li>
           </ul>
 
+          <BloquesCuenta fecha={evento.fecha} className="qp-dest__cuenta" />
+
           <button
             type="button"
             className="qp-dest__cta"
@@ -300,6 +410,15 @@ export default function EventosDestacados({
                 {String(total).padStart(2, '0')}
               </span>
             </p>
+            {/* Cuánto falta para pasar al siguiente evento. Se reinicia con cada
+                cambio de evento y al salir de la pausa (el temporizador del
+                autoplay también arranca de cero ahí), así van sincronizados. */}
+            <span
+              key={`${activo}-${pausado}`}
+              className={`qp-dest__autoplay${pausado ? ' esta-pausado' : ''}`}
+              style={{ '--duracion': `${INTERVALO_AUTOPLAY}ms` }}
+              aria-hidden="true"
+            />
             <div className="qp-dest__flechas">
               <button type="button" className="qp-dest__flecha" onClick={() => avanzar(-1)} aria-label="Evento anterior">
                 <FaArrowLeft aria-hidden="true" />

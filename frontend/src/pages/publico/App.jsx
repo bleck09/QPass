@@ -7,10 +7,10 @@ import MapaUbicacion from '../../components/MapaUbicacion.jsx';
 import { proyectarContorno } from '../../utils/contornoMapa.js';
 import { tipoElementoInfo } from '../../utils/elementosMapa.js';
 import {
-  FaChartLine, FaClock, FaTicketAlt, FaExchangeAlt,
+  FaClock, FaTicketAlt,
   FaQrcode, FaMapMarkedAlt, FaMapMarkerAlt, FaStore, FaTimes,
   FaArrowLeft, FaCheck, FaCalendarAlt, FaMobileAlt, FaArrowRight,
-  FaWallet, FaUndoAlt, FaFlagCheckered,
+  FaUndoAlt, FaFlagCheckered, FaFire,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import {
@@ -19,11 +19,17 @@ import {
 } from '../../utils/eventos.js';
 import { useRevelar } from '../../utils/useRevelar.js';
 import { useParallax } from '../../utils/useParallax.js';
+import { ACTIVIDADES_POR_DEFECTO, iconoActividad, estilosImagenHero } from '../../constants/landingEvento.js';
 import EventoAcciones from './evento/EventoAcciones.jsx';
 import EventoInfoUtil from './evento/EventoInfoUtil.jsx';
 import EventoPuestos from './evento/EventoPuestos.jsx';
 import EventoBarraCompra from './evento/EventoBarraCompra.jsx';
+import EventoCinta from './evento/EventoCinta.jsx';
+import EventoProgreso from './evento/EventoProgreso.jsx';
+import { seguirPuntero } from '../../utils/efectosPuntero.js';
 import './App.css';
+import './evento/EfectosEvento.css';
+import './evento/TarjetasEntrada.css';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
 // El editor de Admin (Mapa.jsx) usa tamaño real en px con scroll horizontal
@@ -45,15 +51,8 @@ const defaultLandingData = {
   colorFondo: '#0b1120',        
   colorTextoTitulo: '#FFFFFF',  
   colorTextoP: '#94A3B8',       
-  // Se muestran cuando el organizador no cargó actividades propias: por eso
-  // hablan de lo que el ASISTENTE tiene en cualquier evento QPass (antes
-  // decían "Recaudación diaria" o "Auditoría continua", textos de operador).
-  actividades: [
-    { icono: 'qr', titulo: 'Acceso con QR', descripcion: 'Entrás en segundos mostrando tu manilla o tu QR.' },
-    { icono: 'wallet', titulo: 'Pagos sin efectivo', descripcion: 'Recargás saldo y pagás con tu manilla en cada puesto.' },
-    { icono: 'sync', titulo: 'Devolución de saldo', descripcion: 'Lo que no gastes se devuelve después del evento.' },
-    { icono: 'store', titulo: 'Puestos conectados', descripcion: 'Comida, bebida y más, todos cobrando con QPass.' }
-  ],
+  // Mismas que el editor (constants/landingEvento.js).
+  actividades: ACTIVIDADES_POR_DEFECTO,
   precios: [
     { 
       id: 'basic', tipo: 'General', precio: '150 Bs', destacado: false,
@@ -74,6 +73,27 @@ const defaultLandingData = {
     { hora: '23:30', actividad: 'Cierre del evento y balance de cajas' }
   ]
 };
+
+/**
+ * Título del evento letra por letra: cada letra es un <span> que entra con un
+ * pequeño rebote (EfectosEvento.css). Las palabras no se cortan al final de
+ * línea (white-space: nowrap por palabra). Todo es aria-hidden: el <h1> lleva
+ * el texto completo en aria-label, así el lector de pantalla no deletrea.
+ */
+function TituloAnimado({ texto = '' }) {
+  let n = 0;
+  const palabras = texto.split(' ');
+  return palabras.map((palabra, i) => (
+    <span key={i} aria-hidden="true">
+      <span className="ev-titulo__palabra">
+        {[...palabra].map((letra, j) => (
+          <span key={j} className="ev-titulo__letra" style={{ '--n': n++ }}>{letra}</span>
+        ))}
+      </span>
+      {i < palabras.length - 1 && ' '}
+    </span>
+  ));
+}
 
 export default function App() {
   const navigate = useNavigate();
@@ -105,6 +125,10 @@ export default function App() {
         ...cfg,
         titulo: activo.nombre,
         imagen: cfg?.imagen || activo.imagen || defaultLandingData.imagen,
+        // Sin actividades propias se muestran las de QPass (igual que avisa
+        // la vista previa del editor), no una sección vacía.
+        actividades: cfg?.actividades?.length ? cfg.actividades : defaultLandingData.actividades,
+        cronograma: cfg?.cronograma ?? defaultLandingData.cronograma,
       },
       precios: categorias.length > 0
         ? categorias.map(c => ({
@@ -150,6 +174,15 @@ export default function App() {
     () => filtroDiaPrecios ? precios.filter(p => p.diaEvento?.id === filtroDiaPrecios) : precios,
     [precios, filtroDiaPrecios],
   );
+
+  // "Más vendida": la categoría con más entradas vendidas (cupo - disponibles),
+  // solo si hay al menos dos para comparar y ventas reales.
+  const idMasVendida = useMemo(() => {
+    const conDatos = preciosFiltrados.filter(p => p.cantidad != null && p.disponibles != null);
+    if (conDatos.length < 2) return null;
+    const top = conDatos.reduce((a, b) => ((b.cantidad - b.disponibles) > (a.cantidad - a.disponibles) ? b : a));
+    return top.cantidad - top.disponibles > 0 ? top.id : null;
+  }, [preciosFiltrados]);
 
   const [puestoModal, setPuestoModal] = useState(null);
   // El panel del hero muestra 4 actividades; con mas, el resto se ve en un
@@ -205,6 +238,7 @@ export default function App() {
   const refParallaxImagen = useParallax(0.16, 90);
   const refParallaxTexto = useParallax(-0.05, 40);
   const [refActividades, verActividades] = useRevelar();
+  const [refGridActividades, verGridActividades] = useRevelar();
   const [refMapa, verMapa] = useRevelar();
   const [refInfo, verInfo] = useRevelar();
   const [refPuestos, verPuestos] = useRevelar();
@@ -240,6 +274,8 @@ export default function App() {
   const hayMenu = mapaPuestosActivos.some(p => (p.productos || []).some(pr => pr.activo !== false));
 
 
+  const estilosHero = estilosImagenHero(data.imagenAjuste, data.colorFondo || defaultLandingData.colorFondo);
+
   const estiloDinamico = {
     '--color-primario': data.colorPrimario || defaultLandingData.colorPrimario,
     '--color-boton': data.colorBoton || defaultLandingData.colorBoton,
@@ -248,15 +284,11 @@ export default function App() {
     '--color-texto-p': data.colorTextoP || defaultLandingData.colorTextoP,
   };
 
-  const renderIcono = (nombreIcono) => {
-    switch(nombreIcono) {
-      case 'ticket': return <FaTicketAlt />;
-      case 'chart': return <FaChartLine />;
-      case 'sync': return <FaExchangeAlt />;
-      case 'store': return <FaStore />;
-      case 'wallet': return <FaWallet />;
-      default: return <FaQrcode />;
-    }
+  // Los íconos elegibles viven en constants/landingEvento.js (los mismos que
+  // ofrece el editor de Admin).
+  const renderIcono = (clave) => {
+    const Icono = iconoActividad(clave);
+    return <Icono />;
   };
 
   // Mientras carga o si el evento no existe / falla, no montamos la landing entera.
@@ -313,7 +345,7 @@ export default function App() {
         <ul className="pi-landing-nav-links">
           <li><a href="#entradas">Entradas</a></li>
           {evento?.latitud != null && <li><a href="#ubicacion">Ubicación</a></li>}
-          <li><a href="#cronograma">Cronograma</a></li>
+          {data.cronograma.length > 0 && <li><a href="#cronograma">Cronograma</a></li>}
           {!terminado && <li><a href="#info">Antes de ir</a></li>}
           <li><a href="#actividades">Actividades</a></li>
           {!terminado && hayMenu && <li><a href="#puestos">Menú</a></li>}
@@ -336,17 +368,33 @@ export default function App() {
       {/* Landmark principal de la pantalla (Manual 11) */}
       <main id="contenido">
       {/* SECCIÓN HERO */}
-      <header id="inicio" className="pi-landing-hero">
+      <header id="inicio" className="pi-landing-hero" {...seguirPuntero()}>
         {/* La foto del evento es el fondo de toda la pantalla. Va como <div>
             con background y no como <img> porque es decorativa: el nombre del
             evento ya esta en el <h1>, asi que un alt seria ruido repetido. */}
-        <div
-          className="ev-hero__fondo"
-          ref={refParallaxImagen}
-          style={{ backgroundImage: `url(${data.imagen})` }}
-          aria-hidden="true"
-        />
+        {/* El parallax mueve el contenedor; el encuadre/zoom/desenfoque que
+            eligió el organizador (LandingConfig.imagenAjuste) va en la capa
+            interna, así los dos transform no se pisan. */}
+        <div className="ev-hero__fondo" ref={refParallaxImagen} aria-hidden="true">
+          {/* Tres capas, cada una con su propio transform para que no se pisen:
+              parallax (contenedor) > acercamiento lento > ajuste del organizador. */}
+          <div className="ev-hero__fondo-mov">
+            <div
+              className="ev-hero__fondo-img"
+              style={{ backgroundImage: `url(${data.imagen})`, ...estilosHero.imagen }}
+            />
+          </div>
+        </div>
+        {estilosHero.velo && <div className="ev-hero__oscurecer" style={estilosHero.velo} aria-hidden="true" />}
         <div className="ev-hero__scrim" aria-hidden="true" />
+        {/* Efectos decorativos: una luz del color del evento que sigue al
+            mouse y partículas que suben (EfectosEvento.css). */}
+        <div className="ev-hero__luz" aria-hidden="true" />
+        <div className="ev-hero__particulas" aria-hidden="true">
+          {Array.from({ length: 12 }, (_, i) => (
+            <span key={i} style={{ '--i': i, '--t': `${4 + ((i * 3) % 5)}px` }} />
+          ))}
+        </div>
 
         <div className="pi-landing-hero-content" ref={refParallaxTexto}>
           <p className="ev-hero__estado">
@@ -354,7 +402,9 @@ export default function App() {
             {ESTADO_EVENTO[estadoEvento(evento ?? {})]?.label ?? 'Próximo'}
           </p>
 
-          <h1>{data.titulo}</h1>
+          <h1 className="ev-hero__titulo" aria-label={data.titulo}>
+            <TituloAnimado texto={data.titulo} />
+          </h1>
           <p className="ev-hero__info">{data.informacion}</p>
 
           {/* Datos clave arriba de todo: antes habia que scrollear media pagina
@@ -397,7 +447,7 @@ export default function App() {
               <span className="ev-hero__cuenta-bloques">
                 {[['dias', 'días'], ['horas', 'hs'], ['minutos', 'min'], ['seg', 'seg']].map(([clave, etiqueta]) => (
                   <span className="ev-hero__cuenta-bloque" key={clave}>
-                    <b>{String(timeLeft[clave]).padStart(2, '0')}</b>
+                    <b key={timeLeft[clave]}>{String(timeLeft[clave]).padStart(2, '0')}</b>
                     <em>{etiqueta}</em>
                   </span>
                 ))}
@@ -435,6 +485,7 @@ export default function App() {
         {/* Ubicacion y cronograma viven ACA, en la mitad derecha del hero, que
             quedo libre al pasar la foto al fondo. Asi la pantalla de entrada
             responde todo de una: que es, cuando, donde y a que hora. */}
+        {(evento?.latitud != null || data.cronograma.length > 0) && (
         <aside className="ev-hero__panel glass-panel">
           {evento?.latitud != null && (
             <div className="ev-hero__panel-bloque" id="ubicacion">
@@ -448,13 +499,15 @@ export default function App() {
             </div>
           )}
 
+          {/* Cronograma vacío: no se muestra el bloque (antes quedaba el título solo). */}
+          {data.cronograma.length > 0 && (
           <div className="ev-hero__panel-bloque" id="cronograma">
             <h2 className="ev-hero__panel-titulo">
               <FaClock aria-hidden="true" /> Cronograma
             </h2>
             <ol className="ev-agenda ev-agenda--compacta">
               {data.cronograma.slice(0, CRONO_EN_PANEL).map((item, index) => (
-                <li className="ev-agenda__item" key={index}>
+                <li className="ev-agenda__item" key={index} style={{ '--i': index }}>
                   <span className="ev-agenda__num" aria-hidden="true">{index + 1}</span>
                   <span className="ev-agenda__cuerpo">
                     <span className="ev-agenda__hora">{item.hora}</span>
@@ -475,8 +528,20 @@ export default function App() {
               </button>
             )}
           </div>
+          )}
         </aside>
+        )}
       </header>
+
+      {!terminado && (
+        <EventoCinta
+          nombre={data.titulo}
+          cuando={cuandoEs}
+          lugar={evento?.lugar}
+          precioDesde={precioDesde}
+          digital={evento?.tipoManilla === 'digital'}
+        />
+      )}
 {/* SECCIÓN PRECIOS Y ENTRADAS */}
       <section
         id="entradas"
@@ -513,45 +578,71 @@ export default function App() {
         <div
           className={`pricing-grid${verPreciosGrid ? ' es-visible' : ''}`}
           ref={refPreciosGrid}
+          {...seguirPuntero('.pricing-card')}
         >
-          {preciosFiltrados.map((plan) => {
+          {preciosFiltrados.map((plan, iPlan) => {
             const stk = estadoStock(plan);
             const agotado = stk === 'agotado';
+            const precioNum = plan.precioNum ?? parseFloat(plan.precio);
+            const vendidas = plan.cantidad != null && plan.disponibles != null ? plan.cantidad - plan.disponibles : 0;
             return (
-              <div key={plan.id} className={`pricing-card ${plan.destacado ? 'destacado' : ''} ${agotado ? 'agotado' : ''}`}>
+              <article
+                key={plan.id}
+                className={`pricing-card ${plan.destacado ? 'destacado' : ''} ${agotado ? 'agotado' : ''}`}
+                style={{ '--i': iPlan }}
+              >
+                {plan.id === idMasVendida && (
+                  <span className="ticket-cinta"><FaFire aria-hidden="true" /> Más vendida</span>
+                )}
                 <div className="pricing-card-header">
-                  {mostrarJornada(plan.diaEvento) && (
-                    <span className="dia-badge">{nombreJornada(plan.diaEvento)}</span>
-                  )}
-                  <h3>{plan.tipo}</h3>
+                  <div className="ticket-cab">
+                    <span className="ticket-ic" aria-hidden="true"><FaTicketAlt /></span>
+                    <div className="ticket-cab-txt">
+                      {mostrarJornada(plan.diaEvento) && (
+                        <span className="dia-badge">{nombreJornada(plan.diaEvento)}</span>
+                      )}
+                      <h3>{plan.tipo}</h3>
+                    </div>
+                  </div>
                   {stk && (
                     <span className={`stock-badge ${ESTADO_STOCK[stk].clase}`}>
-                      {ESTADO_STOCK[stk].label}
+                      {stk === 'stock_bajo' ? `¡Últimas ${plan.disponibles}!` : ESTADO_STOCK[stk].label}
                     </span>
                   )}
                   {plan.cantidad > 0 && plan.disponibles != null && !agotado && (
                     <div className="pricing-cupo">
                       <span className="pricing-cupo-txt">
                         Quedan <b>{plan.disponibles}</b> de {plan.cantidad}
+                        {vendidas > 0 && <> · {vendidas} vendidas</>}
                       </span>
                       <span className="pricing-cupo-pista" aria-hidden="true">
-                        <span style={{ '--vendido': `${Math.min(100, ((plan.cantidad - plan.disponibles) / plan.cantidad) * 100)}%` }} />
+                        <span style={{ '--vendido': `${Math.min(100, (vendidas / plan.cantidad) * 100)}%` }} />
                       </span>
                     </div>
                   )}
                 </div>
                 <ul className="pricing-features">
                   {plan.beneficios.map((ben, idx) => (
-                    <li key={idx}><FaCheck className="check-icon" aria-hidden="true"/> {ben}</li>
+                    <li key={idx} style={{ '--j': idx }}><FaCheck className="check-icon" aria-hidden="true"/> {ben}</li>
                   ))}
                 </ul>
+                {/* Troquel: la tarjeta se "corta" como una entrada de papel. */}
+                <div className="ticket-corte" aria-hidden="true" />
                 <div className="pricing-price">
-                  <span className="price-amount">{plan.precio}</span>
+                  {Number.isFinite(precioNum) ? (
+                    <>
+                      <span className="price-moneda">Bs</span>
+                      <span className="price-amount">{precioNum.toLocaleString('es-BO')}</span>
+                      <span className="price-nota">por entrada</span>
+                    </>
+                  ) : (
+                    <span className="price-amount">{plan.precio}</span>
+                  )}
                 </div>
                 <button className="btn-pricing" onClick={handleLoginClick} disabled={agotado || terminado}>
-                  {terminado ? 'Evento finalizado' : agotado ? 'Agotado' : 'Adquirir ahora'}
+                  {terminado ? 'Evento finalizado' : agotado ? 'Agotado' : <>Adquirir ahora <FaArrowRight aria-hidden="true" /></>}
                 </button>
-              </div>
+              </article>
             );
           })}
         </div>
@@ -578,9 +669,13 @@ export default function App() {
         ref={refActividades}
       >
         <h2 className="pi-landing-section-title">Servicios del Evento</h2>
-        <div className="pi-landing-grid">
+        <div
+          ref={refGridActividades}
+          className={`pi-landing-grid qp-escalonado${verGridActividades ? ' es-visible' : ''}`}
+          {...seguirPuntero('.pi-landing-glass-card')}
+        >
           {data.actividades.map((actividad, index) => (
-            <div key={index} className="pi-landing-glass-card">
+            <div key={index} className="pi-landing-glass-card" style={{ '--i': index }}>
               <div className="pi-landing-card-header">
                 <div className="pi-landing-card-icon">
                   {renderIcono(actividad.icono || 'ticket')}
@@ -637,7 +732,7 @@ export default function App() {
               </svg>
             )}
 
-            {mapaPuestosActivos.map((puesto) => (
+            {mapaPuestosActivos.map((puesto, iPuesto) => (
               // Cada puesto del mapa es un botón: se puede abrir con Tab + Enter.
               // Con contorno, la posición va en % del lienzo (escala como una
               // imagen); sin contorno, se mantiene el lienzo fijo de siempre.
@@ -645,12 +740,15 @@ export default function App() {
                 type="button"
                 key={puesto.id}
                 className="pi-landing-puesto-box"
-                style={contornoProyectado ? {
-                  left: pct(puesto.x, contornoProyectado.ancho), top: pct(puesto.y, contornoProyectado.alto),
-                  width: pct(puesto.ancho, contornoProyectado.ancho), height: pct(puesto.alto, contornoProyectado.alto),
-                } : {
-                  left: `${puesto.x}px`, top: `${puesto.y}px`,
-                  width: `${puesto.ancho}px`, height: `${puesto.alto}px`,
+                style={{
+                  '--i': iPuesto,
+                  ...(contornoProyectado ? {
+                    left: pct(puesto.x, contornoProyectado.ancho), top: pct(puesto.y, contornoProyectado.alto),
+                    width: pct(puesto.ancho, contornoProyectado.ancho), height: pct(puesto.alto, contornoProyectado.alto),
+                  } : {
+                    left: `${puesto.x}px`, top: `${puesto.y}px`,
+                    width: `${puesto.ancho}px`, height: `${puesto.alto}px`,
+                  }),
                 }}
                 onClick={() => setPuestoModal(puesto)}
                 aria-label={`Ver puesto ${puesto.nombre}`}
@@ -707,6 +805,8 @@ export default function App() {
         <p>&copy; {new Date().getFullYear()} QPass - Gestión de Accesos Inteligente. Todos los derechos reservados.</p>
       </footer>
 
+      <EventoProgreso />
+
       {!terminado && evento && (
         <EventoBarraCompra nombre={data.titulo} precioDesde={precioDesde} />
       )}
@@ -737,7 +837,7 @@ export default function App() {
             <div className="pi-landing-modal-body">
               <ol className="ev-agenda">
                 {data.cronograma.map((item, index) => (
-                  <li className="ev-agenda__item" key={index}>
+                  <li className="ev-agenda__item" key={index} style={{ '--i': index }}>
                     <span className="ev-agenda__num" aria-hidden="true">{index + 1}</span>
                     <span className="ev-agenda__cuerpo">
                       <span className="ev-agenda__hora">{item.hora}</span>

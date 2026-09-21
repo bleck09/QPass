@@ -19,6 +19,8 @@ import {
   FaTh, FaList
 } from 'react-icons/fa';
 import './UsuarioNormal.css';
+import './CompraEntradas.css';
+import { useCuentaRegresiva } from '../../utils/useCuentaRegresiva.js';
 import EventosDestacados from '../../components/EventosDestacados.jsx';
 import FotoZoom from '../../components/FotoZoom.jsx';
 import { VERSION_TERMINOS, TEXTO_TERMINOS } from '../../constants/terminos.js';
@@ -126,6 +128,23 @@ function BilleteraAcordeon({ b, enCurso = false, qrCodigo }) {
   );
 }
 
+/** Cuenta regresiva del encabezado de compra (días / hs / min). */
+function CuentaCompra({ fecha }) {
+  const c = useCuentaRegresiva(fecha);
+  if (!c || c.terminada) return null;
+  return (
+    <div className="pi-cmp-cuenta" aria-label={`Faltan ${c.dias} días y ${c.horas} horas`}>
+      <span className="pi-cmp-cuenta-tit" aria-hidden="true"><FaHourglassHalf /> Faltan</span>
+      {[[c.dias, 'días'], [c.horas, 'hs'], [c.minutos, 'min']].map(([v, u]) => (
+        <span key={u} className="pi-cmp-cuenta-bloque" aria-hidden="true">
+          <b key={v}>{u === 'días' ? v : String(v).padStart(2, '0')}</b>
+          <em>{u}</em>
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export default function UsuarioNormal() {
   useTituloPagina('Mi panel');
   const [usuario] = useState(() => leerSesion() || { nombre: 'Invitado', email: '' });
@@ -205,8 +224,41 @@ export default function UsuarioNormal() {
   const [aceptoTerminos, setAceptoTerminos] = useState(false);
   // Al hacer clic en "Pagar" se muestra primero el QR del negocio; solo después se habilita subir el comprobante.
   const [pagoIniciado, setPagoIniciado] = useState(false);
+  // Paso 1 del pago ("ya transferí"): solo guía visual, habilita el paso 2.
+  const [transferido, setTransferido] = useState(false);
+  const [montoCopiado, setMontoCopiado] = useState(false);
+  // Resumen de la compra recién enviada: muestra la pantalla de éxito del
+  // modal en vez de sacar al usuario de golpe a Mis Entradas.
+  const [compraEnviada, setCompraEnviada] = useState(null);
 
   const montoTotalEntradas = entradasCart.reduce((acc, entrada) => acc + Number(entrada.precio), 0);
+
+  // Una entrada está completa cuando tiene nombre, correo con forma de correo
+  // y (si es de un invitado) celular. Guía visual; la validación final sigue
+  // siendo la de handleEnviarComprobante.
+  const entradaCompleta = (e) =>
+    !!e.nombre.trim() && /\S+@\S+\.\S+/.test(e.correo.trim()) && (e.isTitular || !!e.celular.trim());
+  const entradasCompletas = entradasCart.filter(entradaCompleta).length;
+  const datosCompletos = entradasCart.length > 0 && entradasCompletas === entradasCart.length;
+  // Paso actual del indicador de arriba: 0 elegir, 1 datos, 2 pago.
+  const pasoCompra = entradasCart.length === 0 ? 0 : !datosCompletos ? 1 : 2;
+
+  const cerrarPago = () => {
+    setPagoIniciado(false);
+    setTransferido(false);
+    if (compraEnviada) {
+      setCompraEnviada(null);
+      navigate('/usuarionormal');
+    }
+  };
+
+  const copiarMonto = async () => {
+    try {
+      await navigator.clipboard.writeText(montoTotalEntradas.toFixed(2));
+      setMontoCopiado(true);
+      setTimeout(() => setMontoCopiado(false), 2000);
+    } catch { /* sin permiso de portapapeles: el monto sigue a la vista */ }
+  };
 
   // Cada compra con su evento resuelto y si ese evento sigue vigente (para Mis Entradas).
   const comprasConEvento = useMemo(() => {
@@ -639,13 +691,13 @@ export default function UsuarioNormal() {
       });
       await recargarCompras();
 
+      // Pantalla de éxito dentro del mismo modal; "Ver mis entradas" lleva a la
+      // solicitud recién creada (aparece como pendiente en Mis Entradas).
+      setCompraEnviada({ cantidad: entradasCart.length, total: montoTotalEntradas, evento: eventoSeleccionado.nombre });
       setEntradasCart([]);
       setComprobante(null);
       setAceptoTerminos(false);
-      setPagoIniciado(false);
-
-      // La solicitud recién creada aparece como pendiente en Mis Entradas.
-      navigate('/usuarionormal');
+      setTransferido(false);
     } catch (err) {
       setErrorForm(err.message);
     }
@@ -926,162 +978,107 @@ export default function UsuarioNormal() {
       )}
 
       {/* =========================================================
-          PESTAÑA: COMPRAR (formulario compacto, para el evento seleccionado)
+          PESTAÑA: COMPRAR — flujo guiado: elegir → datos → pago → aprobación
+          (estilos en CompraEntradas.css)
       ========================================================= */}
       {pestana === 'comprar' && (
-        <div className="pi-usr-comprar">
+        <div className="pi-cmp">
 
-          <div className="pi-usr-evento-header">
-            <img src={imagenEvento(eventoSeleccionado)} alt={eventoSeleccionado.nombre} width="320" height="180" />
-            <div>
-              <span className="pi-usr-evento-header-eyebrow">Comprando entradas para</span>
-              <h3>{eventoSeleccionado.nombre}</h3>
-              <span className="texto-ayuda">
-                <FaCalendarAlt /> {formatearFecha(eventoSeleccionado.fecha)} · <FaMapMarkerAlt /> {eventoSeleccionado.lugar}
+          {/* ---------- Encabezado del evento + pasos ---------- */}
+          <header className="pi-cmp-hero" style={{ backgroundImage: `url(${imagenEvento(eventoSeleccionado)})` }}>
+            <div className="pi-cmp-hero-velo" aria-hidden="true" />
+            <div className="pi-cmp-hero-txt">
+              <span className="pi-cmp-eyebrow"><FaTicketAlt aria-hidden="true" /> Comprando entradas para</span>
+              <h2>{eventoSeleccionado.nombre}</h2>
+              <span className="pi-cmp-hero-datos">
+                <span><FaCalendarAlt aria-hidden="true" /> {formatearFecha(eventoSeleccionado.fecha)}</span>
+                <span><FaMapMarkerAlt aria-hidden="true" /> {eventoSeleccionado.lugar}</span>
               </span>
             </div>
-          </div>
+            <CuentaCompra fecha={eventoSeleccionado.fecha} />
+          </header>
 
-          {/* Nota dinámica dependiendo de la validación */}
-          {!puedoSerTitular ? (
-            <div className="pi-usr-nota-informativa nota-verde">
-              <FaUserPlus className="nota-icon" />
-              <div>
-                <strong>Comprando para terceros (Invitados)</strong>
-                <p>
-                  {jornadasDelEvento.length > 1
-                    ? <>Ya tenés tu propia entrada en <b>todas las jornadas</b> de este evento. Las que agregues abajo serán para tus invitados.</>
-                    : <>El sistema detecta que <b>ya cuentas con una entrada</b> asignada a tu cuenta. Todas las entradas que agregues abajo serán para tus invitados.</>}
-                  {' '}Al aprobarse la compra, cada invitado recibe su propia cuenta. La manilla física con su código QR se la entrega Supervisor al recogerla en el evento.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="pi-usr-nota-informativa">
-              <FaIdCard className="nota-icon" />
-              <div>
-                <strong>Elige una categoría para empezar</strong>
-                <p>
-                  {jornadasDelEvento.length > 1
-                    ? 'La primera entrada que agregues de cada jornada será la tuya; las siguientes de esa jornada serán para invitados. Podés comprar tu entrada para cada noche del evento.'
-                    : 'La primera entrada que agregues abajo será la tuya (no vas a poder cambiar tu nombre ni correo). Si haces clic de nuevo, esa entrada será para un invitado, y así sucesivamente.'}
-                </p>
-              </div>
+          <ol className="pi-cmp-pasos" aria-label="Pasos de la compra">
+            {['Elegí tus entradas', 'Datos de cada persona', 'Pago y comprobante', 'Aprobación'].map((t, i) => (
+              <li key={t} className={i < pasoCompra ? 'listo' : i === pasoCompra ? 'actual' : ''} aria-current={i === pasoCompra ? 'step' : undefined}>
+                <span className="pi-cmp-paso-num">{i < pasoCompra ? <FaCheckCircle aria-hidden="true" /> : i + 1}</span>
+                <span className="pi-cmp-paso-txt">{t}</span>
+              </li>
+            ))}
+          </ol>
+
+          {!puedoSerTitular && (
+            <div className="pi-cmp-aviso">
+              <FaUserPlus aria-hidden="true" />
+              <p>
+                {jornadasDelEvento.length > 1
+                  ? <>Ya tenés tu propia entrada en <b>todas las jornadas</b>: las que agregues serán para tus invitados.</>
+                  : <>Ya tenés <b>tu entrada</b> para este evento: las que agregues serán para tus invitados.</>}
+                {' '}Cada invitado recibe su propia cuenta al aprobarse la compra.
+              </p>
             </div>
           )}
 
-          <div className="pi-usr-comprar-grid">
-            <div className="pi-usr-comprar-col-entradas">
-              {entradasCart.length === 0 ? (
-                <div className="pi-usr-card" style={{ textAlign: 'center', color: 'var(--gris-medio)' }}>
-                  Aún no agregaste ninguna entrada. Elige una categoría abajo para empezar.
-                </div>
-              ) : (
-                <div className="pi-usr-cart-list">
-                  {/* Con 2+ jornadas en el carrito, agrupadas bajo un encabezado por
-                      noche; con 0 o 1, `gruposCarrito` viene [] y cae al grupo único
-                      sin encabezado — mismo render de siempre. */}
-                  {(gruposCarrito.length > 0 ? gruposCarrito : [{ dia: null, items: entradasCart }]).map((grupo) => (
-                    <Fragment key={grupo.dia?.id ?? 'unica'}>
-                      {grupo.dia && (
-                        <h5 className="pi-usr-cart-dia-header"><FaMoon aria-hidden="true" /> {nombreJornadaConAnio(grupo.dia)}</h5>
-                      )}
-                      {grupo.items.map((entrada) => {
-                        const catSeleccionada = categoriasEntradas.find(c => c.id === entrada.categoriaTicketId);
-                        const indiceGlobal = entradasCart.indexOf(entrada);
-                        return (
-                          <div key={entrada.id} className="pi-usr-ticket-row" style={{ borderLeftColor: catSeleccionada.color }}>
-                            <div className="pi-usr-ticket-row-top">
-                              <span className="pi-usr-ticket-row-titulo">
-                                {entrada.isTitular ? <FaUserTag color="var(--indigo-profundo)"/> : <FaUserPlus color="var(--gris-medio)"/>}
-                                {entrada.isTitular
-                                  ? 'Tú'
-                                  : `Invitado ${entradasCart.slice(0, indiceGlobal + 1).filter(e => !e.isTitular).length}`}
-                              </span>
+          <div className="pi-cmp-grid">
+            <div className="pi-cmp-col">
 
-                              <span className="pi-usr-cat-badge-fija" style={{ background: catSeleccionada.color }}>
-                                {catSeleccionada.nombre} · Bs.{catSeleccionada.precio}
-                              </span>
-
-                              <button type="button" className="btn-eliminar-ticket" onClick={() => quitarEntrada(entrada.id)} aria-label={`Quitar entrada de ${entrada.nombre || 'invitado'}`}>
-                                <FaTrash aria-hidden="true" />
-                              </button>
-                            </div>
-
-                            <div className="pi-usr-ticket-inputs">
-                              <div className="input-group">
-                                <label htmlFor={`compra-nombre-${entrada.id}`}>Nombre completo</label>
-                                <input id={`compra-nombre-${entrada.id}`} type="text" autoComplete="name" placeholder="Ej: Ana López" value={entrada.nombre} onChange={(e) => actualizarEntrada(entrada.id, 'nombre', e.target.value)} disabled={entrada.isTitular} />
-                              </div>
-                              <div className="input-group">
-                                <label htmlFor={`compra-correo-${entrada.id}`}>Correo electrónico</label>
-                                <input id={`compra-correo-${entrada.id}`} type="email" autoComplete="email" placeholder="Para enviar credenciales" value={entrada.correo} onChange={(e) => actualizarEntrada(entrada.id, 'correo', e.target.value)} disabled={entrada.isTitular} />
-                              </div>
-                              <div className="input-group">
-                                <label htmlFor={`compra-celular-${entrada.id}`}>Celular (WhatsApp)</label>
-                                <input id={`compra-celular-${entrada.id}`} type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="Ej: 71234567" value={entrada.celular} onChange={(e) => actualizarEntrada(entrada.id, 'celular', e.target.value)} />
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </Fragment>
-                  ))}
-                </div>
-              )}
-
-              <div className="pi-usr-categorias-grandes">
-                <h4>{!puedoSerTitular ? 'Añadir entradas para invitados' : 'Elige tu categoría'}</h4>
-                <p className="texto-ayuda">
-                  {!puedoSerTitular
-                    ? `Elige la categoría para sumar una entrada de invitado. Puedes hacer clic varias veces para agregar a más de una persona (máx. ${MAX_ENTRADAS} entradas por compra).`
-                    : 'Haz clic en la categoría que quieres para tu propia entrada.'}
+              {/* ---------- 1. Categorías ---------- */}
+              <section className="pi-cmp-seccion">
+                <h3><span className="pi-cmp-num">1</span> {puedoSerTitular ? 'Elegí tus entradas' : 'Sumá entradas para invitados'}</h3>
+                <p className="pi-cmp-ayuda">
+                  {puedoSerTitular
+                    ? 'La primera entrada de cada jornada es la tuya; las siguientes, de invitados.'
+                    : 'Cada clic suma una entrada de invitado.'}
+                  {' '}Máximo {MAX_ENTRADAS} por compra.
                 </p>
-                {/* Con 2+ jornadas ofrecidas, una grilla por noche bajo su propio
-                    encabezado (el badge de jornada de la tarjeta se omite ahí, ya
-                    es redundante); con 0 o 1, `gruposCategorias` viene [] y cae a
-                    una sola grilla — mismo render de siempre, badge incluido. */}
+
                 {(gruposCategorias.length > 0 ? gruposCategorias : [{ dia: null, items: categoriasEntradas }]).map((grupo) => (
                   <Fragment key={grupo.dia?.id ?? 'unica'}>
                     {grupo.dia && (
-                      <h5 className="pi-usr-categorias-dia-header"><FaMoon aria-hidden="true" /> {nombreJornadaConAnio(grupo.dia)}</h5>
+                      <h4 className="pi-cmp-dia"><FaMoon aria-hidden="true" /> {nombreJornadaConAnio(grupo.dia)}</h4>
                     )}
-                    <div className="pi-usr-categorias-grid">
-                      {grupo.items.map(cat => {
+                    <div className="pi-cmp-cats">
+                      {grupo.items.map((cat, iCat) => {
                         const cantidad = entradasCart.filter(ent => ent.categoriaTicketId === cat.id).length;
                         const alMaximo = entradasCart.length >= MAX_ENTRADAS;
                         const cupoLibre = cupoLibreDe(cat);
                         const agotada = Number(cat.cantidad) - Number(cat.cantidadVendida) <= 0;
                         const sinCupoParaMas = cupoLibre <= 0;
+                        const vendidoPct = Number(cat.cantidad) > 0 ? Math.min(100, (Number(cat.cantidadVendida) / Number(cat.cantidad)) * 100) : 0;
+                        const paraMi = !yaTengoJornada(cat.diaEventoId ?? null);
                         return (
                           <button
                             key={cat.id}
-                            className="pi-usr-categoria-card"
-                            style={{ background: cat.color, opacity: agotada ? 0.55 : 1 }}
+                            type="button"
+                            className={`pi-cmp-cat${cantidad > 0 ? ' elegida' : ''}${agotada ? ' agotada' : ''}`}
+                            style={{ '--cat': cat.color, '--i': iCat }}
                             disabled={alMaximo || sinCupoParaMas}
                             onClick={() => agregarEntrada(cat.id)}
                           >
-                            {cantidad > 0 && (
-                              <span className="cat-card-badge" style={{ color: cat.color }}>{cantidad}</span>
+                            {cantidad > 0 && <span key={cantidad} className="pi-cmp-cat-badge">{cantidad}</span>}
+                            <span className="pi-cmp-cat-franja" aria-hidden="true" />
+                            <span className="pi-cmp-cat-cab">
+                              <span className="pi-cmp-cat-ic" aria-hidden="true"><FaTicketAlt /></span>
+                              {!grupo.dia && mostrarJornada(cat.diaEvento) && (
+                                <span className="pi-cmp-chip">{nombreJornada(cat.diaEvento)}</span>
+                              )}
+                            </span>
+                            <span className="pi-cmp-cat-nombre">{cat.nombre}</span>
+                            <span className="pi-cmp-cat-precio"><small>Bs</small> {cat.precio}</span>
+                            {!agotada && (
+                              <span className="pi-cmp-cat-cupo">
+                                <span className="pi-cmp-cat-pista" aria-hidden="true"><span style={{ width: `${vendidoPct}%` }} /></span>
+                                <small>{cupoLibre <= 10 ? `¡Quedan ${cupoLibre}!` : `${cupoLibre} disponibles`}</small>
+                              </span>
                             )}
-                            {!grupo.dia && mostrarJornada(cat.diaEvento) && (
-                              <span className="cat-card-jornada">{nombreJornada(cat.diaEvento)}</span>
-                            )}
-                            {misJornadasConEntrada.has(cat.diaEventoId ?? null) && (
-                              <span className="cat-card-jornada cat-card-jornada--tengo">Ya tenés tu entrada</span>
-                            )}
-                            <span className="cat-card-nombre">{cat.nombre}</span>
-                            <span className="cat-card-precio">Bs. {cat.precio}</span>
-                            {agotada ? (
-                              <span className="cat-card-cta">Agotada</span>
-                            ) : sinCupoParaMas ? (
-                              <span className="cat-card-cta">Sin más cupo</span>
-                            ) : (
-                              <span className="cat-card-cta"><FaPlus /> {cantidad > 0 ? 'Agregar otra' : 'Agregar'}</span>
-                            )}
-                            {!agotada && cupoLibre > 0 && cupoLibre <= 10 && (
-                              <span className="cat-card-stock">Quedan {cupoLibre}</span>
-                            )}
+                            <span className="pi-cmp-cat-pie">
+                              {agotada ? 'Agotada' : sinCupoParaMas ? 'Sin más cupo' : (
+                                <>
+                                  <span className="pi-cmp-para">{paraMi ? <><FaUserTag aria-hidden="true" /> Será tu entrada</> : <><FaUserPlus aria-hidden="true" /> Para un invitado</>}</span>
+                                  <span className="pi-cmp-cat-cta"><FaPlus aria-hidden="true" /> {cantidad > 0 ? 'Otra' : 'Agregar'}</span>
+                                </>
+                              )}
+                            </span>
                           </button>
                         );
                       })}
@@ -1089,115 +1086,247 @@ export default function UsuarioNormal() {
                   </Fragment>
                 ))}
                 {entradasCart.length >= MAX_ENTRADAS && (
-                  <p className="texto-ayuda">Llegaste al máximo de {MAX_ENTRADAS} entradas por compra.</p>
+                  <p className="pi-cmp-ayuda">Llegaste al máximo de {MAX_ENTRADAS} entradas por compra.</p>
                 )}
-              </div>
+              </section>
+
+              {/* ---------- 2. Datos de cada persona ---------- */}
+              <section className="pi-cmp-seccion">
+                <h3>
+                  <span className="pi-cmp-num">2</span> Tus entradas
+                  {entradasCart.length > 0 && <span className="pi-cmp-contador">{entradasCompletas}/{entradasCart.length} completas</span>}
+                </h3>
+
+                {entradasCart.length === 0 ? (
+                  <div className="pi-cmp-vacio">
+                    <FaTicketAlt aria-hidden="true" />
+                    <p>Todavía no agregaste entradas. Tocá una categoría de arriba para empezar.</p>
+                  </div>
+                ) : (
+                  <div className="pi-cmp-items">
+                    {(gruposCarrito.length > 0 ? gruposCarrito : [{ dia: null, items: entradasCart }]).map((grupo) => (
+                      <Fragment key={grupo.dia?.id ?? 'unica'}>
+                        {grupo.dia && (
+                          <h4 className="pi-cmp-dia"><FaMoon aria-hidden="true" /> {nombreJornadaConAnio(grupo.dia)}</h4>
+                        )}
+                        {grupo.items.map((entrada) => {
+                          const cat = categoriasEntradas.find(c => c.id === entrada.categoriaTicketId);
+                          const indiceGlobal = entradasCart.indexOf(entrada);
+                          const completa = entradaCompleta(entrada);
+                          const etiqueta = entrada.isTitular
+                            ? 'Tu entrada'
+                            : `Invitado ${entradasCart.slice(0, indiceGlobal + 1).filter(e => !e.isTitular).length}`;
+                          const inicial = (entrada.nombre.trim()[0] || (entrada.isTitular ? 'T' : '?')).toUpperCase();
+                          return (
+                            <article key={entrada.id} className={`pi-cmp-item${completa ? ' completa' : ''}`} style={{ '--cat': cat?.color }}>
+                              <div className="pi-cmp-item-cab">
+                                <span className="pi-cmp-avatar" aria-hidden="true">{inicial}</span>
+                                <span className="pi-cmp-item-tit">
+                                  <strong>{etiqueta}</strong>
+                                  <span className="pi-cmp-chip pi-cmp-chip--cat">{cat?.nombre} · Bs {cat?.precio}</span>
+                                </span>
+                                <span className={`pi-cmp-estado${completa ? ' ok' : ''}`}>
+                                  {completa ? <><FaCheckCircle aria-hidden="true" /> Completa</> : 'Faltan datos'}
+                                </span>
+                                <button type="button" className="pi-cmp-quitar" onClick={() => quitarEntrada(entrada.id)} aria-label={`Quitar ${etiqueta}`}>
+                                  <FaTrash aria-hidden="true" />
+                                </button>
+                              </div>
+                              <div className="pi-cmp-item-campos">
+                                <div className="input-group">
+                                  <label htmlFor={`compra-nombre-${entrada.id}`}>Nombre completo</label>
+                                  <input id={`compra-nombre-${entrada.id}`} type="text" autoComplete="name" placeholder="Ej: Ana López" value={entrada.nombre} onChange={(e) => actualizarEntrada(entrada.id, 'nombre', e.target.value)} disabled={entrada.isTitular} />
+                                </div>
+                                <div className="input-group">
+                                  <label htmlFor={`compra-correo-${entrada.id}`}>Correo electrónico</label>
+                                  <input id={`compra-correo-${entrada.id}`} type="email" autoComplete="email" placeholder="Para enviar su acceso" value={entrada.correo} onChange={(e) => actualizarEntrada(entrada.id, 'correo', e.target.value)} disabled={entrada.isTitular} />
+                                </div>
+                                <div className="input-group">
+                                  <label htmlFor={`compra-celular-${entrada.id}`}>Celular (WhatsApp){entrada.isTitular && ' · opcional'}</label>
+                                  <input id={`compra-celular-${entrada.id}`} type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="Ej: 71234567" value={entrada.celular} onChange={(e) => actualizarEntrada(entrada.id, 'celular', e.target.value)} />
+                                </div>
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </Fragment>
+                    ))}
+                  </div>
+                )}
+              </section>
             </div>
 
-            <div className="pi-usr-comprar-col-resumen">
-              <div className="pi-usr-card pi-usr-pago-card">
-                <div className="pi-usr-resumen-compra">
-                  <div className="resumen-linea">
-                    <span>Total de entradas</span>
-                    <span>{entradasCart.length}</span>
-                  </div>
-                  <div className="resumen-total">
-                    <span>Total a pagar</span>
-                    <strong>Bs. {montoTotalEntradas.toFixed(2)}</strong>
-                  </div>
-                </div>
-
-                <button
-                  className="pi-usr-btn-enviar"
-                  onClick={() => {
-                    if (entradasCart.length === 0) return setErrorForm('Agrega al menos una entrada antes de pagar.');
-                    setErrorForm('');
-                    setPagoIniciado(true);
-                  }}
-                >
-                  <FaQrcode /> Pagar
-                </button>
-
-                {errorForm && !pagoIniciado && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorForm}</div>}
+            {/* ---------- Resumen (recibo) ---------- */}
+            <aside className="pi-cmp-resumen" aria-label="Resumen de la compra">
+              <h3><FaTicketAlt aria-hidden="true" /> Resumen</h3>
+              {entradasCart.length === 0 ? (
+                <p className="pi-cmp-ayuda">Acá vas a ver el detalle y el total.</p>
+              ) : (
+                <ul className="pi-cmp-lineas">
+                  {categoriasEntradas
+                    .map(cat => ({ cat, n: entradasCart.filter(e => e.categoriaTicketId === cat.id).length }))
+                    .filter(({ n }) => n > 0)
+                    .map(({ cat, n }) => (
+                      <li key={cat.id}>
+                        <span><i style={{ background: cat.color }} aria-hidden="true" /> {n} × {cat.nombre}</span>
+                        <b>Bs {(n * Number(cat.precio)).toFixed(2)}</b>
+                      </li>
+                    ))}
+                </ul>
+              )}
+              <div className="pi-cmp-corte" aria-hidden="true" />
+              <div className="pi-cmp-total">
+                <span>Total a pagar</span>
+                <strong key={montoTotalEntradas}>Bs {montoTotalEntradas.toFixed(2)}</strong>
               </div>
-            </div>
+              <ul className="pi-cmp-check">
+                <li className={entradasCart.length > 0 ? 'ok' : ''}>
+                  <FaCheckCircle aria-hidden="true" /> {entradasCart.length || 'Sin'} entrada{entradasCart.length === 1 ? '' : 's'} elegida{entradasCart.length === 1 ? '' : 's'}
+                </li>
+                <li className={datosCompletos ? 'ok' : ''}>
+                  <FaCheckCircle aria-hidden="true" /> Datos completos {entradasCart.length > 0 && `(${entradasCompletas}/${entradasCart.length})`}
+                </li>
+              </ul>
+              <button
+                type="button"
+                className="pi-cmp-pagar"
+                disabled={!datosCompletos}
+                onClick={() => { setErrorForm(''); setPagoIniciado(true); }}
+              >
+                <FaQrcode aria-hidden="true" /> Pagar Bs {montoTotalEntradas.toFixed(2)}
+              </button>
+              {!datosCompletos && entradasCart.length > 0 && (
+                <p className="pi-cmp-ayuda">Completá los datos de todas las entradas para continuar.</p>
+              )}
+              {errorForm && !pagoIniciado && <div className="pi-usr-alerta-error"><FaExclamationTriangle aria-hidden="true" /> {errorForm}</div>}
+            </aside>
           </div>
+
+          {/* Barra fija en celular: el total y el botón siempre a mano. */}
+          {entradasCart.length > 0 && (
+            <div className="pi-cmp-barra-movil">
+              <span><small>{entradasCart.length} entrada{entradasCart.length === 1 ? '' : 's'}</small><b>Bs {montoTotalEntradas.toFixed(2)}</b></span>
+              <button type="button" className="pi-cmp-pagar" disabled={!datosCompletos} onClick={() => { setErrorForm(''); setPagoIniciado(true); }}>
+                <FaQrcode aria-hidden="true" /> Pagar
+              </button>
+            </div>
+          )}
         </div>
       )}
 
-      {/* --- PANTALLA GRANDE DE PAGO: QR del negocio y luego subir el comprobante --- */}
+      {/* --- PAGO: tres pasos guiados y pantalla de éxito --- */}
       {pagoIniciado && (
         <Modal
-          titulo={<><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Pagar entradas</>}
-          onCerrar={() => setPagoIniciado(false)}
+          titulo={compraEnviada
+            ? <><FaCheckCircle color="var(--verde-recarga-texto)" aria-hidden="true" /> Solicitud enviada</>
+            : <><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Pagar entradas</>}
+          onCerrar={cerrarPago}
           tamano="lg"
           className="pi-usr-modal-pago"
         >
-            <div className="pi-usr-modal-body">
-              <div className="pi-usr-qr-card pi-usr-qr-card-grande">
-                <img width="200" height="200" src={DATOS_PAGO_NEGOCIO.qrUrl} alt="QR de pago del negocio" />
-                <div className="qr-info-text">
-                  <span className="pi-usr-qr-titulo"><FaQrcode /> Escanea para pagar</span>
-                  <span className="pi-usr-qr-nota">
-                    Transfiere Bs. {montoTotalEntradas.toFixed(2)} a {DATOS_PAGO_NEGOCIO.nombre} y luego sube tu comprobante aquí abajo.
-                  </span>
-                </div>
+          {compraEnviada ? (
+            <div className="pi-cmp-exito">
+              <div className="pi-cmp-confeti" aria-hidden="true">
+                {Array.from({ length: 14 }, (_, i) => <i key={i} style={{ '--i': i }} />)}
               </div>
-
-              <div className="pi-usr-comprobante">
-                <span className="pi-usr-form-label">Comprobante de Transferencia</span>
-                <p className="texto-ayuda" style={{marginBottom: '10px'}}>Sube la captura de tu transferencia aquí.</p>
-                {!comprobante ? (
-                  <label htmlFor="pi-usr-file" className="pi-usr-btn-upload-grande">
-                    <FaUpload size={24} color="var(--cian-digital)"/>
-                    <span>Haz clic para subir comprobante</span>
-                  </label>
-                ) : (
-                  <div className="pi-usr-comprobante-preview-grande">
-                    <img width="240" height="320" src={comprobante.previewUrl} alt="Comprobante" />
-                    <div className="preview-info">
-                      <span>{comprobante.nombreArchivo}</span>
-                      <label htmlFor="pi-usr-file" className="btn-cambiar-archivo">Cambiar foto</label>
+              <svg className="pi-cmp-exito-check" viewBox="0 0 52 52" aria-hidden="true">
+                <circle cx="26" cy="26" r="24" />
+                <path d="M15 27 l7 7 l15 -16" />
+              </svg>
+              <h3>¡Listo! Recibimos tu solicitud</h3>
+              <p>
+                {compraEnviada.cantidad} entrada{compraEnviada.cantidad === 1 ? '' : 's'} para <b>{compraEnviada.evento}</b> · Bs {compraEnviada.total.toFixed(2)}
+              </p>
+              <ol className="pi-cmp-exito-pasos">
+                <li><FaHourglassHalf aria-hidden="true" /> Un administrador revisa tu comprobante.</li>
+                <li><FaEnvelope aria-hidden="true" /> Te avisamos por correo cuando se apruebe.</li>
+                <li><FaQrcode aria-hidden="true" /> Tu entrada aparece en <b>Mis entradas</b>.</li>
+              </ol>
+              <button type="button" className="pi-cmp-pagar" onClick={cerrarPago}>
+                <FaTicketAlt aria-hidden="true" /> Ver mis entradas
+              </button>
+            </div>
+          ) : (
+            <div className="pi-cmp-pago">
+              {/* Paso 1: transferir */}
+              <section className={`pi-cmp-pago-paso${transferido || comprobante ? ' listo' : ' actual'}`}>
+                <span className="pi-cmp-pago-num">{transferido || comprobante ? <FaCheckCircle aria-hidden="true" /> : 1}</span>
+                <div className="pi-cmp-pago-cuerpo">
+                  <h4>Transferí el monto con QR</h4>
+                  <div className="pi-cmp-qr">
+                    <img width="180" height="180" src={DATOS_PAGO_NEGOCIO.qrUrl} alt="QR de pago" />
+                    <div>
+                      <span className="pi-cmp-monto-tag">Monto exacto</span>
+                      <strong className="pi-cmp-monto">Bs {montoTotalEntradas.toFixed(2)}</strong>
+                      <button type="button" className="pi-cmp-copiar" onClick={copiarMonto}>
+                        {montoCopiado ? <><FaCheckCircle aria-hidden="true" /> Copiado</> : 'Copiar monto'}
+                      </button>
+                      <p className="pi-cmp-ayuda">A nombre de <b>{DATOS_PAGO_NEGOCIO.nombre}</b>. Escaneá el QR desde la app de tu banco.</p>
+                      {!transferido && !comprobante && (
+                        <button type="button" className="pi-cmp-listo" onClick={() => setTransferido(true)}>
+                          Ya transferí <FaCheckCircle aria-hidden="true" />
+                        </button>
+                      )}
                     </div>
                   </div>
-                )}
-                <input id="pi-usr-file" type="file" accept="image/*" onChange={handleComprobanteUpload} hidden />
-              </div>
+                </div>
+              </section>
 
-              <div className="pi-usr-terminos">
-                <details>
-                  <summary>Términos y condiciones</summary>
-                  <pre className="pi-usr-terminos-texto">{TEXTO_TERMINOS}</pre>
-                </details>
-                <label className="pi-usr-terminos-check">
-                  <input
-                    type="checkbox"
-                    checked={aceptoTerminos}
-                    onChange={(e) => setAceptoTerminos(e.target.checked)}
-                  />
-                  <span>
-                    Acepto los términos y condiciones. Entiendo que el saldo cargado
-                    es solo para este evento y que tengo{' '}
-                    <strong>{eventoSeleccionado?.diasParaRetiro ?? 30} días</strong> tras
-                    el cierre para retirar lo que no consuma.
-                  </span>
-                </label>
-              </div>
+              {/* Paso 2: comprobante */}
+              <section className={`pi-cmp-pago-paso${comprobante ? ' listo' : transferido ? ' actual' : ''}`}>
+                <span className="pi-cmp-pago-num">{comprobante ? <FaCheckCircle aria-hidden="true" /> : 2}</span>
+                <div className="pi-cmp-pago-cuerpo">
+                  <h4>Subí la captura del comprobante</h4>
+                  {!comprobante ? (
+                    <label className="pi-cmp-subir">
+                      <FaUpload aria-hidden="true" />
+                      <span><b>Tocá para elegir</b> o arrastrá la imagen acá</span>
+                      <small>JPG o PNG</small>
+                      <input type="file" accept="image/*" onChange={handleComprobanteUpload} />
+                    </label>
+                  ) : (
+                    <div className="pi-cmp-comprobante">
+                      <img width="120" height="160" src={comprobante.previewUrl} alt="Comprobante subido" />
+                      <div>
+                        <span className="pi-cmp-ok"><FaCheckCircle aria-hidden="true" /> Comprobante cargado</span>
+                        <small>{comprobante.nombreArchivo}</small>
+                        <label className="pi-cmp-cambiar">
+                          Cambiar imagen
+                          <input type="file" accept="image/*" onChange={handleComprobanteUpload} />
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </section>
 
-              {errorForm && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorForm}</div>}
-
-              <div className="pi-usr-modal-acciones">
-                <button type="button" className="btn-cerrar-secundario" onClick={() => setPagoIniciado(false)}>Cerrar</button>
-                <button
-                  type="button"
-                  className="pi-usr-btn-enviar"
-                  onClick={handleEnviarComprobante}
-                  disabled={!comprobante || !aceptoTerminos}
-                >
-                  <FaCheckCircle /> Enviar Pago y Solicitar
-                </button>
-              </div>
+              {/* Paso 3: confirmar */}
+              <section className={`pi-cmp-pago-paso${comprobante ? ' actual' : ''}`}>
+                <span className="pi-cmp-pago-num">3</span>
+                <div className="pi-cmp-pago-cuerpo">
+                  <h4>Confirmá y enviá</h4>
+                  <details className="pi-cmp-terminos">
+                    <summary>Leer términos y condiciones</summary>
+                    <pre className="pi-usr-terminos-texto">{TEXTO_TERMINOS}</pre>
+                  </details>
+                  <label className="pi-usr-terminos-check">
+                    <input type="checkbox" checked={aceptoTerminos} onChange={(e) => setAceptoTerminos(e.target.checked)} />
+                    <span>
+                      Acepto los términos. Entiendo que el saldo es solo para este evento y que tengo{' '}
+                      <strong>{eventoSeleccionado?.diasParaRetiro ?? 30} días</strong> tras el cierre para retirar lo que no consuma.
+                    </span>
+                  </label>
+                  {errorForm && <div className="pi-usr-alerta-error"><FaExclamationTriangle aria-hidden="true" /> {errorForm}</div>}
+                  <div className="pi-usr-modal-acciones">
+                    <button type="button" className="btn-cerrar-secundario" onClick={cerrarPago}>Volver</button>
+                    <button type="button" className="pi-cmp-pagar" onClick={handleEnviarComprobante} disabled={!comprobante || !aceptoTerminos}>
+                      <FaCheckCircle aria-hidden="true" /> Enviar solicitud
+                    </button>
+                  </div>
+                </div>
+              </section>
             </div>
+          )}
         </Modal>
       )}
 
