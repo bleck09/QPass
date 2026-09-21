@@ -4,6 +4,8 @@ import {
   normalizarAjusteImagen, esAjusteDefecto, RANGOS_AJUSTE_IMAGEN, AJUSTE_IMAGEN_DEFECTO,
 } from '../../constants/landingEvento.js';
 import './AjusteImagen.css';
+import Boton from '../../components/Boton.jsx';
+import Filtros from '../../components/Filtros.jsx';
 
 // Encuadres rápidos: dónde queda el punto de interés en la foto.
 const ENCUADRES = [
@@ -59,9 +61,9 @@ export default function AjusteImagen({ imagen, ajuste, onChange }) {
       <div className="pi-ajimg-cab">
         <strong><FaCrosshairs aria-hidden="true" /> Ajustar la imagen</strong>
         {!esAjusteDefecto(a) && (
-          <button type="button" className="pi-ajimg-reset" onClick={() => onChange(null)}>
-            <FaUndo aria-hidden="true" /> Restablecer
-          </button>
+          <Boton variante="secundario" tamano="sm" icono={FaUndo} onClick={() => onChange(null)}>
+            Restablecer
+          </Boton>
         )}
       </div>
 
@@ -99,17 +101,13 @@ export default function AjusteImagen({ imagen, ajuste, onChange }) {
         />
       </div>
 
-      <div className="pi-ajimg-encuadres" role="group" aria-label="Encuadres rápidos">
-        {ENCUADRES.map((en) => (
-          <button
-            key={en.etiqueta}
-            type="button"
-            className={a.x === en.x && a.y === en.y ? 'activo' : ''}
-            onClick={() => cambiar({ x: en.x, y: en.y })}
-          >
-            {en.etiqueta}
-          </button>
-        ))}
+      <div className="pi-ajimg-encuadres">
+        <Filtros
+          etiqueta="Encuadres rápidos"
+          opciones={ENCUADRES.map((en) => ({ valor: `${en.x}-${en.y}`, texto: en.etiqueta }))}
+          activo={`${a.x}-${a.y}`}
+          onCambio={(v) => { const [x, y] = v.split('-').map(Number); cambiar({ x, y }); }}
+        />
         <span className="pi-ajimg-coord">{a.x}% · {a.y}%</span>
       </div>
 

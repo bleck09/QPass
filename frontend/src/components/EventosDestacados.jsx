@@ -9,6 +9,7 @@ import {
 import { useCuentaRegresiva } from '../utils/useCuentaRegresiva.js';
 import './EventosDestacados.css';
 import './EventosDestacadosTicket.css';
+import Boton from './Boton.jsx';
 
 const DURACION_EXPANSION = 700; // ms — debe coincidir con la transición de .slot-expandiendo
 const DURACION_CROSSFADE = 200;
@@ -389,14 +390,15 @@ export default function EventosDestacados({
 
           <BloquesCuenta fecha={evento.fecha} className="qp-dest__cuenta" />
 
-          <button
-            type="button"
+          <Boton
+            variante="acento"
+            pildora
+            iconoDerecha={FaArrowRight}
             className="qp-dest__cta"
             onClick={() => onVerEvento?.(evento)}
           >
             {textoCta}
-            <FaArrowRight aria-hidden="true" />
-          </button>
+          </Boton>
         </div>
 
         {total > 1 && (
@@ -420,12 +422,8 @@ export default function EventosDestacados({
               aria-hidden="true"
             />
             <div className="qp-dest__flechas">
-              <button type="button" className="qp-dest__flecha" onClick={() => avanzar(-1)} aria-label="Evento anterior">
-                <FaArrowLeft aria-hidden="true" />
-              </button>
-              <button type="button" className="qp-dest__flecha" onClick={() => avanzar(1)} aria-label="Evento siguiente">
-                <FaArrowRight aria-hidden="true" />
-              </button>
+              <Boton variante="translucido" icono={FaArrowLeft} onClick={() => avanzar(-1)} aria-label="Evento anterior" />
+              <Boton variante="translucido" icono={FaArrowRight} onClick={() => avanzar(1)} aria-label="Evento siguiente" />
             </div>
           </div>
         )}

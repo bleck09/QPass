@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { FaShareAlt, FaCalendarPlus, FaGoogle, FaDownload, FaCheck } from 'react-icons/fa';
 import { urlGoogleCalendar, descargarIcs } from '../../../utils/calendario.js';
 import './EventoAcciones.css';
+import Boton from '../../../components/Boton.jsx';
 
 /**
  * Acciones secundarias del hero del evento: compartir el link y agendarlo.
@@ -47,21 +48,21 @@ export default function EventoAcciones({ evento }) {
 
   return (
     <div className="ev-acc">
-      <button type="button" className="ev-acc__btn" onClick={compartir}>
-        {copiado ? <FaCheck aria-hidden="true" /> : <FaShareAlt aria-hidden="true" />}
+      <Boton variante="translucido" pildora icono={copiado ? FaCheck : FaShareAlt} onClick={compartir}>
         {copiado ? '¡Link copiado!' : 'Compartir'}
-      </button>
+      </Boton>
 
       <div className="ev-acc__menu-wrap" ref={menuRef}>
-        <button
-          type="button"
-          className="ev-acc__btn"
+        <Boton
+          variante="translucido"
+          pildora
+          icono={FaCalendarPlus}
           aria-expanded={menuAbierto}
           aria-haspopup="true"
           onClick={() => setMenuAbierto((a) => !a)}
         >
-          <FaCalendarPlus aria-hidden="true" /> Agendar
-        </button>
+          Agendar
+        </Boton>
         {menuAbierto && (
           <div className="ev-acc__menu">
             <a

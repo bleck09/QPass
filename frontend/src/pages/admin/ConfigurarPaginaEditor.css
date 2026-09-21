@@ -58,8 +58,6 @@
 .pi-cfg-barra-acciones { display: flex; flex-wrap: wrap; gap: var(--space-2); }
 .pi-cfg-barra-acciones button { min-height: 2.5rem; }
 
-.pi-cfg-barra .pi-admin-btn-save:disabled { opacity: 0.5; cursor: not-allowed; }
-
 /* ---------- Layout: editor + vista previa ---------- */
 .pi-cfg-layout {
   display: grid;
@@ -242,24 +240,6 @@
 
 .pi-cfg-fila-acciones { display: flex; gap: var(--space-1); }
 
-.pi-cfg-fila-acciones button {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background-color var(--duration-fast), color var(--duration-fast);
-}
-
-.pi-cfg-fila-acciones button:hover:not(:disabled) { background: var(--brand-bg); color: var(--action); }
-.pi-cfg-fila-acciones button.borrar:hover { background: var(--danger-bg); color: var(--danger-text); }
-.pi-cfg-fila-acciones button:disabled { opacity: 0.35; cursor: default; }
-.pi-cfg-fila-acciones button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-
 /* Grilla de íconos (se abre debajo de la fila). */
 .pi-cfg-iconos {
   display: grid;
@@ -295,9 +275,6 @@
 .pi-cfg-iconos button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 
 .pi-cfg-header-btns { display: flex; flex-wrap: wrap; gap: var(--space-2); }
-
-.pi-admin-btn-add.pi-cfg-btn-sec { background: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-strong); }
-.pi-admin-btn-add.pi-cfg-btn-sec:hover { background: var(--bg-hover); }
 
 .pi-cfg-vacio {
   display: flex;
@@ -365,29 +342,6 @@
 }
 
 .pi-cfg-preview-barra > span { display: inline-flex; align-items: center; gap: var(--space-2); }
-
-.pi-cfg-dispositivos {
-  display: flex;
-  padding: 3px;
-  border-radius: var(--radius-full);
-  background: var(--bg-sunken);
-}
-
-.pi-cfg-dispositivos button {
-  display: grid;
-  place-items: center;
-  width: 2.25rem;
-  height: 2rem;
-  border: none;
-  border-radius: var(--radius-full);
-  background: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background-color var(--duration-fast), color var(--duration-fast);
-}
-
-.pi-cfg-dispositivos button.activo { background: var(--bg-surface); color: var(--action); box-shadow: var(--shadow-sm); }
-.pi-cfg-dispositivos button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 1px; }
 
 .pi-cfg-marco {
   margin: 0 auto;

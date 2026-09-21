@@ -1,0 +1,497 @@
+================================================================================
+  QPASS — PLAN DE REDISEÑO GLOBAL (interfaz uniforme, interactiva y amigable)
+================================================================================
+Creado: 2026-09-21        Última actualización: 2026-09-21
+
+Este archivo es la FUENTE DE VERDAD del rediseño. Se actualiza al terminar
+cada parte (casilleros + bitácora al final). Si se retoma en otra sesión,
+leer primero "0. CÓMO RETOMAR".
+
+Leyenda de casilleros:
+  [x] hecho y compilando (lint + build OK)     [~] en curso / parcial
+  [ ] pendiente                                 [-] descartado (con motivo)
+  (V) = falta que el usuario lo verifique en el navegador
+
+
+--------------------------------------------------------------------------------
+0. CÓMO RETOMAR
+--------------------------------------------------------------------------------
+1. Leer la sección 2 (estándar) y la 5 (fase actual). La primera tarea con
+   [ ] o [~] de la fase actual es la siguiente a hacer.
+2. Trabajar en partes CHICAS: una tarea (o dos relacionadas) por vuelta.
+3. Al terminar cada parte:
+   - npx eslint <archivos tocados>   y   npx vite build   (en frontend/)
+   - marcar el casillero y anotar en la BITÁCORA (sección 7): fecha, qué se
+     hizo, archivos, y qué quedó pendiente o raro.
+4. No levantar el servidor de desarrollo: el usuario lo corre y verifica.
+   Recordarle reiniciar `npm run dev` + Ctrl+F5 si se crean CSS nuevos.
+5. Datos de contacto de ejemplo (constants/contacto.js) y mail.service stub:
+   no bloquean; describir como si funcionaran.
+
+
+--------------------------------------------------------------------------------
+1. OBJETIVO
+--------------------------------------------------------------------------------
+Que TODA la aplicación (público + los 8 roles) se vea y se comporte igual:
+  - Una sola forma de hacer cada cosa (botón, confirmación, aviso, modal,
+    formulario, tabla, tarjeta, estado vacío/carga/error, pestañas, pasos).
+  - Cada acción da respuesta: confirmación antes si es riesgosa, aviso
+    después siempre (éxito o error), estado "cargando" mientras espera.
+  - Interactivo y vivo como las pantallas ya rediseñadas (landing, página del
+    evento, compra de entradas): entradas animadas, hover, micro-feedback.
+  - Accesible: teclado, foco visible, lectores de pantalla, contraste AA,
+    movimiento reducido, tema claro/oscuro, móvil.
+
+
+--------------------------------------------------------------------------------
+2. ESTÁNDAR GLOBAL — "UNA SOLA FORMA DE MOSTRAR CADA COSA"
+--------------------------------------------------------------------------------
+2.1 Fundaciones (ya existen, se respetan)
+  - Colores: SOLO tokens semánticos de styles/index.css (--bg-*, --text-*,
+    --border*, --action, --accent, --commerce, --ok/--warn/--danger/--info
+    con -text y -bg, --brand-bg). Nunca hex suelto ni primitivos directos en
+    componentes nuevos. Páginas públicas del evento: --color-* del evento.
+  - Espaciado --space-*, radios --radius-*, sombras --shadow-*,
+    tipografía --text-*, --weight-*, --leading-*.
+  - Movimiento: --duration-fast (150ms) / --duration-normal (250ms),
+    --ease-out. Rebote solo en micro-feedback: cubic-bezier(0.34,1.56,0.64,1).
+    TODO efecto se apaga con @media (prefers-reduced-motion: reduce).
+  - Revelado al bajar: useRevelar + .qp-revelar / .qp-escalonado (layout.css).
+
+2.2 Componentes base (FASE 0 los crea/unifica; después se usan en todas partes)
+  Componente          Archivo                         Estado
+  ------------------  ------------------------------  -----------------------
+  Botón               components/Boton.jsx            [x] creado (V)
+  Avisos (toasts)     components/Avisos.jsx           [x] creado (V), provider
+                                                          montado en main.jsx
+  Confirmación        components/ConfirmarModal.jsx   [x] existe (useConfirmar)
+  Modal               components/Modal.jsx            [x] existe
+  Carga / Error       components/EstadosAsync.jsx     [x] existe
+  Estado vacío        components/EstadosAsync.jsx     [x] EstadoVacio (V);
+                                                          EstadoError usa Boton
+  Encabezado página   components/EncabezadoPagina.jsx [x] creado (V)
+  Pestañas            components/Pestanas.jsx         [x] creado (V): variantes
+                                                          segmento/linea,
+                                                          navegacion o tabs
+  Animaciones         styles/animaciones.css          [x] creado (keyframes
+                                                          qp-aparecer, qp-pop,
+                                                          qp-latido, qp-digito,
+                                                          qp-flotar, qp-girar...)
+  Pasos (stepper)     components/Pasos.jsx            [ ] nuevo (a partir de
+                                                          compra y wizard admin)
+  Campo de formulario components/Campo.jsx            [ ] nuevo (label, ayuda,
+                                                          error, contador)
+  Insignia de estado  components/Insignia.jsx         [x] creado (V): tonos
+                                                          ok/warn/danger/info/
+                                                          marca/neutro, punto,
+                                                          latido, solida.
+                                                          BadgeEstadoEvento ya
+                                                          la usa (toda la app)
+  Tabla / Paginador   components/Tabla.jsx, Paginador [x] existen
+  Buscador / Filtros  components/Buscador.jsx         [x] existe
+  StatCard            components/StatCard.jsx         [x] existe (+ count-up)
+  Tarjeta             components/Card.jsx             [x] existe (revisar)
+
+2.3 Botones — regla única
+  <Boton variante=... tamano=... icono={Fa...} cargando={bool}>
+  Variantes: primario (acción principal, índigo) · secundario (borde) ·
+  fantasma (sin borde, acciones terciarias) · peligro (rojo, destruir) ·
+  compra (coral, pagar/comprar) · exito (verde, aprobar/confirmar dinero).
+  Tamaños: sm (tablas), md (por defecto), lg (CTA de pantalla).
+  Siempre: type="button" salvo submit; ícono a la izquierda; mínimo 44px de
+  alto táctil en md/lg; mientras `cargando` muestra spinner y se deshabilita
+  (evita doble envío). Solo UNA acción primaria por vista/modal.
+
+2.4 Confirmaciones — cuándo y cómo
+  Acción                                  Patrón
+  --------------------------------------  -------------------------------------
+  Destructiva / irreversible (eliminar,   useConfirmar({ peligroso: true }) con
+  anular, archivar, rechazar, quitar       texto que diga QUÉ se pierde; foco en
+  gente, cerrar caja, devolver dinero)     "Cancelar". Rechazos: con campoNota.
+  Mueve dinero o stock (recarga, venta,   useConfirmar normal mostrando monto
+  devolución, entrega de manilla)          y destinatario.
+  Reversible y chica (quitar del carrito, Sin confirmar; aviso con "Deshacer"
+  cambiar filtro, marcar leído)            cuando tenga sentido.
+  Guardar / crear                         Sin confirmar; aviso de éxito.
+  Salir con cambios sin guardar           Confirmar "¿Descartar cambios?".
+  NUNCA window.alert / window.confirm / window.prompt.
+
+2.5 Avisos (feedback después de actuar)
+  - Éxito / info: aviso flotante (toast) arriba a la derecha (abajo en
+    móvil), 4,5 s, se pausa con el mouse, se cierra a mano.
+  - Error de servidor: aviso de error (7 s) + mensaje en línea si hay un
+    formulario a la vista (junto al campo o al botón).
+  - Validación de formulario: SIEMPRE en línea, junto al campo, al enviar.
+  - Estados persistentes (evento archivado, caja sin abrir): banner en la
+    página, no toast.
+  - Reemplaza todos los setMensaje + setTimeout y las ~62 clases de alerta.
+
+2.6 Estados de pantalla
+  Cargando: EstadoCarga (esqueleto). Error: EstadoError con "Reintentar".
+  Vacío: EstadoVacio (ícono, título, texto, acción sugerida). Nunca una
+  lista en blanco ni "No hay datos" suelto.
+
+2.7 Modales
+  Todos con <Modal> (foco atrapado, Esc, bloqueo de scroll). Estructura:
+  título con ícono · cuerpo · pie con acciones (secundaria izq., primaria
+  der.). Sin overlays armados a mano.
+
+2.8 Interacción y movimiento (lo que hace que "se sienta vivo")
+  - Entrada de secciones y listas: revelado / escalonado.
+  - Hover de tarjetas: elevar 2-4px + borde de acento.
+  - Contadores y totales: pop al cambiar; cifras de dashboards: count-up.
+  - Botón principal: destello al pasar el mouse.
+  - Pasos: el actual late; los hechos con ✓.
+  - Éxito importante (compra, cierre de caja): pantalla de éxito animada.
+
+2.9 Estilos enlazados — SIN código repetido (pedido del usuario)
+  - Un estilo se define UNA vez y se reutiliza: botones (Boton.css), avisos,
+    insignias, pestañas, campos, estados. Una pantalla no redefine lo que ya
+    existe en un componente base; solo agrega lo propio de su layout.
+  - Animaciones compartidas en styles/animaciones.css (aparecer, pop,
+    latido, flotar, dígito que cae, entrada escalonada...). Hoy están
+    repetidas con nombres distintos en varios .css (pCmpPop, qpAvisoPop,
+    evNumOla, pCmpLatido, qpDestDigito, pCmpDigito...): se unifican al
+    migrar cada pantalla.
+  - Lógica repetida también se unifica: cuenta regresiva -> useCuentaRegresiva;
+    QR -> qrDe; contraste -> utils/contraste.js; puntero -> efectosPuntero.js.
+  - Antes de escribir CSS nuevo: buscar si ya existe una clase/animación que
+    haga lo mismo (grep) y usarla.
+
+2.0 REGLA PRINCIPAL — PRIMERO LO QUE YA EXISTE (pedido del usuario)
+  Antes de crear CUALQUIER componente, clase o utilidad nueva:
+    1. Buscar si ya hay algo global que haga lo mismo o parecido en:
+         components/          (Modal, Card, Tabla, Paginador, Buscador,
+                               Filtros, StatCard, EventoCard, GrillaEventos,
+                               EstadosAsync, ConfirmarModal, FotoZoom, Migas,
+                               BotonVolver, SelectorRango, FiltroJornada...)
+         styles/buttons.css   (.btn-primario, .btn-cancelar, .btn-secundario-sm)
+         styles/forms.css     (.formulario, .input-group, .form-nota(--error),
+                               .upload-zone, .preview-zone, .checkbox-grid,
+                               .modal-actions, .input-monto-wrapper)
+         styles/layout.css    (.qp-nav, .qp-btn-group, .qp-revelar...)
+         utils/               (hooks y helpers)
+    2. Si existe: SE USA ESE. Si le falta algo o se ve viejo, SE MEJORA ESE
+       (y la mejora llega sola a todas las pantallas que ya lo usan).
+    3. Solo se crea algo nuevo si no existe nada equivalente, y se anota en
+       §2.2 con el motivo.
+  No se crean versiones paralelas de algo que ya existe: complica todo.
+
+2.10 Componentes que se repiten -> GLOBALES (pedido del usuario)
+  Regla: si un mismo bloque de interfaz aparece en 2 o más pantallas, se
+  convierte en componente global en components/ (con su .css) y todas las
+  pantallas lo usan. Nunca se copia y pega un bloque entre pantallas.
+  Al migrar cada pantalla: antes de escribir un bloque, revisar esta lista
+  y components/; si el bloque se repite y no existe, crearlo y anotarlo acá.
+
+  Ya globales: Boton, Avisos, Pestanas, EncabezadoPagina, Insignia,
+  EstadoCarga/EstadoError/EstadoVacio, Modal, useConfirmar, Tabla,
+  Paginador, Buscador, Filtros, StatCard, EventoCard, GrillaEventos,
+  EventosDestacados, CalendarioEventos, MapaSelector, FotoZoom.
+
+  Detectados repetidos, a globalizar (medido 2026-09-21):
+  [~] CuentaRegresiva visual: components/CuentaRegresiva.jsx creado
+      (variantes clara/oscura). Usan: Mis Entradas, Compra. Faltan:
+      cartelera (EventosDestacados), página del evento (App.jsx), entrada
+      flotante — migrar en FASE 9.
+  [~] ModalQr: components/ModalQr.jsx creado (QR sobre blanco, línea de
+      escaneo, código, consejo de brillo, estado "sin vincular"). Usan:
+      Mis Entradas (manilla destacada + invitado). Faltan: Mi Saldo
+      (BilleteraAcordeon, en 1.5) y el resto de pantallas con QR.
+      utils/qr.js (qrDe) ahora es global (movido desde usuario-normal/).
+  [ ] SelectorEvento (desplegable "¿de qué evento?"): 4 pantallas admin
+      (ConfigurarPagina, CrearQr, CrearTickets, Mapa) + las de caja.
+  [ ] Tarjetas de estadística propias (13 clases distintas) -> StatCard.
+  [ ] Subir imagen: ya existe .upload-zone/.preview-zone en forms.css
+      (6 pantallas) -> MEJORAR esos (§2.0), no crear componente paralelo
+      salvo que haga falta comportamiento (entonces envolverlos).
+  [ ] Selector de vista tarjetas/tabla: 3 pantallas -> Pestanas variante
+      segmento (ya sirve).
+  [-] Campo como componente nuevo: DESCARTADO por §2.0 — ya existe
+      .input-group en forms.css (17 archivos). Se MEJORA ese (ver 0.8).
+  [ ] Pasos/stepper: compra, wizard admin, pago (0.7).
+
+2.11 Definición de "terminado" por pantalla
+  [ ] Usa Boton / Avisos / Modal / useConfirmar / Estados / Insignia.
+  [ ] Toda acción riesgosa confirma; toda acción da aviso.
+  [ ] Sin clases de botón/alerta propias nuevas; CSS muerto borrado.
+  [ ] Sin estilos ni lógica duplicados (§2.9): usa animaciones.css y hooks
+      compartidos.
+  [ ] Ningún bloque copiado de otra pantalla: si se repite, es componente
+      global (§2.10).
+  [ ] Tema oscuro, móvil (360px), teclado y movimiento reducido revisados.
+  [ ] lint + build OK; anotado en la bitácora.
+
+
+--------------------------------------------------------------------------------
+3. INVENTARIO MEDIDO (2026-09-21, antes de empezar)
+--------------------------------------------------------------------------------
+  - 127 combinaciones distintas de clases de botón en los .jsx.
+  - 62 clases distintas de alerta/mensaje/aviso/error.
+  - 7 pantallas con modal armado a mano (overlay propio): AdminConfigurar-
+    Pagina, Ayudante, Devolucion, publico/App, Recargador, GestionEntrega,
+    Supervisor.  27 archivos ya usan <Modal>.
+  - useConfirmar en 12 archivos; window.alert en perfil/Perfil.jsx.
+  - Sin sistema de avisos global: cada pantalla usa setMensaje + setTimeout
+    (Admin, AdminConfigurarPagina, AdminGeneral, Mapa, Ayudante, Cliente,
+    Devolucion, Perfil, Recargador, Supervisor, UsuarioNormal).
+  - Archivos más grandes (partir en componentes al rediseñar):
+    admin/Admin.jsx 1957 · usuario-normal/UsuarioNormal.jsx ~1940 ·
+    admin/AdminGestionEventos.jsx 979 · ayudante/Ayudante.jsx 952 ·
+    publico/App.jsx 893 · recargador/Recargador.jsx 734 ·
+    supervisor/Supervisor.jsx 723 · supervisor/GestionEntrega.jsx 691 ·
+    devolucion/Devolucion.jsx 684.
+
+
+--------------------------------------------------------------------------------
+4. YA HECHO ANTES DE ESTE PLAN (referencia de estilo a imitar)
+--------------------------------------------------------------------------------
+  [x] Landing pública: secciones Asistentes / Organizadores / Plataforma
+      (órbita de roles), demo de compra, panel de ejemplo, cinta, fondo por
+      sección, navbar con sección activa, footer, WhatsApp flotante.
+  [x] Cartelera destacada: entrada flotante 3D + "Otros eventos", cuenta
+      regresiva, barra de autoplay, Ken Burns.
+  [x] Página pública del evento: efectos (título letra a letra + ola,
+      cronograma animado, Ken Burns), tarjetas de entrada tipo ticket, menú
+      de puestos + calculadora de saldo, "Antes de ir", compartir/agendar,
+      barra de compra fija, estado de evento terminado.
+  [x] Admin > Gestión de eventos: asistente de 5 pasos para crear/editar,
+      pestañas agrupadas (Preparar / Operación), checklist de publicación.
+  [x] Admin > Configurar página: vista previa en vivo, 14 paletas con
+      contraste validado, íconos, ajuste de imagen (punto focal, zoom...).
+  [x] Usuario Normal > Comprar: flujo guiado (pasos, categorías ticket,
+      recibo, pago en 3 pasos, pantalla de éxito).
+  NOTA: estas pantallas usan estilos propios; en su fase se migran a los
+  componentes base (Boton, Avisos, Insignia...) sin perder el diseño.
+
+
+--------------------------------------------------------------------------------
+5. FASES (en orden). Cada tarea = una parte chica.
+--------------------------------------------------------------------------------
+
+FASE 0 — Componentes base (se hacen A MEDIDA que Usuario Normal los necesita)
+  [x] 0.1 Avisos globales: AvisosProvider en main.jsx + useAvisos()
+          (exito/error/info, acción opcional "Deshacer", pausa al hover,
+          barra de tiempo, aria-live). (V)
+  [x] 0.2 Boton: variantes, tamaños, ícono, cargando (spinner). (V)
+          + tokens semánticos nuevos --danger-hover y --ok-hover.
+  [x] 0.3 EstadoVacio en EstadosAsync.jsx (error y vacío comparten el
+          molde .estado-bloque; EstadoError ahora usa Boton). (V)
+  [x] 0.4 Insignia (badge de estado único con tonos). (V)
+          BadgeEstadoEvento migrado -> afecta a TODAS las pantallas que la
+          usan (8): Próximo=info, En curso=ok con punto que late,
+          Finalizado=warn, Archivado=neutro. Borrado BadgeEstadoEvento.css.
+          Pendiente: ~54 clases de badge propias en otras pantallas y los
+          colores ev-* del calendario (CalendarioEventos.css) -> en su fase.
+  [x] 0.5 Pestanas (tabs: role=tablist, flechas del teclado, indicador
+          deslizante) — reemplaza pi-usr-tabs, pi-ges-tabs, etc. (V)
+          Pendiente migrar: pi-ges-tabs, pi-rec-tabs, pi-dev-tabs,
+          pi-ayu-tabs, pi-perfil-tabs, pi-cliente-tabs, pi-unegocio-tabs,
+          pi-mapa-tabs, vista-toggle (usr, mcat, ges) — en su fase.
+  [x] 0.6 EncabezadoPagina (título + subtítulo + ícono + acciones). (V)
+  [ ] 0.7 Pasos (stepper) extraído de compra / wizard admin.
+  [ ] 0.8 Formularios: MEJORAR .input-group de forms.css (estado de error
+          en rojo + mensaje, texto de ayuda, contador) en vez de crear un
+          componente Campo (§2.0). Llega a los 17 archivos que ya lo usan.
+  [ ] 0.10 Reconciliar lo duplicado antes de seguir (§2.0):
+          [ ] Boton vs styles/buttons.css (29 archivos usan .btn-primario,
+              .btn-cancelar, .btn-secundario-sm): un solo estilo — las
+              clases de buttons.css pasan a verse igual que Boton (mismos
+              tokens, hover, foco, tamaños) y Boton las usa por dentro.
+          [ ] .pi-usr-card y demás pi-x-card -> components/Card.jsx.
+          [ ] Acciones de modal: .modal-actions (forms.css), .qp-btn-group
+              (layout.css), .pi-usr-modal-acciones -> una sola.
+  [~] 0.9 styles/animaciones.css: keyframes compartidos; reemplazar los
+          duplicados a medida que se migra cada pantalla (§2.9).
+          Hecho: Boton (qp-girar), Avisos (qp-pop), Pestanas, Encabezado.
+
+FASE 1 — USUARIO NORMAL (pages/usuario-normal/UsuarioNormal.jsx)
+  1.1 Estructura
+    [x] Partir UsuarioNormal.jsx por pestaña: EventosTab, CompraTab,
+        MisEntradasTab, SaldoTab (+ hooks de datos compartidos). Sin cambiar
+        comportamiento. (V)
+    [x] Encabezado + pestañas con EncabezadoPagina + Pestanas: título y
+        bajada por pestaña, contador de solicitudes en revisión en "Mis
+        entradas", "Elegir otro evento" en Comprar. (V)
+  1.2 Pestaña Eventos
+    [x] Cartelera compacta: estados carga/error en tarjeta y EstadoVacio si
+        no hay eventos (antes quedaba un panel oscuro vacío). (V)
+    [x] "Eventos pasados": EventosTab.css propio, Insignia "Realizado",
+        saldo por retirar con Insignia + botón "Retirar" (lleva a Mi
+        saldo), foto que recupera color al hover, entrada escalonada; la
+        sección no se muestra si no hay pasados. CSS viejo borrado. (V)
+  1.3 Pestaña Comprar (ya rediseñada)
+    [x] Migrar botones a Boton, errores a Avisos + en línea. (V)
+    [x] Quitar entrada del carrito: aviso con "Deshacer". (V)
+    [x] Botón "Enviar solicitud" con estado cargando (evita doble envío). (V)
+  1.4 Pestaña Mis Entradas
+    [x] "Tu manilla" destacada: tipo ticket (QR | troquel | datos | cuenta
+        regresiva), foto con Ken Burns, QR que late y se abre grande
+        (ModalQr), insignias. (V)
+    [x] Lista: vista tarjetas/tabla con Pestanas; tarjetas = EventoCard
+        global en GrillaEventos (pedido del usuario; suma paginación),
+        con insignia de estado de la compra y chips (origen, entradas,
+        jornada, N.º);
+        tabla con Insignia de estado y Boton; EstadoVacio con "Ver
+        eventos" y vacío de búsqueda. insigniaEstado() única para ambas
+        vistas. MisEntradasTab.css propio; CSS viejo borrado. (V)
+    [~] Revisar mi solicitud (editar pendiente): [x] aviso de éxito al
+        guardar + botón con cargando (V); [ ] validación en línea por campo.
+    [x] Reportar error de datos: try/catch + avisos + botón cargando. (V)
+    [x] QR de invitado: ModalQr. (V)
+  1.5 Pestaña Mi Saldo
+    [ ] Stats con count-up (StatCard), billeteras por evento con acordeón
+        animado y plazo de retiro como Insignia.
+    [ ] Historial: Tabla + Buscador/Filtros unificados, detalle de venta.
+  1.6 Cierre
+    [ ] Borrar CSS muerto de UsuarioNormal.css (formulario de compra viejo:
+        pi-usr-comprar*, pi-usr-evento-header, pi-usr-categoria-card...).
+    [ ] Revisión 2.9 completa + bitácora.
+
+FASE 2 — CUENTA: Perfil, CompletarPerfil, Login, Registrar, RecuperarContra
+  [ ] Perfil: quitar window.alert; Avisos; Campo; confirmar cambios
+      sensibles (contraseña, correo).
+  [ ] CompletarPerfil: Pasos (contraseña → CI → listo).
+  [ ] Login / Registrar / Recuperar: Campo, Boton cargando, errores en línea.
+
+FASE 3 — USUARIO NEGOCIO: UsuarioNegocio, UsuNegoDasboar, MiCatalogo,
+         MiCatalogoPuesto, MiPuestoDetalle, MisAyudantes
+  [ ] Panel y dashboard (StatCard count-up, gráficos).
+  [ ] Catálogo y productos (tarjetas, stock con Insignia, confirmar borrar).
+  [ ] Puesto y ayudantes (confirmar quitar ayudante, avisos).
+
+FASE 4 — AYUDANTE (952 líneas): cobrar con escaneo, carrito, ventas.
+  [ ] Modal propio -> Modal. Confirmar cobro (monto). Éxito animado.
+
+FASE 5 — CAJA: Recargador y Devolución (+ CorteCaja, AvisoSinCaja)
+  [ ] Modales propios -> Modal. Confirmar recargas/devoluciones con monto.
+  [ ] Corte de caja con pasos y resumen; éxito animado.
+
+FASE 6 — SUPERVISOR: Supervisor, GestionEntrega, PersonasPorEncontrar
+  [ ] Modales propios -> Modal. Entrega de manilla con pasos. Alertas de
+      duplicados con Insignia/avisos.
+
+FASE 7 — CLIENTE: Cliente (solicitud de evento), ClienteDashboard
+  [ ] Solicitud de evento con Pasos + vista previa (como admin).
+  [ ] Dashboard con StatCard count-up.
+
+FASE 8 — ADMIN
+  [ ] AdminGeneral (dashboard).
+  [ ] Admin.jsx (1957 líneas): partir por vista (reportes, solicitudes,
+      incidencias...) y migrar.
+  [ ] AdminAuditoria.
+  [ ] Gestión de eventos: migrar a componentes base (Tabs, Boton...).
+  [ ] Tickets, QR, Jornadas, Mapa, Crear usuario negocio.
+  [ ] Configurar página: modal armado a mano -> Modal; migrar botones.
+
+FASE 9 — LAYOUT Y PÚBLICO
+  [~] MenuLateral (navegación, rol activo, móvil).
+      [x] Opción activa también en subpantallas (`tambien` en menuConfig):
+          Comprar -> Eventos; catálogo/:id -> Mi Catálogo; evento/puesto ->
+          Mi Negocio; config/tickets/qr/Mapa -> Gestión de Eventos;
+          solicitudes -> Por Eventos. (V)
+      [ ] Resto del rediseño del menú.
+  [ ] Público: migrar a componentes base donde aplique (sin tocar diseño).
+
+FASE 10 — LIMPIEZA Y QA GLOBAL
+  [ ] Buscar clases de botón/alerta sobrantes y CSS muerto.
+  [ ] Pasada de tema oscuro, móvil, teclado y movimiento reducido en todo.
+
+
+--------------------------------------------------------------------------------
+6. DECISIONES Y NOTAS
+--------------------------------------------------------------------------------
+  - Los componentes base se crean cuando la primera pantalla los necesita
+    (no todos de golpe), para validarlos con uso real.
+  - No se cambia lógica de negocio al rediseñar; si aparece un bug, se
+    anota acá y se arregla aparte, avisando al usuario.
+  - (Usuario, 2026-09-21) Las tarjetas de evento son SIEMPRE EventoCard
+    (foto de fondo + scrim + insignias arriba + chips + CTA), dentro de
+    GrillaEventos. No se diseñan tarjetas de evento propias por pantalla.
+  - Archivos .css nuevos por componente (el servidor de desarrollo a veces
+    no recarga CSS agregado al final de un archivo existente).
+
+
+--------------------------------------------------------------------------------
+7. BITÁCORA (lo más nuevo arriba)
+--------------------------------------------------------------------------------
+2026-09-21  Regla §2.0 (pedido del usuario): usar y MEJORAR lo global que ya
+            existe; no crear versiones paralelas. Detectados solapamientos:
+            Boton vs buttons.css, Campo (descartado) vs .input-group,
+            SubirImagen vs .upload-zone, pi-usr-card vs Card.jsx. Tareas
+            nuevas 0.8 (reformulada) y 0.10.
+2026-09-21  Ajuste pedido por el usuario: las tarjetas de Mis Entradas pasan
+            a ser EventoCard + GrillaEventos (globales) en vez de tarjetas
+            propias; borrado .pi-me-card*. Queda como decisión en §6.
+2026-09-21  1.4 Mis Entradas (parte A).
+            - Nuevos globales: CuentaRegresiva.jsx/.css, ModalQr.jsx/.css;
+              utils/qr.js (movido). MisEntradasTab.css.
+            - MisEntradasTab: manilla destacada, lista (tarjetas/tabla),
+              vacíos y QR rediseñados (ver 1.4). Quitado el adaptador de
+              cuenta regresiva (lo hace el componente).
+            - CompraTab: su CuentaCompra local (duplicado) reemplazada por
+              CuentaRegresiva; borrado su CSS (.pi-cmp-cuenta*).
+            - UsuarioNormal.css: borrado CSS muerto de manilla, countdown,
+              vista-toggle, compra-card, entradas-grid, qr-modal-img.
+              Se conservan .pi-usr-badge (modal revisión + Cliente.jsx) y
+              .pi-usr-btn-revisar (SaldoTab) hasta migrar esos.
+            Próximo: 1.4 parte B — modal "Revisar mi solicitud" con
+            .input-group mejorado (0.8) y validación en línea.
+2026-09-21  Arreglo (reportado por el usuario): en Comprar entradas el menú
+            lateral no marcaba ninguna opción (comparaba la ruta exacta).
+            MenuLateral.jsx: esOpcionActiva() + `tambien` por opción; mismo
+            problema resuelto en subpantallas de Usuario Negocio y Admin.
+2026-09-21  1.2 Pestaña Eventos + FASE 0.3 y 0.4.
+            - Nuevos: components/Insignia.jsx/.css, EventosTab.css.
+            - EstadosAsync: EstadoVacio; error y vacío con molde común
+              (.estado-bloque), EstadoError con Boton. Clases .estado-error*
+              eliminadas (no se usaban en otro lado).
+            - BadgeEstadoEvento ahora es una Insignia (tono en ESTADO_EVENTO
+              de utils/eventos.js). Retargeteados 3 ajustes contextuales
+              (.pi-badge-estado-evento -> .qp-insignia) en EventoCard.css,
+              AdminGestionEventos.css y GestionEntrega.css.
+            - EventosTab reescrito (ver 1.2). CSS muerto borrado de
+              UsuarioNormal.css.
+            Próximo: 1.4 Mis Entradas.
+2026-09-21  1.1 (parte 2) + FASE 0.5, 0.6, 0.9 (inicio).
+            - Nuevos: components/Pestanas.jsx/.css, EncabezadoPagina.jsx/
+              .css, styles/animaciones.css (importado en main.jsx).
+            - Boton.css y Avisos.css usan los keyframes compartidos
+              (quitados qpBtnGirar y qpAvisoPop duplicados).
+            - UsuarioNormal.jsx: encabezado con EncabezadoPagina + Pestanas.
+              Borrado CSS muerto .pi-usr-header / .pi-usr-tabs.
+            - Inventario: 13 implementaciones de pestañas en la app (lista en
+              tarea 0.5) a migrar en sus fases.
+            Próximo: 1.2 Pestaña Eventos (necesita 0.3 EstadoVacio y 0.4
+            Insignia) o 1.4 Mis Entradas.
+2026-09-21  1.1 (parte 1): UsuarioNormal.jsx (1985 líneas) partido en:
+              UsuarioNormal.jsx (112: encabezado + pestañas),
+              useDatosUsuario.js (datos compartidos, se cargan una vez),
+              EventosTab.jsx, CompraTab.jsx, MisEntradasTab.jsx,
+              SaldoTab.jsx, qr.js (qrDe compartido).
+            - Código movido TAL CUAL con script por marcadores; verificado
+              línea por línea contra el original (solo difieren imports,
+              envoltorios de pestaña y la cuenta regresiva).
+            - Cuenta regresiva de la manilla destacada: ahora usa
+              useCuentaRegresiva (antes setInterval propio duplicado).
+            - Cada pestaña se monta al visitarla y luego solo se oculta
+              (display:none/contents): conserva carrito, filtros y
+              búsquedas al cambiar de pestaña, como antes.
+            - Respaldo del original: scratchpad de la sesión (no en repo).
+            - Nueva regla §2.9 (estilos enlazados, sin repetir) + tarea 0.9.
+            Próximo: 1.1 (parte 2) encabezado + pestañas con componentes
+            base (EncabezadoPagina, Pestanas) o 1.4 Mis Entradas.
+2026-09-21  FASE 0.1 + 0.2 y primeras migraciones en Usuario Normal.
+            - Nuevos: components/Avisos.jsx/.css (toasts globales, provider
+              en main.jsx), components/Boton.jsx/.css.
+            - index.css: tokens --danger-hover, --ok-hover.
+            - UsuarioNormal.jsx: Comprar -> Boton en todos sus botones,
+              "Deshacer" al quitar entrada, envío con cargando + aviso de
+              error; Revisar solicitud -> aviso de éxito (antes cerraba en
+              silencio) + cargando; Reportar error -> try/catch, avisos,
+              cargando (antes no avisaba nada ni atrapaba errores).
+            - CompraEntradas.css: borrado CSS de botones reemplazados.
+            Pendiente de verificar en navegador (V). Próximo: 1.1 (partir
+            UsuarioNormal.jsx por pestaña) o 1.4 (Mis Entradas), a elección.
+2026-09-21  Plan creado. Inventario medido (sección 3). Próximo: FASE 0.1
+            (Avisos) + 0.2 (Boton), aplicados en Usuario Normal.

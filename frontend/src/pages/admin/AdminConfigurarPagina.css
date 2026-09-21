@@ -252,21 +252,9 @@
 .pi-admin-time-input { width: 110px; }
 
 /* --- BOTONES --- */
-.pi-admin-btn-save { background-color: var(--indigo-profundo); color: var(--text-on-accent); border: none; padding: 8px 20px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; }
-.pi-admin-btn-save:hover { background-color: var(--indigo-profundo-hover); }
-
-.pi-admin-btn-preview { background-color: var(--bg-surface); color: var(--text-primary); border: 1px solid var(--border-strong); padding: 8px 20px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; }
-.pi-admin-btn-preview:hover { background-color: var(--bg-page); }
-
-.pi-admin-btn-reset { background-color: var(--rojo-error-suave); color: var(--rojo-error-texto); border: none; padding: 8px 20px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; }
-.pi-admin-btn-reset:hover { background-color: var(--rojo-error); color: var(--text-on-accent); }
-
-.pi-admin-btn-add { background-color: var(--cian-digital-suave); color: var(--cian-digital-texto); border: none; padding: 8px 12px; border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: background 0.2s; }
-.pi-admin-btn-add:hover { background-color: var(--cian-digital); color: var(--texto-sobre-vivo); }
 
 .pi-admin-btn-delete { background-color: var(--rojo-error-suave); color: var(--rojo-error-texto); border: none; width: 36px; height: 36px; border-radius: var(--radius-sm); cursor: pointer; display: inline-flex; justify-content: center; align-items: center; transition: background 0.2s; }
 .pi-admin-btn-delete:hover { background-color: var(--rojo-error); color: var(--text-on-accent); }
-
 
 /* --- MODAL VISTA PREVIA COMPLETA DARK/GLASS --- */
 .pi-admin-modal-overlay {
@@ -285,11 +273,6 @@
 .dark-header {
   background: #0f172a; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;
 }
-
-.pi-admin-btn-close-dark {
-  background: rgba(255,255,255,0.1); border: none; color: white; padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: background 0.2s;
-}
-.pi-admin-btn-close-dark:hover { background: var(--rojo-error); }
 
 /* Contenedor escrolleable */
 .modal-scrollable {

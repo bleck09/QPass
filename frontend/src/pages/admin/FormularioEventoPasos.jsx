@@ -6,6 +6,8 @@ import {
 } from 'react-icons/fa';
 import CalendarioEventos from '../../components/CalendarioEventos.jsx';
 import MapaSelector from '../../components/MapaSelector.jsx';
+import Boton from '../../components/Boton.jsx';
+import Filtros from '../../components/Filtros.jsx';
 import './FormularioEventoPasos.css';
 
 // 'YYYY-MM-DD' -> "domingo 13 de septiembre" (sin depender de formatearFecha,
@@ -314,17 +316,13 @@ export default function FormularioEventoPasos({
 
                 <div className="pi-ges-input-group">
                   <label htmlFor="ev-retiro"><FaUndoAlt aria-hidden="true" /> Días para retirar el saldo tras el cierre</label>
-                  <div className="pi-fev__chips" role="group" aria-label="Valores rápidos">
-                    {DIAS_RETIRO_RAPIDOS.map((d) => (
-                      <button
-                        key={d}
-                        type="button"
-                        className={Number(formEvento.diasParaRetiro || 30) === d ? 'activo' : ''}
-                        onClick={() => setFormEvento((f) => ({ ...f, diasParaRetiro: String(d) }))}
-                      >
-                        {d} días
-                      </button>
-                    ))}
+                  <div className="pi-fev__chips">
+                    <Filtros
+                      etiqueta="Valores rápidos"
+                      opciones={DIAS_RETIRO_RAPIDOS.map((d) => ({ valor: String(d), texto: `${d} días` }))}
+                      activo={String(Number(formEvento.diasParaRetiro || 30))}
+                      onCambio={(v) => setFormEvento((f) => ({ ...f, diasParaRetiro: v }))}
+                    />
                     <input
                       id="ev-retiro" type="number" min="1" step="1" name="diasParaRetiro"
                       value={formEvento.diasParaRetiro} onChange={onChange}
@@ -351,7 +349,7 @@ export default function FormularioEventoPasos({
                     <div key={t} className={v ? '' : 'falta'}>
                       <dt>{v ? <FaCheckCircle aria-hidden="true" /> : <FaRegCircle aria-hidden="true" />} {t}</dt>
                       <dd>{v || 'Falta completar'}</dd>
-                      <button type="button" onClick={() => irA(i)} aria-label={`Editar ${t}`}><FaPen aria-hidden="true" /></button>
+                      <Boton variante="fantasma" tamano="sm" icono={FaPen} onClick={() => irA(i)} aria-label={`Editar ${t}`} />
                     </div>
                   ))}
                 </dl>
@@ -376,26 +374,20 @@ export default function FormularioEventoPasos({
 
           {/* ---------- Navegación ---------- */}
           <div className="pi-fev__nav">
-            <button type="button" className="pi-ges-btn-cancelar" onClick={onCancelar}>Cancelar</button>
+            <Boton variante="fantasma" onClick={onCancelar}>Cancelar</Boton>
             <span className="pi-fev__nav-der">
               {paso > 0 && (
-                <button type="button" className="pi-ges-btn-cancelar" onClick={() => irA(paso - 1)}>
-                  <FaArrowLeft aria-hidden="true" /> Atrás
-                </button>
+                <Boton variante="secundario" icono={FaArrowLeft} onClick={() => irA(paso - 1)}>Atrás</Boton>
               )}
               {editando && !esUltimo && (
-                <button type="button" className="pi-ges-btn-cancelar" onClick={() => irA(paso + 1)}>
-                  Siguiente <FaArrowRight aria-hidden="true" />
-                </button>
+                <Boton variante="secundario" iconoDerecha={FaArrowRight} onClick={() => irA(paso + 1)}>Siguiente</Boton>
               )}
               {editando || esUltimo ? (
-                <button type="submit" className="pi-ges-btn-guardar">
-                  {editando ? 'Guardar cambios' : <><FaRocket aria-hidden="true" /> Crear evento</>}
-                </button>
+                <Boton type="submit" icono={editando ? null : FaRocket}>
+                  {editando ? 'Guardar cambios' : 'Crear evento'}
+                </Boton>
               ) : (
-                <button type="submit" className="pi-ges-btn-guardar">
-                  Siguiente <FaArrowRight aria-hidden="true" />
-                </button>
+                <Boton type="submit" iconoDerecha={FaArrowRight}>Siguiente</Boton>
               )}
             </span>
           </div>

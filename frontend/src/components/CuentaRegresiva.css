@@ -1,0 +1,96 @@
+/* =========================================================================
+   CUENTA REGRESIVA ÚNICA — ver CuentaRegresiva.jsx.
+   Tokens semánticos; keyframes compartidos (styles/animaciones.css).
+   ========================================================================= */
+
+.qp-cuenta {
+  --cuenta-texto: var(--text-primary);
+  --cuenta-suave: var(--text-secondary);
+  --cuenta-bloque: var(--bg-surface);
+  --cuenta-borde: var(--border);
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--cuenta-texto);
+}
+
+/* Sobre fotos o fondos oscuros: vidrio translúcido y texto claro. */
+.qp-cuenta--oscura {
+  --cuenta-texto: var(--n-0);
+  --cuenta-suave: var(--n-300);
+  --cuenta-bloque: color-mix(in srgb, var(--n-950) 55%, transparent);
+  --cuenta-borde: color-mix(in srgb, var(--n-0) 20%, transparent);
+}
+
+.qp-cuenta-tit {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cuenta-suave);
+}
+
+.qp-cuenta-tit svg { animation: qp-girar 3s ease-in-out infinite; }
+
+.qp-cuenta-bloques { display: flex; gap: var(--space-2); }
+
+.qp-cuenta-bloque {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 3.1rem;
+  padding: var(--space-2) var(--space-1);
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--cuenta-borde);
+  background: var(--cuenta-bloque);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.qp-cuenta-bloque b {
+  display: inline-block;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  animation: qp-digito 400ms var(--ease-out);
+}
+
+.qp-cuenta-bloque em {
+  font-size: 0.65rem;
+  font-style: normal;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cuenta-suave);
+}
+
+/* Llegó el día. */
+.qp-cuenta--llego {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--cuenta-bloque);
+  border: 1px solid var(--cuenta-borde);
+  font-weight: 800;
+  animation: qp-pop 500ms var(--ease-rebote);
+}
+
+.qp-cuenta-llego-ic { font-size: var(--text-lg); color: var(--warn); }
+
+@media (max-width: 36rem) {
+  .qp-cuenta-bloque { flex: 1; min-width: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-cuenta-tit svg,
+  .qp-cuenta-bloque b,
+  .qp-cuenta--llego { animation: none; }
+}

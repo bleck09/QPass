@@ -2,6 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router-dom'
 import './styles/index.css'
+import './styles/animaciones.css'
 import './styles/buttons.css'
 import './styles/forms.css'
 import './styles/layout.css'
@@ -11,6 +12,7 @@ import PaginaPrincipal from './pages/publico/PaginaPrincipal.jsx'
 import App from './pages/publico/App.jsx'
 import Login from './pages/publico/Login.jsx'
 import MenuLateral from './layout/MenuLateral.jsx'
+import { AvisosProvider } from './components/Avisos.jsx'
 
 import Admin from './pages/admin/Admin.jsx'
 import AdminGeneral from './pages/admin/AdminGeneral.jsx'
@@ -201,6 +203,9 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    {/* Avisos flotantes globales (useAvisos): disponibles en toda la app. */}
+    <AvisosProvider>
+      <RouterProvider router={router} />
+    </AvisosProvider>
   </StrictMode>,
 )

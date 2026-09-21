@@ -8,6 +8,7 @@ import PanelEjemplo from './PanelEjemplo.jsx';
 import { IMAGENES_LANDING } from '../../constants/imagenesLanding.js';
 import { useRevelar } from '../../utils/useRevelar.js';
 import './InfoSecciones.css';
+import Boton from '../../components/Boton.jsx';
 
 // Lo que QPass resuelve por el organizador. Cada ítem corresponde a un módulo
 // que ya existe en el sistema: no prometer acá nada que la app no haga.
@@ -120,9 +121,9 @@ function VistaOrganizador({ onContactar }) {
           <p>Contanos tu idea y te proponemos cómo armar tu evento con QPass.</p>
         </div>
         <div className="qp-info__cta-fila">
-          <button type="button" className="qp-info__cta" onClick={() => onContactar('organizar')}>
-            Quiero organizar mi evento <FaArrowRight aria-hidden="true" />
-          </button>
+          <Boton variante="acento" pildora iconoDerecha={FaArrowRight} onClick={() => onContactar('organizar')}>
+            Quiero organizar mi evento
+          </Boton>
         </div>
       </div>
     </>
@@ -179,9 +180,9 @@ function VistaNegocio({ onContactar }) {
           <p>Escribinos y te contamos qué eventos se vienen y cómo sumarte.</p>
         </div>
         <div className="qp-info__cta-fila">
-          <button type="button" className="qp-info__cta qp-info__cta--coral" onClick={() => onContactar('negocio')}>
-            Quiero vender en un evento <FaArrowRight aria-hidden="true" />
-          </button>
+          <Boton variante="compra" pildora iconoDerecha={FaArrowRight} onClick={() => onContactar('negocio')}>
+            Quiero vender en un evento
+          </Boton>
         </div>
       </div>
     </>

@@ -19,6 +19,34 @@ html {
   overflow: clip;
 }
 
+/* Componentes globales con la paleta del evento (PLAN_REDISENO §2.0): los
+   botones son <Boton> y los filtros <Filtros>; acá solo se redefinen sus
+   variables, sin clases de botón propias. */
+.pi-landing-container .qp-btn--primario {
+  --btn-bg: var(--color-boton);
+  --btn-bg-hover: color-mix(in srgb, var(--color-boton) 85%, var(--color-texto-titulo));
+  --btn-texto: var(--color-fondo);
+}
+
+.pi-landing-container .qp-btn--translucido {
+  --btn-tinte: var(--color-texto-titulo);
+  --btn-borde-hover: var(--color-primario);
+}
+
+.pi-landing-container .qp-btn--fantasma {
+  --btn-texto: var(--color-texto-p);
+  --btn-bg-hover: color-mix(in srgb, var(--color-texto-titulo) 8%, transparent);
+}
+
+.pi-landing-container .qp-filtros {
+  --filtro-fondo: color-mix(in srgb, var(--color-texto-titulo) 6%, transparent);
+  --filtro-texto: var(--color-texto-p);
+  --filtro-texto-hover: var(--color-texto-titulo);
+  --filtro-bg-hover: color-mix(in srgb, var(--color-texto-titulo) 10%, transparent);
+  --filtro-activo-bg: var(--color-primario);
+  --filtro-activo-texto: var(--color-fondo);
+}
+
 /* --- EFECTOS DE LUCES (GLOW) --- */
 .bg-glow {
   position: absolute;
@@ -109,22 +137,6 @@ html {
   color: var(--color-texto-titulo);
 }
 
-.pi-landing-btn-nav {
-  background: transparent;
-  color: var(--color-texto-titulo);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 8px 24px;
-  border-radius: var(--radius-xl);
-  cursor: pointer;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.pi-landing-btn-nav:hover {
-  background: rgba(255, 255, 255, 0.1);
-  border-color: var(--color-texto-titulo);
-}
-
 /* --- SECCIÓN HERO --- */
 .pi-landing-hero {
   display: flex;
@@ -152,24 +164,6 @@ html {
   color: var(--color-texto-p);
   /* Longitud de línea legible 45-75 caracteres (Manual 5.1) */
   max-width: 60ch;
-}
-
-.pi-landing-btn-primary {
-  background-color: var(--color-boton);
-  color: var(--color-fondo); /* El texto del botón toma el color del fondo para contraste */
-  border: none; 
-  padding: 16px 36px; 
-  font-size: var(--text-lg);
-  font-weight: 700; 
-  border-radius: var(--radius-xl); 
-  cursor: pointer;
-  box-shadow: 0 4px 15px rgba(10, 14, 39, 0.2); 
-  transition: all 0.3s ease;
-}
-
-.pi-landing-btn-primary:hover { 
-  transform: translateY(-3px); 
-  box-shadow: 0 8px 20px rgba(255, 255, 255, 0.2); 
 }
 
 /* --- SECCIONES GENERALES --- */
@@ -649,33 +643,6 @@ html {
   color: var(--color-texto-titulo);
 }
 
-.btn-pricing {
-  width: 100%;
-  padding: 16px;
-  border-radius: var(--radius-xl);
-  border: none;
-  background-color: var(--color-primario);
-  color: var(--color-fondo);
-  font-weight: 800;
-  font-size: var(--text-base);
-  cursor: pointer;
-  transition: all 0.3s;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-}
-
-.btn-pricing:hover:not(:disabled) {
-  background-color: var(--color-boton);
-  color: var(--color-primario);
-  box-shadow: 0 0 20px var(--color-primario);
-}
-
-.btn-pricing:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-  filter: grayscale(0.6);
-}
-
 /* --- BADGE DE STOCK EN LAS TARJETAS DE ENTRADA --- */
 .stock-badge {
   display: inline-flex;
@@ -1041,12 +1008,6 @@ html {
   margin-top: var(--space-1);
 }
 
-.pi-landing-hero .pi-landing-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
 .ev-hero__btn-sec {
   display: inline-flex;
   align-items: center;
@@ -1085,7 +1046,6 @@ html {
   .ev-hero__btn-sec { transition: none; }
   .ev-hero__btn-sec:hover { transform: none; }
 }
-
 
 /* Barra flotante en tablet/móvil: los links no entran, se ocultan y quedan
    el volver, el logo y el CTA, que es lo que hace falta acá. */
@@ -1220,8 +1180,6 @@ html {
   max-width: 44rem;
 }
 
-
-
 /* =========================================================================
    ENTRADA DE LAS TARJETAS AL BAJAR
    La sección ya se revela con .qp-revelar; acá las tarjetas entran de a una
@@ -1309,7 +1267,6 @@ html {
 @media (max-width: 62rem) {
   .pi-landing-hero { min-height: 0; }
 }
-
 
 /* --- Agenda ---
    El cronograma de siempre: tarjetas alternadas (una con el color primario
@@ -1429,7 +1386,6 @@ html {
   .ev-agenda__item:hover { transform: none; }
 }
 
-
 /* =========================================================================
    FONDO DEL HERO — la foto del evento a pantalla completa.
    ========================================================================= */
@@ -1501,11 +1457,6 @@ html {
 .ev-hero__datos li { font-size: var(--text-base); }
 .ev-hero__datos em { font-size: var(--text-sm); }
 .ev-hero__datos li > svg { font-size: var(--text-lg); }
-
-.pi-landing-hero .pi-landing-btn-primary {
-  font-size: var(--text-base);
-  padding: var(--space-4) var(--space-8);
-}
 
 @media (max-width: 62rem) {
   .pi-landing-hero {

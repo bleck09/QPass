@@ -30,6 +30,7 @@ import { seguirPuntero } from '../../utils/efectosPuntero.js';
 import './App.css';
 import './evento/EfectosEvento.css';
 import './evento/TarjetasEntrada.css';
+import Boton from '../../components/Boton.jsx';
 
 // DATOS ACTUALIZADOS (Con fecha objetivo en Febrero)
 // El editor de Admin (Mapa.jsx) usa tamaño real en px con scroll horizontal
@@ -352,13 +353,13 @@ export default function App() {
           {hayMapaDelEvento && <li><a href="#mapa">Mapa</a></li>}
         </ul>
         {terminado ? (
-          <button className="pi-landing-btn-nav" onClick={handleVolverInicio}>
+          <Boton variante="translucido" pildora onClick={handleVolverInicio}>
             Próximos eventos
-          </button>
+          </Boton>
         ) : (
-          <button className="pi-landing-btn-nav" onClick={handleLoginClick}>
-            Comprar Entrada
-          </button>
+          <Boton variante="translucido" pildora onClick={handleLoginClick}>
+            Comprar entrada
+          </Boton>
         )}
       </nav>
 
@@ -466,17 +467,15 @@ export default function App() {
                   <span>¿Te quedó saldo? Podés retirarlo hasta el <b>{formatearFecha(limiteRetiro, false)}</b>.</span>
                 </p>
               )}
-              <button className="pi-landing-btn-primary" onClick={handleVolverInicio}>
+              <Boton tamano="lg" pildora iconoDerecha={FaArrowRight} onClick={handleVolverInicio}>
                 Ver próximos eventos
-                <FaArrowRight aria-hidden="true" />
-              </button>
+              </Boton>
             </div>
           ) : (
             <div className="ev-hero__acciones">
-              <button className="pi-landing-btn-primary" onClick={() => document.getElementById('entradas').scrollIntoView({behavior: 'smooth'})}>
+              <Boton tamano="lg" pildora iconoDerecha={FaArrowRight} onClick={() => document.getElementById('entradas').scrollIntoView({ behavior: 'smooth' })}>
                 Comprar entradas
-                <FaArrowRight aria-hidden="true" />
-              </button>
+              </Boton>
               {evento && <EventoAcciones evento={evento} />}
             </div>
           )}
@@ -639,9 +638,16 @@ export default function App() {
                     <span className="price-amount">{plan.precio}</span>
                   )}
                 </div>
-                <button className="btn-pricing" onClick={handleLoginClick} disabled={agotado || terminado}>
-                  {terminado ? 'Evento finalizado' : agotado ? 'Agotado' : <>Adquirir ahora <FaArrowRight aria-hidden="true" /></>}
-                </button>
+                <Boton
+                  tamano="lg"
+                  pildora
+                  anchoCompleto
+                  iconoDerecha={terminado || agotado ? null : FaArrowRight}
+                  onClick={handleLoginClick}
+                  disabled={agotado || terminado}
+                >
+                  {terminado ? 'Evento finalizado' : agotado ? 'Agotado' : 'Adquirir ahora'}
+                </Boton>
               </article>
             );
           })}

@@ -1,0 +1,79 @@
+/* =========================================================================
+   MODAL DE QR ÚNICO — ver ModalQr.jsx. Tokens semánticos.
+   ========================================================================= */
+
+.qp-modal-qr {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+}
+
+.qp-modal-qr-titulo { font-size: var(--text-lg); color: var(--text-primary); }
+
+.qp-modal-qr-etiquetas { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2); }
+
+/* El QR va sobre blanco siempre (también en tema oscuro): así lo leen los
+   escáneres. Una línea de "escaneo" lo recorre. */
+.qp-modal-qr-marco {
+  position: relative;
+  overflow: hidden;
+  padding: var(--space-3);
+  border-radius: var(--radius-lg);
+  background: var(--n-0);
+  box-shadow: var(--shadow-md), 0 0 0 4px var(--brand-bg);
+  animation: qp-pop 450ms var(--ease-rebote);
+}
+
+.qp-modal-qr-img { display: block; width: 15rem; height: 15rem; }
+
+.qp-modal-qr-laser {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  height: 3px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  box-shadow: 0 0 12px var(--accent);
+  pointer-events: none;
+  animation: qpModalQrLaser 2.4s ease-in-out infinite;
+}
+
+@keyframes qpModalQrLaser {
+  0%, 100% { top: 8%; }
+  50%      { top: 90%; }
+}
+
+.qp-modal-qr-codigo {
+  padding: 2px var(--space-3);
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  letter-spacing: 0.08em;
+}
+
+.qp-modal-qr-nota { margin: 0; font-size: var(--text-sm); color: var(--text-primary); }
+
+.qp-modal-qr-tip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.qp-modal-qr-tip svg { color: var(--warn); }
+
+@media (max-width: 36rem) {
+  .qp-modal-qr-img { width: 12rem; height: 12rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-modal-qr-marco,
+  .qp-modal-qr-laser { animation: none; }
+  .qp-modal-qr-laser { display: none; }
+}

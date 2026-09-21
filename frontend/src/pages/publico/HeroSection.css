@@ -152,40 +152,6 @@
   margin-top: var(--space-1);
 }
 
-.qp-hero__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-full);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-  text-decoration: none;
-  transition: transform var(--duration-fast) var(--ease-out),
-              box-shadow var(--duration-fast) var(--ease-out),
-              background-color var(--duration-fast) var(--ease-out);
-}
-
-/* Primario: cian de marca. Texto azul-noche porque el blanco sobre cian
-   no llega a AA (ver nota de --texto-sobre-vivo en index.css). */
-.qp-hero__btn--primario {
-  background: var(--cian-digital);
-  color: var(--texto-sobre-vivo);
-  border: 1px solid color-mix(in srgb, var(--blanco) 25%, transparent);
-  box-shadow: var(--shadow-md);
-}
-
-.qp-hero__btn--primario:hover {
-  background: var(--cian-digital-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.qp-hero__btn:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 3px;
-}
-
 /* =======================================================
    CAPA 2 — TARJETA "CÓMO FUNCIONA"
    Aparece mientras la manilla gira; queda superpuesta al intro.

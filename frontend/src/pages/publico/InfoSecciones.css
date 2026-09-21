@@ -745,74 +745,6 @@
   gap: var(--space-3);
 }
 
-.qp-info__cta {
-  position: relative;
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  min-height: 2.75rem;
-  padding: var(--space-3) var(--space-8);
-  border: 1px solid transparent;
-  border-radius: var(--radius-full);
-  background: var(--cian-digital);
-  color: var(--texto-sobre-vivo);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-  text-decoration: none;
-  cursor: pointer;
-  box-shadow: var(--shadow-md);
-  transition: background-color var(--duration-fast) var(--ease-out),
-              transform var(--duration-fast) var(--ease-out),
-              box-shadow var(--duration-fast) var(--ease-out);
-}
-
-/* Destello que cruza el botón al pasar el mouse. */
-.qp-info__cta::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -60%;
-  width: 40%;
-  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--blanco) 45%, transparent), transparent);
-  transform: skewX(-20deg);
-  transition: left 600ms var(--ease-out);
-}
-
-.qp-info__cta:hover::before { left: 120%; }
-
-.qp-info__cta svg { transition: transform var(--duration-fast) var(--ease-out); }
-.qp-info__cta:hover svg { transform: translateX(3px); }
-
-.qp-info__cta:hover {
-  background: var(--cian-digital-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
-.qp-info__cta--coral { background: var(--coral-compra); }
-.qp-info__cta--coral:hover { background: var(--coral-compra-hover); }
-
-.qp-info__cta--sec {
-  background: color-mix(in srgb, var(--blanco) 8%, transparent);
-  border-color: color-mix(in srgb, var(--blanco) 30%, transparent);
-  color: var(--blanco);
-  box-shadow: none;
-}
-
-.qp-info__cta--sec:hover {
-  background: color-mix(in srgb, var(--blanco) 16%, transparent);
-  box-shadow: none;
-}
-
-.qp-info__cta:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 3px;
-}
-
 /* =======================================================
    RESPONSIVE
 ======================================================= */
@@ -869,7 +801,7 @@
 
   .qp-info__banda { padding: var(--space-8) var(--space-5); }
   .qp-info__cta-fila,
-  .qp-info__cta-fila .qp-info__cta { width: 100%; }
+  .qp-info__cta-fila > .qp-btn { width: 100%; }
   .qp-info__tab { font-size: var(--text-xs); padding: var(--space-2); }
 }
 
@@ -884,14 +816,11 @@
   .qp-info__timeline::before { transform: none !important; transition: none; }
   .qp-info__servicio,
   .qp-info__beneficios li,
-  .qp-info__cta,
-  .qp-info__cta::before,
   .qp-info__foto img,
   .qp-info__collage img,
   .qp-info__tabs-indicador { transition: none; }
   .qp-info__servicio:hover,
   .qp-info__beneficios li:hover,
-  .qp-info__cta:hover,
   .qp-info__foto:hover img,
   .qp-info__collage img:hover { transform: none; }
 }

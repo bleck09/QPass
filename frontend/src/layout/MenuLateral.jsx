@@ -17,11 +17,15 @@ import { ROLES_SEGURIDAD } from '../utils/duplicados.js';
 import './MenuLateral.css';
 
 // Configuración de menús según el rol
+// `tambien`: subpantallas que NO tienen opción propia en el menú pero
+// pertenecen a esta (ej. Comprar entradas es un paso de Eventos). Sin esto,
+// al entrar a una subpantalla el menú no marcaba ninguna opción como activa.
+// Un patrón que termina en '/*' abarca todo lo que cuelga de esa ruta.
 const menuConfig = {
   [ROLES.ADMIN]: [
     { titulo: 'Dashboard General', ruta: '/admin/general', icono: <FaChartPie /> },
-    { titulo: 'Por Eventos', ruta: '/admin', icono: <FaChartBar /> },
-    { titulo: 'Gestión de Eventos', ruta: '/admin/eventos', icono: <FaCalendarAlt /> },
+    { titulo: 'Por Eventos', ruta: '/admin', icono: <FaChartBar />, tambien: ['/admin/solicitudes'] },
+    { titulo: 'Gestión de Eventos', ruta: '/admin/eventos', icono: <FaCalendarAlt />, tambien: ['/admin/config', '/AdminCrearTickets', '/admin/qr', '/Mapa'] },
     { titulo: 'Gestión de Usuarios', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
     // Tickets del Evento, Generar QR, Configurar Página y Mapa se acceden desde
     // Gestión de Eventos (accesos rápidos del detalle), no desde la barra lateral.
@@ -51,21 +55,27 @@ const menuConfig = {
     { titulo: 'Arqueo de Caja', ruta: '/devolucion/caja', icono: <FaMoneyBillWave /> }
   ],
   [ROLES.USUARIO_NORMAL]: [
-    { titulo: 'Eventos', ruta: '/usuarionormal/eventos', icono: <FaCalendarAlt /> },
+    { titulo: 'Eventos', ruta: '/usuarionormal/eventos', icono: <FaCalendarAlt />, tambien: ['/usuarionormal/comprar'] },
     { titulo: 'Mis Entradas', ruta: '/usuarionormal', icono: <FaFileInvoiceDollar /> },
     { titulo: 'Mi Saldo', ruta: '/usuarionormal/saldo', icono: <FaWallet /> },
     { titulo: 'Mi Perfil', ruta: '/perfil', icono: <FaUserCircle /> }
   ],
   [ROLES.USUARIO_NEGOCIO]: [
     { titulo: 'Dashboard de Negocio', ruta: '/UsuNegoDasboar', icono: <FaChartPie />  },
-    { titulo: 'Mi Catálogo', ruta: '/usuarionegocio/catalogo', icono: <FaBoxOpen /> },
-    { titulo: 'Mi Negocio', ruta: '/usuarionegocio', icono: <FaFileInvoiceDollar /> },
+    { titulo: 'Mi Catálogo', ruta: '/usuarionegocio/catalogo', icono: <FaBoxOpen />, tambien: ['/usuarionegocio/catalogo/*'] },
+    { titulo: 'Mi Negocio', ruta: '/usuarionegocio', icono: <FaFileInvoiceDollar />, tambien: ['/usuarionegocio/evento/*'] },
     { titulo: 'Mis Ayudantes', ruta: '/usuarionegocio/ayudantes', icono:<FaUsers /> }
   ],
   [ROLES.AYUDANTE]: [
     { titulo: 'Vender / Cobrar', ruta: '/ayudante', icono: <FaCashRegister /> }
   ]
 };
+
+// ¿La opción del menú corresponde a la pantalla actual? Ruta exacta o una
+// de sus subpantallas (`tambien`).
+const esOpcionActiva = (item, ruta) =>
+  ruta === item.ruta ||
+  (item.tambien || []).some((p) => (p.endsWith('/*') ? ruta.startsWith(p.slice(0, -1)) : ruta === p));
 
 export const EVENTO_USUARIO_ACTUALIZADO = 'qpass-usuario-actualizado';
 
@@ -196,7 +206,7 @@ export default function MenuLateral({ children }) {
 
         <nav className="pi-layout-nav" aria-label="Navegación principal">
           {opcionesMenu.map((item, index) => {
-            const esActivo = location.pathname === item.ruta;
+            const esActivo = esOpcionActiva(item, location.pathname);
             return (
               <button
                 type="button"

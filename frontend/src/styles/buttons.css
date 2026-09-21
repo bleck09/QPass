@@ -1,65 +1,220 @@
 /* ============================================================================
-   BOTONES — sistema único del proyecto.
-   .btn-primario / .btn-cancelar / .btn-secundario-sm estaban repetidos en
-   varias CSS de página con tamaños distintos. Definición canónica, se importa
-   UNA vez en main.jsx. Solo tokens de index.css.
+   BOTONES — sistema ÚNICO del proyecto (PLAN_REDISENO.txt §2.0 y §2.3).
+   Se importa UNA vez en main.jsx. Solo tokens de index.css.
+
+   Una sola definición para dos formas de usarlo:
+     - Componente <Boton variante tamano icono cargando> (components/Boton.jsx),
+       que pone las clases .qp-btn / .qp-btn--<variante> / .qp-btn--<tamano>.
+     - Clases directas que ya usan ~29 pantallas: .btn-primario, .btn-cancelar,
+       .btn-secundario-sm (+ --peligro). NO tienen reglas propias: comparten
+       selector con la variante equivalente de .qp-btn, así se ven IDÉNTICAS
+       y cualquier mejora llega a todas a la vez.
+         .btn-primario            = variante primario
+         .btn-cancelar            = variante secundario
+         .btn-secundario-sm       = variante secundario, tamaño sm
+         .btn-secundario-sm--peligro = variante peligro-suave, tamaño sm
+         .btn-quitar-imagen       = variante peligro-suave, tamaño sm
+                                    (antes definido en forms.css y copiado
+                                    en Mapa.css y Cliente.css)
+   Código nuevo: usar <Boton>.
+
+   Páginas con colores propios (landing pública, página del evento con su
+   paleta): NO crear clases de botón. Se reusa <Boton> y el contenedor
+   redefine las variables --btn-* de la variante, p. ej.
+     .pi-landing-container .qp-btn--primario { --btn-bg: var(--color-boton); }
    ========================================================================= */
 
-.btn-primario {
+/* ---------- Base ---------- */
+.qp-btn,
+.btn-primario,
+.btn-cancelar,
+.btn-secundario-sm,
+.btn-quitar-imagen {
+  --btn-bg: var(--action);
+  --btn-bg-hover: var(--action-hover);
+  --btn-texto: var(--text-on-accent);
+  --btn-texto-hover: var(--btn-texto);
+  --btn-borde: transparent;
+  --btn-borde-hover: var(--btn-borde);
+
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  min-height: 44px;
-  border: none;
+  gap: var(--space-2);
+  min-height: 2.75rem; /* objetivo táctil de 44px */
+  padding: 0 var(--space-5);
+  border: 1px solid var(--btn-borde);
   border-radius: var(--radius-md);
-  background-color: var(--action);
-  color: var(--text-on-accent);
+  background: var(--btn-bg);
+  color: var(--btn-texto);
   font-family: inherit;
   font-size: var(--text-sm);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
+  line-height: 1.2;
   white-space: nowrap;
+  text-decoration: none;
   cursor: pointer;
-  transition: background 0.2s;
+  user-select: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
-.btn-primario:hover:not(:disabled) {
-  background-color: var(--action-hover);
+:is(.qp-btn, .btn-primario, .btn-cancelar, .btn-secundario-sm, .btn-quitar-imagen):hover:not(:disabled) {
+  background: var(--btn-bg-hover);
+  color: var(--btn-texto-hover);
+  border-color: var(--btn-borde-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-.btn-primario:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
+:is(.qp-btn, .btn-primario, .btn-cancelar, .btn-secundario-sm, .btn-quitar-imagen):active:not(:disabled) {
+  transform: translateY(0) scale(0.97);
+  box-shadow: none;
 }
 
-.btn-cancelar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 16px;
-  min-height: 44px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
+:is(.qp-btn, .btn-primario, .btn-cancelar, .btn-secundario-sm, .btn-quitar-imagen):focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
-.btn-cancelar:hover {
-  background: var(--bg-page);
+:is(.qp-btn, .btn-primario, .btn-cancelar, .btn-secundario-sm, .btn-quitar-imagen):disabled { opacity: 0.5; cursor: not-allowed; }
+.qp-btn--cargando:disabled { opacity: 0.85; cursor: progress; }
+
+/* ---------- Variantes ---------- */
+/* primario: los valores por defecto de la base (índigo). */
+
+.qp-btn--secundario,
+.btn-cancelar,
+.btn-secundario-sm {
+  --btn-bg: var(--bg-surface);
+  --btn-bg-hover: var(--bg-hover);
+  --btn-texto: var(--text-primary);
+  --btn-borde: var(--border-strong);
+  --btn-borde-hover: var(--action);
 }
 
-/* --- Acciones dentro de tablas / barras ---
-   Fila `.btn-acciones` + botón `.btn-secundario-sm` (icono + texto). Reemplaza
-   los .action-buttons / .btn-asignar / .btn-editar / .btn-eliminar que estaban
-   repetidos (y divergentes) en varias CSS de página.
-   Variante `--peligro` para la acción destructiva de la fila. */
+.qp-btn--fantasma {
+  --btn-bg: transparent;
+  --btn-bg-hover: var(--bg-hover);
+  --btn-texto: var(--text-primary);
+}
+
+.qp-btn--fantasma:hover:not(:disabled) { box-shadow: none; transform: none; }
+
+.qp-btn--peligro {
+  --btn-bg: var(--danger);
+  --btn-bg-hover: var(--danger-hover);
+  --btn-texto: var(--text-on-vivid);
+}
+
+/* Destructiva secundaria (acciones de fila): borde neutro y texto rojo; al
+   pasar el mouse se llena de rojo. */
+.qp-btn--peligro-suave,
+.btn-secundario-sm--peligro,
+.btn-quitar-imagen {
+  --btn-bg: var(--bg-surface);
+  --btn-bg-hover: var(--danger);
+  --btn-texto: var(--danger-text);
+  --btn-texto-hover: var(--text-on-vivid);
+  --btn-borde: var(--border-strong);
+  --btn-borde-hover: var(--danger);
+}
+
+.qp-btn--compra {
+  --btn-bg: var(--commerce);
+  --btn-bg-hover: var(--commerce-hover);
+  --btn-texto: var(--text-on-vivid);
+}
+
+.qp-btn--exito {
+  --btn-bg: var(--ok);
+  --btn-bg-hover: var(--ok-hover);
+  --btn-texto: var(--text-on-vivid);
+}
+
+/* Acento de marca (cian): CTA de la landing pública. */
+.qp-btn--acento {
+  --btn-bg: var(--accent);
+  --btn-bg-hover: var(--accent-hover);
+  --btn-texto: var(--text-on-vivid);
+}
+
+/* Vidrio: sobre fotos o bandas oscuras. --btn-tinte es el color del texto
+   y de la transparencia (blanco por defecto; la página del evento le pasa
+   su color de título). */
+.qp-btn--translucido {
+  --btn-tinte: var(--n-0);
+  --btn-bg: color-mix(in srgb, var(--btn-tinte) 10%, transparent);
+  --btn-bg-hover: color-mix(in srgb, var(--btn-tinte) 18%, transparent);
+  --btn-texto: var(--btn-tinte);
+  --btn-borde: color-mix(in srgb, var(--btn-tinte) 28%, transparent);
+  --btn-borde-hover: var(--accent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Destello al pasar el mouse, solo en las acciones fuertes. */
+:is(.qp-btn--primario, .btn-primario, .qp-btn--compra, .qp-btn--exito, .qp-btn--acento)::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -60%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--n-0) 40%, transparent), transparent);
+  transform: skewX(-20deg);
+  transition: left 650ms var(--ease-out);
+  pointer-events: none;
+}
+
+:is(.qp-btn--primario, .btn-primario, .qp-btn--compra, .qp-btn--exito, .qp-btn--acento):hover:not(:disabled)::before { left: 130%; }
+
+/* ---------- Tamaños ---------- */
+.qp-btn--sm,
+.btn-secundario-sm,
+.btn-quitar-imagen {
+  min-height: 2.25rem;
+  padding: 0 var(--space-3);
+  font-size: var(--text-xs);
+  border-radius: var(--radius-sm);
+}
+
+.qp-btn--lg { min-height: 3.25rem; padding: 0 var(--space-6); font-size: var(--text-base); }
+
+.qp-btn--ancho { width: 100%; }
+
+/* Forma de píldora (páginas públicas). */
+.qp-btn--pildora { border-radius: var(--radius-full); }
+
+/* Como enlace (<Boton como="a"> / como={Link}): sin subrayado y, si está
+   "deshabilitado", sin clic. */
+a.qp-btn { text-decoration: none; }
+a.qp-btn[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }
+
+.qp-btn--solo-icono { padding: 0; aspect-ratio: 1; }
+
+/* ---------- Íconos y spinner ---------- */
+.qp-btn-ic { flex-shrink: 0; }
+.qp-btn-ic--der { transition: transform var(--duration-fast) var(--ease-out); }
+.qp-btn:hover:not(:disabled) .qp-btn-ic--der { transform: translateX(3px); }
+
+.qp-btn-spinner {
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: qp-girar 700ms linear infinite; /* keyframe compartido (animaciones.css) */
+}
+
+/* ---------- Fila de acciones (tablas / barras) ---------- */
 .btn-acciones {
   display: inline-flex;
   align-items: center;
@@ -67,40 +222,10 @@
   flex-wrap: wrap;
 }
 
-.btn-secundario-sm {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-}
-
-.btn-secundario-sm:hover:not(:disabled) {
-  background: var(--bg-page);
-  color: var(--indigo-profundo);
-  border-color: var(--indigo-profundo);
-}
-
-.btn-secundario-sm:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.btn-secundario-sm--peligro {
-  color: var(--rojo-error-texto);
-}
-
-.btn-secundario-sm--peligro:hover:not(:disabled) {
-  background: var(--rojo-error);
-  color: var(--text-on-accent);
-  border-color: var(--rojo-error);
+@media (prefers-reduced-motion: reduce) {
+  :is(.qp-btn, .btn-primario, .btn-cancelar, .btn-secundario-sm, .btn-quitar-imagen) { transition: none; }
+  :is(.qp-btn, .btn-primario, .btn-cancelar, .btn-secundario-sm, .btn-quitar-imagen):hover:not(:disabled),
+  :is(.qp-btn, .btn-primario, .btn-cancelar, .btn-secundario-sm, .btn-quitar-imagen):active:not(:disabled) { transform: none; }
+  :is(.qp-btn--primario, .btn-primario, .qp-btn--compra, .qp-btn--exito, .qp-btn--acento)::before { display: none; }
+  .qp-btn-spinner { animation-duration: 1.6s; } /* sigue girando: indica espera */
 }

@@ -20,6 +20,8 @@ import {
   ICONOS_ACTIVIDAD, ACTIVIDADES_POR_DEFECTO, PALETAS_LANDING, iconoActividad, esAjusteDefecto,
 } from '../../constants/landingEvento.js';
 import VistaPreviaPagina from './VistaPreviaPagina.jsx';
+import Boton from '../../components/Boton.jsx';
+import Pestanas from '../../components/Pestanas.jsx';
 import AjusteImagen from './AjusteImagen.jsx';
 import './AdminConfigurarPagina.css';
 import './ConfigurarPaginaEditor.css';
@@ -276,15 +278,11 @@ export default function AdminConfigurarPagina({
             : <><FaCheckCircle aria-hidden="true" /> Todo guardado</>}
         </span>
         <div className="pi-cfg-barra-acciones">
-          <button type="button" className="pi-admin-btn-reset" onClick={restablecerValores}>
-            <FaUndo aria-hidden="true" /> Restablecer
-          </button>
-          <button type="button" className="pi-admin-btn-preview" onClick={() => setShowPreview(true)}>
-            <FaExpand aria-hidden="true" /> Vista completa
-          </button>
-          <button type="button" className="pi-admin-btn-save" onClick={guardarConfiguracion} disabled={guardando || !hayCambios}>
-            <FaSave aria-hidden="true" /> {guardando ? 'Guardando…' : 'Guardar cambios'}
-          </button>
+          <Boton variante="peligro-suave" icono={FaUndo} onClick={restablecerValores}>Restablecer</Boton>
+          <Boton variante="secundario" icono={FaExpand} onClick={() => setShowPreview(true)}>Vista completa</Boton>
+          <Boton icono={FaSave} onClick={guardarConfiguracion} cargando={guardando} disabled={!hayCambios}>
+            {guardando ? 'Guardando…' : 'Guardar cambios'}
+          </Boton>
         </div>
       </div>
 
@@ -380,9 +378,9 @@ export default function AdminConfigurarPagina({
                 <div className="pi-cfg-imagen">
                   <img width="480" height="200" src={config.imagen} alt="Imagen de la página" />
                   <span className="pi-cfg-imagen-tag">Imagen propia de la página</span>
-                  <button type="button" className="btn-quitar-imagen" onClick={() => setConfig(c => ({ ...c, imagen: '', imagenAjuste: null }))}>
-                    <FaTimes aria-hidden="true" /> Quitar (usar la del evento)
-                  </button>
+                  <Boton variante="peligro-suave" tamano="sm" icono={FaTimes} onClick={() => setConfig(c => ({ ...c, imagen: '', imagenAjuste: null }))}>
+                    Quitar (usar la del evento)
+                  </Boton>
                 </div>
               ) : (
                 <div className="pi-cfg-imagen-doble">
@@ -416,18 +414,18 @@ export default function AdminConfigurarPagina({
           <section className="pi-admin-card pi-cfg-seccion" {...zona('actividades')}>
             <div className="pi-admin-card-header">
               <h3><span className="pi-cfg-num">3</span><FaListUl aria-hidden="true" /> Servicios / actividades</h3>
-              <button type="button" className="pi-admin-btn-add" onClick={() => agregarFila('actividades', { icono: 'music', titulo: '', descripcion: '' })}>
-                <FaPlus aria-hidden="true" /> Añadir
-              </button>
+              <Boton variante="secundario" tamano="sm" icono={FaPlus} onClick={() => agregarFila('actividades', { icono: 'music', titulo: '', descripcion: '' })}>
+                Añadir
+              </Boton>
             </div>
             <p className="texto-ayuda">Lo que el asistente va a encontrar: música, comida, zona VIP, estacionamiento…</p>
 
             {config.actividades.length === 0 && (
               <div className="pi-cfg-vacio">
                 <p>No hay actividades cargadas.</p>
-                <button type="button" className="pi-admin-btn-add" onClick={() => cambiar('actividades', ACTIVIDADES_POR_DEFECTO)}>
-                  <FaMagic aria-hidden="true" /> Usar las sugeridas
-                </button>
+                <Boton variante="secundario" tamano="sm" icono={FaMagic} onClick={() => cambiar('actividades', ACTIVIDADES_POR_DEFECTO)}>
+                  Usar las sugeridas
+                </Boton>
               </div>
             )}
 
@@ -451,9 +449,9 @@ export default function AdminConfigurarPagina({
                     <input type="text" placeholder="Descripción corta" value={act.descripcion} onChange={(e) => actualizarFila('actividades', index, 'descripcion', e.target.value)} aria-label={`Descripción de la actividad ${index + 1}`} />
                   </div>
                   <div className="pi-cfg-fila-acciones">
-                    <button type="button" onClick={() => moverFila('actividades', index, -1)} disabled={index === 0} aria-label="Subir"><FaArrowUp aria-hidden="true" /></button>
-                    <button type="button" onClick={() => moverFila('actividades', index, 1)} disabled={index === config.actividades.length - 1} aria-label="Bajar"><FaArrowDown aria-hidden="true" /></button>
-                    <button type="button" className="borrar" onClick={() => { setIconosAbiertos(null); quitarFila('actividades', index); }} aria-label="Quitar"><FaTrash aria-hidden="true" /></button>
+                    <Boton variante="fantasma" tamano="sm" icono={FaArrowUp} onClick={() => moverFila('actividades', index, -1)} disabled={index === 0} aria-label="Subir" />
+                    <Boton variante="fantasma" tamano="sm" icono={FaArrowDown} onClick={() => moverFila('actividades', index, 1)} disabled={index === config.actividades.length - 1} aria-label="Bajar" />
+                    <Boton variante="peligro-suave" tamano="sm" icono={FaTrash} onClick={() => { setIconosAbiertos(null); quitarFila('actividades', index); }} aria-label="Quitar" />
                   </div>
 
                   {abierto && (
@@ -483,13 +481,13 @@ export default function AdminConfigurarPagina({
               <h3><span className="pi-cfg-num">4</span><FaRegCalendarAlt aria-hidden="true" /> Cronograma</h3>
               <div className="pi-cfg-header-btns">
                 {config.cronograma.length > 1 && (
-                  <button type="button" className="pi-admin-btn-add pi-cfg-btn-sec" onClick={ordenarCronograma}>
-                    <FaSortAmountDown aria-hidden="true" /> Ordenar por hora
-                  </button>
+                  <Boton variante="fantasma" tamano="sm" icono={FaSortAmountDown} onClick={ordenarCronograma}>
+                    Ordenar por hora
+                  </Boton>
                 )}
-                <button type="button" className="pi-admin-btn-add" onClick={() => agregarFila('cronograma', { hora: horaSiguiente(config.cronograma), actividad: '' })}>
-                  <FaPlus aria-hidden="true" /> Añadir
-                </button>
+                <Boton variante="secundario" tamano="sm" icono={FaPlus} onClick={() => agregarFila('cronograma', { hora: horaSiguiente(config.cronograma), actividad: '' })}>
+                  Añadir
+                </Boton>
               </div>
             </div>
             <p className="texto-ayuda">Los primeros 4 se ven en el encabezado; el resto, en "Ver todas las actividades".</p>
@@ -503,9 +501,9 @@ export default function AdminConfigurarPagina({
                   <input type="time" value={item.hora} onChange={(e) => actualizarFila('cronograma', index, 'hora', e.target.value)} className="pi-admin-time-input" aria-label={`Hora ${index + 1}`} />
                   <input type="text" placeholder="¿Qué pasa a esta hora?" value={item.actividad} className="pi-cfg-crono-texto" onChange={(e) => actualizarFila('cronograma', index, 'actividad', e.target.value)} aria-label={`Actividad ${index + 1}`} />
                   <div className="pi-cfg-fila-acciones">
-                    <button type="button" onClick={() => moverFila('cronograma', index, -1)} disabled={index === 0} aria-label="Subir"><FaArrowUp aria-hidden="true" /></button>
-                    <button type="button" onClick={() => moverFila('cronograma', index, 1)} disabled={index === config.cronograma.length - 1} aria-label="Bajar"><FaArrowDown aria-hidden="true" /></button>
-                    <button type="button" className="borrar" onClick={() => quitarFila('cronograma', index)} aria-label="Quitar"><FaTrash aria-hidden="true" /></button>
+                    <Boton variante="fantasma" tamano="sm" icono={FaArrowUp} onClick={() => moverFila('cronograma', index, -1)} disabled={index === 0} aria-label="Subir" />
+                    <Boton variante="fantasma" tamano="sm" icono={FaArrowDown} onClick={() => moverFila('cronograma', index, 1)} disabled={index === config.cronograma.length - 1} aria-label="Bajar" />
+                    <Boton variante="peligro-suave" tamano="sm" icono={FaTrash} onClick={() => quitarFila('cronograma', index)} aria-label="Quitar" />
                   </div>
                 </li>
               ))}
@@ -517,14 +515,16 @@ export default function AdminConfigurarPagina({
         <aside className="pi-cfg-preview" aria-label="Vista previa en vivo">
           <div className="pi-cfg-preview-barra">
             <span><FaEye aria-hidden="true" /> Vista previa en vivo</span>
-            <div className="pi-cfg-dispositivos" role="group" aria-label="Tamaño de la vista previa">
-              <button type="button" className={dispositivo === 'escritorio' ? 'activo' : ''} onClick={() => setDispositivo('escritorio')} aria-pressed={dispositivo === 'escritorio'} aria-label="Escritorio">
-                <FaDesktop aria-hidden="true" />
-              </button>
-              <button type="button" className={dispositivo === 'celular' ? 'activo' : ''} onClick={() => setDispositivo('celular')} aria-pressed={dispositivo === 'celular'} aria-label="Celular">
-                <FaMobileAlt aria-hidden="true" />
-              </button>
-            </div>
+            <Pestanas
+              variante="segmento"
+              etiqueta="Tamaño de la vista previa"
+              activo={dispositivo}
+              onCambio={setDispositivo}
+              items={[
+                { id: 'escritorio', etiqueta: 'Escritorio', icono: FaDesktop, soloIcono: true },
+                { id: 'celular', etiqueta: 'Celular', icono: FaMobileAlt, soloIcono: true },
+              ]}
+            />
           </div>
           <div className={`pi-cfg-marco pi-cfg-marco--${dispositivo}`}>
             <VistaPreviaPagina config={config} evento={eventoParaPreview} resaltar={resaltar} />
@@ -548,7 +548,7 @@ export default function AdminConfigurarPagina({
           >
             <div className="pi-cfg-modal-header">
               <h3 id="cfg-preview-titulo">Vista completa · {eventoNombre}</h3>
-              <button type="button" className="pi-admin-btn-close-dark" onClick={() => setShowPreview(false)} aria-label="Cerrar"><FaTimes aria-hidden="true" /></button>
+              <Boton variante="fantasma" icono={FaTimes} onClick={() => setShowPreview(false)} aria-label="Cerrar" className="pi-cfg-modal-cerrar" />
             </div>
             <div className="pi-cfg-modal-body">
               <VistaPreviaPagina config={config} evento={eventoParaPreview} />

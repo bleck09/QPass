@@ -4,6 +4,7 @@ import {
   FaBolt, FaTicketAlt, FaStore,
 } from 'react-icons/fa';
 import './HeroSection.css';
+import Boton from '../../components/Boton.jsx';
 
 /**
  * Curva Bézier suave a partir de N puntos (viewBox 0 0 240 60).
@@ -205,10 +206,9 @@ export default function HeroSection() {
             </p>
 
             <div className="qp-hero__acciones">
-              <a href="#cartelera" className="qp-hero__btn qp-hero__btn--primario">
-                <span>Ver cartelera</span>
-                <FaArrowRight aria-hidden="true" />
-              </a>
+              <Boton como="a" href="#cartelera" variante="acento" tamano="lg" pildora iconoDerecha={FaArrowRight}>
+                Ver cartelera
+              </Boton>
             </div>
           </div>
 

@@ -20,10 +20,11 @@ export const esVigente = (evento) => new Date(evento.fechaFin) >= new Date();
 //  - en_curso   : ya empezó (ahora >= fecha) y todavía no terminó
 //  - proximo    : todavía no empieza
 export const ESTADO_EVENTO = {
-  proximo:    { label: 'Próximo',    clase: 'ev-proximo' },
-  en_curso:   { label: 'En curso',   clase: 'ev-en-curso' },
-  finalizado: { label: 'Finalizado', clase: 'ev-finalizado' },
-  archivado:  { label: 'Archivado',  clase: 'ev-archivado' },
+  // tono: el de la <Insignia> única (BadgeEstadoEvento); clase: la usa el calendario.
+  proximo:    { label: 'Próximo',    clase: 'ev-proximo',    tono: 'info' },
+  en_curso:   { label: 'En curso',   clase: 'ev-en-curso',   tono: 'ok' },
+  finalizado: { label: 'Finalizado', clase: 'ev-finalizado', tono: 'warn' },
+  archivado:  { label: 'Archivado',  clase: 'ev-archivado',  tono: 'neutro' },
 };
 
 // Estado de stock de una categoría de ticket, para el badge de la landing:

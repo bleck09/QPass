@@ -1,18 +1,20 @@
 import { ESTADO_EVENTO, estadoEvento } from '../utils/eventos.js';
-import './BadgeEstadoEvento.css';
+import Insignia from './Insignia.jsx';
 
-// Píldora de estado de un evento (Próximo / En curso / Finalizado / Archivado).
-// El estado se deriva de fechas + flags — ver utils/eventos.js.
-export default function BadgeEstadoEvento({ evento, className = '' }) {
+// Insignia de estado de un evento (Próximo / En curso / Finalizado / Archivado).
+// El estado se deriva de fechas + flags — ver utils/eventos.js. Usa la
+// Insignia única: el tono sale de ESTADO_EVENTO[...].tono.
+export default function BadgeEstadoEvento({ evento, className = '', solida = false }) {
   // Sin datos temporales (ej. tarjetas de puesto que reusan <EventoCard>) no hay estado que mostrar.
   if (!evento || (!evento.fecha && !evento.fechaFin && !evento.estado && !evento.archivadoEn)) {
     return null;
   }
-  const info = ESTADO_EVENTO[estadoEvento(evento)];
+  const estado = estadoEvento(evento);
+  const info = ESTADO_EVENTO[estado];
   if (!info) return null;
   return (
-    <span className={`pi-badge-estado-evento ${info.clase} ${className}`}>
+    <Insignia tono={info.tono} punto latido={estado === 'en_curso'} solida={solida} className={className}>
       {info.label}
-    </span>
+    </Insignia>
   );
 }

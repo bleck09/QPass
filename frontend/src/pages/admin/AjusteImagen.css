@@ -26,24 +26,6 @@
 
 .pi-ajimg-cab strong svg { color: var(--info-text); }
 
-.pi-ajimg-reset {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  min-height: 2rem;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-full);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-family: inherit;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-}
-
-.pi-ajimg-reset:hover { color: var(--text-primary); border-color: var(--accent); }
-
 .pi-ajimg-ayuda { margin: 0; font-size: var(--text-xs); line-height: var(--leading-normal); color: var(--text-secondary); }
 
 /* ---------- Foto con punto focal ---------- */
@@ -119,22 +101,6 @@
 
 /* ---------- Encuadres rápidos ---------- */
 .pi-ajimg-encuadres { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
-
-.pi-ajimg-encuadres button {
-  min-height: 2rem;
-  padding: 0 var(--space-3);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-full);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-}
-
-.pi-ajimg-encuadres button:hover { border-color: var(--accent); }
-.pi-ajimg-encuadres button.activo { border-color: var(--action); background: var(--action); color: var(--text-on-accent); }
 
 .pi-ajimg-coord { margin-left: auto; font-size: var(--text-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 

@@ -4,35 +4,15 @@
    ========================================================================= */
 
 .ev-menu__filtros {
-  display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-8);
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 auto var(--space-8);
 }
 
-.ev-menu__filtros button {
-  min-height: 2.5rem;
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-full);
-  border: 1px solid color-mix(in srgb, var(--color-texto-titulo) 18%, transparent);
-  background: transparent;
-  color: var(--color-texto-p);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  text-transform: capitalize;
-  cursor: pointer;
-  transition: background-color var(--duration-fast), color var(--duration-fast), border-color var(--duration-fast);
-}
+.ev-menu__filtros button { text-transform: capitalize; }
 
-.ev-menu__filtros button:hover { border-color: var(--color-primario); color: var(--color-texto-titulo); }
-
-.ev-menu__filtros button.activo {
-  border-color: var(--color-primario);
-  background: var(--color-primario);
-  color: var(--color-fondo);
-}
+.ev-menu__vaciar { align-self: flex-start; }
 
 .ev-menu__layout {
   display: grid;
@@ -204,9 +184,7 @@
 .ev-menu__cant button:active { transform: scale(0.9); }
 
 .ev-menu__cant button:focus-visible,
-.ev-menu__filtros button:focus-visible,
 .ev-menu__mas:focus-visible,
-.ev-menu__vaciar:focus-visible,
 .ev-menu__detalle-toggle:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
@@ -352,23 +330,6 @@
 
 .ev-menu__sugerencia svg,
 .ev-menu__nota svg { flex-shrink: 0; margin-top: 0.2em; color: var(--color-primario); }
-
-.ev-menu__vaciar {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  align-self: flex-start;
-  min-height: 2.25rem;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--color-texto-p);
-  font-family: inherit;
-  font-size: var(--text-xs);
-  cursor: pointer;
-}
-
-.ev-menu__vaciar:hover { color: var(--color-texto-titulo); }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 62rem) {

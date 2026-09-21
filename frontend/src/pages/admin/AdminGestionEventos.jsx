@@ -29,6 +29,7 @@ import AdminConfigurarPagina from './AdminConfigurarPagina.jsx';
 import Mapa from './Mapa.jsx';
 import Admin from './Admin.jsx';
 import FormularioEventoPasos from './FormularioEventoPasos.jsx';
+import Boton from '../../components/Boton.jsx';
 import './AdminGestionEventos.css';
 import './GestionEventosNav.css';
 
@@ -859,9 +860,9 @@ export default function AdminGestionEventos() {
                 Paso {indicePaso + 1} de {pasosPreparar.length}
                 {estadoPaso(pasosPreparar[indicePaso]) === 'listo' && <> · <FaCheckCircle aria-hidden="true" /> listo</>}
               </span>
-              <button type="button" onClick={() => { setPestana(pasoSiguiente.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
-                Siguiente: {pasoSiguiente.label} <FaArrowRight aria-hidden="true" />
-              </button>
+              <Boton iconoDerecha={FaArrowRight} onClick={() => { setPestana(pasoSiguiente.id); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>
+                Siguiente: {pasoSiguiente.label}
+              </Boton>
             </div>
           )}
           </div>

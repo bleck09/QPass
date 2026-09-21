@@ -4,16 +4,7 @@
   display: flex; flex-direction: column; gap: 24px;
 }
 
-.pi-usr-header {
-  display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;
-}
-
-.pi-usr-header h1,
-.pi-usr-header h2 { color: var(--text-primary); font-size: var(--text-xl); font-weight: 700; margin: 0; }
-
-.pi-usr-tabs { display: flex; gap: 8px; background-color: var(--bg-page); padding: 4px; border-radius: var(--radius-md); }
-.pi-usr-tabs button { display: flex; align-items: center; gap: 8px; border: none; background: none; padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; }
-.pi-usr-tabs button.activo { background-color: var(--bg-surface); color: var(--indigo-profundo); box-shadow: 0 1px 4px rgba(10, 14, 39, 0.1); }
+/* Encabezado y pestañas: componentes EncabezadoPagina y Pestanas. */
 
 /* --- TARJETAS GENÉRICAS --- */
 .pi-usr-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); padding: var(--space-6); }
@@ -30,26 +21,7 @@
   background: var(--azul-noche, #0b1120); color: var(--text-on-accent); border-radius: var(--radius-xl); padding: 40px 20px;
   display: flex; flex-direction: column; gap: 24px; overflow: hidden; position: relative;
 }
-.pi-usr-eventos-pasados-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
-.pi-usr-evento-pasado-card { border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--border); background: var(--bg-page); }
-.pi-usr-evento-pasado-card img { width: 100%; height: 120px; object-fit: cover; display: block; }
-.pi-usr-evento-pasado-info { padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
-.pi-usr-evento-pasado-info strong { font-size: var(--text-sm); color: var(--text-primary); }
-.pi-usr-evento-pasado-info span { display: flex; align-items: center; gap: 8px; font-size: var(--text-xs); color: var(--text-secondary); }
-.pi-usr-evento-pasado-info span.pi-usr-evento-pasado-saldo {
-  color: var(--ambar-aviso-texto, #9a6a15);
-  font-weight: 700;
-}
-
-/* Móvil: 2 columnas compactas (igual que "Eventos Pasados" de la landing). */
-@media (max-width: 576px) {
-  .pi-usr-eventos-pasados-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-  .pi-usr-evento-pasado-card img { height: auto; aspect-ratio: 4 / 3; }
-  .pi-usr-evento-pasado-info { padding: 8px 10px 10px; min-width: 0; }
-  .pi-usr-evento-pasado-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .pi-usr-evento-pasado-info span { align-items: flex-start; gap: 4px; line-height: 1.35; }
-  .pi-usr-evento-pasado-info span svg { flex-shrink: 0; margin-top: 2px; }
-}
+/* Eventos pasados: estilos en EventosTab.css. */
 
 /* --- PESTAÑA: COMPRAR --- */
 .pi-usr-comprar { display: flex; flex-direction: column; gap: 20px; }
@@ -199,92 +171,12 @@
 .pi-usr-btn-demo { align-self: flex-start; background-color: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); border: 1px dashed var(--ambar-aviso); padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 700; cursor: pointer; }
 .pi-usr-btn-demo:hover { background-color: rgba(255, 176, 32, 0.25); }
 
-.pi-usr-btn-revisar { align-self: flex-start; display: flex; align-items: center; gap: 8px; background: var(--bg-surface); color: var(--indigo-profundo); border: 1px solid var(--border-strong); padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 700; cursor: pointer; transition: all 0.2s; }
-.pi-usr-btn-revisar:hover { background-color: var(--indigo-profundo-suave); border-color: var(--indigo-profundo); }
-
 /* =========================================================
    PESTAÑA: MIS ENTRADAS (manilla destacada + otras solicitudes + pasadas)
 ========================================================= */
 .pi-usr-mis-entradas { display: flex; flex-direction: column; gap: 16px; }
 
-/* Tu entrada propia y confirmada de un evento próximo, destacada en grande, con la imagen del evento de fondo. */
-.pi-usr-manilla-destacada {
-  position: relative; border-radius: var(--radius-xl); overflow: hidden; color: var(--text-on-accent);
-  background-color: var(--indigo-profundo); background-size: cover; background-position: center;
-  box-shadow: 0 10px 25px rgba(26, 43, 107, 0.25);
-}
-.pi-usr-manilla-overlay {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 24px; padding: 28px;
-  background: linear-gradient(120deg, rgba(10,14,39,0.92) 0%, rgba(10,14,39,0.78) 45%, rgba(26,43,107,0.55) 100%);
-}
-.pi-usr-manilla-destacada .manilla-qr { width: 140px; height: 140px; border-radius: var(--radius-lg); border: 5px solid rgba(255,255,255,0.2); flex-shrink: 0; }
-.pi-usr-manilla-destacada .manilla-qr-pendiente {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.75);
-  text-align: center; font-size: var(--text-xs); padding: 8px; box-sizing: border-box;
-}
-.pi-usr-manilla-destacada .pi-usr-qr-titulo { color: rgba(255,255,255,0.75); font-size: var(--text-xs); }
-.pi-usr-manilla-destacada .manilla-info { flex: 1; min-width: 200px; }
-.pi-usr-manilla-destacada .manilla-info h3 { margin: 4px 0 8px 0; font-size: var(--text-xl); font-weight: 800; }
-.pi-usr-manilla-destacada .manilla-datos { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; font-size: var(--text-xs); color: rgba(255,255,255,0.85); }
-.pi-usr-manilla-destacada .manilla-datos span { display: flex; align-items: center; gap: 8px; }
-/* Etiquetas de la entrada (jornada / categoría / número) en su propia fila */
-.pi-usr-manilla-destacada .manilla-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
-.pi-usr-manilla-destacada .manilla-badge { background: var(--indigo-profundo); color: var(--blanco); }
-.pi-usr-manilla-destacada .manilla-badge--categoria { background: var(--cian-digital); }
-
-/* Cuenta regresiva compacta en el espacio sobrante de la manilla destacada. */
-.pi-usr-manilla-countdown {
-  margin-left: auto; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  background: rgba(0,0,0,0.28); border-radius: var(--radius-lg); padding: 16px 20px; flex-shrink: 0;
-}
-.countdown-title-mini { font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; color: rgba(255,255,255,0.7); }
-.countdown-timer-mini { display: flex; align-items: center; gap: 8px; }
-.time-block-mini { display: flex; flex-direction: column; align-items: center; background: rgba(255,255,255,0.1); border-radius: var(--radius-md); padding: 8px 8px; min-width: 38px; }
-.time-number-mini { font-size: var(--text-lg); font-weight: 800; line-height: 1; }
-.time-label-mini { font-size: var(--text-xs); font-weight: 700; letter-spacing: 0.5px; color: rgba(255,255,255,0.6); margin-top: 4px; }
-.time-separator-mini { font-weight: 800; color: rgba(255,255,255,0.5); }
-.countdown-llego { display: flex; flex-direction: column; align-items: center; gap: 4px; font-weight: 800; font-size: var(--text-sm); white-space: nowrap; }
-.countdown-llego-icono { font-size: var(--text-2xl); }
-
-.pi-usr-mis-entradas-subtitulo { font-size: var(--text-base); font-weight: 700; color: var(--text-primary); margin: 4px 0 0 0; }
-
-/* "Mis Entradas" se ve como tarjetas o como tabla (Buscador + Tabla, con las
-   clases genéricas fila-nombre/celda-normal/celda-secundaria de Tabla.css) —
-   las dos vistas se mantienen, el usuario elige con este selector. */
-.pi-usr-mis-entradas-cabecera { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
-
-.pi-usr-vista-toggle { display: flex; gap: 4px; background-color: var(--bg-page); padding: 4px; border-radius: var(--radius-md); }
-.pi-usr-vista-toggle button {
-  display: flex; align-items: center; gap: 6px; border: none; background: none; padding: 6px 14px;
-  border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 600; color: var(--text-secondary); cursor: pointer; transition: all 0.2s;
-}
-.pi-usr-vista-toggle button.activo { background-color: var(--bg-surface); color: var(--indigo-profundo); box-shadow: 0 1px 4px rgba(10, 14, 39, 0.1); }
-
-/* La tabla de "Mis Entradas" reutiliza .pi-usr-tipo-celda/.pi-usr-detalle-consumo
-   (mismas clases que "Mis Transacciones"), para que las dos tablas se vean
-   con el mismo lenguaje visual — sin clases propias que mantener acá. */
-
-.pi-usr-entradas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
-
-/* Card compacta de una solicitud (lote de entradas), con la imagen del evento de fondo. */
-.pi-usr-compra-card {
-  position: relative; border-radius: var(--radius-lg); overflow: hidden; min-height: 200px;
-  display: flex; /* el overlay estira hasta abajo aunque la fila del grid sea más alta */
-  background-size: cover; background-position: center; box-shadow: 0 2px 10px rgba(10, 14, 39,0.08);
-}
-.pi-usr-compra-card-overlay {
-  position: relative; flex: 1; padding: 16px; display: flex; flex-direction: column; justify-content: space-between; gap: 8px;
-  background: linear-gradient(to bottom, rgba(10,14,39,0.15) 0%, rgba(10,14,39,0.75) 60%, rgba(10,14,39,0.92) 100%);
-  color: var(--text-on-accent);
-}
-.pi-usr-compra-card-badges { display: flex; gap: 8px; flex-wrap: wrap; }
-.pi-usr-compra-card-info { display: flex; flex-direction: column; gap: 4px; }
-.pi-usr-compra-card-info strong { font-size: var(--text-base); font-weight: 800; }
-.pi-usr-compra-card-info span { display: flex; align-items: center; gap: 8px; font-size: var(--text-xs); color: rgba(255,255,255,0.85); }
-.pi-usr-compra-card-acciones { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.pi-usr-compra-card-acciones .pi-usr-btn-revisar { align-self: auto; background: var(--bg-surface); }
-.pi-usr-compra-card-acciones .pi-usr-btn-demo { align-self: auto; }
+/* Manilla destacada, lista y tarjetas: estilos en MisEntradasTab.css. */
 
 /* QR de una entrada dentro del modal "Revisar mi solicitud" (compra ya aprobada). */
 .pi-usr-entrada-qr { display: flex; align-items: center; gap: 12px; background-color: var(--bg-surface); border-radius: var(--radius-md); padding: 8px; }
@@ -311,9 +203,6 @@
 .pi-usr-revision-datos { display: flex; flex-wrap: wrap; gap: 16px; font-size: var(--text-xs); color: var(--text-secondary); }
 .pi-usr-revision-datos span { display: flex; align-items: center; gap: 8px; }
 
-.pi-usr-btn-reportar-entrada { display: flex; align-items: center; gap: 8px; background: none; border: 1px dashed var(--ambar-aviso); color: var(--ambar-aviso-texto); padding: 8px 12px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 700; cursor: pointer; }
-.pi-usr-btn-reportar-entrada:hover { background-color: var(--ambar-aviso-suave); }
-
 .pi-usr-form-reporte { display: flex; flex-direction: column; gap: 8px; background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; margin-top: 8px; }
 .pi-usr-form-reporte label,
 .pi-usr-form-reporte legend { font-size: var(--text-xs); font-weight: 600; color: var(--text-primary); }
@@ -328,8 +217,6 @@
 
 .pi-usr-modal-acciones { display: flex; justify-content: flex-end; gap: 8px; }
 .pi-usr-modal-acciones .pi-usr-btn-enviar { width: auto; padding: 8px 20px; }
-.btn-cerrar-secundario { background: var(--bg-page); border: none; color: var(--text-primary); padding: 8px 16px; border-radius: var(--radius-md); font-size: var(--text-xs); font-weight: 700; cursor: pointer; }
-.btn-cerrar-secundario:hover { background-color: var(--border); }
 
 /* Credenciales (usado dentro de las cards de Mis Entradas) */
 .qr-miniatura { width: 80px; height: 80px; border-radius: var(--radius-md); border: 3px solid var(--bg-page); }
@@ -385,7 +272,6 @@
 .pi-usr-qr-titulo { display: flex; align-items: center; gap: 8px; font-size: var(--text-base); font-weight: 700; color: var(--text-primary); margin-bottom: 8px;}
 .pi-usr-qr-nota { font-size: var(--text-xs); color: var(--text-secondary); }
 
-
 /* Buscador + filtros del historial: separado del título y de la tabla (no "pegado"). */
 .pi-usr-hist-buscador { margin: 4px 0 20px; }
 
@@ -407,17 +293,6 @@
   .pi-usr-qr-card { flex-direction: column; text-align: center; }
   .qr-info-text { align-items: center; text-align: center; }
   .pi-usr-evento-header { flex-direction: column; text-align: center; }
-  .pi-usr-manilla-overlay { flex-direction: column; align-items: stretch; gap: 20px; padding: 24px 20px; text-align: center; }
-  .pi-usr-manilla-destacada .manilla-qr { align-self: center; }
-  .pi-usr-manilla-destacada .manilla-info { min-width: 0; }
-  .pi-usr-manilla-destacada .pi-usr-qr-titulo { justify-content: center; margin-bottom: 4px; }
-  .pi-usr-manilla-destacada .manilla-datos,
-  .pi-usr-manilla-destacada .manilla-badges { justify-content: center; }
-  /* la cuenta regresiva ocupa todo el ancho y cierra la tarjeta */
-  .pi-usr-manilla-countdown { margin-left: 0; width: 100%; box-sizing: border-box; }
-  .countdown-timer-mini { justify-content: center; }
-  .time-block-mini { flex: 1; max-width: 64px; }
-  .countdown-llego { flex-direction: row; justify-content: center; gap: 10px; }
 }
 
 /* --- Términos y condiciones en el pago (§T&C) --- */
@@ -558,38 +433,3 @@
   background: var(--ambar-aviso-suave, rgba(255,193,7,0.12));
 }
 
-.pi-usr-bill-btn-qr {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: auto;
-  margin-top: 12px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--indigo-profundo);
-  color: var(--text-on-accent);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.pi-usr-bill-btn-qr:hover { background: var(--indigo-profundo-hover); }
-
-.pi-usr-qr-grande {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-  text-align: center;
-  padding: 8px 0 4px;
-}
-.pi-usr-qr-grande img {
-  border-radius: var(--radius-lg);
-  background: #fff;
-  padding: 12px;
-  border: 1px solid var(--border);
-}
-
-.pi-usr-qr-modal-img { border-radius: var(--radius-md); background: #fff; padding: 10px; border: 1px solid var(--border); }

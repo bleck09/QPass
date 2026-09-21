@@ -117,7 +117,7 @@
 }
 
 /* El badge de estado va dentro de <strong>; anula la regla ".pi-entrega-evento-info span". */
-.pi-entrega-evento-info strong .pi-badge-estado-evento {
+.pi-entrega-evento-info strong .qp-insignia {
   display: inline-flex;
   font-size: var(--text-xs);
   vertical-align: middle;

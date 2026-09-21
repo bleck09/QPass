@@ -471,31 +471,6 @@
   letter-spacing: 0.04em;
 }
 
-.qp-dest__cta {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-1);
-  padding: var(--space-3) var(--space-6);
-  border: none;
-  border-radius: var(--radius-full);
-  background: var(--cian-digital);
-  color: var(--texto-sobre-vivo);
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-  cursor: pointer;
-  box-shadow: var(--shadow-md);
-  transition: transform var(--duration-fast) var(--ease-out),
-              background-color var(--duration-fast) var(--ease-out),
-              box-shadow var(--duration-fast) var(--ease-out);
-}
-
-.qp-dest__cta:hover {
-  background: var(--cian-digital-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-}
-
 /* --- Contador y flechas --- */
 .qp-dest__controles {
   display: flex;
@@ -522,38 +497,9 @@
 .qp-dest__contador-barra { font-size: var(--text-xs); color: var(--n-500); }
 .qp-dest__contador-total { font-size: var(--text-xs); color: var(--n-300); }
 
+.qp-dest__cta { margin-top: var(--space-1); } /* <Boton variante="acento"> */
+
 .qp-dest__flechas { display: flex; gap: var(--space-2); }
-
-.qp-dest__flecha {
-  display: grid;
-  place-items: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--blanco) 25%, transparent);
-  background: color-mix(in srgb, var(--blanco) 12%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--blanco);
-  font-size: var(--text-base);
-  cursor: pointer;
-  transition: background-color var(--duration-normal) var(--ease-out),
-              color var(--duration-normal) var(--ease-out),
-              transform var(--duration-normal) var(--ease-out);
-}
-
-.qp-dest__flecha:hover {
-  background: var(--cian-digital);
-  border-color: var(--cian-digital);
-  color: var(--texto-sobre-vivo);
-  transform: scale(1.08);
-}
-
-.qp-dest__flecha:focus-visible,
-.qp-dest__cta:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 3px;
-}
 
 /* =======================================================
    4. BANNER DE CIERRE
@@ -716,9 +662,7 @@
   .qp-dest__chip-punto { animation: none; }
   .qp-dest__item,
   .qp-dest__item--expandiendo,
-  .qp-dest__info,
-  .qp-dest__cta,
-  .qp-dest__flecha { transition: none; }
+  .qp-dest__info { transition: none; }
   .qp-dest__item--entrando { animation: none; }
 }
 

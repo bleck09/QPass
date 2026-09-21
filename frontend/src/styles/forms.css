@@ -221,26 +221,6 @@
   box-shadow: var(--shadow-sm);
 }
 
-.btn-quitar-imagen {
-  background: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  border: none;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.2s, color 0.2s;
-}
-
-.btn-quitar-imagen:hover {
-  background: var(--rojo-error);
-  color: var(--text-on-accent);
-}
-
 /* --- Checkbox en tarjeta (listas de puestos, permisos…) --- */
 .checkbox-grid {
   display: flex;

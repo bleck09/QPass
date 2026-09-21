@@ -301,7 +301,7 @@
 }
 
 /* --- FORMULARIOS --- .formulario / .input-group / .input-monto* / .upload-*
-   / .preview-* / .btn-quitar-imagen / .btn-upload-small -> styles/forms.css */
+   / .preview-* / .btn-upload-small -> styles/forms.css; .btn-quitar-imagen -> styles/buttons.css */
 
 /* Formularios en línea (Para añadir productos) */
 .form-añadir-producto {

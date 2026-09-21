@@ -42,22 +42,6 @@
 
 .qp-pie__marca .qpass-home-logo { margin-left: 0; }
 
-.qp-pie__cta {
-  min-height: 2.75rem;
-  padding: var(--space-2) var(--space-5);
-  border-radius: var(--radius-full);
-  border: 1px solid color-mix(in srgb, var(--cian-digital) 50%, transparent);
-  background: color-mix(in srgb, var(--cian-digital) 12%, transparent);
-  color: var(--cian-digital);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out), color var(--duration-fast) var(--ease-out);
-}
-
-.qp-pie__cta:hover { background: var(--cian-digital); color: var(--texto-sobre-vivo); }
-
 .qp-pie__col h2 {
   margin: 0 0 var(--space-4);
   font-size: var(--text-xs);
@@ -112,26 +96,6 @@
 
 .qp-pie__base p { margin: 0; font-size: var(--text-xs); color: var(--text-secondary); }
 
-.qp-pie__arriba {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 2.75rem;
-  padding: 0 var(--space-4);
-  border: none;
-  border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--blanco) 6%, transparent);
-  color: var(--n-200);
-  font-family: inherit;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-}
-
-.qp-pie__arriba svg { transition: transform var(--duration-normal) var(--ease-out); }
-.qp-pie__arriba:hover { color: var(--blanco); }
-.qp-pie__arriba:hover svg { transform: translateY(-3px); }
-
 @media (max-width: 62rem) {
   .qp-pie__grid { grid-template-columns: 1fr 1fr; }
   .qp-pie__marca { grid-column: 1 / -1; }
@@ -143,6 +107,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .qp-pie__col a:hover,
-  .qp-pie__arriba:hover svg { transform: none; }
+  .qp-pie__col a:hover { transform: none; }
 }

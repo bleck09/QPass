@@ -10,31 +10,6 @@
   gap: var(--space-2);
 }
 
-.ev-acc__btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-height: 2.75rem;
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-full);
-  border: 1px solid color-mix(in srgb, var(--color-texto-titulo) 25%, transparent);
-  background: color-mix(in srgb, var(--color-texto-titulo) 8%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  color: var(--color-texto-titulo);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-  transition: background-color var(--duration-fast), border-color var(--duration-fast);
-}
-
-.ev-acc__btn:hover {
-  background: color-mix(in srgb, var(--color-texto-titulo) 16%, transparent);
-  border-color: var(--color-primario);
-}
-
-.ev-acc__btn:focus-visible,
 .ev-acc__menu a:focus-visible,
 .ev-acc__menu button:focus-visible {
   outline: 2px solid var(--focus-ring);

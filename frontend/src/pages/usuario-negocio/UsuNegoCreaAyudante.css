@@ -41,7 +41,6 @@ button.badge-puesto--btn:hover { background-color: var(--cian-digital); color: v
    -> .btn-acciones + .btn-secundario-sm(--peligro) (styles/buttons.css) */
 .tabla-vacia { text-align: center; padding: 40px !important; color: var(--text-secondary); font-style: italic; font-size: var(--text-base); }
 
-
 /* =========================================================
    MODAL (ESTILO EXACTO AL DE TUS IMÁGENES Y REFERENCIA)
 ========================================================= */
@@ -64,10 +63,9 @@ button.badge-puesto--btn:hover { background-color: var(--cian-digital); color: v
   border-color: var(--cian-digital); box-shadow: 0 0 0 3px var(--cian-digital-suave);
 }
 
-/* .upload-* / .preview-zone / .img-preview-avatar / .btn-quitar-imagen -> styles/forms.css (global) */
+/* .upload-* / .preview-zone / .img-preview-avatar -> styles/forms.css (global); .btn-quitar-imagen -> styles/buttons.css */
 
 /* Footer de acciones -> .modal-actions global (styles/forms.css);
    botones -> .btn-primario / .btn-cancelar global (styles/buttons.css) */
-
 
 @media (max-width: 600px) { .pi-ayudante-search { max-width: 100%; } }

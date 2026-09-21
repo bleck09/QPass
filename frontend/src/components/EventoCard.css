@@ -140,7 +140,7 @@
 }
 
 /* Badges de estado que se pasan por props: legibles sobre el scrim */
-.qp-evento-card__badges .pi-badge-estado-evento {
+.qp-evento-card__badges .qp-insignia {
   display: inline-flex;
   vertical-align: middle;
   font-size: var(--text-xs);

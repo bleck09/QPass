@@ -124,24 +124,7 @@
 }
 
 /* --- BOTONES GLOBALES --- */
-.btn-primario {
-  background-color: var(--indigo-profundo);
-  color: var(--text-on-accent);
-  border: none;
-  padding: 8px 20px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.2s;
-}
-
-.btn-primario:hover { 
-  background-color: var(--indigo-profundo-hover); 
-}
+/* .btn-primario / .btn-cancelar: definidos UNA vez en styles/buttons.css (no redefinir acá). */
 
 .btn-secundario {
   background-color: var(--bg-surface);
@@ -216,7 +199,6 @@
 
 .btn-icon-visible { border-color: var(--verde-recarga); color: var(--verde-recarga); }
 .btn-icon-visible:hover { background: var(--verde-recarga-suave); }
-
 
 /* =======================================================
    VISTA 0: CONTORNO DEL RECINTO (mapa real)
@@ -384,7 +366,6 @@
   transform-origin: bottom right;
 }
 
-
 /* =======================================================
    MODAL GENERAL (Formulario de añadir/editar)
 ======================================================= */
@@ -438,12 +419,8 @@
 
 .preview-zone { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-md); background-color: var(--bg-surface); }
 .img-preview-rect { width: 100%; aspect-ratio: 16 / 9; object-fit: contain; border-radius: var(--radius-sm); }
-.btn-quitar-imagen { background: var(--rojo-error-suave); color: var(--rojo-error-texto); border: none; padding: 8px 12px; border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; }
-.btn-quitar-imagen:hover { background: var(--rojo-error); color: var(--text-on-accent); }
 
 .modal-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px; padding-top: 16px; border-top: 1px solid var(--border);}
-.btn-cancelar { background: var(--bg-surface); border: 1px solid var(--border-strong); color: var(--text-primary); padding: 8px 16px; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; font-size: var(--text-sm);}
-.btn-cancelar:hover { background: var(--bg-page); }
 /* ============================================================================
    MÓVIL: la barra del plano ponía el texto de ayuda y los botones en la misma
    fila, así que el texto quedaba en una columna de una palabra por línea y los

@@ -144,11 +144,13 @@
   --ok:        var(--verde-recarga);
   --ok-text:   var(--verde-recarga-texto);
   --ok-bg:     var(--verde-recarga-suave);
+  --ok-hover:  var(--verde-recarga-hover);
   --warn:      var(--ambar-aviso);
   --warn-text: var(--ambar-aviso-texto);
   --warn-bg:   var(--ambar-aviso-suave);
   --danger:      var(--rojo-error);
   --danger-text: var(--rojo-error-texto);
+  --danger-hover: var(--rojo-error-hover);
   --danger-bg:   var(--rojo-error-suave);
   --info:      var(--cian-digital);
   --info-text: var(--cian-digital-texto);

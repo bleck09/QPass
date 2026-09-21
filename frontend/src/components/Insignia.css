@@ -1,0 +1,54 @@
+/* =========================================================================
+   INSIGNIA ÚNICA — ver Insignia.jsx. Tokens semánticos (claro/oscuro).
+   ========================================================================= */
+
+.qp-insignia {
+  --tono: var(--text-secondary);
+  --tono-bg: var(--bg-sunken);
+  --tono-texto: var(--text-secondary);
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--tono-bg);
+  color: var(--tono-texto);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1.4;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.qp-insignia--ok     { --tono: var(--ok);     --tono-bg: var(--ok-bg);     --tono-texto: var(--ok-text); }
+.qp-insignia--warn   { --tono: var(--warn);   --tono-bg: var(--warn-bg);   --tono-texto: var(--warn-text); }
+.qp-insignia--danger { --tono: var(--danger); --tono-bg: var(--danger-bg); --tono-texto: var(--danger-text); }
+.qp-insignia--info   { --tono: var(--info);   --tono-bg: var(--info-bg);   --tono-texto: var(--info-text); }
+.qp-insignia--marca  { --tono: var(--action); --tono-bg: var(--brand-bg);  --tono-texto: var(--action); }
+
+/* Sólida: fondo lleno, para ponerla sobre fotos o fondos oscuros. */
+.qp-insignia--solida { background: var(--tono); color: var(--text-on-vivid); }
+.qp-insignia--solida.qp-insignia--marca,
+.qp-insignia--solida.qp-insignia--neutro { color: var(--text-on-accent); }
+.qp-insignia--solida.qp-insignia--neutro { --tono: var(--n-700); }
+
+.qp-insignia-ic { flex-shrink: 0; font-size: 0.95em; }
+
+.qp-insignia-punto {
+  --latido-color: var(--tono);
+  flex-shrink: 0;
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.qp-insignia--solida .qp-insignia-punto { background: currentColor; }
+
+/* Keyframe compartido (styles/animaciones.css). */
+.qp-insignia-punto.late { animation: qp-latido 1.6s ease-out infinite; }
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-insignia-punto.late { animation: none; }
+}

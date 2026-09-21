@@ -52,36 +52,9 @@
 .pi-cmp-hero-datos span { display: inline-flex; align-items: center; gap: var(--space-2); }
 .pi-cmp-hero-datos svg { color: var(--cian-digital); }
 
-.pi-cmp-cuenta { position: relative; display: flex; align-items: center; gap: var(--space-2); }
+/* Cuenta regresiva: componente global CuentaRegresiva (variante oscura). */
+.pi-cmp-hero > .qp-cuenta { position: relative; }
 
-.pi-cmp-cuenta-tit {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-right: var(--space-1);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  text-transform: uppercase;
-  color: var(--n-300);
-}
-
-.pi-cmp-cuenta-bloque {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  min-width: 3.25rem;
-  padding: var(--space-2);
-  overflow: hidden;
-  border-radius: var(--radius-md);
-  border: 1px solid color-mix(in srgb, var(--n-0) 20%, transparent);
-  background: color-mix(in srgb, var(--n-950) 55%, transparent);
-  backdrop-filter: blur(8px);
-}
-
-.pi-cmp-cuenta-bloque b { display: inline-block; font-size: var(--text-lg); font-variant-numeric: tabular-nums; animation: pCmpDigito 400ms var(--ease-out); }
-.pi-cmp-cuenta-bloque em { font-size: 0.65rem; font-style: normal; text-transform: uppercase; color: var(--n-300); }
-
-@keyframes pCmpDigito { from { transform: translateY(-70%); opacity: 0; } }
 @keyframes pCmpAparecer { from { opacity: 0; transform: translateY(var(--space-3)); } }
 
 /* ---------- Indicador de pasos ---------- */
@@ -407,21 +380,6 @@
 
 .pi-cmp-estado.ok { background: var(--ok-bg); color: var(--ok-text); animation: pCmpPop 400ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 
-.pi-cmp-quitar {
-  display: grid;
-  place-items: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--danger-bg);
-  color: var(--danger-text);
-  cursor: pointer;
-}
-
-.pi-cmp-quitar:hover { background: var(--danger); color: var(--text-on-vivid); }
-.pi-cmp-quitar:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-
 .pi-cmp-item-campos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); }
 .pi-cmp-item-campos .input-group { margin: 0; }
 
@@ -496,44 +454,6 @@
 .pi-cmp-check li.ok { color: var(--text-primary); }
 .pi-cmp-check li.ok svg { color: var(--ok); }
 
-/* Botón de pago: coral (acción de compra) con destello. */
-.pi-cmp-pagar {
-  position: relative;
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  min-height: 3rem;
-  padding: 0 var(--space-5);
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--commerce);
-  color: var(--text-on-vivid);
-  font-family: inherit;
-  font-size: var(--text-base);
-  font-weight: 800;
-  cursor: pointer;
-  transition: background-color var(--duration-fast), transform var(--duration-fast) var(--ease-out);
-}
-
-.pi-cmp-pagar::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -60%;
-  width: 40%;
-  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--n-0) 55%, transparent), transparent);
-  transform: skewX(-20deg);
-  transition: left 650ms var(--ease-out);
-}
-
-.pi-cmp-pagar:hover:not(:disabled) { background: var(--commerce-hover); transform: translateY(-2px); }
-.pi-cmp-pagar:hover:not(:disabled)::before { left: 130%; }
-.pi-cmp-pagar:disabled { opacity: 0.45; cursor: not-allowed; }
-.pi-cmp-pagar:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
-
 .pi-cmp-barra-movil { display: none; }
 
 /* ---------- Modal de pago: tres pasos ---------- */
@@ -588,8 +508,6 @@
 .pi-cmp-monto-tag { font-size: var(--text-xs); font-weight: var(--weight-bold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); }
 .pi-cmp-monto { font-size: var(--text-3xl); font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; color: var(--text-primary); }
 
-.pi-cmp-copiar,
-.pi-cmp-listo,
 .pi-cmp-cambiar {
   display: inline-flex;
   align-items: center;
@@ -606,9 +524,7 @@
   cursor: pointer;
 }
 
-.pi-cmp-copiar:hover, .pi-cmp-cambiar:hover { border-color: var(--accent); }
-.pi-cmp-listo { border-color: var(--action); background: var(--action); color: var(--text-on-accent); }
-.pi-cmp-listo:hover { background: var(--action-hover); }
+.pi-cmp-cambiar:hover { border-color: var(--accent); }
 
 /* Zona de carga: el input real cubre toda la zona (clic y arrastrar). */
 .pi-cmp-subir {
@@ -776,10 +692,10 @@
 @media (prefers-reduced-motion: reduce) {
   .pi-cmp-hero, .pi-cmp-cat, .pi-cmp-item, .pi-cmp-lineas li, .pi-cmp-total strong, .pi-cmp-cat-badge,
   .pi-cmp-estado.ok, .pi-cmp-vacio svg, .pi-cmp-subir svg, .pi-cmp-comprobante, .pi-cmp-barra-movil,
-  .pi-cmp-cuenta-bloque b, .pi-cmp-pasos li.actual .pi-cmp-paso-num, .pi-cmp-pago-paso.actual .pi-cmp-pago-num,
+   .pi-cmp-pasos li.actual .pi-cmp-paso-num, .pi-cmp-pago-paso.actual .pi-cmp-pago-num,
   .pi-cmp-exito h3, .pi-cmp-exito > p, .pi-cmp-exito-pasos { animation: none; }
   .pi-cmp-confeti { display: none; }
   .pi-cmp-exito-check circle, .pi-cmp-exito-check path { animation: none; stroke-dashoffset: 0; }
-  .pi-cmp-cat, .pi-cmp-pagar, .pi-cmp-cat-ic { transition: none; }
-  .pi-cmp-cat:hover:not(:disabled), .pi-cmp-pagar:hover:not(:disabled) { transform: none; }
+  .pi-cmp-cat, .pi-cmp-cat-ic { transition: none; }
+  .pi-cmp-cat:hover:not(:disabled) { transform: none; }
 }

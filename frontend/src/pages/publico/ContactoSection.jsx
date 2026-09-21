@@ -5,6 +5,7 @@ import {
 } from 'react-icons/fa';
 import { CONTACTO, MOTIVOS_CONTACTO } from '../../constants/contacto.js';
 import './ContactoSection.css';
+import Boton from '../../components/Boton.jsx';
 
 const MOTIVOS = Object.values(MOTIVOS_CONTACTO);
 
@@ -146,10 +147,9 @@ export default function ContactoSection({ motivo = MOTIVOS[0] }) {
           />
         </div>
 
-        <button type="submit" className="qp-contacto__enviar">
+        <Boton type="submit" variante="acento" pildora anchoCompleto iconoDerecha={FaArrowRight}>
           Enviar mensaje
-          <FaArrowRight aria-hidden="true" />
-        </button>
+        </Boton>
 
         {/* aria-live: quien usa lector de pantalla se entera del cambio sin mover el foco. */}
         <p className="qp-contacto__aviso" role="status" aria-live="polite">

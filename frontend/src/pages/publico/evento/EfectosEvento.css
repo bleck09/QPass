@@ -143,24 +143,6 @@
 
 .pricing-card:hover::after { opacity: 1; }
 
-/* Botón de compra: un destello lo cruza al pasar el mouse. */
-.btn-pricing { position: relative; overflow: hidden; }
-
-.btn-pricing::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: -60%;
-  width: 40%;
-  background: linear-gradient(100deg, transparent, color-mix(in srgb, var(--color-texto-titulo) 55%, transparent), transparent);
-  transform: skewX(-20deg);
-  transition: left 650ms var(--ease-out);
-  pointer-events: none;
-}
-
-.btn-pricing:hover:not(:disabled)::before { left: 130%; }
-
 /* ---------- Actividades: entrada escalonada + luz + ícono vivo ---------- */
 .pi-landing-glass-card { position: relative; overflow: hidden; }
 
@@ -209,7 +191,6 @@
   .pricing-title::after { transition: none; }
   .qp-revelar[data-revelar="armado"]:not(.es-visible) .pi-landing-section-title::after,
   .qp-revelar[data-revelar="armado"]:not(.es-visible) .pricing-title::after { transform: translateX(-50%); }
-  .btn-pricing::before { display: none; }
   .pi-landing-card-icon { transition: none; }
   .pi-landing-glass-card:hover .pi-landing-card-icon { transform: none; }
 }
@@ -251,7 +232,6 @@
     text-shadow: 0 0 1rem color-mix(in srgb, var(--color-primario) 60%, transparent);
   }
 }
-
 
 /* Resplandor suave del color de acento, en bucle lento. */
 .pi-landing-hero .ev-hero__titulo {

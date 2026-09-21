@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { FaArrowRight, FaTicketAlt } from 'react-icons/fa';
 import './EventoBarraCompra.css';
+import Boton from '../../../components/Boton.jsx';
 
 /**
  * Barra de compra fija abajo. Aparece cuando el hero (y su botón de compra)
@@ -43,9 +44,9 @@ export default function EventoBarraCompra({ nombre, precioDesde, idEntradas = 'e
           {precioDesde != null && <small>Entradas desde Bs {precioDesde}</small>}
         </span>
       </span>
-      <button type="button" className="ev-barra__cta" onClick={irAEntradas} tabIndex={visible ? 0 : -1}>
-        Comprar <FaArrowRight aria-hidden="true" />
-      </button>
+      <Boton pildora iconoDerecha={FaArrowRight} onClick={irAEntradas} tabIndex={visible ? 0 : -1}>
+        Comprar
+      </Boton>
     </div>
   );
 }

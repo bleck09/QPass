@@ -1,0 +1,70 @@
+/* =========================================================================
+   ANIMACIONES COMPARTIDAS — PLAN_REDISENO.txt §2.9.
+   Los keyframes se definen UNA sola vez acá y todos los componentes los
+   reutilizan por nombre. Antes cada .css tenía su copia con otro nombre
+   (pCmpPop, qpAvisoPop, pCmpLatido, qpDestDigito...); se van reemplazando
+   por estos a medida que se migra cada pantalla.
+
+   Convención: prefijo `qp-` en kebab-case. Duraciones y curvas desde los
+   tokens (--duration-*, --ease-out, --ease-rebote).
+   Movimiento reducido: la regla global de abajo apaga todas las
+   animaciones de entrada/decorativas que usen estas clases utilitarias;
+   los componentes que las usan directo agregan su propio `animation: none`.
+   ========================================================================= */
+
+:root {
+  /* Rebote corto para micro-feedback (contadores, íconos, tildes). */
+  --ease-rebote: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Entrada: sube un poco y aparece. */
+@keyframes qp-aparecer {
+  from { opacity: 0; transform: translateY(var(--space-3)); }
+}
+
+/* Entrada desde el costado (listas, filas nuevas). */
+@keyframes qp-aparecer-lado {
+  from { opacity: 0; transform: translateX(-1rem); }
+}
+
+/* Solo opacidad (cambios de contenido en el mismo lugar). */
+@keyframes qp-fundido {
+  from { opacity: 0; }
+}
+
+/* Pop: nace chico y rebota (contadores, insignias, tildes). */
+@keyframes qp-pop {
+  from { transform: scale(0.3); opacity: 0; }
+}
+
+/* Latido: anillo que se expande desde el elemento. Color por variable. */
+@keyframes qp-latido {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--latido-color, var(--action)) 45%, transparent); }
+  70%, 100% { box-shadow: 0 0 0 6px transparent; }
+}
+
+/* Flotar: sube y baja despacio (ilustraciones, íconos de estado vacío). */
+@keyframes qp-flotar {
+  50% { transform: translateY(-5px); }
+}
+
+/* Dígito que cae al cambiar (cuentas regresivas, totales). */
+@keyframes qp-digito {
+  from { transform: translateY(-70%); opacity: 0; }
+}
+
+/* Giro continuo (spinners). */
+@keyframes qp-girar {
+  to { transform: rotate(360deg); }
+}
+
+/* ---------- Clases utilitarias ---------- */
+.qp-anim-aparecer { animation: qp-aparecer var(--duration-normal) var(--ease-out) backwards; }
+.qp-anim-pop { animation: qp-pop 450ms var(--ease-rebote) backwards; }
+.qp-anim-fundido { animation: qp-fundido var(--duration-normal) var(--ease-out) backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-anim-aparecer,
+  .qp-anim-pop,
+  .qp-anim-fundido { animation: none; }
+}

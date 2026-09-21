@@ -38,7 +38,8 @@
   }
 }
 
-.estado-error {
+/* ---------- Bloque de estado: error y vacío comparten el mismo molde ---------- */
+.estado-bloque {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -46,42 +47,50 @@
   gap: var(--space-2);
   padding: var(--space-10) var(--space-4);
   color: var(--text-secondary);
+  animation: qp-aparecer var(--duration-normal) var(--ease-out);
 }
 
-.estado-error-icono {
+.estado-bloque--compacto { padding: var(--space-6) var(--space-4); }
+
+.estado-bloque-icono {
   font-size: var(--text-2xl);
-  color: var(--ambar-aviso-texto);
+  color: var(--warn-text);
   margin-bottom: var(--space-1);
 }
 
-.estado-error-titulo {
+/* Vacío: ícono dentro de un círculo que flota (keyframe compartido). */
+.estado-bloque-ilustracion {
+  display: grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: var(--space-2);
+  border-radius: 50%;
+  background: var(--brand-bg);
+  color: var(--action);
+  font-size: var(--text-xl);
+  animation: qp-flotar 3s ease-in-out infinite;
+}
+
+.estado-bloque--compacto .estado-bloque-ilustracion { width: 3rem; height: 3rem; font-size: var(--text-lg); }
+
+.estado-bloque-titulo {
   margin: 0;
   font-size: var(--text-base);
   font-weight: var(--weight-semibold);
   color: var(--text-primary);
 }
 
-.estado-error-mensaje {
+.estado-bloque-mensaje {
+  max-width: 28rem;
   margin: 0;
   font-size: var(--text-sm);
+  line-height: var(--leading-normal);
 }
 
-.estado-error-btn {
-  margin-top: var(--space-3);
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-5);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  font: inherit;
-  font-weight: var(--weight-semibold);
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out);
-}
+.estado-bloque-accion { margin-top: var(--space-3); }
 
-.estado-error-btn:hover {
-  background: var(--bg-page);
+@media (prefers-reduced-motion: reduce) {
+  .estado-bloque,
+  .estado-bloque-ilustracion { animation: none; }
 }

@@ -1,58 +1,98 @@
-/* Pastillas de filtro unificadas (components/Filtros.jsx). Solo tokens Nivel 2. */
+/* =========================================================================
+   PASTILLAS DE FILTRO / OPCIÓN — components/Filtros.jsx (global, ~20 usos).
+   Mejorado en el rediseño (PLAN §2.0): alto táctil, hover, foco visible,
+   rebote al elegir y contador animado. Tokens semánticos; keyframes
+   compartidos (styles/animaciones.css).
+
+   Páginas con colores propios (p. ej. la página del evento con su paleta)
+   NO copian estas reglas: redefinen las variables --filtro-* en su
+   contenedor, igual que --btn-* en styles/buttons.css.
+   ========================================================================= */
 
 .qp-filtros {
+  --filtro-fondo: var(--bg-sunken);
+  --filtro-texto: var(--text-secondary);
+  --filtro-texto-hover: var(--text-primary);
+  --filtro-bg-hover: var(--bg-surface);
+  --filtro-activo-bg: var(--action);
+  --filtro-activo-texto: var(--text-on-accent);
+
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  padding: 4px;
-  background: var(--bg-sunken);
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--filtro-fondo);
   border-radius: var(--radius-lg);
 }
 
 .qp-filtros button {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--space-2);
+  min-height: 2.25rem;
+  padding: 0 var(--space-4);
   border: 0;
   background: none;
-  padding: 7px 14px;
   border-radius: var(--radius-full);
   font: inherit;
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
-  color: var(--text-secondary);
+  color: var(--filtro-texto);
   cursor: pointer;
   white-space: nowrap;
   transition:
-    background var(--duration-fast) var(--ease-out),
-    color var(--duration-fast) var(--ease-out);
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out);
 }
 
-.qp-filtros button:hover {
-  color: var(--text-primary);
+.qp-filtros button:hover:not(.is-on) {
+  background: var(--filtro-bg-hover);
+  color: var(--filtro-texto-hover);
 }
 
+.qp-filtros button:active { transform: scale(0.95); }
+
+.qp-filtros button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Elegida: se llena y "rebota" apenas se elige. */
 .qp-filtros button.is-on {
-  background: var(--action);
-  color: var(--text-on-accent);
+  background: var(--filtro-activo-bg);
+  color: var(--filtro-activo-texto);
+  box-shadow: var(--shadow-sm);
+  animation: qp-filtro-elegido 300ms var(--ease-rebote);
 }
+
+@keyframes qp-filtro-elegido { from { transform: scale(0.92); } }
 
 .qp-filtros__conteo {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
+  min-width: 1.15rem;
+  height: 1.15rem;
+  padding: 0 var(--space-1);
   border-radius: var(--radius-full);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-size: 11px;
+  background: var(--filtro-bg-hover);
+  color: var(--filtro-texto);
+  font-size: 0.7rem;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+  animation: qp-pop 400ms var(--ease-rebote);
 }
 
 .qp-filtros button.is-on .qp-filtros__conteo {
-  background: color-mix(in srgb, var(--text-on-accent) 24%, transparent);
-  color: var(--text-on-accent);
+  background: color-mix(in srgb, var(--filtro-activo-texto) 24%, transparent);
+  color: var(--filtro-activo-texto);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-filtros button { transition: none; }
+  .qp-filtros button:active { transform: none; }
+  .qp-filtros button.is-on,
+  .qp-filtros__conteo { animation: none; }
 }

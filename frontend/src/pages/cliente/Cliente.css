@@ -256,25 +256,6 @@
   background-color: var(--bg-page);
 }
 
-.btn-quitar-imagen {
-  background: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  border: none;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-quitar-imagen:hover {
-  background: var(--rojo-error);
-  color: var(--text-on-accent);
-}
-
 /* --- LISTAS DINÁMICAS (Actividades y Cronograma) --- */
 .listas-dinamicas {
   display: flex;
@@ -312,22 +293,7 @@
 }
 
 /* --- BOTONES --- */
-.btn-primario {
-  background-color: var(--indigo-profundo);
-  color: var(--text-on-accent);
-  border: none;
-  padding: 12px 24px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.2s;
-}
-
-.btn-primario:hover { background-color: var(--indigo-profundo-hover); }
+/* .btn-primario / .btn-cancelar: definidos UNA vez en styles/buttons.css (no redefinir acá). */
 
 .btn-añadir-sm {
   background-color: var(--cian-digital-suave);
@@ -630,25 +596,6 @@
   background-color: var(--bg-page);
 }
 
-.btn-quitar-imagen {
-  background: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  border: none;
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.btn-quitar-imagen:hover {
-  background: var(--rojo-error);
-  color: var(--text-on-accent);
-}
-
 /* --- LISTAS DINÁMICAS (Actividades y Cronograma como en la imagen) --- */
 .listas-dinamicas {
   display: flex;
@@ -699,22 +646,7 @@
 }
 
 /* --- BOTONES --- */
-.btn-primario {
-  background-color: var(--indigo-profundo);
-  color: var(--text-on-accent);
-  border: none;
-  padding: 8px 20px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.2s;
-}
-
-.btn-primario:hover { background-color: var(--indigo-profundo-hover); }
+/* .btn-primario / .btn-cancelar: definidos UNA vez en styles/buttons.css (no redefinir acá). */
 
 .btn-secundario {
   background-color: var(--azul-noche);

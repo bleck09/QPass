@@ -630,8 +630,8 @@
 
 /* El badge de estado va dentro de <h1>/<strong>; anulamos la regla genérica
    ".pi-ges-detalle-info span" / ".pi-ges-evento-info ... span" que lo aplastaría. */
-.pi-ges-detalle-info h1 .pi-badge-estado-evento,
-.pi-ges-evento-info strong .pi-badge-estado-evento {
+.pi-ges-detalle-info h1 .qp-insignia,
+.pi-ges-evento-info strong .qp-insignia {
   display: inline-flex;
   font-size: var(--text-xs);
   vertical-align: middle;

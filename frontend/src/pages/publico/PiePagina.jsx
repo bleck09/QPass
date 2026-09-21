@@ -4,6 +4,7 @@ import {
 } from 'react-icons/fa';
 import { CONTACTO } from '../../constants/contacto.js';
 import './PiePagina.css';
+import Boton from '../../components/Boton.jsx';
 
 const EXPLORAR = [
   { href: '#cartelera', texto: 'Cartelera' },
@@ -45,9 +46,9 @@ export default function PiePagina({ onContactar, hayPasados = true }) {
             Bolivia. Una sola plataforma para el público, los organizadores y
             los negocios.
           </p>
-          <button type="button" className="qp-pie__cta" onClick={() => onContactar('organizar')}>
+          <Boton variante="acento" pildora onClick={() => onContactar('organizar')}>
             Organizá tu evento con nosotros
-          </button>
+          </Boton>
         </div>
 
         <nav className="qp-pie__col" aria-label="Secciones">
@@ -76,9 +77,9 @@ export default function PiePagina({ onContactar, hayPasados = true }) {
 
       <div className="qp-pie__base">
         <p>&copy; {new Date().getFullYear()} QPass Technologies. Todos los derechos reservados.</p>
-        <button type="button" className="qp-pie__arriba" onClick={subir}>
-          Volver arriba <FaArrowUp aria-hidden="true" />
-        </button>
+        <Boton variante="translucido" tamano="sm" pildora iconoDerecha={FaArrowUp} onClick={subir}>
+          Volver arriba
+        </Boton>
       </div>
     </footer>
   );

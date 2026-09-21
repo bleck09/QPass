@@ -3,6 +3,8 @@ import {
   FaStore, FaPlus, FaMinus, FaWallet, FaUndoAlt, FaTrashAlt, FaChevronDown, FaCalculator,
 } from 'react-icons/fa';
 import './EventoPuestos.css';
+import Boton from '../../../components/Boton.jsx';
+import Filtros from '../../../components/Filtros.jsx';
 
 const PRODUCTOS_VISIBLES = 4;
 const bs = new Intl.NumberFormat('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -58,16 +60,13 @@ export default function EventoPuestos({ puestos, diasParaRetiro }) {
   return (
     <div className="ev-menu">
       {categorias.length > 1 && (
-        <div className="ev-menu__filtros" role="group" aria-label="Filtrar puestos por categoría">
-          <button type="button" className={categoria === null ? 'activo' : ''} onClick={() => setCategoria(null)}>
-            Todos
-          </button>
-          {categorias.map((c) => (
-            <button key={c} type="button" className={categoria === c ? 'activo' : ''} onClick={() => setCategoria(c)}>
-              {c}
-            </button>
-          ))}
-        </div>
+        <Filtros
+          className="ev-menu__filtros"
+          etiqueta="Filtrar puestos por categoría"
+          opciones={[{ valor: '', texto: 'Todos' }, ...categorias.map((c) => ({ valor: c, texto: c }))]}
+          activo={categoria ?? ''}
+          onCambio={(v) => setCategoria(v || null)}
+        />
       )}
 
       <div className="ev-menu__layout">
@@ -183,9 +182,9 @@ export default function EventoPuestos({ puestos, diasParaRetiro }) {
                 <FaWallet aria-hidden="true" />
                 <span>Cargá <b>Bs {bs.format(total)}</b> en los puntos de recarga del evento y pagá todo con tu manilla.</span>
               </p>
-              <button type="button" className="ev-menu__vaciar" onClick={() => setCantidades({})}>
-                <FaTrashAlt aria-hidden="true" /> Vaciar presupuesto
-              </button>
+              <Boton variante="fantasma" tamano="sm" icono={FaTrashAlt} className="ev-menu__vaciar" onClick={() => setCantidades({})}>
+                Vaciar presupuesto
+              </Boton>
             </>
           )}
 

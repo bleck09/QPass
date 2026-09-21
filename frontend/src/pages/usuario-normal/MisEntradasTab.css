@@ -1,0 +1,152 @@
+/* =========================================================================
+   PESTAÑA MIS ENTRADAS (Usuario Normal): manilla destacada + lista.
+   Insignias, botones, pestañas, cuenta regresiva y QR vienen de los
+   componentes globales; acá solo el layout propio. Keyframes compartidos.
+   ========================================================================= */
+
+/* ---------- Manilla destacada (forma de entrada) ---------- */
+.pi-me-manilla {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  border-radius: var(--radius-xl);
+  color: var(--n-0);
+  box-shadow: var(--shadow-lg);
+  animation: qp-aparecer 500ms var(--ease-out);
+}
+
+.pi-me-manilla-fondo {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  animation: pMeKenBurns 24s ease-in-out infinite alternate;
+}
+
+@keyframes pMeKenBurns { to { transform: scale(1.08); } }
+
+.pi-me-manilla-velo {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg,
+    color-mix(in srgb, var(--n-950) 94%, transparent) 25%,
+    color-mix(in srgb, var(--indigo-profundo) 70%, transparent));
+}
+
+.pi-me-manilla > :not(.pi-me-manilla-fondo, .pi-me-manilla-velo) { position: relative; }
+
+/* QR: sobre blanco siempre (lo leen los escáneres). Late suave para invitar
+   a tocarlo; al tocarlo se abre en grande (ModalQr). */
+.pi-me-manilla-qr {
+  --latido-color: var(--accent);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 9.5rem;
+  min-height: 9.5rem;
+  padding: var(--space-2);
+  border: none;
+  border-radius: var(--radius-lg);
+  background: var(--n-0);
+  color: var(--n-700);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  cursor: pointer;
+  animation: qp-latido 2.4s ease-out infinite;
+  transition: transform var(--duration-normal) var(--ease-rebote);
+}
+
+.pi-me-manilla-qr img { display: block; width: 8rem; height: 8rem; }
+.pi-me-manilla-qr:hover { transform: scale(1.05) rotate(-2deg); }
+.pi-me-manilla-qr:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
+.pi-me-manilla-qr-ver { font-weight: var(--weight-semibold); color: var(--n-600); }
+
+.pi-me-manilla-qr.pendiente {
+  background: color-mix(in srgb, var(--n-0) 12%, transparent);
+  color: var(--n-200);
+  border: 2px dashed color-mix(in srgb, var(--n-0) 35%, transparent);
+  animation: none;
+}
+
+.pi-me-manilla-qr.pendiente svg { font-size: var(--text-2xl); animation: qp-flotar 3s ease-in-out infinite; }
+
+/* Troquel vertical entre el QR y los datos. */
+.pi-me-manilla-corte {
+  align-self: stretch;
+  width: 0;
+  border-left: 2px dashed color-mix(in srgb, var(--n-0) 30%, transparent);
+}
+
+.pi-me-manilla-info { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-2); min-width: 0; }
+
+.pi-me-manilla-info h2 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 800;
+  line-height: var(--leading-tight);
+  color: var(--n-0);
+  overflow-wrap: anywhere;
+}
+
+.pi-me-manilla-datos { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); font-size: var(--text-sm); color: var(--n-200); }
+.pi-me-manilla-datos span { display: inline-flex; align-items: center; gap: var(--space-2); }
+.pi-me-manilla-datos svg { color: var(--accent); }
+
+.pi-me-manilla-insignias { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1); }
+
+/* ---------- Cabecera de la lista ---------- */
+.pi-me-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.pi-me-subtitulo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+/* ---------- Tarjetas: EventoCard global, acá solo la grilla ---------- */
+.pi-me-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(18rem, 100%), 1fr));
+  gap: var(--space-5);
+}
+
+/* ---------- Tabla ---------- */
+.pi-me-celda-estado { display: flex; flex-wrap: wrap; gap: var(--space-1); }
+.pi-me-celda-fecha { font-size: var(--text-xs); color: var(--text-secondary); white-space: nowrap; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 62rem) {
+  .pi-me-manilla { grid-template-columns: auto minmax(0, 1fr); }
+  .pi-me-manilla-corte { display: none; }
+  .pi-me-manilla-cuenta { grid-column: 1 / -1; }
+}
+
+@media (max-width: 36rem) {
+  .pi-me-manilla { grid-template-columns: 1fr; justify-items: center; text-align: center; padding: var(--space-5) var(--space-4); }
+  .pi-me-manilla-info { align-items: center; }
+  .pi-me-manilla-datos, .pi-me-manilla-insignias { justify-content: center; }
+  .pi-me-manilla-cuenta { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-me-manilla, .pi-me-manilla-fondo, .pi-me-manilla-qr, .pi-me-manilla-qr.pendiente svg { animation: none; }
+  .pi-me-manilla-qr { transition: none; }
+  .pi-me-manilla-qr:hover { transform: none; }
+}

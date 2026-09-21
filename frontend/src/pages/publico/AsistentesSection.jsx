@@ -6,6 +6,7 @@ import DemoCompra from './DemoCompra.jsx';
 import { IMAGENES_LANDING } from '../../constants/imagenesLanding.js';
 import { useRevelar } from '../../utils/useRevelar.js';
 import './InfoSecciones.css';
+import Boton from '../../components/Boton.jsx';
 
 // "Evento tradicional" vs "Con QPass": lo didáctico es ver el cambio, no una
 // lista de ventajas sueltas.
@@ -123,12 +124,12 @@ export default function AsistentesSection() {
           </p>
         </div>
         <div className="qp-info__cta-fila">
-          <a href="#cartelera" className="qp-info__cta">
-            Ver cartelera <FaArrowRight aria-hidden="true" />
-          </a>
-          <button type="button" className="qp-info__cta qp-info__cta--sec" onClick={() => navigate('/Registrar')}>
+          <Boton como="a" href="#cartelera" variante="acento" pildora iconoDerecha={FaArrowRight}>
+            Ver cartelera
+          </Boton>
+          <Boton variante="translucido" pildora onClick={() => navigate('/Registrar')}>
             Crear mi cuenta
-          </button>
+          </Boton>
         </div>
       </div>
     </>

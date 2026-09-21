@@ -1,0 +1,114 @@
+/* =========================================================================
+   PESTAÑAS ÚNICAS — ver Pestanas.jsx. Tokens semánticos (claro/oscuro).
+   Animaciones: keyframes compartidos de styles/animaciones.css.
+   ========================================================================= */
+
+.qp-pestanas {
+  --ind-x: 0px;
+  --ind-ancho: 0px;
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  gap: var(--space-1);
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.qp-pestanas::-webkit-scrollbar { display: none; }
+.qp-pestanas--ancho { display: flex; width: 100%; }
+.qp-pestanas--ancho .qp-pestana { flex: 1; justify-content: center; }
+
+.qp-pestana {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: 0 var(--space-4);
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--duration-normal) var(--ease-out);
+}
+
+.qp-pestana:hover:not(:disabled) { color: var(--text-primary); }
+.qp-pestana.activa { color: var(--action); }
+.qp-pestana:disabled { opacity: 0.45; cursor: not-allowed; }
+.qp-pestana:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; border-radius: var(--radius-md); }
+
+.qp-pestana-ic { flex-shrink: 0; transition: transform var(--duration-normal) var(--ease-rebote); }
+.qp-pestana.activa .qp-pestana-ic { transform: scale(1.12); }
+
+.qp-pestana-contador {
+  display: grid;
+  place-items: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--danger);
+  color: var(--text-on-vivid);
+  font-size: 0.7rem;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  animation: qp-pop 450ms var(--ease-rebote);
+}
+
+/* Indicador que se desliza a la pestaña activa. */
+.qp-pestanas-indicador {
+  position: absolute;
+  left: 0;
+  width: var(--ind-ancho);
+  transform: translateX(var(--ind-x));
+  pointer-events: none;
+  transition: transform 350ms var(--ease-out), width 350ms var(--ease-out);
+}
+
+/* ---------- Variante segmento (píldora) ---------- */
+.qp-pestanas--segmento {
+  padding: var(--space-1);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+}
+
+.qp-pestanas--segmento .qp-pestana { border-radius: var(--radius-md); }
+
+.qp-pestanas--segmento .qp-pestanas-indicador {
+  top: var(--space-1);
+  bottom: var(--space-1);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ---------- Variante línea (subrayado) ---------- */
+.qp-pestanas--linea {
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.qp-pestanas--linea .qp-pestana { min-height: 2.75rem; padding: 0 var(--space-4); }
+
+.qp-pestanas--linea .qp-pestanas-indicador {
+  bottom: 0;
+  height: 3px;
+  border-radius: var(--radius-full) var(--radius-full) 0 0;
+  background: var(--action);
+}
+
+@media (max-width: 36rem) {
+  .qp-pestana { padding: 0 var(--space-3); font-size: var(--text-xs); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-pestanas-indicador,
+  .qp-pestana-ic { transition: none; }
+  .qp-pestana-contador { animation: none; }
+}

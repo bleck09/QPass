@@ -173,25 +173,14 @@
   color: var(--color-texto-p);
 }
 
-/* ---------- Botón ---------- */
-.btn-pricing {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-}
-
-.btn-pricing svg { transition: transform 250ms var(--ease-out); }
-.btn-pricing:hover:not(:disabled) svg { transform: translateX(4px); }
-
 @media (prefers-reduced-motion: reduce) {
   .pricing-card::before,
   .ticket-cinta svg,
   .stock-badge.stk-bajo,
   .pricing-grid.es-visible .pricing-features li { animation: none; }
-  .ticket-ic, .pricing-price .price-amount, .btn-pricing svg { transition: none; }
+  .ticket-ic, .pricing-price .price-amount { transition: none; }
   .pricing-card:hover .ticket-ic { transform: rotate(-12deg); }
-  .pricing-card:hover .price-amount, .btn-pricing:hover:not(:disabled) svg { transform: none; }
+  .pricing-card:hover .price-amount { transform: none; }
 }
 
 /* Con cinta "Más vendida", el encabezado deja lugar a la esquina. */
