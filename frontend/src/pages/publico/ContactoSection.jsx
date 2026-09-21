@@ -3,21 +3,28 @@ import {
   FaEnvelope, FaWhatsapp, FaMapMarkerAlt, FaCalendarCheck,
   FaArrowRight, FaExternalLinkAlt,
 } from 'react-icons/fa';
-import { CONTACTO } from '../../constants/contacto.js';
+import { CONTACTO, MOTIVOS_CONTACTO } from '../../constants/contacto.js';
 import './ContactoSection.css';
 
-const MOTIVOS = [
-  'Quiero organizar un evento',
-  'Tengo un negocio y quiero vender adentro',
-  'Consulta sobre mi entrada o mi saldo',
-  'Otro',
-];
+const MOTIVOS = Object.values(MOTIVOS_CONTACTO);
 
-export default function ContactoSection() {
+/**
+ * `motivo`: motivo a preseleccionar. Lo cambian los CTA de las secciones de
+ * Organizadores / Asistentes antes de saltar a #contacto.
+ */
+export default function ContactoSection({ motivo = MOTIVOS[0] }) {
   const [form, setForm] = useState({
-    nombre: '', correo: '', motivo: MOTIVOS[0], mensaje: '',
+    nombre: '', correo: '', motivo, mensaje: '',
   });
   const [enviado, setEnviado] = useState(false);
+
+  // Si el padre pide otro motivo, se ajusta durante el render (patrón de React
+  // para derivar estado de una prop) sin perder lo que ya se escribió.
+  const [motivoPrevio, setMotivoPrevio] = useState(motivo);
+  if (motivo !== motivoPrevio) {
+    setMotivoPrevio(motivo);
+    setForm((f) => ({ ...f, motivo }));
+  }
 
   const cambiar = (e) => {
     const { name, value } = e.target;

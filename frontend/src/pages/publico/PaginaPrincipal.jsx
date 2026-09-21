@@ -9,7 +9,9 @@ import './PaginaPrincipal.css';
 import HeroSection from './HeroSection.jsx';
 import EventosDestacados from '../../components/EventosDestacados.jsx';
 import ContactoSection from './ContactoSection.jsx';
-import { CONTACTO } from '../../constants/contacto.js';
+import AsistentesSection from './AsistentesSection.jsx';
+import OrganizadoresSection from './OrganizadoresSection.jsx';
+import { CONTACTO, MOTIVOS_CONTACTO } from '../../constants/contacto.js';
 import api from '../../api/index.js';
 import { esVigente, formatearFecha } from '../../utils/eventos.js';
 import { useApi } from '../../utils/useApi.js';
@@ -40,6 +42,15 @@ export default function PaginaPrincipal() {
   // (ver utils/useRevelar.js).
   const [refPasados, pasadosVisible] = useRevelar();
   const [refContacto, contactoVisible] = useRevelar();
+  const [refAsistentes, asistentesVisible] = useRevelar();
+  const [refOrganizadores, organizadoresVisible] = useRevelar();
+
+  // Los CTA de Organizadores llevan al formulario con el motivo ya elegido.
+  const [motivoContacto, setMotivoContacto] = useState(MOTIVOS_CONTACTO.organizar);
+  const irAContacto = (tipo) => {
+    setMotivoContacto(MOTIVOS_CONTACTO[tipo]);
+    document.getElementById('contacto')?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   // En tablet/movil los links de la navbar se ocultan por falta de espacio.
   // Antes no quedaba NINGUNA navegacion; ahora se despliegan en un panel.
@@ -60,7 +71,8 @@ export default function PaginaPrincipal() {
         <ul id="menu-navegacion" className={`qpass-home-nav-links${menuAbierto ? ' esta-abierto' : ''}`} onClick={() => setMenuAbierto(false)}>
           <li><a href="#servicios">Características</a></li>
           <li><a href="#cartelera">Cartelera</a></li>
-          <li><a href="#pasados">Eventos Pasados</a></li>
+          <li><a href="#asistentes">Asistentes</a></li>
+          <li><a href="#organizadores">Organizadores</a></li>
           <li><a href="#contacto">Contáctanos</a></li>
         </ul>
         <div className="qpass-home-nav-actions">
@@ -138,6 +150,22 @@ export default function PaginaPrincipal() {
       </section>
 
       <section
+        id="asistentes"
+        className={`qpass-home-section qp-revelar${asistentesVisible ? ' es-visible' : ''}`}
+        ref={refAsistentes}
+      >
+        <AsistentesSection />
+      </section>
+
+      <section
+        id="organizadores"
+        className={`qpass-home-section qp-revelar${organizadoresVisible ? ' es-visible' : ''}`}
+        ref={refOrganizadores}
+      >
+        <OrganizadoresSection onContactar={irAContacto} />
+      </section>
+
+      <section
         id="pasados"
         className={`qpass-home-section qp-revelar${pasadosVisible ? ' es-visible' : ''}`}
         ref={refPasados}
@@ -170,7 +198,7 @@ export default function PaginaPrincipal() {
           <p>¿Tenés un evento en mente o una consulta? Te respondemos.</p>
         </div>
 
-        <ContactoSection />
+        <ContactoSection motivo={motivoContacto} />
       </section>
       </main>
 
