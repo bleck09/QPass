@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import jsQR from 'jsqr';
 import { FaTimes } from 'react-icons/fa';
+import Boton from './Boton.jsx';
 import './EscanerQr.css';
 
 // Ancho máximo del frame que se analiza con jsQR (respaldo cuando el navegador no trae
@@ -213,9 +214,7 @@ export default function EscanerQr({ onDetectado, onCancelar }) {
         </>
       )}
       <canvas ref={canvasRef} style={{ display: 'none' }} />
-      <button type="button" className="pi-escaner-qr-btn-cancelar" onClick={onCancelar}>
-        <FaTimes aria-hidden="true" /> Cancelar
-      </button>
+      <Boton variante="secundario" icono={FaTimes} onClick={onCancelar}>Cancelar</Boton>
     </div>
   );
 }

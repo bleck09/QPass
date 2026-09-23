@@ -105,10 +105,10 @@
 
 /* ---------- Títulos de sección: subrayado que crece al aparecer ---------- */
 .pi-landing-section-title,
-.pricing-title { position: relative; padding-bottom: var(--space-4); }
+.pi-ev-pricing-title { position: relative; padding-bottom: var(--space-4); }
 
 .pi-landing-section-title::after,
-.pricing-title::after {
+.pi-ev-pricing-title::after {
   content: '';
   position: absolute;
   left: 50%;
@@ -122,14 +122,14 @@
 }
 
 .qp-revelar[data-revelar="armado"]:not(.es-visible) .pi-landing-section-title::after,
-.qp-revelar[data-revelar="armado"]:not(.es-visible) .pricing-title::after {
+.qp-revelar[data-revelar="armado"]:not(.es-visible) .pi-ev-pricing-title::after {
   transform: translateX(-50%) scaleX(0);
 }
 
 /* ---------- Tarjetas de entrada: brillo que sigue al mouse ---------- */
-.pricing-card { overflow: hidden; }
+.pi-ev-pricing-card { overflow: hidden; }
 
-.pricing-card::after {
+.pi-ev-pricing-card::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -141,7 +141,7 @@
   transition: opacity 300ms var(--ease-out);
 }
 
-.pricing-card:hover::after { opacity: 1; }
+.pi-ev-pricing-card:hover::after { opacity: 1; }
 
 /* ---------- Actividades: entrada escalonada + luz + ícono vivo ---------- */
 .pi-landing-glass-card { position: relative; overflow: hidden; }
@@ -188,9 +188,9 @@
   .qp-revelar.es-visible .pi-landing-puesto-box { animation: none; }
   .ev-hero__particulas { display: none; }
   .pi-landing-section-title::after,
-  .pricing-title::after { transition: none; }
+  .pi-ev-pricing-title::after { transition: none; }
   .qp-revelar[data-revelar="armado"]:not(.es-visible) .pi-landing-section-title::after,
-  .qp-revelar[data-revelar="armado"]:not(.es-visible) .pricing-title::after { transform: translateX(-50%); }
+  .qp-revelar[data-revelar="armado"]:not(.es-visible) .pi-ev-pricing-title::after { transform: translateX(-50%); }
   .pi-landing-card-icon { transition: none; }
   .pi-landing-glass-card:hover .pi-landing-card-icon { transform: none; }
 }

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { forzarTemaClaro } from '../../utils/tema.js';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaSignInAlt, FaBars, FaTimes, FaMapMarkerAlt, FaWhatsapp, FaCheckCircle,
@@ -20,6 +21,7 @@ import { useApi } from '../../utils/useApi.js';
 import { useRevelar } from '../../utils/useRevelar.js';
 import { useSeccionActiva } from '../../utils/useSeccionActiva.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import Boton from '../../components/Boton.jsx';
 
 const LINKS_NAV = [
   { id: 'servicios', texto: 'Características' },
@@ -31,6 +33,10 @@ const LINKS_NAV = [
 const IDS_NAV = LINKS_NAV.map((l) => l.id);
 
 export default function PaginaPrincipal() {
+  // Esta pantalla se ve siempre en claro: el tema oscuro es solo del
+  // panel (ver utils/tema.js).
+  useEffect(() => { forzarTemaClaro(); }, []);
+
   const navigate = useNavigate();
 
   useEffect(() => { window.scrollTo(0, 0); }, []);
@@ -112,21 +118,21 @@ export default function PaginaPrincipal() {
   };
 
   return (
-    <div className="qpass-home-container">
+    <div className="pi-home-qpass-home-container">
 
       {/* Fondo que cambia por sección (antes, una sola foto fija para toda la página). */}
       <FondoLanding version={cargando} />
-      <div className="qpass-home-glow glow-1"></div>
-      <div className="qpass-home-glow glow-2"></div>
+      <div className="pi-home-qpass-home-glow pi-home-glow-1"></div>
+      <div className="pi-home-qpass-home-glow pi-home-glow-2"></div>
 
       <div className="qp-home-progreso" ref={progresoRef} aria-hidden="true" />
 
-      <nav className={`qpass-floating-navbar glass-morphism${scrolleado ? ' esta-scrolleada' : ''}`}>
-        <a href="#contenido" className="qpass-home-logo" onClick={subir} aria-label="QPass, volver al inicio">
-          <div className="logo-icon-bg"><FaQrcode aria-hidden="true" /></div>
+      <nav className={`pi-home-qpass-floating-navbar pi-home-glass-morphism${scrolleado ? ' esta-scrolleada' : ''}`}>
+        <a href="#contenido" className="pi-home-qpass-home-logo" onClick={subir} aria-label="QPass, volver al inicio">
+          <div className="pi-home-logo-icon-bg"><FaQrcode aria-hidden="true" /></div>
           <span>QPass</span>
         </a>
-        <ul id="menu-navegacion" className={`qpass-home-nav-links${menuAbierto ? ' esta-abierto' : ''}`} onClick={() => setMenuAbierto(false)}>
+        <ul id="menu-navegacion" className={`pi-home-qpass-home-nav-links${menuAbierto ? ' esta-abierto' : ''}`} onClick={() => setMenuAbierto(false)}>
           {LINKS_NAV.map(({ id, texto }) => (
             <li key={id}>
               <a
@@ -140,12 +146,12 @@ export default function PaginaPrincipal() {
           ))}
         </ul>
         <div className="qpass-home-nav-actions">
-          <button className="btn-solid" onClick={() => navigate('/login')}>
-            <FaSignInAlt aria-hidden="true" /> <span>Iniciar Sesión</span>
-          </button>
+          <Boton variante="acento" pildora icono={FaSignInAlt} className="qpass-home-sesion" onClick={() => navigate('/login')}>
+            Iniciar sesión
+          </Boton>
           <button
             type="button"
-            className="qpass-home-nav-toggle"
+            className="pi-home-qpass-home-nav-toggle"
             aria-expanded={menuAbierto}
             aria-controls="menu-navegacion"
             aria-label={menuAbierto ? 'Cerrar menú' : 'Abrir menú'}
@@ -162,11 +168,11 @@ export default function PaginaPrincipal() {
       <CintaBeneficios />
 
       {error ? (
-        <section id="cartelera" className="qpass-home-section">
+        <section id="cartelera" className="pi-home-qpass-home-section">
           <EstadoError onReintentar={recargar} titulo="No se pudo cargar la cartelera" />
         </section>
       ) : cargando ? (
-        <section id="cartelera" className="qpass-home-section">
+        <section id="cartelera" className="pi-home-qpass-home-section">
           <EstadoCarga filas={3} etiqueta="Cargando cartelera…" />
         </section>
       ) : (
@@ -175,7 +181,7 @@ export default function PaginaPrincipal() {
 
       <section
         id="servicios"
-        className={`qpass-home-section qp-revelar${serviciosVisible ? ' es-visible' : ''}`}
+        className={`pi-home-qpass-home-section qp-revelar${serviciosVisible ? ' es-visible' : ''}`}
         ref={refServicios}
       >
         <EcosistemaSection enCartelera={proximosEventos.length} realizados={todosPasados.length} />
@@ -183,7 +189,7 @@ export default function PaginaPrincipal() {
 
       <section
         id="asistentes"
-        className={`qpass-home-section qp-revelar${asistentesVisible ? ' es-visible' : ''}`}
+        className={`pi-home-qpass-home-section qp-revelar${asistentesVisible ? ' es-visible' : ''}`}
         ref={refAsistentes}
       >
         <AsistentesSection />
@@ -191,7 +197,7 @@ export default function PaginaPrincipal() {
 
       <section
         id="organizadores"
-        className={`qpass-home-section qp-revelar${organizadoresVisible ? ' es-visible' : ''}`}
+        className={`pi-home-qpass-home-section qp-revelar${organizadoresVisible ? ' es-visible' : ''}`}
         ref={refOrganizadores}
       >
         <OrganizadoresSection onContactar={irAContacto} />
@@ -200,24 +206,24 @@ export default function PaginaPrincipal() {
       {hayPasados && (
         <section
           id="pasados"
-          className={`qpass-home-section qp-revelar${pasadosVisible ? ' es-visible' : ''}`}
+          className={`pi-home-qpass-home-section qp-revelar${pasadosVisible ? ' es-visible' : ''}`}
           ref={refPasados}
         >
-          <div className="section-header qp-pasados__header">
+          <div className="pi-home-section-header qp-pasados__header">
             <span className="qp-info__eyebrow">Eventos pasados</span>
             <h2>Ya confiaron en QPass</h2>
             <p>El éxito de nuestros aliados es nuestro éxito.</p>
           </div>
 
-          <ul className="past-events-grid">
+          <ul className="pi-home-past-events-grid">
             {eventosPasados.map((evento) => (
               <li key={evento.id}>
-                <Link to={`/evento/${evento.id}`} className="past-card glass-morphism">
-                  <span className="past-card-img">
+                <Link to={`/evento/${evento.id}`} className="pi-home-past-card pi-home-glass-morphism">
+                  <span className="pi-home-past-card-img">
                     <img src={evento.imagen} alt="" width="100" height="100" loading="lazy" />
-                    <span className="past-card-badge"><FaCheckCircle aria-hidden="true" /> Realizado</span>
+                    <span className="pi-home-past-card-badge"><FaCheckCircle aria-hidden="true" /> Realizado</span>
                   </span>
-                  <span className="past-card-info">
+                  <span className="pi-home-past-card-info">
                     <h3>{evento.nombre}</h3>
                     <span><FaMapMarkerAlt aria-hidden="true" /> {evento.lugar} · {formatearFecha(evento.fecha)}</span>
                   </span>
@@ -230,10 +236,10 @@ export default function PaginaPrincipal() {
 
       <section
         id="contacto"
-        className={`qpass-home-section qp-revelar${contactoVisible ? ' es-visible' : ''}`}
+        className={`pi-home-qpass-home-section qp-revelar${contactoVisible ? ' es-visible' : ''}`}
         ref={refContacto}
       >
-        <div className="section-header center">
+        <div className="pi-home-section-header center">
           <span className="qp-info__eyebrow">Contacto</span>
           <h2>Contáctanos</h2>
           <p>¿Tenés un evento en mente o una consulta? Te respondemos.</p>

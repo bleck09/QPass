@@ -1,0 +1,60 @@
+/* Selector de cantidad (components/SelectorCantidad.jsx). Solo tokens;
+   páginas con otra paleta redefinen las variables --cant-* en su contenedor. */
+
+.qp-cantidad {
+  --cant-fondo: var(--bg-sunken);
+  --cant-btn: var(--bg-surface);
+  --cant-btn-hover: var(--action);
+  --cant-btn-texto: var(--text-primary);
+  --cant-btn-texto-hover: var(--text-on-accent);
+  --cant-valor: var(--text-primary);
+  --cant-tam: 2.25rem;
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border-radius: var(--radius-full);
+  background: var(--cant-fondo);
+}
+
+.qp-cantidad--sm { --cant-tam: 1.9rem; }
+
+.qp-cantidad__btn {
+  display: grid;
+  place-items: center;
+  width: var(--cant-tam);
+  height: var(--cant-tam);
+  border: 0;
+  border-radius: 50%;
+  background: var(--cant-btn);
+  color: var(--cant-btn-texto);
+  font-size: var(--text-xs);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition:
+    background-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.qp-cantidad__btn:hover:not(:disabled) { background: var(--cant-btn-hover); color: var(--cant-btn-texto-hover); }
+.qp-cantidad__btn:active:not(:disabled) { transform: scale(0.9); }
+.qp-cantidad__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.qp-cantidad__btn:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+/* El número "salta" al cambiar (se re-monta por key). */
+.qp-cantidad__valor {
+  min-width: 1.75rem;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--cant-valor);
+  animation: qp-pop 250ms var(--ease-rebote);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-cantidad__btn { transition: none; }
+  .qp-cantidad__btn:active:not(:disabled) { transform: none; }
+  .qp-cantidad__valor { animation: none; }
+}

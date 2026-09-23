@@ -1,0 +1,53 @@
+/* Código de N dígitos (components/InputCodigo.jsx). Antes: .otp-* en auth.css.
+   Solo tokens; keyframes compartidos (styles/animaciones.css). */
+
+.qp-codigo {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  margin: var(--space-5) 0 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+}
+
+.qp-codigo__casilla {
+  width: 2.875rem;
+  height: 3.5rem;
+  border: 2px solid var(--border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  font-family: inherit;
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--text-primary);
+  outline: none;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    box-shadow var(--duration-fast) var(--ease-out),
+    transform var(--duration-fast) var(--ease-out);
+}
+
+.qp-codigo__casilla:focus {
+  border-color: var(--border-focus);
+  box-shadow: 0 0 0 3px var(--cian-digital-suave);
+  transform: translateY(-2px);
+}
+
+/* Cada dígito que se escribe "salta" un poco. */
+.qp-codigo__casilla.llena { border-color: var(--action); animation: qp-pop 250ms var(--ease-rebote); }
+
+.qp-codigo.con-error .qp-codigo__casilla { border-color: var(--danger); }
+.qp-codigo.con-error .qp-codigo__casilla:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent); }
+
+@media (max-width: 30rem) {
+  .qp-codigo__casilla { width: 2.375rem; height: 3rem; font-size: var(--text-lg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-codigo__casilla { transition: none; }
+  .qp-codigo__casilla:focus { transform: none; }
+  .qp-codigo__casilla.llena { animation: none; }
+}

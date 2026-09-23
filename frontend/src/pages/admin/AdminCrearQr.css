@@ -1,453 +1,117 @@
-/* Prefix único: pi-adqr- */
+/* Generar códigos QR — solo layout propio (prefijo pi-adqr-). Encabezado, KPIs
+   (.qp-stats + StatCard), tarjetas (Card), campos (Campo), botones, paginador,
+   avisos y el modal del QR ampliado son los GLOBALES. Antes este archivo tenía
+   sus propios inputs, botones, paginador y un modal armado a mano. */
+
 .pi-adqr-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-
-.pi-adqr-aviso-digital {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  margin: 0;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  background: var(--cian-digital-suave);
-  color: var(--cian-digital-texto);
-  font-size: var(--text-xs);
-  line-height: 1.5;
-}
-
-.pi-adqr-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.pi-adqr-header h1,
-.pi-adqr-header h2 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-primary);
-  font-size: var(--text-xl);
-  font-weight: 700;
-}
-
-.pi-adqr-header p {
-  color: var(--text-secondary);
-  font-size: var(--text-base);
-  margin-top: 4px;
-}
-
-.pi-adqr-selector-evento {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 8px 16px;
-  color: var(--indigo-profundo);
-  font-weight: 600;
-}
-
-.pi-adqr-selector-evento select {
-  border: none;
-  outline: none;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-  background: none;
-}
-
-/* --- KPI --- */
-.pi-adqr-kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-}
-
-.pi-adqr-kpi-card {
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
-}
-
-.pi-adqr-kpi-card .numero {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.pi-adqr-kpi-card .label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-/* --- TARJETAS --- */
-.pi-adqr-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-6);
+  gap: var(--space-5);
+  width: 100%;
 }
 
 .pi-adqr-subtitulo {
+  margin: 0 0 var(--space-4);
   font-size: var(--text-base);
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
 }
 
 .pi-adqr-card-header {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
-/* Sin `wrap`, los cuatro botones (ver QR, dos PDF y vaciar) se salían de la
-   tarjeta en pantallas angostas en vez de pasar a la línea de abajo. */
-.pi-adqr-acciones-lista {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.pi-adqr-card-header .pi-adqr-subtitulo { margin-bottom: 0; }
+
+.pi-adqr-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12.5rem, 1fr));
+  gap: var(--space-4);
 }
 
-/* --- FORMULARIO --- */
-.pi-adqr-form {
-  display: flex;
-  align-items: flex-end;
-  gap: 16px;
-  flex-wrap: wrap;
-}
+.pi-adqr-form-actions { display: flex; justify-content: flex-end; margin-top: var(--space-4); }
 
-.pi-adqr-input-group label {
-  display: block;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.pi-adqr-input-wrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.pi-adqr-input-icon {
-  position: absolute;
-  left: 12px;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.pi-adqr-input-wrapper input {
-  width: 200px;
-  padding: 8px 8px 8px 40px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  outline: none;
-  font-size: var(--text-sm);
-  font-family: inherit;
-  color: var(--text-primary);
-  transition: border-color 0.2s;
-}
-
-.pi-adqr-input-wrapper input:focus {
-  border-color: var(--cian-digital);
-}
-
-.pi-adqr-input-wrapper input[aria-invalid="true"] {
-  border-color: var(--rojo-error);
-}
-
-.pi-adqr-error {
-  margin: 6px 0 0;
-  max-width: 200px;
-  font-size: var(--text-xs);
-  color: var(--rojo-error-texto);
-}
-
-.pi-adqr-btn-add {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--indigo-profundo);
-  color: var(--text-on-accent);
-  border: none;
-  padding: 12px 20px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.pi-adqr-btn-add:hover {
-  background-color: var(--indigo-profundo-hover);
-}
-
-.pi-adqr-btn-imprimir {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--verde-recarga);
-  color: var(--texto-sobre-vivo);
-  border: none;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.pi-adqr-btn-imprimir:hover {
-  background-color: var(--verde-recarga-hover);
-}
-
-.pi-adqr-btn-vaciar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  border: none;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.pi-adqr-btn-vaciar:hover {
-  background-color: var(--rojo-error);
-  color: var(--text-on-accent);
-}
-
-.pi-adqr-empty {
-  text-align: center;
-  padding: 32px !important;
-  color: var(--text-secondary);
-}
-
-/* --- PAGINADOR --- */
-.pi-adqr-paginador {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-bottom: 16px;
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-.pi-adqr-paginador button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.pi-adqr-paginador button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* --- CHIP (código sin imagen, se pide el QR recién al hacer click) --- */
-.pi-adqr-chip {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-page);
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.pi-adqr-chip:hover {
-  border-color: var(--cian-digital);
-}
-
-.pi-adqr-chip svg {
-  color: var(--indigo-profundo);
-  font-size: var(--text-lg);
-}
-
-/* --- MODAL DE VISTA PREVIA DE UN QR --- */
-.pi-adqr-modal-fondo {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-dropdown);
-}
-
-.pi-adqr-modal {
-  position: relative;
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  max-width: 90vw;
-  max-height: 90vh;
-  overflow: auto;
-}
-
-.pi-adqr-modal img {
-  max-width: min(80vw, 500px);
-  max-height: 60vh;
-  width: auto;
-  height: auto;
-}
-
-.pi-adqr-modal-cerrar {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  border: none;
-  background: none;
-  font-size: var(--text-lg);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-
-/* --- GRILLA DE QR --- */
+/* ---------- Grilla de códigos ---------- */
 .pi-adqr-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(9.375rem, 1fr));
+  gap: var(--space-4);
 }
 
-.pi-adqr-tarjeta {
+.pi-adqr-tarjeta,
+.pi-adqr-chip {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: var(--bg-page);
+  background: var(--bg-sunken);
+  color: var(--text-primary);
+  font: inherit;
 }
 
-.pi-adqr-tarjeta img {
+.pi-adqr-tarjeta { flex-direction: column; padding: var(--space-4); }
+
+.pi-adqr-chip { cursor: pointer; text-align: left; }
+.pi-adqr-chip:hover { border-color: var(--action); background: var(--brand-bg); }
+.pi-adqr-chip:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+.pi-adqr-chip svg { flex-shrink: 0; color: var(--action); }
+
+/* Vista previa siempre chica en pantalla; el tamaño real elegido (cm/px) se
+   respeta recién al armar el PDF, que se descarga como archivo. */
+.pi-adqr-tarjeta img,
+.pi-adqr-ampliado img {
+  width: auto !important;
+  height: auto !important;
+  max-width: 9.375rem;
+  max-height: 9.375rem;
   border-radius: var(--radius-sm);
   background: var(--bg-surface);
 }
 
-/* Vista previa siempre chica en pantalla; el tamaño real elegido (cm/px) se respeta
-   recién al armar el PDF, que se descarga como archivo y no depende de esto. */
-.pi-adqr-tarjeta img {
-  width: auto !important;
-  height: auto !important;
-  max-width: 150px;
-  max-height: 150px;
+.pi-adqr-ampliado {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
 }
 
+/* El QR ampliado sí se ve grande (es para leerlo desde el celular). */
+.pi-adqr-ampliado img { max-width: 15.625rem; max-height: 15.625rem; }
+
 .pi-adqr-qr-cargando {
-  width: 150px;
-  height: 150px;
   max-width: 100%;
   border-radius: var(--radius-sm);
-  background: var(--gris-medio);
-  opacity: 0.3;
+  background: var(--bg-hover);
 }
 
 .pi-adqr-codigo {
   font-size: var(--text-xs);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   color: var(--text-primary);
   text-align: center;
   word-break: break-all;
 }
 
-/* --- PROGRESO DE GENERACIÓN DEL PDF --- */
+/* ---------- Progreso del PDF ---------- */
 .pi-adqr-progreso {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
   font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 
 .pi-adqr-progreso-barra {
   flex: 1;
-  height: 8px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-page);
-  overflow: hidden;
-}
-
-.pi-adqr-progreso-relleno {
-  height: 100%;
-  background: var(--indigo-profundo);
-  transition: width 0.15s ease-out;
-}
-
-/* Sugerencia de cantidad de manillas según el cupo (§Jornadas) */
-.pi-adqr-sugerencia {
-  margin: 6px 0 0;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  line-height: 1.5;
-}
-.pi-adqr-sugerencia strong { color: var(--text-primary); }
-.pi-adqr-btn-sugerido {
-  margin-left: 6px;
-  padding: 2px 10px;
-  border: 1px solid var(--indigo-profundo);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--indigo-profundo);
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.pi-adqr-btn-sugerido:hover { background: var(--indigo-profundo-suave, rgba(26,43,107,0.08)); }
-
-/* ============================================================================
-   MÓVIL: la barra de acciones de los códigos no entraba a lo ancho.
-   ========================================================================= */
-@media (max-width: 560px) {
-  .pi-adqr-card-header { align-items: stretch; gap: 10px; }
-  /* Dos botones por fila, a todo el ancho y con el texto centrado. */
-  .pi-adqr-acciones-lista {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-    gap: 8px;
-  }
-  .pi-adqr-acciones-lista > button {
-    width: 100%;
-    justify-content: center;
-    text-align: center;
-    padding: 10px 8px;
-    line-height: 1.25;
-  }
+  width: 100%;
+  height: var(--space-2);
+  accent-color: var(--action);
 }

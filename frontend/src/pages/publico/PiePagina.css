@@ -40,7 +40,7 @@
   color: var(--text-secondary);
 }
 
-.qp-pie__marca .qpass-home-logo { margin-left: 0; }
+.qp-pie__marca .pi-home-qpass-home-logo { margin-left: 0; }
 
 .qp-pie__col h2 {
   margin: 0 0 var(--space-4);

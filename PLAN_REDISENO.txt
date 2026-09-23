@@ -46,6 +46,18 @@ Que TODA la aplicación (público + los 8 roles) se vea y se comporte igual:
 --------------------------------------------------------------------------------
 2. ESTÁNDAR GLOBAL — "UNA SOLA FORMA DE MOSTRAR CADA COSA"
 --------------------------------------------------------------------------------
+2.0.7 ANTES DE BORRAR UNA REGLA CSS: EL DETECTOR TIENE QUE SER TONTO
+  El detector de "clase muerta" NO puede exigir comillas alrededor
+  (className="x"): una clase también se usa dentro de un template literal
+  (className={`pricing-grid ${activo ? 'es-visible' : ''}`}), y ahí la
+  clase NO está entre comillas. Se busca la clase como PALABRA en todo el
+  JSX (sin exigir comillas) y recién entonces se borra.
+  Después de cada limpieza hay que correr el CRUCE EN LOS DOS SENTIDOS:
+    1. CSS -> JSX: reglas que ya no usa nadie (se borran).
+    2. JSX -> CSS: className que se quedaron SIN NINGUNA REGLA en toda la
+       app (son las que rompen el diseño en silencio).
+  El (2) es el que faltaba y dejó pasar los errores de abajo.
+
 2.1 Fundaciones (ya existen, se respetan)
   - Colores: SOLO tokens semánticos de styles/index.css (--bg-*, --text-*,
     --border*, --action, --accent, --commerce, --ok/--warn/--danger/--info
@@ -77,10 +89,25 @@ Que TODA la aplicación (público + los 8 roles) se vea y se comporte igual:
                                                           qp-aparecer, qp-pop,
                                                           qp-latido, qp-digito,
                                                           qp-flotar, qp-girar...)
-  Pasos (stepper)     components/Pasos.jsx            [ ] nuevo (a partir de
-                                                          compra y wizard admin)
-  Campo de formulario components/Campo.jsx            [ ] nuevo (label, ayuda,
-                                                          error, contador)
+  Pasos (stepper)     components/Pasos.jsx            [x] creado (V): riel /
+                                                          compacto, navegable
+  Campo de formulario styles/forms.css .input-group   [x] MEJORADO (0.8, V):
+                                                          aria-invalid en rojo,
+                                                          .input-group__error,
+                                                          .input-group__ayuda.
+                                                          Campo.jsx descartado.
+  Aviso fijo (banner) components/Avisos.jsx          [x] AvisoFijo: MISMO
+                      (export AvisoFijo)                  molde y tonos que los
+                                                          toasts (info/exito/
+                                                          error/aviso), sin
+                                                          cerrarse. Reemplaza
+                                                          las clases de alerta
+                                                          propias (pi-x-alerta)
+  Error de un campo   components/ErrorCampo.jsx       [x] nuevo: solo el
+                                                          mensaje bajo el
+                                                          control (no existía
+                                                          nada; no reemplaza
+                                                          .input-group)
   Insignia de estado  components/Insignia.jsx         [x] creado (V): tonos
                                                           ok/warn/danger/info/
                                                           marca/neutro, punto,
@@ -89,7 +116,11 @@ Que TODA la aplicación (público + los 8 roles) se vea y se comporte igual:
                                                           la usa (toda la app)
   Tabla / Paginador   components/Tabla.jsx, Paginador [x] existen
   Buscador / Filtros  components/Buscador.jsx         [x] existe
-  StatCard            components/StatCard.jsx         [x] existe (+ count-up)
+  StatCard            components/StatCard.jsx         [x] MEJORADO: count-up
+                                                          si valor es entero
+                                                          (anima desde el valor
+                                                          anterior), prop
+                                                          unidad, grilla .qp-stats
   Tarjeta             components/Card.jsx             [x] existe (revisar)
 
 2.3 Botones — regla única
@@ -102,19 +133,66 @@ Que TODA la aplicación (público + los 8 roles) se vea y se comporte igual:
   alto táctil en md/lg; mientras `cargando` muestra spinner y se deshabilita
   (evita doble envío). Solo UNA acción primaria por vista/modal.
 
-2.4 Confirmaciones — cuándo y cómo
-  Acción                                  Patrón
-  --------------------------------------  -------------------------------------
-  Destructiva / irreversible (eliminar,   useConfirmar({ peligroso: true }) con
-  anular, archivar, rechazar, quitar       texto que diga QUÉ se pierde; foco en
-  gente, cerrar caja, devolver dinero)     "Cancelar". Rechazos: con campoNota.
-  Mueve dinero o stock (recarga, venta,   useConfirmar normal mostrando monto
-  devolución, entrega de manilla)          y destinatario.
-  Reversible y chica (quitar del carrito, Sin confirmar; aviso con "Deshacer"
-  cambiar filtro, marcar leído)            cuando tenga sentido.
-  Guardar / crear                         Sin confirmar; aviso de éxito.
-  Salir con cambios sin guardar           Confirmar "¿Descartar cambios?".
+2.4 Confirmaciones — cuándo y cómo (pedido del usuario: "modales de
+    confirmación en botones de guardado o eliminado")
+  Modal de confirmación ÚNICO: useConfirmar() (components/ConfirmarModal.jsx).
   NUNCA window.alert / window.confirm / window.prompt.
+
+  Acción                                  ¿Confirma?  Cómo
+  --------------------------------------  ----------  ---------------------------
+  ELIMINAR / quitar / archivar / anular /    SÍ       peligroso: true; el texto
+  desvincular / rechazar / cerrar sesión              dice QUÉ se pierde y qué NO
+                                                      (ej. "las ventas no se
+                                                      borran"); foco en Cancelar;
+                                                      rechazos/anulaciones con
+                                                      motivo (campoNota).
+  MUEVE DINERO o stock (cobrar, recargar,    SÍ       muestra MONTO y a QUIÉN;
+  devolver saldo, entregar manilla)                   el botón dice el monto
+                                                      ("Cobrar 45 pts"); cargando
+                                                      para que no se haga 2 veces.
+  GUARDADO SENSIBLE (cambiar contraseña,     SÍ       explica la consecuencia
+  resetear la de otro, cerrar caja con                ("la actual deja de
+  diferencia, publicar un evento)                     funcionar", "faltan Bs 20").
+  GUARDAR / CREAR normal (datos de un        NO       Validación en línea antes
+  formulario, producto, puesto…)                      de enviar + botón con
+                                                      cargando + aviso de éxito.
+                                                      (Confirmar cada guardado
+                                                      molesta y se aprende a
+                                                      aceptar sin leer.)
+  SALIR/cerrar con cambios sin guardar       SÍ       "¿Descartar los cambios?".
+  Reversible y chico (quitar del carrito,    NO       aviso con "Deshacer".
+  vaciar venta, cambiar filtro)
+
+  Dónde ya está aplicado (se actualiza en cada fase):
+    Perfil: cambiar contraseña. Usuario Normal: reportar error de datos
+    (formulario propio). Negocio: quitar puesto del evento, eliminar
+    producto, archivar puesto, quitar ayudante del puesto, desvincular
+    ayudante, resetear contraseña de ayudante. Ayudante: cobrar (botón con
+    monto + cargando; la tarjeta de cobro es la confirmación). Caja: cerrar
+    caja con diferencia, recargar (monto + a quién), devolver efectivo
+    (monto + a quién). Deshacer: quitar entrada (Compra), vaciar venta.
+    Supervisor: reemplazar manilla (anula la anterior), marcar manilla
+    recuperada (ya estaba), reponer saldo (monto + a quién).
+    Cliente: descartar cambios sin guardar de una solicitud.
+    Admin: borrar jornada (antes sin confirmar), eliminar usuario (nombre
+    + correo en el mensaje). Crear usuario / jornada: SIN confirmar.
+  Pendiente de revisar en su fase: publicar / archivar evento, aprobar /
+  rechazar compra y todas las eliminaciones de Admin (FASE 8), y
+  "¿Descartar cambios?" en formularios largos (Configurar página, asistente
+  de eventos, Perfil en edición).
+
+2.4-bis DÓNDE VALE EL TEMA OSCURO (decisión del usuario, 2026-09-22)
+  El tema oscuro es SOLO del panel (lo de adentro). La página pública, la
+  del evento y las pantallas de cuenta (login, registro, recuperar,
+  completar perfil) van SIEMPRE en claro, aunque el sistema operativo esté
+  en oscuro o la persona haya elegido oscuro dentro de la app. Tienen su
+  propio diseño y no se tocan (§9).
+  Cómo: esas 6 pantallas llaman forzarTemaClaro() al montar y el
+  MenuLateral (que envuelve todo el panel) llama restaurarTema(). Funciona
+  porque el bloque del tema oscuro está escrito como
+  :root:not([data-theme="light"]), así que data-theme="light" lo desactiva.
+  El <script> de index.html hace lo mismo antes de pintar, mirando la ruta,
+  para que no haya un parpadeo oscuro al entrar directo a /login.
 
 2.5 Avisos (feedback después de actuar)
   - Éxito / info: aviso flotante (toast) arriba a la derecha (abajo en
@@ -176,6 +254,33 @@ Que TODA la aplicación (público + los 8 roles) se vea y se comporte igual:
     3. Solo se crea algo nuevo si no existe nada equivalente, y se anota en
        §2.2 con el motivo.
   No se crean versiones paralelas de algo que ya existe: complica todo.
+    4. Los estilos NUEVOS o MEJORADOS se escriben EN el global (buttons.css,
+       Filtros.css, Pestanas.css...), nunca en el .css de la pantalla.
+    5. Si una pantalla necesita otros colores (landing oscura, página del
+       evento con su paleta), NO copia el componente: redefine sus
+       variables en su contenedor:
+         botones  --btn-bg, --btn-bg-hover, --btn-texto, --btn-borde,
+                  --btn-borde-hover, --btn-tinte (translucido)
+         filtros  --filtro-fondo, --filtro-texto, --filtro-texto-hover,
+                  --filtro-bg-hover, --filtro-activo-bg, --filtro-activo-texto
+         pestañas --pest-texto, --pest-texto-hover, --pest-texto-activa,
+                  --pest-fondo, --pest-indicador, --pest-radio
+       Ejemplo: publico/App.css (.pi-landing-container .qp-btn--primario).
+       En el .css de la pantalla solo queda posición/margen del componente.
+    6. NUNCA definir una clase global al nivel de arriba en el .css de una
+       pantalla (.input-group, .modal-actions, .texto-ayuda, .qp-btn...).
+       Vite junta TODO el CSS en un solo archivo: esa copia pisa al global
+       en toda la app. Si hace falta un ajuste, va limitado al contenedor
+       de la pantalla: .pi-cliente-container .input-group { margin... }.
+       Control antes de cerrar cada fase: en dist/assets/*.css debe haber
+       UNA sola regla ".input-group{" sin prefijo.
+
+  ERROR COMETIDO (no repetir): se crearon Boton.css (paralelo a
+  buttons.css) y botones/pestañas propios en landing, página del evento,
+  cartelera y paneles (qp-info__cta, qp-hero__btn, ev-acc__btn, btn-pricing,
+  qp-dest__flecha, qp-info__tabs, pi-ajimg-reset, pi-fev__chips...).
+  Corregido el 2026-09-21 (ver bitácora). Antes de escribir un <button> o
+  <a> con clase propia: ¿es un Boton / Filtros / Pestanas? Casi siempre sí.
 
 2.10 Componentes que se repiten -> GLOBALES (pedido del usuario)
   Regla: si un mismo bloque de interfaz aparece en 2 o más pantallas, se
@@ -190,26 +295,77 @@ Que TODA la aplicación (público + los 8 roles) se vea y se comporte igual:
   EventosDestacados, CalendarioEventos, MapaSelector, FotoZoom.
 
   Detectados repetidos, a globalizar (medido 2026-09-21):
-  [~] CuentaRegresiva visual: components/CuentaRegresiva.jsx creado
-      (variantes clara/oscura). Usan: Mis Entradas, Compra. Faltan:
-      cartelera (EventosDestacados), página del evento (App.jsx), entrada
-      flotante — migrar en FASE 9.
-  [~] ModalQr: components/ModalQr.jsx creado (QR sobre blanco, línea de
-      escaneo, código, consejo de brillo, estado "sin vincular"). Usan:
-      Mis Entradas (manilla destacada + invitado). Faltan: Mi Saldo
-      (BilleteraAcordeon, en 1.5) y el resto de pantallas con QR.
-      utils/qr.js (qrDe) ahora es global (movido desde usuario-normal/).
-  [ ] SelectorEvento (desplegable "¿de qué evento?"): 4 pantallas admin
-      (ConfigurarPagina, CrearQr, CrearTickets, Mapa) + las de caja.
-  [ ] Tarjetas de estadística propias (13 clases distintas) -> StatCard.
-  [ ] Subir imagen: ya existe .upload-zone/.preview-zone en forms.css
-      (6 pantallas) -> MEJORAR esos (§2.0), no crear componente paralelo
-      salvo que haga falta comportamiento (entonces envolverlos).
-  [ ] Selector de vista tarjetas/tabla: 3 pantallas -> Pestanas variante
-      segmento (ya sirve).
-  [-] Campo como componente nuevo: DESCARTADO por §2.0 — ya existe
-      .input-group en forms.css (17 archivos). Se MEJORA ese (ver 0.8).
-  [ ] Pasos/stepper: compra, wizard admin, pago (0.7).
+  [x] CuentaRegresiva visual: components/CuentaRegresiva.jsx (variantes
+      clara/oscura). Usan: Mis Entradas, Compra, cartelera
+      (EventosDestacados) y la entrada flotante.
+      [-] La página pública del evento NO usa el componente: su contador
+          del hero tiene diseño propio (ev-hero__cuenta*, con el dígito
+          que cae) y §9 dice no tocar el diseño público.
+          PERO el CÁLCULO sí estaba duplicado: App.jsx tenía su propio
+          useState + setInterval con EXACTAMENTE la misma fórmula que
+          utils/useCuentaRegresiva. Ahora usa el hook y se borraron esas
+          ~25 líneas. No cambia ni una clase: se ve igual.
+  [x] ModalQr: components/ModalQr.jsx. Usan: Mis Entradas (manilla
+      destacada + invitado) y Mi Saldo. No falta ninguna: las otras
+      pantallas con QR no son el mismo caso — AdminCrearQr DIBUJA los
+      códigos para imprimirlos en PDF (utils/qrPdf) y CompraTab muestra
+      el QR de pago del negocio, que es una imagen suelta, no la manilla
+      de una persona. utils/qr.js (qrDe) es global.
+  [x] SelectorEvento: components/SelectorEvento.jsx + .css. Si el evento
+      viene fijo (embebido o llegando desde Gestión de Eventos) muestra el
+      nombre como Insignia; si no, un <select> en el .input-group global.
+      Usan: ConfigurarPagina, CrearQr, CrearTickets y Mapa — el bloque
+      estaba COPIADO en las 4, y su regla de ancho también
+      (.pi-adqr-/.pi-adtick-/.pi-cfg-/.pi-mapa-selector-evento eran la
+      misma línea 4 veces) -> ahora .qp-selector-evento, una sola.
+      onCambio lo pone cada pantalla, porque cada una hace algo distinto
+      además de cambiar el id: Mapa sale del modo diseño, CrearQr vuelve a
+      la página 1 y oculta los QR, ConfigurarPagina CONFIRMA si hay
+      cambios sin guardar, y CrearTickets solo cambia el id.
+      Las de caja no lo usan: eligen el evento de otra forma.
+  [x] Tarjetas de estadística propias -> StatCard: hecho en todos los
+      paneles (admin, caja, supervisor, negocio, usuario). La única que
+      queda con KPI propios es publico/PanelEjemplo.jsx, y es a propósito:
+      es la MAQUETA del panel que se muestra en la landing (qp-panel__kpi),
+      no un panel real — usa el diseño de la landing, que no se toca.
+  [x] Subir imagen: components/SubirImagen.jsx. Usan: MiCatalogo,
+      MiCatalogoPuesto (x2), MisAyudantes (x2), Cliente y ahora también
+      FormularioEventoPasos (imagen del evento).
+      MEJORAS AL GLOBAL en vez de perder lo que hacía la copia (§2.0.4):
+        - maxBytes: tope propio de la pantalla, más chico que el del
+          backend (8 MB). La imagen del evento sigue limitada a 3 MB.
+        - imagen rota: si la URL guardada no se puede mostrar, avisa en
+          línea y ofrece quitarla (antes quedaba un cuadro vacío).
+        - anchoVista/altoVista para la vista previa apaisada del evento.
+      Al migrar FormularioEventoPasos se fueron 5 props que el padre le
+      pasaba solo para esto (onImagen, onQuitarImagen, errorImagen,
+      previewFallo, setPreviewFallo) y el handler handleImagenUpload
+      entero de AdminGestionEventos.
+      [-] AdminConfigurarPagina NO se migra: su caso es distinto (imagen
+          propia de la página vs. portada heredada del evento, con dos
+          vistas previas etiquetadas y el botón "Quitar (usar la del
+          evento)"). Meterlo en el global pedía 4 props más para un solo
+          caso — lo contrario de §2.10. Su subida ya tiene try/catch y
+          aviso desde 8.5.
+  [x] Selector de vista tarjetas/tabla -> Pestanas variante segmento.
+      Mis Entradas ya lo usaba; el último a mano era el de Gestión de
+      Eventos (Lista / Calendario, .pi-ges-vista-tabs con sus botones
+      propios) -> ahora <Pestanas>, y del CSS solo queda la separación
+      (.pi-ges-vista-selector). No había una tercera pantalla.
+  [x] Campo.jsx: NO es un estilo nuevo (se descartó eso por §2.0); es un
+      envoltorio fino que ARMA el .input-group global (label + control con
+      ícono/prefijo + ayuda + ErrorCampo). Se hizo porque ese bloque de
+      ~15 líneas se repetía ~25 veces (auth + compra). Estilos: forms.css.
+  [x] InputContrasena.jsx (ver/ocultar) e InputCodigo.jsx (6 dígitos,
+      pegar el código) — se repetían en 4 y 2 pantallas.
+  [x] utils/validacion.js: reglas y mensajes únicos (correo, obligatorio,
+      contraseña nueva, confirmación, celular 8 dígitos).
+  [x] Pasos/stepper (0.7): components/Pasos.jsx, usado por Registrar,
+      CompletarPerfil (seguridad -> datos), la compra (CompraTab), el
+      asistente de evento (FormularioEventoPasos) y la navegación
+      "Preparar el evento" de Gestión de Eventos, que combina <Pasos>
+      (variante compacto, con estado listo/falta/opcional) con <Pestanas>
+      para el grupo "Operación". También Cliente y ClienteDashboard.
 
 2.11 Definición de "terminado" por pantalla
   [ ] Usa Boton / Avisos / Modal / useConfirmar / Estados / Insignia.
@@ -289,21 +445,107 @@ FASE 0 — Componentes base (se hacen A MEDIDA que Usuario Normal los necesita)
           pi-ayu-tabs, pi-perfil-tabs, pi-cliente-tabs, pi-unegocio-tabs,
           pi-mapa-tabs, vista-toggle (usr, mcat, ges) — en su fase.
   [x] 0.6 EncabezadoPagina (título + subtítulo + ícono + acciones). (V)
-  [ ] 0.7 Pasos (stepper) extraído de compra / wizard admin.
-  [ ] 0.8 Formularios: MEJORAR .input-group de forms.css (estado de error
-          en rojo + mensaje, texto de ayuda, contador) en vez de crear un
-          componente Campo (§2.0). Llega a los 17 archivos que ya lo usan.
-  [ ] 0.10 Reconciliar lo duplicado antes de seguir (§2.0):
-          [ ] Boton vs styles/buttons.css (29 archivos usan .btn-primario,
-              .btn-cancelar, .btn-secundario-sm): un solo estilo — las
-              clases de buttons.css pasan a verse igual que Boton (mismos
-              tokens, hover, foco, tamaños) y Boton las usa por dentro.
-          [ ] .pi-usr-card y demás pi-x-card -> components/Card.jsx.
-          [ ] Acciones de modal: .modal-actions (forms.css), .qp-btn-group
-              (layout.css), .pi-usr-modal-acciones -> una sola.
+  [x] 0.7 Pasos: components/Pasos.jsx/.css, variantes riel y compacto,
+          estados listo/pendiente/falta/opcional, navegable con onIr,
+          contador, aria-current="step". Reemplaza 4 versiones propias:
+          asistente de eventos (pi-fev__stepper), compra (pi-cmp-pasos),
+          registro y completar perfil (pi-auth__progress) y "Preparar el
+          evento" (pi-ges-tab numerada); "Operación" pasa a Pestanas. (V)
+          - El modal de pago (pi-cmp-pago-paso) NO es un indicador: son 3
+            secciones de contenido numeradas; se queda, pero con el
+            keyframe compartido qp-latido.
+          - pCmpAparecer / pCmpLatido / piGesLatido (copias) borrados.
+  [x] 0.8 Formularios: MEJORADO .input-group de forms.css (§2.0): hover,
+          tokens en vez de px, [aria-invalid] en rojo con anillo rojo al
+          enfocar, .input-group__error (con ErrorCampo.jsx) y
+          .input-group__ayuda; .form-nota--error con ícono y aparición.
+          Llega a los 17 archivos que ya lo usan. (V)
+          Patrón de validación (§2.5): errores por campo recién después
+          del primer intento de enviar, se actualizan al escribir, foco al
+          primer campo con error; el botón NO se deshabilita en silencio.
+          Pendiente: contador de caracteres (cuando algún campo lo pida).
+  [~] 0.10 Reconciliar lo duplicado antes de seguir (§2.0):
+          [x] Boton vs styles/buttons.css: UN solo archivo (buttons.css);
+              .btn-primario/.btn-cancelar/.btn-secundario-sm(--peligro)/
+              .btn-quitar-imagen comparten selector con la variante de
+              .qp-btn. Boton.css borrado. Redefiniciones locales borradas
+              (Mapa.css, Cliente.css, forms.css). (V)
+          [x] Botones propios creados en esta sesión -> Boton/Filtros/
+              Pestanas: paneles (AjusteImagen, FormularioEventoPasos,
+              AdminGestionEventos, AdminConfigurarPagina, CompraTab,
+              MisEntradas, SaldoTab), landing (Hero, Asistentes,
+              Organizadores + sus pestañas, Contacto, Pie, navbar),
+              página del evento (nav, hero, compartir/agendar, entradas,
+              barra de compra, filtros y "vaciar" del menú) y cartelera
+              (CTA + flechas). CSS muerto borrado. (V)
+          [x] Pestañas del asistente admin: resueltas con 0.7 — "Preparar
+              el evento" es <Pasos variante="compacto"> (marca cada paso
+              como listo / falta / opcional y deja saltar a él) y
+              "Operación" es <Pestanas navegacion>.
+          [x] Botones propios ANTERIORES al plan:
+              - ConfirmarModal (confirmar-btn / -cancelar / -ok): el pie de
+                TODAS las confirmaciones de la app pasa a <Boton>
+                (secundario + primario/peligro). El "Confirmar" es ÍNDIGO y
+                el primario global es cian, así que para no cambiar cómo se
+                ve se conserva el color con las variables --btn-* del propio
+                Boton (3 líneas en ConfirmarModal.css). Si algún día se
+                quiere unificar en cian, se borran esas 3 líneas.
+              - CapturarFoto (-btn-cancelar / -btn-tomar) y EscanerQr
+                (-btn-cancelar) -> <Boton>. Sus reglas se borraron.
+              - CorteCaja (pi-caja-btn-*), AvisoSinCaja y auth
+                (pi-auth__ghost-btn, pi-login-btn-register): ya estaban
+                migrados en sus fases; no queda ni una regla.
+              - btn-close-modal de publico/App.jsx: resuelto en 9.2/9.3.
+              [-] Paginador (.qp-paginador__btn): NO se migra. Son flechas
+                  circulares « », no botones de texto: con <Boton> cambiarían
+                  de forma y no se gana nada.
+              [-] FiltroJornada: NO hay nada que migrar. Con 5 jornadas o
+                  menos YA delega en <Filtros>; su UI propia es solo el
+                  combobox buscable para cuando hay más, que Filtros no
+                  hace.
+          [x] pi-x-card -> Card: el último que quedaba era
+              .pi-admin-card (Configurar página), con EXACTAMENTE los
+              mismos valores que .qp-card (fondo, borde, radio, sombra y
+              padding). Sus 4 secciones pasan a <Card as="section">; las
+              reglas hijas (h3, header) se cuelgan de .pi-cfg-seccion.
+              De paso: su CSS tenía un @media (max-width: 900px) VACÍO y
+              4 comentarios de sección sin ninguna regla debajo, restos de
+              limpiezas anteriores. 165 -> 146 líneas.
+          [x] Acciones de modal: ya hay UNA sola, .modal-actions
+              (forms.css), usada por 22 pantallas. .qp-btn-group y
+              .pi-usr-modal-acciones se fueron con la limpieza de CSS
+              muerto: ya no las usaba nadie.
+  [x] 0.11 Globales mejorados con el estilo nuevo (§2.0 punto 4):
+          buttons.css: variantes nuevas acento (cian), translucido (vidrio,
+          --btn-tinte), peligro-suave; prop pildora; Boton como="a"/Link
+          (aria-disabled en enlaces). Filtros.css: 36px táctil, hover, foco,
+          rebote al elegir, contador con qp-pop, variables --filtro-*.
+          Pestanas: variables --pest-*, idBase (id + aria-controls para
+          role=tabpanel), soloIcono. (V)
   [~] 0.9 styles/animaciones.css: keyframes compartidos; reemplazar los
           duplicados a medida que se migra cada pantalla (§2.9).
-          Hecho: Boton (qp-girar), Avisos (qp-pop), Pestanas, Encabezado.
+          Hecho: Boton (qp-girar), Avisos (qp-pop), Pestanas, Encabezado,
+          Compra (qp-aparecer, qp-latido), Gestión de eventos.
+          CORRECCIÓN 2026-09-22: la medición de abajo estaba MAL. Se
+          compararon los cuerpos uno por uno y NO son equivalentes:
+            qpHeroFlotar lleva rotateX/rotateZ (la chapa gira en 3D) y
+            -0.75rem; qpInfoFlotar -0.6rem liso; qpDemoFlotar suma rotate.
+            El compartido qp-flotar es -5px liso.
+            qpHeroLatido es opacidad + escala (no sombra); qpDemoLatido y
+            qpPanelLatido son sombras de distinto color y radio (10px y
+            5px) contra los 6px del compartido.
+            qpDemoAparecer sube 0.25rem; qpEcoAparecer es scale(0.4); el
+            compartido baja --space-3.
+          O sea: reemplazarlos CAMBIARÍA el movimiento de la landing, y §9
+          dice no tocar el diseño público. NO se reemplazan. Lo de abajo
+          queda como registro de lo que se creyó en su momento.
+          MEDIDO 2026-09-21 (equivocado, ver arriba):
+            qpHeroFlotar, qpInfoFlotar, qpDestFlotar  -> qp-flotar
+            qpHeroLatido, qpDestLatido                -> qp-latido
+            qpDestDigito                              -> qp-digito
+            qpEcoAparecer                             -> qp-aparecer
+            slideDown (5 copias), pulse (2), slideUp  -> revisar en
+            sus pantallas (Admin/roles) y unificar en animaciones.css.
 
 FASE 1 — USUARIO NORMAL (pages/usuario-normal/UsuarioNormal.jsx)
   1.1 Estructura
@@ -335,54 +577,356 @@ FASE 1 — USUARIO NORMAL (pages/usuario-normal/UsuarioNormal.jsx)
         tabla con Insignia de estado y Boton; EstadoVacio con "Ver
         eventos" y vacío de búsqueda. insigniaEstado() única para ambas
         vistas. MisEntradasTab.css propio; CSS viejo borrado. (V)
-    [~] Revisar mi solicitud (editar pendiente): [x] aviso de éxito al
-        guardar + botón con cargando (V); [ ] validación en línea por campo.
+    [x] Revisar mi solicitud (editar pendiente): aviso de éxito +
+        cargando; validación en línea por campo con CamposEntrada; error
+        del servidor como .form-nota--error junto al botón. (V)
+        ARREGLO: exigía el celular del titular, que al comprar es
+        opcional -> no se podía guardar. Ahora mismas reglas que Compra.
     [x] Reportar error de datos: try/catch + avisos + botón cargando. (V)
     [x] QR de invitado: ModalQr. (V)
   1.5 Pestaña Mi Saldo
-    [ ] Stats con count-up (StatCard), billeteras por evento con acordeón
-        animado y plazo de retiro como Insignia.
-    [ ] Historial: Tabla + Buscador/Filtros unificados, detalle de venta.
+    [x] Stats = StatCard en .qp-stats (count-up); paneles = Card; evento
+        en curso destacado (Card + BadgeEstadoEvento + Boton). (V)
+    [x] Billeteras: acordeón animado (alto 0fr->1fr, inert cerrado,
+        aria-controls), plazo como Insignia en la fila y AvisoFijo en el
+        detalle, saldo retenido como AvisoFijo, vacíos con EstadoVacio. (V)
+    [x] Historial: Tabla + Buscador/Filtros (ya globales); tipo de
+        movimiento como Insignia (TIPO_MOVIMIENTO), montos con tokens,
+        sin estilos en línea. (V)
   1.6 Cierre
-    [ ] Borrar CSS muerto de UsuarioNormal.css (formulario de compra viejo:
-        pi-usr-comprar*, pi-usr-evento-header, pi-usr-categoria-card...).
-    [ ] Revisión 2.9 completa + bitácora.
+    [x] UsuarioNormal.css: 45 clases muertas borradas; lo que quedaba se
+        movió a su pestaña (EventosTab.css, CompraEntradas.css,
+        MisEntradasTab.css). Hoy solo tiene .pi-usr-container. (V)
+    [x] Revisión §2.0/2.9: copias de globales borradas (ver bitácora);
+        modales con <Modal tamano>, pies con .modal-actions, campos del
+        reporte con .input-group. (V)
 
 FASE 2 — CUENTA: Perfil, CompletarPerfil, Login, Registrar, RecuperarContra
-  [ ] Perfil: quitar window.alert; Avisos; Campo; confirmar cambios
-      sensibles (contraseña, correo).
-  [ ] CompletarPerfil: Pasos (contraseña → CI → listo).
-  [ ] Login / Registrar / Recuperar: Campo, Boton cargando, errores en línea.
+  [x] Perfil: window.alert y setMensaje+setTimeout -> Avisos/AvisoFijo;
+      pestañas -> Pestanas (linea, idBase + tabpanel); botones -> Boton;
+      campos -> Campo con validación en línea; cambio de contraseña con
+      useConfirmar; historial con Insignia/EstadoVacio; buscar QR con
+      EstadoCarga; modal con .modal-actions; sin estilos en línea. (V)
+      - Correo: no es editable en Perfil (no hay qué confirmar).
+      - Arreglado: "Cancelar" dejaba puesta la foto nueva subida.
+      - Arreglado: fecha de nacimiento podía verse un día antes (huso).
+      - Perfil.css: estaba COPIADO 3 VECES (~1100 líneas) y con clases
+        genéricas globales (.progress-bar, .full-width, .data-label,
+        .stat-row, .text-green, .step-icon...). Reescrito: 1 copia,
+        todo pi-perfil-*, solo tokens.
+      Pendiente de otra fase: .info-icon global en Supervisor.css.
+  [x] CompletarPerfil: usa <Pasos variante="riel"> (seguridad -> datos).
+  [x] Login / Registrar / Recuperar / CompletarPerfil: Campo, Boton
+      cargando, errores en línea con foco al primero, AvisoFijo para el
+      error del servidor, avisos de éxito al terminar (antes setTimeout
+      de 2,5 s). (V)
+      - auth.css: su sistema de campos propio (pi-auth__field/control/
+        submit/error/success/ghost-btn/back) BORRADO. El panel fija los
+        tokens en claro -> los globales se ven bien sobre el papel blanco.
+      - Separadores iguales con 2 nombres -> .pi-auth__separador.
+      - Quitado "Recordarme": no hacía nada (la sesión siempre se guarda).
+      - "Reenviar" del registro no hacía nada: ahora avisa.
+      - Login.css y RecuperarContra.css borrados (quedaban vacíos).
+    [x] CompletarPerfil / Registrar: barra de progreso -> Pasos (0.7).
 
 FASE 3 — USUARIO NEGOCIO: UsuarioNegocio, UsuNegoDasboar, MiCatalogo,
          MiCatalogoPuesto, MiPuestoDetalle, MisAyudantes
-  [ ] Panel y dashboard (StatCard count-up, gráficos).
-  [ ] Catálogo y productos (tarjetas, stock con Insignia, confirmar borrar).
-  [ ] Puesto y ayudantes (confirmar quitar ayudante, avisos).
+  [x] Panel y dashboard: EncabezadoPagina + StatCard (count-up) en las 4
+      pantallas; Dashboard sin estilos en línea (td-centro/td-derecha,
+      variación con clase), anular venta con Boton/Campo/validación y
+      aviso de éxito; vacíos con EstadoVacio. (V)
+  [x] Catálogo y productos: Insignia (archivado, cantidades, categoría,
+      stock bajo / sin stock en la celda), Pestanas soloIcono para
+      tarjetas/tabla, formulario de producto único (añadir = editar),
+      SubirImagen, validación en línea, confirmar borrar (ya estaba),
+      avisos de éxito en cada acción (antes ninguno). (V)
+  [x] Puesto y ayudantes: Pestanas (Menú / Equipo), Card, Tabla card,
+      Boton con cargando al asignar, confirmar quitar y ahora también
+      confirmar el cambio de contraseña de un ayudante; validación única
+      del alta (utils/ayudantes.js) para los 2 lugares donde se crea. (V)
+  Hallazgos arreglados:
+    - GLOBALES ESCONDIDOS en los CSS de Negocio (los usaban Admin,
+      Ayudante, Supervisor, Mapa, Recargador, Devolución, página del
+      evento): celdas (.item-info/.item-img/.fila-nombre/.celda-*/
+      .tabla-vacia/.img-cuadrada) -> components/Tabla.css; modal viejo
+      (.modal-overlay/.modal/.modal-header/.btn-close-modal/.modal-body)
+      -> bloque LEGADO en components/Modal.css; .form-inline/.flex-1
+      fundidos en forms.css; .input-wrapper -> forms.css (legado Admin);
+      .micro-etiqueta/.kpi-* -> Ayudante.css (legado hasta FASE 4).
+    - Estaban DOS VECES (UsuarioNegocio.css y UsuNegoCreaAyudante.css).
+    - UsuNegoCreaAyudante.css borrado (lo que quedaba -> MisAyudantes.css).
+    - ~65 reglas muertas borradas + comentarios huérfanos.
+  PENDIENTE en otras fases (mismas copias, a borrar al migrarlas):
+    - AdCreaUsuarioNegocio.css: .micro-etiqueta .kpi-valor .kpi-icon
+      .numero-grande .fila-nombre .celda-secundaria (ln 46-242). [HECHO 8.2]
+    - AdminCrearTickets.css: .celda-secundaria (ln 247). [HECHO 8.3]
+    - Mapa.css: .fila-nombre (182), .modal-overlay/.modal/.modal-header
+      (372-390). [HECHO 8.4]
+    - Cliente.css: .modal-overlay/.modal/.modal-header (507-546).
+    - Supervisor.css: .info-icon genérico.
 
 FASE 4 — AYUDANTE (952 líneas): cobrar con escaneo, carrito, ventas.
-  [ ] Modal propio -> Modal. Confirmar cobro (monto). Éxito animado.
+  [x] Punto de venta: EncabezadoPagina, StatCard "Vendido hoy" (count-up),
+      Pestanas (Vender con contador de ítems / Historial), Insignia (stock,
+      anulada, datos del evento), Boton en todo, EstadoVacio. (V)
+  [x] ARREGLO IMPORTANTE: "Confirmar cobro" no tenía protección contra
+      doble toque -> se podía COBRAR DOS VECES. Ahora Boton con cargando +
+      guarda en confirmarCobro; el modal no se cierra tocando afuera
+      mientras cobra. El botón dice el monto: "Cobrar N pts".
+  [x] Tarjeta de cobro armada a mano (createPortal + overlay propio +
+      useModal) -> <Modal> global (§2.7). Estado del QR con Insignia;
+      alertas con AvisoFijo.
+  [x] "Vaciar venta" con Deshacer (aviso con acción). "Avisar al negocio"
+      ahora confirma con aviso (antes silencioso, también si fallaba).
+  [x] Nuevo global components/SelectorCantidad.jsx/.css (−/n/+):
+      Ayudante x2 + calculadora de la página del evento (tematizado con
+      --cant-* en App.css).
+  [x] Ayudante.css 991 -> 585 líneas (53 reglas muertas); legado kpi-*
+      borrado (ya no lo usa nadie).
+  [ ] Pendiente de antes (no introducido): 2 errores de lint
+      react-hooks/set-state-in-effect en los efectos del carrito
+      (Ayudante.jsx ~139 y ~161). Revisar con calma: tocan el carrito.
+  [x] Modal propio -> Modal. Confirmar cobro (monto). Éxito animado. (ver abajo)
 
 FASE 5 — CAJA: Recargador y Devolución (+ CorteCaja, AvisoSinCaja)
-  [ ] Modales propios -> Modal. Confirmar recargas/devoluciones con monto.
-  [ ] Corte de caja con pasos y resumen; éxito animado.
+  [x] Modales propios (3 en Recargador/Devolución, con createPortal +
+      overlay + useModal) -> <Modal> global. (V)
+  [x] Confirmar recargas y devoluciones con monto y a quién (useConfirmar);
+      el botón dice el monto ("Recargar 200 pts", "Retirar 50 pts"). (V)
+  [x] ARREGLOS IMPORTANTES:
+      - Recarga y devolución SIN protección contra doble toque -> se podía
+        recargar / pagar efectivo dos veces. Ahora cargando + guarda.
+      - Recarga: si fallaba (salvo manilla falsa) hacía `throw` y NO
+        mostraba nada; el recargador creía que se había cargado. Ahora
+        AvisoFijo "No se pudo recargar".
+      - Reportar incidencia sin try/catch -> ahora error visible.
+      - Devolución: errores al subir la foto del carnet se mostraban
+        DETRÁS del modal (nunca se veían) -> ahora aviso.
+      - Devolución: botón gris sin explicar -> dice qué falta (monto,
+        foto del carnet, foto de la cara) junto a cada cosa.
+  [x] Arqueo de caja: StatCard (.qp-stats), Campo con prefijo, diferencia
+      en vivo con AvisoFijo (cuadra / sobran / faltan), Insignia en el
+      historial, CONFIRMAR cerrar con diferencia, avisos de éxito. (V)
+  [x] AvisoSinCaja = EstadoVacio con acción (AvisoSinCaja.css borrado).
+  Nuevo global: components/FichaParticipante.jsx/.css (foto + nombre +
+  datos de la manilla): Ayudante, Recargador x2, Devolución.
+  Arreglo global: ConfirmarModal tenía el MISMO z-index que Modal y quedaba
+  DETRÁS cuando se abría desde un modal -> token --z-confirmar (1400).
+  Mejora global: prefijo de Campo con ancho según su texto (--prefijo-ancho).
+  CSS: Recargador 627 -> 126 líneas, Devolución 602 -> ~190, CorteCaja
+  limpio; formulario de incidencia duplicado -> uno; foto obligatoria
+  duplicada -> una.
 
 FASE 6 — SUPERVISOR: Supervisor, GestionEntrega, PersonasPorEncontrar
-  [ ] Modales propios -> Modal. Entrega de manilla con pasos. Alertas de
-      duplicados con Insignia/avisos.
+  [x] Modales propios (tarjeta de control y resultado de verificación, con
+      createPortal + overlay + useModal) -> <Modal> global. El "flash" de
+      1 s tras registrar se queda (es parte del flujo en la puerta, no un
+      modal) con su capa propia en --z-confirmar. (V)
+  [x] Entrega de manilla: Ficha del participante + escanear -> "lista para
+      vincular" -> Vincular. REEMPLAZAR confirma (anula la anterior),
+      motivo con validación en línea. (V)
+  [x] ARREGLOS:
+      - Vincular manilla sin try/catch -> si fallaba no se enteraba nadie.
+      - Ingreso / salida sin protección contra doble toque (mostraba un
+        falso "ya ingresado"); ahora cargando.
+      - Error al subir la foto de la puerta iba a errorEscaneo, DETRÁS del
+        modal (no se veía) -> aviso.
+  [x] Personas por encontrar: EncabezadoPagina, EstadoVacio, Boton, avisos;
+      "Reponer saldo" confirma con monto (mueve dinero) + validación.
+      ManillaFalsaModal / VerificarDuenoModal ya usaban globales y cargando.
+  [x] GLOBAL ESCONDIDO: .pi-entrega-eventos-grid (grilla de EventoCard,
+      valor por defecto de GrillaEventos) vivía en GestionEntrega.css y 8
+      pantallas de otros roles importaban ese CSS solo por eso -> ahora
+      .qp-grilla-eventos__grid en GrillaEventos.css; los imports se fueron.
+  [x] Clases GENÉRICAS globales de Supervisor (.foto-box, .foto-img,
+      .text-cyan, .text-gray, .historial-item, .item-in, .confirm-in…)
+      -> prefijo pi-sup-. Las viejas .info-icon/.info-row/.estado-badge
+      borradas (muertas).
+  CSS: GestionEntrega 674 -> 62 líneas, Supervisor 419 -> ~235.
 
 FASE 7 — CLIENTE: Cliente (solicitud de evento), ClienteDashboard
-  [ ] Solicitud de evento con Pasos + vista previa (como admin).
-  [ ] Dashboard con StatCard count-up.
+  [x] Solicitud de evento: Pasos (5 secciones, listo / falta / opcional,
+      tocar lleva a la sección), Campo con validación en línea, colores y
+      filas (actividades / cronograma) sin copias, SubirImagen, vista
+      previa con variables CSS (sin estilos en línea), Pestanas, Insignia
+      del estado de cada solicitud, AvisoFijo si está aprobada/rechazada. (V)
+  [x] ARREGLOS:
+      - "Enviar solicitud" NO validaba (el form se enviaba por onClick,
+        los required no corrían): se podía mandar vacía.
+      - Sin try/catch: si fallaba no avisaba. Sin cargando: se podían
+        crear solicitudes duplicadas.
+      - "Nueva solicitud" / abrir otra descartaba lo que se estaba
+        editando sin preguntar -> ahora "¿Descartar los cambios?" (§2.4) y
+        aviso de "cambios sin guardar".
+      - Quitar una fila ofrece Deshacer.
+  [x] Dashboard: EncabezadoPagina, checklist de preparación -> Pasos (el
+      mapa como opcional, que no es requisito), AvisoFijo "no publicado",
+      StatCard en .qp-stats con Insignia, td-centro, Boton exportar,
+      gráfico/tabla con Pestanas, vacío con EstadoVacio. (V)
+  [x] Cliente.css estaba COPIADO DOS VECES (667 líneas) y redefinía a nivel
+      global .modal, .modal-overlay, .modal-header, .btn-close-modal,
+      .btn-secundario, .img-preview-rect -> reescrito (196 líneas, todo
+      pi-cliente-). .img-preview-rect pasa a forms.css (Mapa tenía otra
+      copia, borrada). ClienteDashboard.css 233 -> 99 (.ok/.falta
+      genéricas borradas).
+  Quedan copias de .btn-close-modal en publico/App.css (modales a mano,
+  §2.7, FASE 9). Las de Mapa.css se borraron en 8.4.
 
 FASE 8 — ADMIN
-  [ ] AdminGeneral (dashboard).
-  [ ] Admin.jsx (1957 líneas): partir por vista (reportes, solicitudes,
-      incidencias...) y migrar.
-  [ ] AdminAuditoria.
-  [ ] Gestión de eventos: migrar a componentes base (Tabs, Boton...).
-  [ ] Tickets, QR, Jornadas, Mapa, Crear usuario negocio.
-  [ ] Configurar página: modal armado a mano -> Modal; migrar botones.
+  Partes: 8.1 AdminGeneral · 8.2 Auditoría/Jornadas/Crear usuario negocio ·
+  8.3 Tickets/QR · 8.4 Mapa · 8.5 Configurar página · 8.6 Gestión de
+  eventos · 8.7 Admin.jsx.
+  [x] 8.1 AdminGeneral: EncabezadoPagina, .qp-stats, Insignia (variación
+      ▲▼, antigüedad, contadores, borrador, caja abierta, diferencias),
+      EstadoVacio. ACCESIBILIDAD: alertas clicables eran <li onClick> y
+      las filas de eventos <tr onClick> (no se abrían con teclado) ->
+      alerta = <button>, nombre del evento = Boton. (V)
+      Nuevos globales: components/PanelGrafico.jsx/.css (gráfico + "ver
+      tabla" con Pestanas; antes uno en Admin y otro en Cliente) y
+      utils/graficos.jsx (ejeTick, tooltipStyle…; Cliente tenía copia).
+  [~] 8.7 Admin.jsx: MIGRADO (estilos, botones y acciones). Queda
+      pendiente PARTIRLO por vista -> ver 8.8.
+      - LO MÁS GRAVE DE TODA LA FASE: dos acciones que mueven PLATA no
+        confirmaban nada y se aplicaban al primer clic, sin try/catch:
+        * Aprobar una compra (da por pagado el monto, emite las entradas y
+          crea las cuentas de los invitados). Doble clic = dos aprobaciones.
+          Ahora confirma con el monto y el comprador, con cargando.
+        * Resolver una incidencia de recarga (ACREDITA o DESCUENTA saldo).
+          Ahora confirma diciendo cuánto y a quién, y el botón lleva el
+          monto ("Aplicar −30 pts"). Peligroso solo si descuenta.
+        También sin try/catch: rechazar compra y corregir el dato de una
+        entrada. Todas avisan ahora (antes no había ningún aviso de éxito).
+      - En el modal de detalle de una compra, "Aprobar" cerraba el modal
+        SIEMPRE, incluso si la aprobación fallaba: el error no se veía.
+        Ahora solo cierra si salió bien.
+      - Anular venta: el botón ya no dice "Anular venta" sino "Anular N
+        pts" (§2.4: el monto va en el botón).
+      - Migas propias (.pi-dash-crumb*) eran una COPIA EXACTA del
+        componente Migas global -> se usa Migas.
+      - 14 botones a mano (.pi-dash-btn-ver/-guardar/-detalle/-anular/
+        -cancelar-anular) -> Boton. Errores en línea -> AvisoFijo.
+        <div style={{display:flex}}> -> btn-acciones / modal-actions.
+      - .pi-dash-modal-reporte y .pi-dash-modal-solicitud se pasaban como
+        className al Modal pero NUNCA tuvieron una regla CSS -> fuera.
+      - CSS 932 -> 599 (49 reglas muertas: migas, botones, una card de
+        evento y unos KPIs propios que ya usan EventoCard/StatCard, y una
+        lista de actividad que ya no existe).
+      - LINT: `navRef.current = {...}` se asignaba DURANTE EL RENDER (React
+        19 no lo permite) -> pasa a useEffect. Quedan 3 errores
+        react-hooks/refs preexistentes en el armado de `migas` (vienen de
+        HEAD): tocarlos implica reescribir el manejo de historial del
+        panel, se deja para 8.8 junto con la división del archivo.
+  [~] 8.8 Admin.jsx: partido por vista. 2028 -> 1839 líneas.
+      Nuevo directorio admin/vistas/:
+        - Podio.jsx (estaba suelto dentro de Admin.jsx).
+        - VistaEntradas.jsx (los badges de estado propios
+          .pi-dash-badge-ok/-pend/-salio pasan a Insignia).
+        - VistaOperadores.jsx: Recargadores y Devoluciones eran la MISMA
+          pantalla copiada dos veces (podio + tabla + detalle del operador)
+          -> UN componente parametrizado que sirve para las dos (§2.9).
+        - VistaNegocios.jsx (incluye top de clientes y anular venta).
+        - VistaSupervisores.jsx.
+      Pendiente de partir: la vista general (la más entrelazada con el
+      estado del panel) y Reportes / Solicitudes, que arrastran sus modales
+      y acciones. Se hace cuando se toquen de nuevo, sin apuro: ya están
+      migradas de estilo en 8.7.
+      LOS 3 ERRORES react-hooks/refs SIGUEN. Se intentó envolver
+      desapilarNiveles / volverASeleccionEvento / volverALaLista en
+      useCallback: NO los calla (la regla marca el punto donde la función
+      se pasa como onClick en `migas`, no su definición) y encima agrega un
+      warning de exhaustive-deps por `volver`. Revertido. Para resolverlo
+      hay que rehacer el manejo de historial del panel (nivelesHistorialRef
+      / ignorarPopRef / popstate), que es cambio de comportamiento, no de
+      estilo -> queda fuera del rediseño, como tarea aparte.
+  [x] 8.2 Jornadas / Auditoría / Crear usuario negocio:
+      - AdminJornadas: botones propios -> Boton; <label> sueltos -> Campo;
+        validación en línea (inicio y fin obligatorios, fin > inicio,
+        aforo >= 1); borrar jornada ahora CONFIRMA; avisos de éxito;
+        error de guardado en AvisoFijo; style textAlign -> td-centro.
+        CSS 130 -> 55 líneas, solo tokens.
+      - AdminAuditoria: EncabezadoPagina, acción = Insignia, "Ver" = Boton,
+        paginador propio -> Paginador GLOBAL (el mismo de Tabla, sirve para
+        paginado del servidor), style -> td-derecha.
+      - AdCreaUsuarioNegocio: GLOBALES ESCONDIDOS borrados (.fila-nombre,
+        .celda-normal/-secundaria redefinidas, .badge-*, .kpi-*,
+        .micro-etiqueta, .numero-grande, .search-icon, .input-wrapper
+        input::placeholder, buscador viejo) -> CSS 286 -> 31. Rol =
+        Insignia (tono por rol), Campo con validación en línea, crear con
+        cargando + aviso + error visible (antes un error de la API se
+        perdía y el modal quedaba igual), eliminar con try/catch.
+  [x] 8.6 Gestión de eventos: ya usaba EventoCard/GrillaEventos, Buscador,
+      Pestanas, Pasos, Modal y confirmaciones; faltaban los botones de
+      acción y el manejo de errores.
+      - SIN try/catch (el error de la API se perdía y la pantalla quedaba
+        como si nada): rechazar solicitud, asignar y quitar usuario,
+        archivar, desarchivar y despublicar. Todas avisan ahora.
+      - NINGUNA acción del evento tenía guarda de doble clic -> un solo
+        estado `accionEvento` ('publicar'|'archivar'|…) que pone cargando
+        en la que corre y desactiva las demás.
+      - No había NINGÚN aviso de éxito en toda la pantalla (aprobar una
+        solicitud, publicar, archivar… no decían nada) -> avisos.
+      - Botones propios (publicar/despublicar/editar/archivar/desarchivar/
+        eliminar/asignar/quitar/aprobar/rechazar) -> Boton. Errores en
+        línea -> AvisoFijo. Un <td> con display:flex inline -> btn-acciones.
+      - CSS 906 -> 498: 49 reglas muertas (restos de un modal y una card a
+        mano: .pi-ges-modal-*, .pi-ges-evento-card/-imagen/-info,
+        .pi-ges-form*, .pi-ges-input-*, .pi-ges-btn-cancelar/-guardar/
+        -close-modal, .pi-ges-buscador, .pi-ges-accesos-rapidos) más los
+        botones ya migrados. Sin globales escondidos (todo iba con prefijo).
+      - Modificadores .pi-ges-nav-grupo--preparar/--operacion: se ponían en
+        el JSX pero NUNCA tuvieron una regla -> fuera.
+  [x] 8.3 Tickets / QR:
+      - AdminCrearTickets: Campo + validación en línea (nombre, cantidad >= lo
+        ya vendido, precio >= 0), Boton, Card, .qp-stats, Insignia (agotado),
+        crear con cargando (antes doble clic = categoría duplicada) y errores
+        visibles; eliminar avisa si la categoría ya tiene tickets colocados.
+        OJO: usaba .pi-jor-error (clase de OTRA pantalla, borrada en 8.2) ->
+        AvisoFijo. CSS 281 -> 80, sin .celda-secundaria redefinida.
+      - AdminCrearQr: el <button> de la lista tenía type="button" DOS VECES;
+        generar no tenía cargando (doble clic = dos tandas de hasta 2000
+        códigos) ni try/catch; vaciar tampoco. Modal del QR ampliado armado a
+        mano -> Modal global (se va useModal); paginador propio -> Paginador;
+        barra de progreso a mano -> <progress>; "Vaciar" se desactiva si no
+        hay códigos libres y dice cuántos borra. CSS 453 -> 115.
+  [x] 8.4 Mapa (Diseñador del recinto):
+      - Era el archivo con MÁS globales escondidos: .modal-overlay/.modal/
+        .modal-header/.modal-body/.btn-close-modal, .btn-secundario,
+        .info-text(-verde), .alerta-exito/-error, .badge-visible/-oculto/
+        -zona, .btn-icon-*, .fila-nombre con !important, .toolbar-actions,
+        .no-margin, .canvas-plano, .resize-handle, .pi-select-rol y
+        .upload-zone-pequeña (ya sin uso). Todo borrado; lo del lienzo pasó
+        a llevar prefijo pi-mapa-. CSS 440 -> 219, solo tokens.
+      - Toast propio con setTimeout(3s) -> avisos globales.
+      - Pestañas propias -> Pestanas; cabecera -> EncabezadoPagina;
+        paneles -> Card; formularios -> Campo; botones -> Boton;
+        badges -> Insignia; tabla con `card` y celdas globales.
+      - GUARDADOS SIN RED DE SEGURIDAD (todos arreglados): "Guardar y
+        Bloquear" manda N PUTs en paralelo y si fallaba no decía nada Y
+        ADEMÁS cerraba el modo diseño como si hubiera guardado; guardar
+        tamaño, crear zona, guardar contorno y mostrar/ocultar puesto no
+        tenían try/catch ni cargando (doble clic = doble tanda).
+      - "Descartar cambios" del contorno tiraba lo dibujado sin preguntar
+        -> ahora confirma (§2.4). Tamaño con validación en línea (>= 50px).
+      - Un <td> tenía color: var(--texto-secundario), token que NO EXISTE
+        (el real es --text-secondary): no pintaba nada -> celda-secundaria.
+  [x] 8.5 Configurar página: ya venía con Boton y Pestanas de fases
+      anteriores; faltaba lo de alrededor.
+      - Vista completa: createPortal + overlay + useModal a mano -> Modal
+        global (tamano xl). Cabecera -> EncabezadoPagina; selector de
+        evento -> Campo/Insignia; toast propio con setTimeout(3s) ->
+        avisos; aviso de contraste -> AvisoFijo.
+      - "Restablecer" no tenía try/catch ni cargando: si fallaba, no decía
+        nada y se podía disparar dos veces.
+      - Cambiar de evento con cambios sin guardar los tiraba sin avisar (el
+        beforeunload solo cubre cerrar la pestaña) -> ahora confirma (§2.4).
+      - CSS: 343 -> 165. Casi todo era una vista previa VIEJA que ya no
+        existe: .preview-* (divider, grid-actividades, glass-card,
+        icon-box, cronograma-box/item, badge-hora), .dark-glass-preview,
+        .dark-header, .modal-scrollable, .no-img, .pi-admin-modal-*,
+        .icon-selector-wrapper, .icon-preview, .pi-admin-select-icon,
+        .pi-admin-btn-delete, .pi-admin-dynamic-row, .pi-admin-grid —
+        todas GLOBALES y sin un solo uso en JSX. Se fue también el
+        @keyframes slideDown duplicado (tarea 0.9).
 
 FASE 9 — LAYOUT Y PÚBLICO
   [~] MenuLateral (navegación, rol activo, móvil).
@@ -390,12 +934,196 @@ FASE 9 — LAYOUT Y PÚBLICO
           Comprar -> Eventos; catálogo/:id -> Mi Catálogo; evento/puesto ->
           Mi Negocio; config/tickets/qr/Mapa -> Gestión de Eventos;
           solicitudes -> Por Eventos. (V)
-      [ ] Resto del rediseño del menú.
-  [ ] Público: migrar a componentes base donde aplique (sin tocar diseño).
+      [x] 9.1 Limpieza del menú — EL USUARIO ELIGIÓ "solo limpieza, sin
+          cambio visual", así que el aspecto queda IGUAL:
+          - 5 clases GLOBALES sueltas (.curve-top, .curve-bottom,
+            .logo-icon-wrapper, .logo-text, .logout-btn) -> prefijo
+            pi-layout-. Se comprobó antes que solo las usa el menú.
+          - 37 px -> tokens (solo equivalencias exactas en gap/padding/
+            margin). Los 46 px que quedan son anchos, sombras, bordes y
+            transform: son valores de diseño, no espaciado.
+          - CSS muerto: NINGUNO (38 clases, todas en uso).
+          - Accesibilidad: ya estaba bien (skip-link, aria-expanded,
+            aria-current="page", role="menu"). No hizo falta tocar nada.
+      [-] Botones propios del menú (contraer, tema, salir, hamburguesa,
+          desplegable de perfil) -> Boton: DESCARTADO por ahora. Cambiaría
+          el aspecto del menú y el usuario pidió no tocarlo. Si algún día
+          se quiere unificar, es lo único que falta del menú.
+  [~] 9.2/9.3 Público: CSS sin globales escondidos (sin tocar diseño).
+      - App.css 1716 -> ~1400: 34 clases MUERTAS borradas (una cuenta
+        regresiva entera: .countdown-*, .time-*, .date-*, .massive-date-*;
+        un modal de puesto viejo: .modal-puesto-*, .modal-categoria-badge,
+        .modal-menu-title, .modal-empty-state; y una tabla de cronograma:
+        .col-hora, .col-actividad, .badge-hora, .inner-table, .prod-*).
+      - GLOBALES SUELTOS prefijados (nadie fuera de publico/ los usaba, se
+        comprobó antes de tocar): 26 en App.css -> pi-ev-, 18 en
+        PaginaPrincipal.css -> pi-home-, 8 en TarjetasEntrada.css -> pi-ev-.
+        Hoy NINGÚN CSS de publico/ define ya una clase sin prefijo.
+      - .box-fondo-color / .box-overlay-texto / .puesto-icon-dinamico
+        estaban definidas A LA VEZ en App.css y en Mapa.css con valores
+        distintos (fondo claro vs texto blanco): cuál ganaba dependía del
+        orden del bundle. Con 8.4 + esto, el choque desapareció.
+      - .btn-close-modal del público PISABA el .btn-close-modal del Modal
+        GLOBAL -> renombrado a .pi-landing-modal-cerrar.
+      - components/Modal.css: el bloque LEGADO (.modal-overlay, .modal,
+        .modal-header, .modal-body, .btn-close-modal) decía "se borra
+        cuando la última pantalla pase a <Modal>". Ese momento llegó: ya no
+        lo usaba nadie -> BORRADO (Modal.css 140 -> 84). El @media de
+        reduced-motion apuntaba a .modal (huérfano) -> .qp-modal.
+      - Los 2 modales de la landing NO pasan al Modal global a propósito:
+        tienen diseño glass propio y §9 dice no tocar el diseño público.
+        Lo que se quitó es el global escondido, no su aspecto.
+      - EventoPuestos.jsx: .ev-menu y .ev-menu__cant ya no tenían ninguna
+        regla (el control lo hace SelectorCantidad) -> fuera del JSX.
+      ERROR COMETIDO Y CORREGIDO (2): el detector marcó .pricing-grid como
+      muerta y la borré, pero App.jsx la usa DENTRO DE UN TEMPLATE LITERAL
+      (className={`pi-ev-pricing-grid${...}`}), sin comillas alrededor. Sin
+      esa regla la grilla dejaba de ser grid y, con UNA sola categoría, la
+      tarjeta se estiraba a todo el ancho (lo vio el usuario en pantalla).
+      Restaurada tal cual (auto-fit 17.5-21rem + justify-content:center +
+      max-width 69rem). De ahí sale la regla §2.0.7.
+      ERROR COMETIDO Y CORREGIDO: al fusionar .glass-modal dentro de
+      .pi-landing-modal, esa regla NO existía (todo el estilo de la tarjeta
+      vivía en .glass-modal), así que el modal se quedó sin estilos. Se
+      detectó con el cruce JSX->CSS y se recreó .pi-landing-modal con el
+      cuerpo original. LECCIÓN: antes de fusionar dos clases, verificar que
+      la de destino exista de verdad.
+      Pendiente de 9.2: .pricing-* y .ev-* están definidas EN DOS ARCHIVOS
+      (App.css como base + evento/TarjetasEntrada.css y EfectosEvento.css
+      como capa). No es un global escondido (son de la misma página), pero
+      el resultado depende del ORDEN del bundle. Unificarlo mueve estilos y
+      puede cambiar el diseño, así que se hará cuando se pueda verificar en
+      pantalla.
+  [x] 9.x REGRESIONES VIEJAS encontradas con el cruce JSX -> CSS (existían
+      en HEAD y se habían perdido en fases anteriores, no solo en la 9):
+      - .pi-ges-error-fechas: la borré en 8.6 mirando solo
+        AdminGestionEventos, pero FormularioEventoPasos.jsx la usaba en 3
+        errores (mapa obligatorio, error del paso, error al guardar) ->
+        pasan a AvisoFijo.
+      - .pi-entrega-panel-cols / .pi-entrega-panel-scan: GestionEntrega.jsx
+        seguía poniendo los className pero las reglas ya no estaban, así
+        que las DOS COLUMNAS del panel de entrega se apilaban. Restauradas.
+      Falsos positivos del cruce (no tocar): clases base de BEM sin reglas
+      propias cuyos modificadores sí pintan (.qp-hero__punto,
+      .estado-bloque--*, .qp-stat__pct) y los sufijos que se arman con
+      ${} (.pi-adg-alerta--, .qp-aviso--, .pi-cfg-marco--).
+
+  [x] 9.4 Página pública del evento: REVISADA, casi nada que migrar.
+      - La landing NO cobra: "Adquirir ahora" solo lleva a /login. La
+        compra real es usuario-normal/CompraTab.jsx, que ya quedó bien en
+        la FASE 1 (valida, cargando `enviandoCompra`, try/catch, aviso de
+        error y pantalla de éxito). No hay doble envío que arreglar acá.
+      - Los <button> que quedan en publico/App.jsx son piezas con diseño
+        propio (logo, volver, tarjeta de puesto, cerrar del modal glass,
+        filtros de día). NO se migran: §9 dice no tocar el diseño público
+        y cambiarlos por Boton/Filtros lo alteraría. Se deja anotado.
+      PROPUESTA (cambio de COMPORTAMIENTO, no de estilo — no se hizo sin
+      consultar): "Adquirir ahora" manda a /login sin recordar a qué
+      evento entraba la persona, así que después del login tiene que
+      volver a buscarlo. Se podría pasar el evento en el state y volver a
+      la compra al terminar. Toca Login y el gate de completar perfil, por
+      eso no se toca dentro del rediseño.
+  [x] 9.5 CSS grandes de la landing: CERO reglas muertas (se pasó el
+      detector de §2.0.7 por los 10 archivos: Hero 69 clases, Info 51,
+      Demo 36, PaginaPrincipal 31, Eco 23, Panel 23, Contacto 15, Pie 6,
+      Cinta 3, Fondo 5 — ninguna sin usar). La landing estaba sana.
+      - px sueltos -> tokens: 50 cambios, SOLO equivalencias exactas
+        (4/8/12/16/20/24/32/40/48/64/80px) y solo en gap/padding/margin,
+        así que el resultado renderizado es idéntico. Los px que no caen
+        en la escala (6, 10, 14…) se dejan: cambiarlos movería el diseño.
+      - Los keyframes de la landing NO se tocan: ver la corrección de 0.9.
 
 FASE 10 — LIMPIEZA Y QA GLOBAL
-  [ ] Buscar clases de botón/alerta sobrantes y CSS muerto.
-  [ ] Pasada de tema oscuro, móvil, teclado y movimiento reducido en todo.
+  [x] CSS muerto en TODA la app: 0. Se pasó un detector por los 60+ CSS
+      (ver §2.0.7) y se borraron ~60 clases muertas:
+      - styles/layout.css 200 -> 132: el bloque de "pestañas de los paneles
+        de rol en móvil" (.pi-rec-tabs, .pi-dev-tabs, .pi-ayu-tabs,
+        .pi-usr-tabs, .pi-unegocio-tabs) ya no lo usaba NADIE — esas
+        pantallas pasaron a Pestanas. Igual las grillas de KPI
+        (.pi-adqr-kpi-grid, .pi-adtick-kpi-grid, .pi-adg-grid, .pi-cld-grid,
+        .pi-sup-stats-grid, .pi-entrega-stats-grid, .pi-rec-historial-stats,
+        .pi-dev-resumen), que hoy son .qp-stats, y los .pi-*-modal-overlay
+        y .pi-*-tarjeta-foto/-nombre de modales ya migrados. También
+        .qp-btn-group y .btn-acciones__texto.
+      - App.css: restos del countdown viejo (.time-*, .date-*, .small-timer)
+        y los .stk-* del stock, que ya son Insignia.
+      - Puntuales: .pi-dash-stat-card y .pi-dash-crumb (Admin ya usa
+        StatCard y Migas), .pi-ges-error-imagen/-imagen-preview/-modal,
+        .pi-adg-grafico, .pi-cld-grafico-titulo, .tabla-vacia,
+        .texto-lectura, .input-monto-wrapper--sm, .qp-anim-* y
+        .pi-unegocio-nota--aviso/--error.
+      EL DETECTOR, EN SERIO (costó tres intentos):
+        v1 exigía comillas -> borró .pricing-grid (usada en un template
+        literal) y rompió la grilla de entradas.
+        v2 borraba los comentarios del JSX con regex -> se comía código
+        real cuando un '/*' caía dentro de una cadena, y daba por muerta
+        .pi-layout-contenedor, que está viva.
+        v3 (el bueno, guardado en el scratchpad): junta las CADENAS del
+        JSX ('...', "...", `...`) —ahí viven los className, y un nombre
+        que solo aparece en un comentario no cuenta—, detecta los
+        prefijos que se arman con ${} (qp-btn--, qp-insignia--…) para no
+        tocarlos, y respeta los selectores agrupados: si la regla mezcla
+        clases vivas y muertas, poda solo el fragmento muerto.
+  [x] Clases de botón/alerta sobrantes: ninguna (ver 0.10).
+  [~] Pasada de accesibilidad y tema. Lo COMPROBABLE sin abrir el
+      navegador, hecho:
+      - MOVIMIENTO REDUCIDO: había 5 archivos que animaban SIN
+        @media (prefers-reduced-motion) — EscanerQr, FotoZoom,
+        MenuLateral, AdminGeneral y Supervisor. Ahora son 0.
+      - TEMA OSCURO: CalendarioEventos usaba 8 colores que NO cambian con
+        el tema (--gris-niebla, --texto-secundario, --borde-suave y los
+        -suave/-texto, que solo están definidos en el :root claro), así
+        que los chips de evento quedaban como parches claros sobre el
+        calendario oscuro -> pasan a los tokens de estado (--ok-bg,
+        --warn-bg, --bg-sunken, --text-muted…), que sí se redefinen. En
+        tema claro se ve igual que antes.
+      - VARIABLE FANTASMA: .pi-ngd-retiro-qr-cargando usaba
+        var(--bg-muted, #eee) y --bg-muted NO EXISTE: caía siempre al gris
+        fijo. Ahora var(--bg-hover). Se pasó un detector por TODA la app:
+        las otras 5 variables sin definir (--mx, --my, --progreso,
+        --hero-tarjetas-*) están bien, las setea el JS con setProperty y
+        el fallback es su valor en reposo.
+      - Colores fijos: de 47 a 34. Los que quedan son a propósito y quedan
+        anotados: el fondo BLANCO del QR (un QR sobre fondo oscuro no se
+        lee con la cámara), el blanco sobre fotos/video de la cámara y el
+        escáner, las sombras rgba() y los de la landing (§9: no se toca).
+      - CONTRASTE (WCAG AA) medido token por token, resolviendo los var()
+        encadenados y componiendo los rgba() sobre su fondo:
+        * TEMA OSCURO, EL ACENTO NO SE VEÍA: --action era #4A5FA8 y sobre
+          el fondo oscuro daba 2.77:1 — por debajo del mínimo hasta para
+          íconos (3:1), y lo usan 41 reglas. El usuario eligió el CIAN de
+          marca (#00B4D8): 6.77:1.
+        * Eso arrastró un segundo problema: --text-on-accent seguía siendo
+          blanco, y blanco sobre cian da 2.46:1, así que el texto de los
+          botones primarios en oscuro habría quedado ilegible. Pasa a azul
+          noche (7.71:1), que es la regla que el propio sistema ya tenía
+          para fondos vivos (--text-on-vivid).
+        * --text-muted sobre superficie da 2.23:1 en claro. index.css ya
+          decía "placeholder, deshabilitado, NO cuerpo", pero se estaba
+          usando para TEXTO informativo en 3 globales: la nota del
+          StatCard, el total del Paginador ("· 120 registros") y el
+          subtítulo de cada paso de <Pasos> -> a --text-secondary (5.73:1).
+          También el chip de evento archivado del calendario.
+        * El resto pasa: texto principal y secundario en los dos temas,
+          los estados ok/warn/danger sobre su fondo (5.1 a 7.3:1) y el
+          texto sobre el botón primario.
+      REGRESIÓN QUE CAUSÉ Y CORREGÍ EN EL MOMENTO: al pasar
+      --text-on-accent a azul noche, la barra de la landing quedó con el
+      logo y los enlaces casi invisibles (lo vio el usuario). Causa: 17
+      reglas usaban --text-on-accent ("texto sobre --action") para decir
+      "texto sobre un fondo oscuro" — la barra de la landing, el menú
+      lateral, el panel de eventos, el overlay del mapa, el escáner…
+      Mientras ese token fue blanco en los dos temas nadie lo notó. Se
+      pasaron a --texto-sobre-oscuro (blanco siempre), que es el valor que
+      ya tenían: quedan exactamente como estaban. Las que sí van sobre
+      --action (botones, pasos, pestañas activas) se dejaron.
+      LECCIÓN: un token dice para qué sirve, no de qué color es. Usar
+      --text-on-accent sobre algo que no es --action funciona hasta que el
+      token cambia.
+      FALTA (necesita ojos en la pantalla, no se puede verificar acá):
+      móvil real a 360px, recorrido con teclado y revisión visual del tema
+      oscuro pantalla por pantalla — sobre todo ahora que el acento del
+      modo oscuro es cian.
 
 
 --------------------------------------------------------------------------------
@@ -415,6 +1143,219 @@ FASE 10 — LIMPIEZA Y QA GLOBAL
 --------------------------------------------------------------------------------
 7. BITÁCORA (lo más nuevo arriba)
 --------------------------------------------------------------------------------
+2026-09-22  TEMA OSCURO ACOTADO AL PANEL (pedido del usuario): la landing,
+            la página del evento y las pantallas de cuenta van siempre en
+            claro. Ver §2.4-bis. Antes de eso, el cambio de acento dejó la
+            barra de la landing casi invisible: 17 reglas usaban
+            --text-on-accent como si fuera "blanco" -> --texto-sobre-oscuro.
+2026-09-22  CONTRASTE: el acento del tema oscuro no llegaba ni al mínimo
+            de íconos (2.77:1) -> cian de marca (6.77:1), decidido con el
+            usuario; y con él, el texto del botón primario pasa a azul
+            noche (blanco sobre cian era 2.46:1). --text-muted se estaba
+            usando como texto informativo en 3 componentes globales.
+2026-09-22  FASE 10 (lo estático): movimiento reducido 5 -> 0 archivos sin
+            cubrir; el calendario ahora sí cambia con el tema oscuro;
+            variable --bg-muted inexistente corregida. Queda el QA que
+            necesita mirar la pantalla (360px, teclado, oscuro).
+2026-09-22  Selector de vista Lista/Calendario de Gestión de Eventos ->
+            Pestanas (era el último a mano). 0.7 Pasos: verificado, ya
+            está en las 7 pantallas que lo necesitaban, incluido
+            CompletarPerfil y el asistente de evento.
+2026-09-22  0.10 botones viejos: ConfirmarModal (el pie de todas las
+            confirmaciones), CapturarFoto y EscanerQr -> Boton, sin cambiar
+            cómo se ven (el índigo del confirmar se mantiene con las
+            variables --btn-*). Paginador y FiltroJornada se descartan con
+            motivo. build OK, cruces limpios.
+2026-09-22  0.10: último pi-x-card (.pi-admin-card) -> Card, y las
+            acciones de modal ya son una sola (.modal-actions). En
+            Configurar página había además un @media vacío y comentarios
+            sin reglas. build OK, cruces en los dos sentidos limpios.
+2026-09-22  CuentaRegresiva: el cálculo del contador de la página pública
+            estaba copiado (misma fórmula que el hook) -> usa el hook. El
+            diseño del hero no se tocó. ModalQr y StatCard: revisados, no
+            faltaba ninguno.
+2026-09-22  SubirImagen: migrado FormularioEventoPasos (y con él se fueron
+            5 props y un handler del padre). El global ganó maxBytes y
+            manejo de imagen rota. AdminConfigurarPagina se deja aparte
+            con su motivo.
+2026-09-22  CSS MUERTO EN TODA LA APP: 0. ~60 clases borradas (layout.css
+            200 -> 132). Detector v3 (cadenas del JSX + prefijos
+            dinámicos + poda de selectores agrupados). build OK.
+2026-09-22  SelectorEvento global (§2.10): el mismo bloque estaba copiado
+            en 4 pantallas de Admin, con su regla CSS copiada también.
+            build OK, lint sin errores nuevos.
+2026-09-22  FASE 9.1 menú lateral: limpieza sin cambio visual (5 globales
+            sueltos prefijados, 37 px -> tokens, cero CSS muerto). Los
+            botones propios del menú se dejan como están por pedido del
+            usuario. FASE 9 COMPLETA.
+2026-09-22  FASE 9.5: la landing no tenía NADA de CSS muerto (10 archivos
+            revisados). 50 px -> tokens con equivalencia exacta. Y se
+            CORRIGIÓ la medición de 0.9: los keyframes de la landing NO
+            son duplicados de los compartidos (cuerpos distintos), así que
+            no se reemplazan.
+2026-09-22  FASE 9.4 revisada: la landing no cobra (manda a /login) y la
+            compra real ya estaba protegida desde la FASE 1. Anotada una
+            propuesta de flujo (no ejecutada): conservar el evento al
+            pasar por el login.
+2026-09-22  CRUCE JSX -> CSS en TODA la app tras el aviso del usuario
+            ("la tarjeta se ve muy ancha"): yo había borrado .pricing-grid
+            creyéndola muerta porque el detector exigía comillas y el JSX
+            la usa en un template literal. Restaurada. El mismo cruce
+            destapó 2 regresiones VIEJAS (.pi-ges-error-fechas y las dos
+            columnas de GestionEntrega). Regla nueva §2.0.7.
+2026-09-22  FASE 9.2/9.3 Público: se fueron TODOS los globales sueltos
+            del CSS público (52 clases prefijadas, 34 muertas borradas) y
+            el bloque legado de Modal.css. build OK, lint limpio.
+            Próximo: 9.1 (menú lateral) o 9.4 (compra del público).
+2026-09-22  FASE 8.8 Admin.jsx partido por vista (admin/vistas/):
+            Recargadores y Devoluciones eran la misma pantalla duplicada ->
+            un solo VistaOperadores. build OK. Quedan los 3 errores de
+            react-hooks/refs (se intentó useCallback, no sirve: ver 8.8).
+            FASE 8 (Admin) terminada salvo esa deuda. Próximo: FASE 9
+            (layout y páginas públicas).
+2026-09-22  FASE 8.7 Admin.jsx: migración de estilos y acciones. Los dos
+            peores hallazgos del rediseño hasta ahora: aprobar una compra y
+            resolver una incidencia movían plata sin confirmar, sin guarda
+            de doble clic y sin try/catch. build OK; lint: quedan 3 errores
+            viejos de react-hooks/refs (documentados en 8.8). Falta partir
+            el archivo -> 8.8.
+2026-09-22  FASE 8.6 Gestión de eventos (ver FASE 8). build OK, lint sin
+            errores (queda 1 warning viejo de exhaustive-deps en
+            cargarProgreso). Próximo: 8.7 Admin.jsx (1957 líneas), lo
+            último de la FASE 8.
+2026-09-22  FASE 8.5 Configurar página (ver FASE 8). Casi todo su CSS
+            eran restos globales de una vista previa vieja. build OK, lint
+            limpio. Próximo: 8.6 Gestión de eventos.
+2026-09-22  FASE 8.4 Mapa (ver FASE 8). El archivo con más globales
+            escondidos de toda la app; varios guardados sin try/catch ni
+            cargando. build OK, lint limpio. Próximo: 8.5 Configurar
+            página (4 modales a mano).
+2026-09-22  FASE 8.3 Tickets / QR (ver FASE 8). build OK, lint limpio.
+            Próximo: 8.4 Mapa.
+2026-09-22  FASE 8.2 Jornadas / Auditoría / Crear usuario negocio (ver
+            FASE 8). build OK, lint limpio. Próximo: 8.3 Tickets / QR.
+2026-09-22  FASE 8.1 AdminGeneral (ver FASE 8). PanelGrafico + utils/graficos
+            globales. build OK, lint limpio.
+2026-09-22  FASE 7 Cliente COMPLETA (ver FASE 7). Respaldos en el
+            scratchpad. build OK, lint limpio. Próximo: FASE 8 (Admin, la
+            más grande: Admin.jsx ~1950 líneas + 10 pantallas).
+2026-09-22  FASE 6 Supervisor COMPLETA (ver FASE 6). Global escondido de la
+            grilla de eventos resuelto; clases genéricas con prefijo.
+            Respaldos de originales en el scratchpad. build OK, lint limpio.
+            Próximo: FASE 7 (Cliente).
+2026-09-21  FASE 5 Caja COMPLETA (ver FASE 5). Pedido del usuario: dejar
+            escrito en el txt qué botones de guardar / eliminar llevan
+            modal de confirmación -> §2.4 reescrita (tabla + dónde ya está
+            aplicado + pendientes). Arreglados doble recarga / doble
+            retiro y errores que no se mostraban. Nuevos: FichaParticipante,
+            --z-confirmar. Respaldos de originales en el scratchpad.
+            build OK. Próximo: FASE 6 (Supervisor).
+2026-09-21  FASE 4 Ayudante (ver FASE 4). Arreglado el doble cobro.
+            Nuevo: SelectorCantidad. Respaldo: scratchpad/Ayudante.original.*
+            build OK; lint: solo los 2 errores que ya existían.
+            Próximo: FASE 5.
+2026-09-21  FASE 3 Usuario Negocio COMPLETA (ver FASE 3). Nuevos:
+            components/SubirImagen.jsx, utils/ayudantes.js; mejorados:
+            forms.css (.form-inline, .flex-1, .upload-zone.subiendo),
+            Tabla.css (celdas compartidas), Modal.css (legado).
+            lint + build OK. Próximo: FASE 4 (Ayudante).
+2026-09-21  0.7 Pasos (ver FASE 0). FASE 0 queda: 0.9 (keyframes, lista
+            medida) y 0.10 (Card.jsx para pi-x-card, acciones de modal).
+            lint + build OK. Próximo: FASE 3 (Usuario Negocio).
+2026-09-21  FASE 2 (parte 2): Perfil (ver FASE 2). FASE 2 COMPLETA salvo la
+            barra de progreso de Registrar/CompletarPerfil (va con 0.7).
+            Respaldo: scratchpad/Perfil.original.jsx/.css.
+            lint + build OK; en dist no quedan .progress-bar/.full-width/
+            .data-label/.btn-guardar-toggle. Próximo: 0.7 Pasos (compra,
+            registro, completar perfil, asistente admin) o FASE 3.
+2026-09-21  FASE 2 (parte 1): Login, Registrar, RecuperarContra,
+            CompletarPerfil (ver FASE 2).
+            - forms.css mejorado: .input-group__control (ícono adelante,
+              acción al final, prefijo), .input-group__cabecera,
+              .input-group__etiqueta.
+            - Nuevos: Campo.jsx, InputContrasena.jsx, InputCodigo.jsx(.css),
+              utils/validacion.js (entradas.js usa su FORMA_CORREO).
+              CamposEntrada ahora usa Campo.
+            - Global escondido encontrado: .full-width vivía en Registrar.css
+              (Perfil la usa; Perfil.css tiene su copia) -> se resuelve al
+              migrar Perfil.
+            lint + build OK. Próximo: Perfil (window.alert, confirmar
+            cambios sensibles).
+2026-09-21  1.6 Cierre de Usuario Normal. FASE 1 COMPLETA (falta (V)).
+            - HALLAZGO GRAVE: UsuarioNormal.css, Cliente.css, Mapa.css,
+              UsuarioNegocio.css y AdminConfigurarPagina.css redefinían
+              .input-group / .formulario / .modal-actions / .upload-zone /
+              .preview-zone / .texto-ayuda / .form-inline al nivel de arriba.
+              Como el CSS va en un solo archivo, pisaban a forms.css en TODA
+              la app (incluida la validación en rojo de 0.8). Borradas; solo
+              quedan ajustes de margen limitados al contenedor. Regla nueva
+              §2.0 punto 6 + control en dist.
+            - .texto-ayuda pasa a forms.css (la usan 5 roles y vivía en
+              UsuarioNormal.css). Cliente.css recibe .mt-20 y .pi-usr-badge
+              hasta migrar Cliente.
+            - Modales: sin className que pise al Modal (pi-usr-modal,
+              pi-usr-modal-pago) -> tamano lg/md. pi-usr-modal-acciones ->
+              .modal-actions. Reporte: fieldset/textarea en .input-group.
+            - Respaldos .bak en el scratchpad de la sesión.
+            lint + build OK. Próximo: FASE 2 (Perfil, CompletarPerfil,
+            Login, Registrar, RecuperarContra).
+2026-09-21  1.5 Mi Saldo.
+            - Globales mejorados (§2.0): StatCard (count-up, unidad, grilla
+              .qp-stats), useContador (anima desde el último valor, no
+              vuelve a 0 — la landing sigue igual).
+            - SaldoTab reescrito con StatCard, Card, Insignia, AvisoFijo,
+              EstadoVacio, Boton; lógica sin cambios. SaldoTab.css nuevo
+              (solo layout + acordeón, que no tiene global).
+            - UsuarioNormal.css: borradas ~60 reglas muertas (pi-usr-saldo*,
+              pi-usr-bill*, pi-usr-monto*, pi-usr-card, pi-usr-qr-card...).
+            - Respaldo: scratchpad/SaldoTab.original.jsx.
+            lint + build OK. Próximo: 1.6 cierre de Usuario Normal.
+2026-09-21  Auditoría Usuario Normal (pedido: "¿ya estamos usando lo que
+            es?"). Encontrado y corregido:
+            - "Eventos pasados" tenía tarjetas propias (pi-evp-card) ->
+              EventoCard + GrillaEventos (§6). Con saldo: "Retirar saldo";
+              sin saldo: "Ver evento".
+            - Paneles pi-usr-card -> <Card> (Eventos, Mis Entradas). Quedan
+              los de SaldoTab: se hacen en 1.5.
+            - Mensajes fijos propios (pi-usr-alerta-error, pi-cmp-aviso) ->
+              <AvisoFijo>, agregado a Avisos.jsx (mismo diseño que los
+              toasts, no un componente paralelo). CSS muerto borrado.
+            - Se revisaron los <button> restantes: son tarjetas elegibles,
+              el QR y la cabecera del acordeón (no son Boton): correcto.
+            lint + build OK.
+2026-09-21  0.8 + 1.4 parte B (validación en línea).
+            - forms.css: .input-group mejorado (ver 0.8).
+            - Nuevos: components/ErrorCampo.jsx; utils/entradas.js
+              (erroresEntradas, CAMPOS_ENTRADA, enfocarPrimerError: reglas y
+              mensajes ÚNICOS para comprar y revisar);
+              usuario-normal/CamposEntrada.jsx (nombre/correo/celular de una
+              entrada, usado por CompraTab y MisEntradasTab — antes cada uno
+              tenía su copia).
+            - CompraTab: "Pagar" ya no queda gris sin explicar: marca los
+              campos con error y enfoca el primero. El correo repetido en
+              una jornada ahora se avisa en el campo ANTES de pagar (antes
+              recién dentro del modal de pago). Validación duplicada de
+              handleEnviarComprobante reemplazada.
+            - MisEntradasTab: Revisar mi solicitud con errores por campo.
+              Arreglado: pedía celular al titular (opcional al comprar).
+            - pi-usr-alerta-error de estos formularios -> .form-nota--error.
+            lint + build OK. Próximo: 1.5 Mi Saldo.
+2026-09-21  0.10 + 0.11: corrección de duplicados (pedido del usuario: "no
+            habrás creado otros botones... corregir antes de avanzar").
+            - buttons.css = única fuente de botones; Boton.css borrado.
+            - Boton: variantes acento/translucido/peligro-suave, pildora,
+              como (enlace). Filtros y Pestanas mejorados y tematizables por
+              variables (--filtro-*, --pest-*).
+            - Reemplazados por Boton/Filtros/Pestanas todos los botones y
+              pestañas propios hechos en esta sesión (lista en 0.10).
+            - Página del evento: paleta aplicada a los globales solo por
+              variables en App.css (.pi-landing-container).
+            - Borrado CSS muerto: qp-info__cta/tabs, qp-hero__btn,
+              qp-pie__cta/arriba, qp-contacto__enviar, btn-solid,
+              pi-landing-btn-*, btn-pricing, ev-acc__btn, ev-barra__cta,
+              ev-menu__filtros/vaciar, qp-dest__cta/flecha, pi-fev__chips.
+            - Regla §2.0 ampliada (puntos 4 y 5) + nota del error cometido.
+            lint + build OK. Falta revisión visual del usuario (V).
 2026-09-21  Regla §2.0 (pedido del usuario): usar y MEJORAR lo global que ya
             existe; no crear versiones paralelas. Detectados solapamientos:
             Boton vs buttons.css, Campo (descartado) vs .input-group,

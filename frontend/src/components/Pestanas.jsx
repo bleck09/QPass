@@ -23,6 +23,9 @@ import './Pestanas.css';
   - item.deshabilitado: se ve pero no se puede elegir.
   - item.soloIcono: muestra solo el ícono (la etiqueta queda para lectores
     de pantalla y como tooltip).
+  - idBase: da ids a las pestañas (`${idBase}-tab-${id}`) y las enlaza con
+    su panel (`${idBase}-panel-${id}`), para usar role="tabpanel" +
+    aria-labelledby en el contenido.
 */
 export default function Pestanas({
   items,
@@ -32,6 +35,7 @@ export default function Pestanas({
   navegacion = false,
   etiqueta,
   anchoCompleto = false,
+  idBase,
   className = '',
 }) {
   const contenedorRef = useRef(null);
@@ -94,6 +98,8 @@ export default function Pestanas({
             ref={(n) => { botonesRef.current[id] = n; }}
             type="button"
             data-pestana={id}
+            id={idBase ? `${idBase}-tab-${id}` : undefined}
+            aria-controls={idBase && !navegacion ? `${idBase}-panel-${id}` : undefined}
             className={`qp-pestana${esActiva ? ' activa' : ''}${soloIcono ? ' qp-pestana--icono' : ''}`}
             title={soloIcono ? texto : undefined}
             role={navegacion ? undefined : 'tab'}

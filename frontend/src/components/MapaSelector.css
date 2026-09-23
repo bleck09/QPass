@@ -37,7 +37,7 @@
 .pi-mapasel-buscar button {
   border: none;
   background: var(--indigo-profundo);
-  color: var(--text-on-accent);
+  color: var(--texto-sobre-oscuro);
   font-weight: 700;
   font-size: var(--text-xs);
   padding: 6px 12px;

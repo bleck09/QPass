@@ -15,7 +15,7 @@ import {
   FaTicketAlt, FaCheckCircle, FaHourglassHalf, FaUserCheck,
   FaStore, FaCashRegister, FaChartPie, FaBoxOpen, FaUserFriends, FaUsers,
   FaChevronRight, FaTrophy, FaCoins, FaShoppingBag, FaWallet,
-  FaExchangeAlt, FaClock, FaExclamationTriangle, FaSignOutAlt,
+  FaClock, FaExclamationTriangle, FaSignOutAlt,
   FaKey, FaListUl, FaBoxes, FaMedal
 } from 'react-icons/fa';
 import api from '../../api/index.js';
@@ -25,6 +25,13 @@ import {
   GraficoVentasPorNegocio, GraficoProductosMasVendidos,
 } from './GraficosEvento.jsx';
 import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
+import VistaEntradas from './vistas/VistaEntradas.jsx';
+import VistaOperadores from './vistas/VistaOperadores.jsx';
+import VistaNegocios from './vistas/VistaNegocios.jsx';
+import VistaSupervisores from './vistas/VistaSupervisores.jsx';
+import Boton from '../../components/Boton.jsx';
+import Migas from '../../components/Migas.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import HistorialManillas from '../../components/HistorialManillas.jsx';
 import './Admin.css';
 // Marco Gráfico/Tabla (.pi-adg-grafico*) compartido con el dashboard general —
@@ -105,31 +112,6 @@ const agruparVentasPorNegocio = (ventas, puestos, usuariosPorId) => {
 
 const sumar = (lista, clave) => lista.reduce((total, item) => total + item[clave], 0);
 
-function Podio({ lista, valorKey, unidad }) {
-  // Coral y cian son fondos muy saturados: el texto blanco no alcanza 4.5:1 ahí,
-  // así que solo el puesto sobre índigo (oscuro) usa texto blanco; los otros dos usan azul noche.
-  const estilos = [
-    { fondo: 'var(--coral-compra)', texto: 'var(--texto-sobre-vivo)' },
-    { fondo: 'var(--indigo-profundo)', texto: 'var(--texto-sobre-oscuro)' },
-    { fondo: 'var(--cian-digital)', texto: 'var(--texto-sobre-vivo)' },
-  ];
-  return (
-    <div className="pi-dash-podio">
-      {lista.slice(0, 3).map((item, index) => (
-        <div className="pi-dash-podio-item" key={item.id ?? item.nombre}>
-          <div
-            className="pi-dash-podio-puesto"
-            style={{ backgroundColor: estilos[index].fondo, color: estilos[index].texto }}
-          >
-            {index + 1}
-          </div>
-          <span className="pi-dash-podio-nombre">{item.nombre}</span>
-          <span className="pi-dash-podio-valor">{item[valorKey]} {unidad}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 export default function Admin({
   soloLectura = false,
@@ -140,6 +122,7 @@ export default function Admin({
   vistaFija = null, // 'solicitudesEntradas' | 'incidencias'
 } = {}) {
   const embebido = !!eventoIdFijo;
+  const avisos = useAvisos();
   useTituloPagina('Panel de administración', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
@@ -181,7 +164,12 @@ export default function Admin({
   const nivelesHistorialRef = useRef(0);   // entradas apiladas aún vivas
   const ignorarPopRef = useRef(0);          // popstates que disparamos nosotros y no hay que procesar
   const navRef = useRef({});
-  navRef.current = { vistaDetalle, itemSeleccionado, enReportes, enSolicitudes };
+  // Se actualiza en un efecto y no durante el render (React 19 no deja tocar
+  // una ref mientras se renderiza). Solo la leen los handlers de popstate, que
+  // corren después del paint, así que siempre ven el último valor.
+  useEffect(() => {
+    navRef.current = { vistaDetalle, itemSeleccionado, enReportes, enSolicitudes };
+  }, [vistaDetalle, itemSeleccionado, enReportes, enSolicitudes]);
 
   const apilarNivel = () => {
     if (embebido) return;
@@ -348,16 +336,47 @@ export default function Admin({
   const cerrarResolucion = () => {
     setIncidenciaModal(null);
     setMontoAjuste('');
+    setErrAjuste('');
   };
+
+  // Resolver una incidencia MUEVE SALDO de una persona: confirma con el monto
+  // y a quién (PLAN §2.4). Antes se aplicaba al primer clic, sin try/catch, y
+  // el doble clic aplicaba el ajuste dos veces.
+  const [resolviendo, setResolviendo] = useState(false);
+  const [errAjuste, setErrAjuste] = useState('');
 
   const confirmarAjuste = async () => {
     const incidencia = incidenciaModal;
     const valor = Number(montoAjuste);
-    if (!incidencia || montoAjuste === '' || Number.isNaN(valor)) return;
+    if (!incidencia || montoAjuste === '' || Number.isNaN(valor) || resolviendo) return;
 
-    await api.incidencias.resolver(incidencia.id, valor);
-    setIncidencias(await api.incidencias.listar(reportesGlobal ? {} : { eventoId }));
-    cerrarResolucion();
+    const quien = incidencia.entrada?.nombre || 'la persona';
+    const ok = await confirmar({
+      titulo: valor === 0 ? '¿Cerrar la incidencia sin tocar el saldo?' : '¿Aplicar el ajuste de saldo?',
+      mensaje: valor > 0
+        ? `Se le ACREDITAN ${valor} pts a ${quien} y la incidencia queda cerrada.`
+        : valor < 0
+          ? `Se le DESCUENTAN ${Math.abs(valor)} pts a ${quien} y la incidencia queda cerrada.`
+          : `La incidencia de ${quien} se cierra sin movimiento de saldo.`,
+      textoConfirmar: valor === 0 ? 'Cerrar incidencia' : `Aplicar ${valor > 0 ? '+' : '−'}${Math.abs(valor)} pts`,
+      peligroso: valor < 0,
+    });
+    if (!ok) return;
+
+    setResolviendo(true);
+    setErrAjuste('');
+    try {
+      await api.incidencias.resolver(incidencia.id, valor);
+      setIncidencias(await api.incidencias.listar(reportesGlobal ? {} : { eventoId }));
+      avisos.exito(valor === 0
+        ? 'La incidencia quedó cerrada.'
+        : `Ajuste aplicado: ${valor > 0 ? '+' : '−'}${Math.abs(valor)} pts a ${quien}.`);
+      cerrarResolucion();
+    } catch (e) {
+      setErrAjuste(e.message || 'No se pudo resolver la incidencia.');
+    } finally {
+      setResolviendo(false);
+    }
   };
 
   // --- SOLICITUDES DE COMPRA DE ENTRADAS Y REPORTES DE DATOS ---
@@ -419,17 +438,41 @@ export default function Admin({
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
 
+  // Aprobar una compra confirma el pago, emite las entradas y crea las cuentas
+  // de los invitados que no tienen: confirma con el monto y quién compró
+  // (PLAN §2.4). Antes se aprobaba al primer clic, sin try/catch ni guarda:
+  // el doble clic mandaba dos aprobaciones de la misma compra.
+  const [compraEnCurso, setCompraEnCurso] = useState(null); // id de la compra
+
   const aprobarSolicitud = async (compra) => {
-    const { passwordsGeneradas, ...actualizada } = await api.compras.aprobar(compra.id);
-    setSolicitudes(prev => prev.map(c => c.id === actualizada.id ? actualizada : c));
-    if (Object.keys(passwordsGeneradas || {}).length > 0) {
-      const entradasPorId = new Map(actualizada.entradas.map(e => [e.id, e]));
-      setPasswordsAMostrar(Object.entries(passwordsGeneradas).map(([entradaId, password]) => ({
-        nombre: entradasPorId.get(entradaId)?.nombre,
-        correo: entradasPorId.get(entradaId)?.correo,
-        numero: entradasPorId.get(entradaId)?.numero,
-        password,
-      })));
+    if (compraEnCurso) return false;
+    const ok = await confirmar({
+      titulo: '¿Aprobar la compra?',
+      mensaje: `Se dan por pagados Bs. ${compra.montoTotal} de ${compra.comprador?.nombre}, se emiten ${compra.entradas.length} entrada(s) y se crean las cuentas de los invitados que no tengan.`,
+      textoConfirmar: `Aprobar Bs. ${compra.montoTotal}`,
+    });
+    if (!ok) return false;
+
+    setCompraEnCurso(compra.id);
+    try {
+      const { passwordsGeneradas, ...actualizada } = await api.compras.aprobar(compra.id);
+      setSolicitudes(prev => prev.map(c => c.id === actualizada.id ? actualizada : c));
+      if (Object.keys(passwordsGeneradas || {}).length > 0) {
+        const entradasPorId = new Map(actualizada.entradas.map(e => [e.id, e]));
+        setPasswordsAMostrar(Object.entries(passwordsGeneradas).map(([entradaId, password]) => ({
+          nombre: entradasPorId.get(entradaId)?.nombre,
+          correo: entradasPorId.get(entradaId)?.correo,
+          numero: entradasPorId.get(entradaId)?.numero,
+          password,
+        })));
+      }
+      avisos.exito(`Compra de ${compra.comprador?.nombre} aprobada (Bs. ${compra.montoTotal}).`);
+      return true;
+    } catch (e) {
+      avisos.error(e.message || 'No se pudo aprobar la compra.', { titulo: 'No se pudo aprobar' });
+      return false;
+    } finally {
+      setCompraEnCurso(null);
     }
   };
 
@@ -442,8 +485,16 @@ export default function Admin({
       peligroso: true,
     });
     if (motivo === null) return;
-    const actualizada = await api.compras.rechazar(compra.id, motivo);
-    setSolicitudes(prev => prev.map(c => c.id === actualizada.id ? actualizada : c));
+    setCompraEnCurso(compra.id);
+    try {
+      const actualizada = await api.compras.rechazar(compra.id, motivo);
+      setSolicitudes(prev => prev.map(c => c.id === actualizada.id ? actualizada : c));
+      avisos.exito(`La solicitud de ${compra.comprador?.nombre} quedó rechazada.`);
+    } catch (e) {
+      avisos.error(e.message || 'No se pudo rechazar la solicitud.', { titulo: 'No se pudo rechazar' });
+    } finally {
+      setCompraEnCurso(null);
+    }
   };
 
   const abrirCorreccion = (reporte) => {
@@ -457,13 +508,26 @@ export default function Admin({
   const cerrarCorreccion = () => {
     setReporteDatoModal(null);
     setValorCorreccion('');
+    setErrCorreccion('');
   };
 
+  const [corrigiendo, setCorrigiendo] = useState(false);
+  const [errCorreccion, setErrCorreccion] = useState('');
+
   const guardarCorreccion = async () => {
-    if (!reporteDatoModal || !valorCorreccion.trim()) return;
-    await api.reportesEntrada.corregir(reporteDatoModal.id, valorCorreccion.trim());
-    await recargarDash();
-    cerrarCorreccion();
+    if (!reporteDatoModal || !valorCorreccion.trim() || corrigiendo) return;
+    setCorrigiendo(true);
+    setErrCorreccion('');
+    try {
+      await api.reportesEntrada.corregir(reporteDatoModal.id, valorCorreccion.trim());
+      await recargarDash();
+      avisos.exito('El dato de la entrada quedó corregido.');
+      cerrarCorreccion();
+    } catch (e) {
+      setErrCorreccion(e.message || 'No se pudo guardar la corrección.');
+    } finally {
+      setCorrigiendo(false);
+    }
   };
 
   // Buscador + filtro por estado del apartado Reportes (aplica a las dos sub-tablas).
@@ -843,23 +907,7 @@ export default function Admin({
             <h1>Selecciona un evento</h1>
           ) : (
             <div className="pi-dash-header-titulo">
-              <nav className="pi-dash-crumbs" aria-label="Ubicación">
-                {migas.map((m, i) => (
-                  <span className="pi-dash-crumb-item" key={i}>
-                    {i > 0 && <FaChevronRight className="pi-dash-crumb-sep" aria-hidden="true" />}
-                    {m.onClick && !m.actual ? (
-                      <button type="button" className="pi-dash-crumb" onClick={m.onClick}>{m.texto}</button>
-                    ) : (
-                      <span
-                        className={`pi-dash-crumb${m.actual ? ' is-current' : ''}`}
-                        aria-current={m.actual ? 'page' : undefined}
-                      >
-                        {m.texto}
-                      </span>
-                    )}
-                  </span>
-                ))}
-              </nav>
+              <Migas items={migas} />
               <h1>{itemAbiertoNombre || tituloVista || eventoActual?.nombre}</h1>
             </div>
           )}
@@ -1042,9 +1090,7 @@ export default function Admin({
                   <td style={{ textAlign: 'center' }}>{c.unidades}</td>
                   <td className="pi-dash-monto-celda">{c.total} pts</td>
                   <td>
-                    <button type="button" className="pi-dash-btn-ver" onClick={() => setClienteAbierto(c)}>
-                      <FaListUl /> Ver compras
-                    </button>
+                    <Boton variante="secundario" tamano="sm" icono={FaListUl} onClick={() => setClienteAbierto(c)}>Ver compras</Boton>
                   </td>
                 </tr>
               )}
@@ -1074,9 +1120,7 @@ export default function Admin({
               <div className="pi-dash-progreso-relleno" style={{ width: `${statsEntradas.pctIngresaron}%` }} />
             </div>
 
-            <button type="button" className="pi-dash-btn-detalle" onClick={() => abrirDetalle('entradas')}>
-              <FaUserCheck /> Ver detalle de participantes
-            </button>
+            <Boton variante="secundario" tamano="sm" icono={FaUserCheck} onClick={() => abrirDetalle('entradas')}>Ver detalle de participantes</Boton>
           </section>
 
           {/* --- PERSONAL DEL EVENTO --- */}
@@ -1207,9 +1251,7 @@ export default function Admin({
                         <span className="pi-dash-act-sub">{f.toLocaleTimeString('es-BO')}</span>
                       </span>
                       {a.venta && (
-                        <button type="button" className="pi-dash-btn-ver" onClick={() => setVentaDetalle(a.venta)}>
-                          Detalle
-                        </button>
+                        <Boton variante="secundario" tamano="sm" onClick={() => setVentaDetalle(a.venta)}>Detalle</Boton>
                       )}
                     </td>
                   </tr>
@@ -1222,258 +1264,78 @@ export default function Admin({
 
       {/* ================= DETALLE: ENTRADAS ================= */}
       {vistaActual === 'entradas' && (
-        <section className="pi-dash-seccion">
-          <h3 className="pi-dash-seccion-titulo">{tituloEntradasFiltro}</h3>
-
-          <Buscador
-            valor={busqueda}
-            onCambio={setBusqueda}
-            placeholder="Buscar por nombre o documento…"
-            etiqueta="Buscar por nombre o documento"
-          />
-
-          <Tabla
-            columnas={['Participante', 'Documento', 'Entrada', 'Estado']}
-            datos={entradasFiltradas}
-            vacio="No se encontraron participantes."
-            renderFila={p => (
-              <tr key={p.id}>
-                <td>
-                  <div className="pi-dash-fila-persona">
-                    {p.foto && <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-dash-mini-avatar" />}
-                    <span>{p.nombre}</span>
-                  </div>
-                </td>
-                <td>{ciDeEntrada(p) || '—'}</td>
-                <td>{p.categoriaTicket?.nombre || '—'}</td>
-                <td>
-                  {p.estadoIngreso === 'salio'
-                    ? <span className="pi-dash-badge pi-dash-badge-salio"><FaSignOutAlt /> Salió</span>
-                    : p.estadoIngreso === 'ingresado'
-                    ? <span className="pi-dash-badge pi-dash-badge-ok"><FaCheckCircle /> Ingresó</span>
-                    : <span className="pi-dash-badge pi-dash-badge-pend"><FaHourglassHalf /> Pendiente</span>}
-                </td>
-              </tr>
-            )}
-          />
-        </section>
+        <VistaEntradas
+          titulo={tituloEntradasFiltro}
+          busqueda={busqueda}
+          onBuscar={setBusqueda}
+          entradas={entradasFiltradas}
+        />
       )}
 
       {/* ================= DETALLE: RECARGADORES ================= */}
       {vistaActual === 'recargadores' && (
-        <section className="pi-dash-seccion">
-          {recargadorAbierto ? (
-            <>
-              <div className="pi-dash-detalle-header">
-                <h3 className="pi-dash-seccion-titulo">{recargadorAbierto.nombre}</h3>
-                <span className="pi-dash-detalle-total">Total recargado: <strong>{recargadorAbierto.totalRecargado} pts</strong></span>
-              </div>
-              <Tabla
-                columnas={['Hora', 'Participante', 'Monto']}
-                datos={recargadorAbierto.recargas}
-                vacio="Este recargador no tiene recargas."
-                renderFila={(t, i) => (
-                  <tr key={i}>
-                    <td>{t.hora}</td>
-                    <td>{t.participante}</td>
-                    <td className="pi-dash-monto-celda"><FaCoins color="var(--verde-recarga-texto)" /> {t.monto} pts</td>
-                  </tr>
-                )}
-              />
-            </>
-          ) : (
-            <>
-              <h3 className="pi-dash-seccion-titulo">Recargadores</h3>
-
-              <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Recargadores</h4>
-              <Podio lista={recargadoresOrdenados} valorKey="totalRecargado" unidad="pts" />
-
-              <Tabla
-                columnas={['Recargador', 'Total Recargado', { texto: 'Acciones', srOnly: true }]}
-                datos={recargadoresOrdenados}
-                vacio="Aún no hay recargas en este evento."
-                renderFila={r => (
-                  <tr key={r.id}>
-                    <td>{r.nombre}</td>
-                    <td className="pi-dash-monto-celda"><FaCoins color="var(--verde-recarga-texto)" /> {r.totalRecargado} pts</td>
-                    <td>
-                      <button type="button" className="pi-dash-btn-ver" onClick={() => abrirItem(r.id)}>
-                        <FaExchangeAlt /> Ver recargas
-                      </button>
-                    </td>
-                  </tr>
-                )}
-              />
-            </>
-          )}
-        </section>
+        <VistaOperadores
+          titulo="Recargadores"
+          tituloPodio="Top Recargadores"
+          lista={recargadoresOrdenados}
+          abierto={recargadorAbierto}
+          claveTotal="totalRecargado"
+          claveMovimientos="recargas"
+          etiquetaTotal="Total recargado"
+          columnaNombre="Recargador"
+          columnaTotal="Total Recargado"
+          textoVer="Ver recargas"
+          vacioLista="Aún no hay recargas en este evento."
+          vacioDetalle="Este recargador no tiene recargas."
+          icono={FaCoins}
+          colorIcono="var(--ok-text)"
+          onAbrir={abrirItem}
+        />
       )}
 
       {/* ================= DETALLE: DEVOLUCIONES ================= */}
       {vistaActual === 'devoluciones' && (
-        <section className="pi-dash-seccion">
-          {devolucionAbierta ? (
-            <>
-              <div className="pi-dash-detalle-header">
-                <h3 className="pi-dash-seccion-titulo">{devolucionAbierta.nombre}</h3>
-                <span className="pi-dash-detalle-total">Total devuelto: <strong>{devolucionAbierta.totalDevuelto} pts</strong></span>
-              </div>
-              <Tabla
-                columnas={['Hora', 'Participante', 'Monto']}
-                datos={devolucionAbierta.retiros}
-                vacio="Este encargado no tiene devoluciones."
-                renderFila={(t, i) => (
-                  <tr key={i}>
-                    <td>{t.hora}</td>
-                    <td>{t.participante}</td>
-                    <td className="pi-dash-monto-celda"><FaBoxOpen color="var(--ambar-aviso-texto)" /> {t.monto} pts</td>
-                  </tr>
-                )}
-              />
-            </>
-          ) : (
-            <>
-              <h3 className="pi-dash-seccion-titulo">Encargados de Devolución</h3>
-
-              <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Devoluciones</h4>
-              <Podio lista={devolucionesOrdenadas} valorKey="totalDevuelto" unidad="pts" />
-
-              <Tabla
-                columnas={['Encargado', 'Total Devuelto', { texto: 'Acciones', srOnly: true }]}
-                datos={devolucionesOrdenadas}
-                vacio="Aún no hay devoluciones en este evento."
-                renderFila={d => (
-                  <tr key={d.id}>
-                    <td>{d.nombre}</td>
-                    <td className="pi-dash-monto-celda"><FaBoxOpen color="var(--ambar-aviso-texto)" /> {d.totalDevuelto} pts</td>
-                    <td>
-                      <button type="button" className="pi-dash-btn-ver" onClick={() => abrirItem(d.id)}>
-                        <FaExchangeAlt /> Ver devoluciones
-                      </button>
-                    </td>
-                  </tr>
-                )}
-              />
-            </>
-          )}
-        </section>
+        <VistaOperadores
+          titulo="Encargados de Devolución"
+          tituloPodio="Top Devoluciones"
+          lista={devolucionesOrdenadas}
+          abierto={devolucionAbierta}
+          claveTotal="totalDevuelto"
+          claveMovimientos="retiros"
+          etiquetaTotal="Total devuelto"
+          columnaNombre="Encargado"
+          columnaTotal="Total Devuelto"
+          textoVer="Ver devoluciones"
+          vacioLista="Aún no hay devoluciones en este evento."
+          vacioDetalle="Este encargado no tiene devoluciones."
+          icono={FaBoxOpen}
+          colorIcono="var(--warn-text)"
+          onAbrir={abrirItem}
+        />
       )}
 
       {/* ================= DETALLE: NEGOCIOS ================= */}
       {vistaActual === 'negocios' && (
-        <section className="pi-dash-seccion">
-          {negocioAbierto ? (
-            <>
-              <div className="pi-dash-detalle-header">
-                <h3 className="pi-dash-seccion-titulo">{negocioAbierto.nombre}</h3>
-                <span className="pi-dash-detalle-total">Ventas totales: <strong>{negocioAbierto.ventasTotal} pts</strong> · {negocioAbierto.ayudantes} ayudante(s)</span>
-              </div>
-              <Tabla
-                columnas={['Hora', 'Cliente', 'Ayudante', 'Productos', 'Monto', { texto: 'Acciones', srOnly: true }]}
-                datos={negocioAbierto.ventas}
-                vacio="Este negocio no tiene ventas."
-                renderFila={(t, i) => (
-                  <tr key={t.id || i} className={t.anulada ? 'pi-dash-fila-anulada' : ''}>
-                    <td>{t.hora}</td>
-                    <td>{t.cliente}</td>
-                    <td>{t.ayudante}</td>
-                    <td>
-                      <ul className="pi-dash-items-lista">
-                        {t.items.map(it => <li key={it.id}><strong>{it.cantidad}×</strong> {it.nombreProducto}</li>)}
-                      </ul>
-                    </td>
-                    <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {t.monto} pts</td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button type="button" className="pi-dash-btn-ver" onClick={() => setVentaDetalle({ ...t, negocio: negocioAbierto.nombre })}>
-                        Detalle
-                      </button>{' '}
-                      {t.anulada
-                        ? <span className="pi-dash-badge-anulada">Anulada</span>
-                        : !soloLectura && (
-                          <button type="button" className="pi-dash-btn-anular" onClick={() => { setVentaAnular({ id: t.id, monto: t.monto, cliente: t.cliente }); setMotivoAnular(''); setErrAnularVenta(''); }}>
-                            Anular
-                          </button>
-                        )}
-                    </td>
-                  </tr>
-                )}
-              />
-            </>
-          ) : (
-            <>
-              <h3 className="pi-dash-seccion-titulo">Usuarios Negocio</h3>
-
-              <div className="pi-dash-total-destacado">
-                <FaCoins color="var(--verde-recarga-texto)" />
-                Consumo total de todos los clientes: <strong>{totalConsumoClientes} pts</strong>
-              </div>
-
-              <h4 className="pi-dash-subtitulo"><FaTrophy color="var(--coral-compra)" /> Top Negocios por Ventas</h4>
-              <Podio lista={negociosOrdenados} valorKey="ventasTotal" unidad="pts" />
-
-              <Tabla
-                columnas={['Negocio', 'Ventas Totales', 'Ayudantes Asignados', { texto: 'Acciones', srOnly: true }]}
-                datos={negociosOrdenados}
-                vacio="Aún no hay ventas de negocios en este evento."
-                renderFila={n => (
-                  <tr key={n.id}>
-                    <td>{n.nombre}</td>
-                    <td className="pi-dash-monto-celda"><FaShoppingBag color="var(--coral-compra)" /> {n.ventasTotal} pts</td>
-                    <td>{n.ayudantes}</td>
-                    <td>
-                      <button type="button" className="pi-dash-btn-ver" onClick={() => abrirItem(n.id)}>
-                        <FaExchangeAlt /> Ver ventas
-                      </button>
-                    </td>
-                  </tr>
-                )}
-              />
-
-              <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado"><FaTrophy color="var(--cian-digital)" /> Top Clientes por Consumo</h4>
-              <Tabla
-                columnas={['Cliente', { texto: 'Compras', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Consumo Total', { texto: 'Acciones', srOnly: true }]}
-                datos={topClientesOrdenados}
-                vacio="Aún no hay consumo de clientes en este evento."
-                renderFila={(c) => (
-                  <tr key={c.id}>
-                    <td>{c.nombre}</td>
-                    <td style={{ textAlign: 'center' }}>{c.compras}</td>
-                    <td style={{ textAlign: 'center' }}>{c.unidades}</td>
-                    <td className="pi-dash-monto-celda">{c.total} pts</td>
-                    <td>
-                      <button type="button" className="pi-dash-btn-ver" onClick={() => setClienteAbierto(c)}>
-                        <FaListUl /> Ver compras
-                      </button>
-                    </td>
-                  </tr>
-                )}
-              />
-            </>
-          )}
-        </section>
+        <VistaNegocios
+          negocioAbierto={negocioAbierto}
+          negocios={negociosOrdenados}
+          topClientes={topClientesOrdenados}
+          totalConsumoClientes={totalConsumoClientes}
+          soloLectura={soloLectura}
+          onAbrir={abrirItem}
+          onVerVenta={(t) => setVentaDetalle({ ...t, negocio: negocioAbierto.nombre })}
+          onAnularVenta={(t) => {
+            setVentaAnular({ id: t.id, monto: t.monto, cliente: t.cliente });
+            setMotivoAnular('');
+            setErrAnularVenta('');
+          }}
+          onVerCliente={setClienteAbierto}
+        />
       )}
 
       {/* ================= DETALLE: SUPERVISORES ================= */}
       {vistaActual === 'supervisores' && (
-        <section className="pi-dash-seccion">
-          <h3 className="pi-dash-seccion-titulo">Supervisores</h3>
-          <p className="pi-dash-incidencias-nota">
-            El sistema no registra qué supervisor gestionó cada ingreso individual; en total,
-            <strong> {statsEntradas.ingresaron}</strong> persona(s) ya ingresaron a este evento.
-          </p>
-
-          <Tabla
-            columnas={['Nombre', 'Correo']}
-            datos={datos.supervisores}
-            vacio="No hay supervisores asignados a este evento."
-            renderFila={s => (
-              <tr key={s.id}>
-                <td>{s.nombre}</td>
-                <td>{s.email}</td>
-              </tr>
-            )}
-          />
-        </section>
+        <VistaSupervisores supervisores={datos.supervisores} ingresaron={statsEntradas.ingresaron} />
       )}
 
       {/* ================= DETALLE: REPORTES (INCIDENCIAS DE RECARGA + DATOS DE ENTRADAS) ================= */}
@@ -1553,9 +1415,7 @@ export default function Admin({
                     </td>
                     <td>
                       {!soloLectura && inc.estado === 'pendiente' && (
-                        <button type="button" className="pi-dash-btn-ver" onClick={() => abrirResolucion(inc)}>
-                          <FaCoins /> Resolver
-                        </button>
+                        <Boton variante="secundario" tamano="sm" icono={FaCoins} onClick={() => abrirResolucion(inc)}>Resolver</Boton>
                       )}
                     </td>
                   </tr>
@@ -1591,7 +1451,7 @@ export default function Admin({
                     </td>
                     <td>
                       {!soloLectura && rep.estado === 'pendiente' && (
-                        <button type="button" className="pi-dash-btn-ver" onClick={() => abrirCorreccion(rep)}>Corregir</button>
+                        <Boton variante="secundario" tamano="sm" onClick={() => abrirCorreccion(rep)}>Corregir</Boton>
                       )}
                     </td>
                   </tr>
@@ -1651,20 +1511,26 @@ export default function Admin({
                     </td>
                     <td>{new Date(compra.createdAt).toLocaleDateString('es-BO')}</td>
                     <td>
-                      <div style={{ display: 'flex', gap: '8px' }}>
+                      <div className="btn-acciones">
                         {!soloLectura && compra.estado === 'pendiente' && (
                           <>
-                            <button type="button" className="pi-dash-btn-ver" onClick={() => aprobarSolicitud(compra)}>
-                              <FaCheckCircle /> Aprobar
-                            </button>
-                            <button type="button" className="pi-dash-btn-ver" onClick={() => rechazarSolicitudCompra(compra)}>
-                              <FaExclamationTriangle /> Rechazar
-                            </button>
+                            <Boton
+                              variante="exito" tamano="sm" icono={FaCheckCircle}
+                              onClick={() => aprobarSolicitud(compra)}
+                              cargando={compraEnCurso === compra.id} disabled={!!compraEnCurso}
+                            >
+                              Aprobar
+                            </Boton>
+                            <Boton
+                              variante="peligro-suave" tamano="sm" icono={FaExclamationTriangle}
+                              onClick={() => rechazarSolicitudCompra(compra)}
+                              disabled={!!compraEnCurso}
+                            >
+                              Rechazar
+                            </Boton>
                           </>
                         )}
-                        <button type="button" className="pi-dash-btn-ver" onClick={() => toggleSolicitud(compra.id)}>
-                          Ver detalle
-                        </button>
+                        <Boton variante="secundario" tamano="sm" onClick={() => toggleSolicitud(compra.id)}>Ver detalle</Boton>
                       </div>
                     </td>
                   </tr>
@@ -1702,7 +1568,6 @@ export default function Admin({
           titulo="Detalle de la solicitud"
           onCerrar={() => setSolicitudAbierta(null)}
           tamano="lg"
-          className="pi-dash-modal-solicitud"
         >
             <div className="pi-dash-detalle-header">
               <div>
@@ -1763,13 +1628,23 @@ export default function Admin({
             />
 
             {!soloLectura && compraAbierta.estado === 'pendiente' && (
-              <div style={{ display: 'flex', gap: '8px', marginTop: '20px' }}>
-                <button type="button" className="pi-dash-btn-ver" onClick={() => { aprobarSolicitud(compraAbierta); setSolicitudAbierta(null); }}>
-                  <FaCheckCircle /> Aprobar
-                </button>
-                <button type="button" className="pi-dash-btn-ver" onClick={() => rechazarSolicitudCompra(compraAbierta)}>
-                  <FaExclamationTriangle /> Rechazar
-                </button>
+              <div className="modal-actions">
+                <Boton
+                  variante="peligro-suave" icono={FaExclamationTriangle}
+                  onClick={() => rechazarSolicitudCompra(compraAbierta)}
+                  disabled={!!compraEnCurso}
+                >
+                  Rechazar
+                </Boton>
+                {/* Solo se cierra el detalle si la aprobación salió bien: antes
+                    se cerraba igual y el error quedaba sin verse. */}
+                <Boton
+                  variante="exito" icono={FaCheckCircle}
+                  onClick={async () => { if (await aprobarSolicitud(compraAbierta)) setSolicitudAbierta(null); }}
+                  cargando={compraEnCurso === compraAbierta.id} disabled={!!compraEnCurso}
+                >
+                  Aprobar
+                </Boton>
               </div>
             )}
         </Modal>
@@ -1780,7 +1655,6 @@ export default function Admin({
         <Modal
           titulo={<><FaCoins aria-hidden="true" /> Resolver incidencia de recarga</>}
           onCerrar={cerrarResolucion}
-          className="pi-dash-modal-reporte"
         >
           <div className="pi-dash-reporte-datos">
             <div><span>Participante</span><strong>{incidenciaModal.entrada.nombre}</strong></div>
@@ -1822,11 +1696,13 @@ export default function Admin({
             <strong> 0</strong> cierra sin tocar el saldo.
           </p>
 
-          <div className="pi-dash-reporte-acciones">
-            <button type="button" className="pi-dash-btn-ver" onClick={cerrarResolucion}>Cancelar</button>
-            <button type="button" className="pi-dash-btn-guardar" onClick={confirmarAjuste}>
-              <FaCheckCircle /> Aplicar y cerrar
-            </button>
+          {errAjuste && <AvisoFijo tono="error">{errAjuste}</AvisoFijo>}
+
+          <div className="modal-actions">
+            <Boton variante="secundario" onClick={cerrarResolucion} disabled={resolviendo}>Cancelar</Boton>
+            <Boton icono={FaCheckCircle} onClick={confirmarAjuste} cargando={resolviendo}>
+              Aplicar y cerrar
+            </Boton>
           </div>
         </Modal>
       )}
@@ -1836,7 +1712,6 @@ export default function Admin({
         <Modal
           titulo={<><FaTicketAlt aria-hidden="true" /> Corregir dato de la entrada</>}
           onCerrar={cerrarCorreccion}
-          className="pi-dash-modal-reporte"
         >
           <div className="pi-dash-reporte-datos">
             <div><span>Persona</span><strong>{reporteDatoModal.entrada.nombre}</strong></div>
@@ -1868,11 +1743,13 @@ export default function Admin({
             autoFocus
           />
 
-          <div className="pi-dash-reporte-acciones">
-            <button type="button" className="pi-dash-btn-ver" onClick={cerrarCorreccion}>Cancelar</button>
-            <button type="button" className="pi-dash-btn-guardar" onClick={guardarCorreccion} disabled={!valorCorreccion.trim()}>
-              <FaCheckCircle /> Guardar corrección
-            </button>
+          {errCorreccion && <AvisoFijo tono="error">{errCorreccion}</AvisoFijo>}
+
+          <div className="modal-actions">
+            <Boton variante="secundario" onClick={cerrarCorreccion} disabled={corrigiendo}>Cancelar</Boton>
+            <Boton icono={FaCheckCircle} onClick={guardarCorreccion} cargando={corrigiendo} disabled={!valorCorreccion.trim()}>
+              Guardar corrección
+            </Boton>
           </div>
         </Modal>
       )}
@@ -1899,7 +1776,7 @@ export default function Admin({
                 </td>
                 <td className="pi-dash-monto-celda">{v.monto} pts</td>
                 <td>
-                  <button type="button" className="pi-dash-btn-ver" onClick={() => setVentaDetalle(v)}>Detalle</button>
+                  <Boton variante="secundario" tamano="sm" onClick={() => setVentaDetalle(v)}>Detalle</Boton>
                 </td>
               </tr>
             )}
@@ -1940,12 +1817,17 @@ export default function Admin({
               onChange={(e) => setMotivoAnular(e.target.value)}
               autoFocus
             />
-            {errAnularVenta && <p className="pi-dash-err-anular">{errAnularVenta}</p>}
-            <div className="pi-dash-form-anular-acciones">
-              <button type="button" className="pi-dash-btn-cancelar-anular" onClick={() => setVentaAnular(null)} disabled={anulandoVenta}>Cancelar</button>
-              <button type="button" className="pi-dash-btn-anular pi-dash-btn-anular--fuerte" onClick={confirmarAnularVenta} disabled={anulandoVenta || motivoAnular.trim().length < 3}>
-                Anular venta
-              </button>
+            {errAnularVenta && <AvisoFijo tono="error">{errAnularVenta}</AvisoFijo>}
+            <div className="modal-actions">
+              <Boton variante="secundario" onClick={() => setVentaAnular(null)} disabled={anulandoVenta}>Cancelar</Boton>
+              {/* El monto va en el botón: es plata que se le devuelve al
+                  comprador y se le descuenta al negocio (PLAN §2.4). */}
+              <Boton
+                variante="peligro" onClick={confirmarAnularVenta}
+                cargando={anulandoVenta} disabled={motivoAnular.trim().length < 3}
+              >
+                Anular {ventaAnular.monto} pts
+              </Boton>
             </div>
           </div>
         </Modal>

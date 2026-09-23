@@ -1,6 +1,8 @@
 import { useCallback, useMemo, useState, useEffect } from 'react';
+import { forzarTemaClaro } from '../../utils/tema.js';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useModal } from '../../utils/useModal.js';
+import { useCuentaRegresiva } from '../../utils/useCuentaRegresiva.js';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import MapaUbicacion from '../../components/MapaUbicacion.jsx';
@@ -97,6 +99,10 @@ function TituloAnimado({ texto = '' }) {
 }
 
 export default function App() {
+  // Esta pantalla se ve siempre en claro: el tema oscuro es solo del
+  // panel (ver utils/tema.js).
+  useEffect(() => { forzarTemaClaro(); }, []);
+
   const navigate = useNavigate();
   const { id } = useParams();
 
@@ -195,31 +201,16 @@ export default function App() {
   const modalPuestoRef = useModal(!!puestoModal, () => setPuestoModal(null));
   const modalCronoRef = useModal(verCronograma, () => setVerCronograma(false));
 
-  // ESTADOS DEL CONTADOR
-  const [timeLeft, setTimeLeft] = useState({ dias: 0, horas: 0, minutos: 0, seg: 0 });
-
-
-  // LÓGICA DEL CONTADOR
-  useEffect(() => {
-    if (!evento?.fecha) return;
-
-    const calcularTiempo = () => {
-      const diferencia = +new Date(evento.fecha) - +new Date();
-      if (diferencia > 0) {
-        setTimeLeft({
-          dias: Math.floor(diferencia / (1000 * 60 * 60 * 24)),
-          horas: Math.floor((diferencia / (1000 * 60 * 60)) % 24),
-          minutos: Math.floor((diferencia / 1000 / 60) % 60),
-          seg: Math.floor((diferencia / 1000) % 60)
-        });
-      } else {
-        setTimeLeft({ dias: 0, horas: 0, minutos: 0, seg: 0 });
-      }
-    };
-    calcularTiempo();
-    const timer = setInterval(calcularTiempo, 1000);
-    return () => clearInterval(timer);
-  }, [evento?.fecha]);
+  // CONTADOR: el cálculo es el del hook compartido (utils/useCuentaRegresiva),
+  // que era EXACTAMENTE el mismo que estaba copiado acá. El diseño de esta
+  // página no cambia: sigue pintándose con sus propias clases ev-hero__cuenta*.
+  const cuenta = useCuentaRegresiva(evento?.fecha);
+  const timeLeft = {
+    dias: cuenta?.dias ?? 0,
+    horas: cuenta?.horas ?? 0,
+    minutos: cuenta?.minutos ?? 0,
+    seg: cuenta?.segundos ?? 0,
+  };
 
   const handleLoginClick = () => navigate('/login');
   const handleVolverInicio = () => navigate('/');
@@ -298,7 +289,7 @@ export default function App() {
       <div className="pi-landing-container" style={estiloDinamico}>
         <nav className="pi-landing-navbar">
           <button type="button" className="pi-landing-logo" onClick={handleVolverInicio} aria-label="QPass, ir al inicio">
-            <FaQrcode className="logo-icon" aria-hidden="true" />
+            <FaQrcode className="pi-ev-logo-icon" aria-hidden="true" />
             <span>QPass</span>
           </button>
         </nav>
@@ -337,7 +328,7 @@ export default function App() {
           onClick={handleVolverInicio}
           aria-label="QPass, ir al inicio"
         >
-          <FaQrcode className="logo-icon" aria-hidden="true" />
+          <FaQrcode className="pi-ev-logo-icon" aria-hidden="true" />
           <span>QPass</span>
         </button>
         {/* El orden sigue al de la pagina: si el menu lista en un orden y la
@@ -363,8 +354,8 @@ export default function App() {
         )}
       </nav>
 
-      <div className="bg-glow glow-top-left"></div>
-      <div className="bg-glow glow-bottom-right"></div>
+      <div className="pi-ev-bg-glow pi-ev-glow-top-left"></div>
+      <div className="pi-ev-bg-glow pi-ev-glow-bottom-right"></div>
 
       {/* Landmark principal de la pantalla (Manual 11) */}
       <main id="contenido">
@@ -485,7 +476,7 @@ export default function App() {
             quedo libre al pasar la foto al fondo. Asi la pantalla de entrada
             responde todo de una: que es, cuando, donde y a que hora. */}
         {(evento?.latitud != null || data.cronograma.length > 0) && (
-        <aside className="ev-hero__panel glass-panel">
+        <aside className="ev-hero__panel pi-ev-glass-panel">
           {evento?.latitud != null && (
             <div className="ev-hero__panel-bloque" id="ubicacion">
               <h2 className="ev-hero__panel-titulo">
@@ -544,16 +535,16 @@ export default function App() {
 {/* SECCIÓN PRECIOS Y ENTRADAS */}
       <section
         id="entradas"
-        className={`pi-landing-section pricing-section qp-revelar${verEntradas ? ' es-visible' : ''}`}
+        className={`pi-landing-section pi-ev-pricing-section qp-revelar${verEntradas ? ' es-visible' : ''}`}
         ref={refEntradas}
       >
-        <h2 className="pricing-title">Elegí tu entrada</h2>
-        <p className="pricing-bajada">
+        <h2 className="pi-ev-pricing-title">Elegí tu entrada</h2>
+        <p className="pi-ev-pricing-bajada">
           Todas incluyen tu manilla QR: entrás sin fila y pagás sin efectivo adentro.
         </p>
 
         {jornadasPrecios.length > 0 && (
-          <div className="pricing-filtro-dias" role="group" aria-label="Filtrar precios por jornada">
+          <div className="pi-ev-pricing-filtro-dias" role="group" aria-label="Filtrar precios por jornada">
             <button
               type="button"
               className={filtroDiaPrecios === null ? 'activo' : ''}
@@ -575,9 +566,9 @@ export default function App() {
         )}
 
         <div
-          className={`pricing-grid${verPreciosGrid ? ' es-visible' : ''}`}
+          className={`pi-ev-pricing-grid${verPreciosGrid ? ' es-visible' : ''}`}
           ref={refPreciosGrid}
-          {...seguirPuntero('.pricing-card')}
+          {...seguirPuntero('.pi-ev-pricing-card')}
         >
           {preciosFiltrados.map((plan, iPlan) => {
             const stk = estadoStock(plan);
@@ -587,55 +578,55 @@ export default function App() {
             return (
               <article
                 key={plan.id}
-                className={`pricing-card ${plan.destacado ? 'destacado' : ''} ${agotado ? 'agotado' : ''}`}
+                className={`pi-ev-pricing-card ${plan.destacado ? 'destacado' : ''} ${agotado ? 'agotado' : ''}`}
                 style={{ '--i': iPlan }}
               >
                 {plan.id === idMasVendida && (
-                  <span className="ticket-cinta"><FaFire aria-hidden="true" /> Más vendida</span>
+                  <span className="pi-ev-ticket-cinta"><FaFire aria-hidden="true" /> Más vendida</span>
                 )}
-                <div className="pricing-card-header">
-                  <div className="ticket-cab">
-                    <span className="ticket-ic" aria-hidden="true"><FaTicketAlt /></span>
-                    <div className="ticket-cab-txt">
+                <div className="pi-ev-pricing-card-header">
+                  <div className="pi-ev-ticket-cab">
+                    <span className="pi-ev-ticket-ic" aria-hidden="true"><FaTicketAlt /></span>
+                    <div className="pi-ev-ticket-cab-txt">
                       {mostrarJornada(plan.diaEvento) && (
-                        <span className="dia-badge">{nombreJornada(plan.diaEvento)}</span>
+                        <span className="pi-ev-dia-badge">{nombreJornada(plan.diaEvento)}</span>
                       )}
                       <h3>{plan.tipo}</h3>
                     </div>
                   </div>
                   {stk && (
-                    <span className={`stock-badge ${ESTADO_STOCK[stk].clase}`}>
+                    <span className={`pi-ev-stock-badge ${ESTADO_STOCK[stk].clase}`}>
                       {stk === 'stock_bajo' ? `¡Últimas ${plan.disponibles}!` : ESTADO_STOCK[stk].label}
                     </span>
                   )}
                   {plan.cantidad > 0 && plan.disponibles != null && !agotado && (
-                    <div className="pricing-cupo">
-                      <span className="pricing-cupo-txt">
+                    <div className="pi-ev-pricing-cupo">
+                      <span className="pi-ev-pricing-cupo-txt">
                         Quedan <b>{plan.disponibles}</b> de {plan.cantidad}
                         {vendidas > 0 && <> · {vendidas} vendidas</>}
                       </span>
-                      <span className="pricing-cupo-pista" aria-hidden="true">
+                      <span className="pi-ev-pricing-cupo-pista" aria-hidden="true">
                         <span style={{ '--vendido': `${Math.min(100, (vendidas / plan.cantidad) * 100)}%` }} />
                       </span>
                     </div>
                   )}
                 </div>
-                <ul className="pricing-features">
+                <ul className="pi-ev-pricing-features">
                   {plan.beneficios.map((ben, idx) => (
-                    <li key={idx} style={{ '--j': idx }}><FaCheck className="check-icon" aria-hidden="true"/> {ben}</li>
+                    <li key={idx} style={{ '--j': idx }}><FaCheck className="pi-ev-check-icon" aria-hidden="true"/> {ben}</li>
                   ))}
                 </ul>
                 {/* Troquel: la tarjeta se "corta" como una entrada de papel. */}
-                <div className="ticket-corte" aria-hidden="true" />
-                <div className="pricing-price">
+                <div className="pi-ev-ticket-corte" aria-hidden="true" />
+                <div className="pi-ev-pricing-price">
                   {Number.isFinite(precioNum) ? (
                     <>
-                      <span className="price-moneda">Bs</span>
-                      <span className="price-amount">{precioNum.toLocaleString('es-BO')}</span>
-                      <span className="price-nota">por entrada</span>
+                      <span className="pi-ev-price-moneda">Bs</span>
+                      <span className="pi-ev-price-amount">{precioNum.toLocaleString('es-BO')}</span>
+                      <span className="pi-ev-price-nota">por entrada</span>
                     </>
                   ) : (
-                    <span className="price-amount">{plan.precio}</span>
+                    <span className="pi-ev-price-amount">{plan.precio}</span>
                   )}
                 </div>
                 <Boton
@@ -725,7 +716,7 @@ export default function App() {
           </p>
         </div>
 
-        <div className="pi-landing-mapa-wrapper glass-panel">
+        <div className="pi-landing-mapa-wrapper pi-ev-glass-panel">
           <div
             className="pi-landing-mapa-canvas"
             style={contornoProyectado
@@ -760,12 +751,12 @@ export default function App() {
                 aria-label={`Ver puesto ${puesto.nombre}`}
               >
                 {puesto.logo ? (
-                  <div className="box-fondo-img" style={{ backgroundImage: `url(${puesto.logo})` }}>
-                    <div className="box-overlay-texto"><strong>{puesto.nombre}</strong></div>
+                  <div className="pi-ev-box-fondo-img" style={{ backgroundImage: `url(${puesto.logo})` }}>
+                    <div className="pi-ev-box-overlay-texto"><strong>{puesto.nombre}</strong></div>
                   </div>
                 ) : (
-                  <div className="box-fondo-color">
-                    <FaStore className="puesto-icon-dinamico" aria-hidden="true" />
+                  <div className="pi-ev-box-fondo-color">
+                    <FaStore className="pi-ev-puesto-icon-dinamico" aria-hidden="true" />
                     <strong>{puesto.nombre}</strong>
                   </div>
                 )}
@@ -788,8 +779,8 @@ export default function App() {
                     width: `${elemento.ancho}px`, height: `${elemento.alto}px`,
                   }}
                 >
-                  <div className="box-fondo-color">
-                    <Icono className="puesto-icon-dinamico" aria-hidden="true" />
+                  <div className="pi-ev-box-fondo-color">
+                    <Icono className="pi-ev-puesto-icon-dinamico" aria-hidden="true" />
                     <strong>{elemento.nombre}</strong>
                   </div>
                 </div>
@@ -803,8 +794,8 @@ export default function App() {
       </main>
 
       {/* FOOTER */}
-      <footer className="pi-landing-footer glass-footer">
-        <div className="footer-logo">
+      <footer className="pi-landing-footer pi-ev-glass-footer">
+        <div className="pi-ev-footer-logo">
           <FaQrcode size={24} />
           <strong>QPass</strong>
         </div>
@@ -823,7 +814,7 @@ export default function App() {
           <div
             ref={modalCronoRef}
             tabIndex={-1}
-            className="pi-landing-modal glass-modal"
+            className="pi-landing-modal"
             onClick={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -833,7 +824,7 @@ export default function App() {
               <h2 id="modal-crono-titulo"><FaClock aria-hidden="true" /> Cronograma</h2>
               <button
                 type="button"
-                className="btn-close-modal"
+                className="pi-landing-modal-cerrar"
                 onClick={() => setVerCronograma(false)}
                 aria-label="Cerrar"
               >
@@ -862,7 +853,7 @@ export default function App() {
           <div
             ref={modalPuestoRef}
             tabIndex={-1}
-            className="pi-landing-modal glass-modal"
+            className="pi-landing-modal"
             onClick={e => e.stopPropagation()}
             role="dialog"
             aria-modal="true"
@@ -872,7 +863,7 @@ export default function App() {
               <h2 id="modal-puesto-titulo">{puestoModal.nombre}</h2>
               <button
                 type="button"
-                className="btn-close-modal"
+                className="pi-landing-modal-cerrar"
                 onClick={() => setPuestoModal(null)}
                 aria-label="Cerrar"
               >
@@ -884,9 +875,9 @@ export default function App() {
               {(puestoModal.productos || []).filter(p => p.activo !== false).length === 0 ? (
                 <p>Este puesto todavía no tiene productos publicados.</p>
               ) : (
-                <ul className="pricing-features">
+                <ul className="pi-ev-pricing-features">
                   {puestoModal.productos.filter(p => p.activo !== false).map(p => (
-                    <li key={p.id}><FaCheck className="check-icon" aria-hidden="true" /> {p.nombre} — {Number(p.precio)} Bs</li>
+                    <li key={p.id}><FaCheck className="pi-ev-check-icon" aria-hidden="true" /> {p.nombre} — {Number(p.precio)} Bs</li>
                   ))}
                 </ul>
               )}

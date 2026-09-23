@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useModal } from '../../utils/useModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga } from '../../components/EstadosAsync.jsx';
@@ -9,7 +7,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import {
   FaPlus, FaTrash, FaSave, FaEye, FaImage, FaUpload, FaPalette, FaTextHeight,
-  FaListUl, FaRegCalendarAlt, FaUndo, FaTimes, FaCalendarAlt, FaDesktop,
+  FaListUl, FaRegCalendarAlt, FaUndo, FaTimes, FaDesktop,
   FaMobileAlt, FaArrowUp, FaArrowDown, FaSortAmountDown, FaCheckCircle,
   FaExclamationTriangle, FaMagic, FaExpand,
 } from 'react-icons/fa';
@@ -21,7 +19,12 @@ import {
 } from '../../constants/landingEvento.js';
 import VistaPreviaPagina from './VistaPreviaPagina.jsx';
 import Boton from '../../components/Boton.jsx';
+import SelectorEvento from '../../components/SelectorEvento.jsx';
+import Modal from '../../components/Modal.jsx';
+import Card from '../../components/Card.jsx';
 import Pestanas from '../../components/Pestanas.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import AjusteImagen from './AjusteImagen.jsx';
 import './AdminConfigurarPagina.css';
 import './ConfigurarPaginaEditor.css';
@@ -133,15 +136,14 @@ export default function AdminConfigurarPagina({
   }
   const hayCambios = base.id === eventoId && JSON.stringify(config) !== base.json;
 
-  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
+  const avisos = useAvisos();
   const [guardando, setGuardando] = useState(false);
+  const [restableciendo, setRestableciendo] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [dispositivo, setDispositivo] = useState('escritorio');
   const [resaltar, setResaltar] = useState(null);
   const [iconosAbiertos, setIconosAbiertos] = useState(null); // índice de la actividad
   const [confirmar, DialogoConfirmar] = useConfirmar();
-
-  const modalPreviewRef = useModal(showPreview, () => setShowPreview(false));
 
   useEffect(() => {
     if (embebido) return;
@@ -161,11 +163,6 @@ export default function AdminConfigurarPagina({
 
   const eventoBloqueado = embebido || !!location.state?.eventoId;
 
-  const avisar = (texto, tipo = 'exito') => {
-    setMensaje({ texto, tipo });
-    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
-  };
-
   const cambiar = (campo, valor) => setConfig(c => ({ ...c, [campo]: valor }));
 
   const handleImageUpload = async (e) => {
@@ -177,7 +174,7 @@ export default function AdminConfigurarPagina({
       // Foto nueva: el encuadre de la anterior ya no aplica.
       setConfig(c => ({ ...c, imagen: url, imagenAjuste: null }));
     } catch (err) {
-      avisar(err.message, 'aviso');
+      avisos.error(err.message, { titulo: 'No se pudo subir la imagen' });
     }
   };
 
@@ -205,9 +202,9 @@ export default function AdminConfigurarPagina({
       const guardada = normalizarConfig(await api.landingConfig.guardar(eventoId, { ...config, titulo: eventoNombre }));
       setConfig(guardada);
       setBase({ id: eventoId, json: JSON.stringify(guardada) });
-      avisar('¡Página del evento actualizada!');
+      avisos.exito('La página del evento quedó actualizada.');
     } catch (err) {
-      avisar(err.message || 'No se pudo guardar. Probá de nuevo.', 'aviso');
+      avisos.error(err.message || 'No se pudo guardar. Probá de nuevo.', { titulo: 'No se pudo guardar' });
     } finally {
       setGuardando(false);
     }
@@ -221,10 +218,32 @@ export default function AdminConfigurarPagina({
       peligroso: true,
     });
     if (!ok) return;
-    const guardada = normalizarConfig(await api.landingConfig.guardar(eventoId, { ...defaultLandingConfig, titulo: eventoNombre }));
-    setConfig(guardada);
-    setBase({ id: eventoId, json: JSON.stringify(guardada) });
-    avisar('Se restauraron los valores por defecto.', 'aviso');
+    setRestableciendo(true);
+    try {
+      const guardada = normalizarConfig(await api.landingConfig.guardar(eventoId, { ...defaultLandingConfig, titulo: eventoNombre }));
+      setConfig(guardada);
+      setBase({ id: eventoId, json: JSON.stringify(guardada) });
+      avisos.exito('La página volvió al diseño por defecto.');
+    } catch (err) {
+      avisos.error(err.message || 'No se pudo restablecer el diseño.', { titulo: 'No se pudo restablecer' });
+    } finally {
+      setRestableciendo(false);
+    }
+  };
+
+  // Cambiar de evento con cambios sin guardar = perderlos. El aviso del
+  // navegador (beforeunload) solo cubre cerrar la pestaña, no esto.
+  const cambiarEvento = async (nuevoId) => {
+    if (hayCambios) {
+      const ok = await confirmar({
+        titulo: '¿Cambiar de evento sin guardar?',
+        mensaje: 'Los cambios de esta página se van a perder.',
+        textoConfirmar: 'Cambiar sin guardar',
+        peligroso: true,
+      });
+      if (!ok) return;
+    }
+    setEventoId(nuevoId);
   };
 
   // Contraste de lo que se va a leer (WCAG: 4.5:1 para texto normal).
@@ -253,21 +272,21 @@ export default function AdminConfigurarPagina({
       )}
 
       {!embebido && (
-        <div className="pi-admin-header">
-          <h1>Página del evento</h1>
-          <div className="pi-admin-selector-evento">
-            <FaCalendarAlt />
-            {eventoBloqueado ? (
-              <strong>{eventoNombre || 'Evento'}</strong>
-            ) : (
-              <select value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
-                {eventosDisponibles.map(ev => (
-                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        </div>
+        <EncabezadoPagina
+          titulo="Página del evento"
+          subtitulo="Así se va a ver la página pública del evento."
+          icono={FaDesktop}
+          acciones={
+            <SelectorEvento
+              id="cfg-evento"
+              eventos={eventosDisponibles}
+              valor={eventoId}
+              onCambio={cambiarEvento}
+              bloqueado={eventoBloqueado}
+              nombre={eventoNombre}
+            />
+          }
+        />
       )}
 
       {/* ---------- Barra de acciones (fija arriba al bajar) ---------- */}
@@ -278,19 +297,13 @@ export default function AdminConfigurarPagina({
             : <><FaCheckCircle aria-hidden="true" /> Todo guardado</>}
         </span>
         <div className="pi-cfg-barra-acciones">
-          <Boton variante="peligro-suave" icono={FaUndo} onClick={restablecerValores}>Restablecer</Boton>
+          <Boton variante="peligro-suave" icono={FaUndo} onClick={restablecerValores} cargando={restableciendo}>Restablecer</Boton>
           <Boton variante="secundario" icono={FaExpand} onClick={() => setShowPreview(true)}>Vista completa</Boton>
           <Boton icono={FaSave} onClick={guardarConfiguracion} cargando={guardando} disabled={!hayCambios}>
             {guardando ? 'Guardando…' : 'Guardar cambios'}
           </Boton>
         </div>
       </div>
-
-      {mensaje.texto && (
-        <div className={`pi-admin-alert ${mensaje.tipo === 'aviso' ? 'pi-admin-alert-aviso' : ''}`} role="status">
-          {mensaje.texto}
-        </div>
-      )}
 
       {cargandoConfig ? (
         <EstadoCarga filas={6} etiqueta="Cargando configuración…" />
@@ -299,7 +312,7 @@ export default function AdminConfigurarPagina({
         <div className="pi-cfg-editor">
 
           {/* ===== 1. COLORES ===== */}
-          <section className="pi-admin-card pi-cfg-seccion" {...zona('colores')}>
+          <Card as="section" className="pi-cfg-seccion" {...zona('colores')}>
             <h3><span className="pi-cfg-num">1</span><FaPalette aria-hidden="true" /> Colores</h3>
 
             <p className="texto-ayuda"><FaMagic aria-hidden="true" /> Elegí una paleta lista o ajustá cada color a mano.</p>
@@ -344,14 +357,15 @@ export default function AdminConfigurarPagina({
               })}
             </ul>
             {problemasContraste > 0 && (
-              <p className="pi-cfg-aviso">
-                <FaExclamationTriangle aria-hidden="true" /> Algunos textos pueden costar leerse. Probá un fondo más oscuro o textos más claros (mínimo recomendado 4.5:1).
-              </p>
+              <AvisoFijo tono="aviso">
+                Algunos textos pueden costar leerse. Probá un fondo más oscuro o textos más claros
+                (mínimo recomendado 4.5:1).
+              </AvisoFijo>
             )}
-          </section>
+          </Card>
 
           {/* ===== 2. TEXTOS E IMAGEN ===== */}
-          <section className="pi-admin-card pi-cfg-seccion" {...zona('textos')}>
+          <Card as="section" className="pi-cfg-seccion" {...zona('textos')}>
             <h3><span className="pi-cfg-num">2</span><FaTextHeight aria-hidden="true" /> Textos e imagen</h3>
 
             <div className="pi-admin-form-group">
@@ -408,11 +422,11 @@ export default function AdminConfigurarPagina({
                 />
               )}
             </div>
-          </section>
+          </Card>
 
           {/* ===== 3. ACTIVIDADES ===== */}
-          <section className="pi-admin-card pi-cfg-seccion" {...zona('actividades')}>
-            <div className="pi-admin-card-header">
+          <Card as="section" className="pi-cfg-seccion" {...zona('actividades')}>
+            <div className="pi-cfg-seccion-header">
               <h3><span className="pi-cfg-num">3</span><FaListUl aria-hidden="true" /> Servicios / actividades</h3>
               <Boton variante="secundario" tamano="sm" icono={FaPlus} onClick={() => agregarFila('actividades', { icono: 'music', titulo: '', descripcion: '' })}>
                 Añadir
@@ -473,11 +487,11 @@ export default function AdminConfigurarPagina({
                 </div>
               );
             })}
-          </section>
+          </Card>
 
           {/* ===== 4. CRONOGRAMA ===== */}
-          <section className="pi-admin-card pi-cfg-seccion" {...zona('cronograma')}>
-            <div className="pi-admin-card-header">
+          <Card as="section" className="pi-cfg-seccion" {...zona('cronograma')}>
+            <div className="pi-cfg-seccion-header">
               <h3><span className="pi-cfg-num">4</span><FaRegCalendarAlt aria-hidden="true" /> Cronograma</h3>
               <div className="pi-cfg-header-btns">
                 {config.cronograma.length > 1 && (
@@ -508,7 +522,7 @@ export default function AdminConfigurarPagina({
                 </li>
               ))}
             </ol>
-          </section>
+          </Card>
         </div>
 
         {/* ---------- Vista previa en vivo ---------- */}
@@ -535,27 +549,16 @@ export default function AdminConfigurarPagina({
       )}
 
       {/* ---------- Vista completa ---------- */}
-      {showPreview && createPortal(
-        <div className="pi-admin-modal-overlay pi-cfg-modal-overlay" onClick={() => setShowPreview(false)}>
-          <div
-            ref={modalPreviewRef}
-            tabIndex={-1}
-            className="pi-cfg-modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="cfg-preview-titulo"
-          >
-            <div className="pi-cfg-modal-header">
-              <h3 id="cfg-preview-titulo">Vista completa · {eventoNombre}</h3>
-              <Boton variante="fantasma" icono={FaTimes} onClick={() => setShowPreview(false)} aria-label="Cerrar" className="pi-cfg-modal-cerrar" />
-            </div>
-            <div className="pi-cfg-modal-body">
-              <VistaPreviaPagina config={config} evento={eventoParaPreview} />
-            </div>
-          </div>
-        </div>,
-        document.body,
+      {/* Vista completa: Modal global (antes, portal + overlay a mano). */}
+      {showPreview && (
+        <Modal
+          titulo={`Vista completa · ${eventoNombre}`}
+          onCerrar={() => setShowPreview(false)}
+          tamano="xl"
+          className="pi-cfg-modal-preview"
+        >
+          <VistaPreviaPagina config={config} evento={eventoParaPreview} />
+        </Modal>
       )}
 
       {DialogoConfirmar}

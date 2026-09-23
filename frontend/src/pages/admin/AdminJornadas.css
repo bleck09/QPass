@@ -1,135 +1,54 @@
-.pi-jor-seccion {
-  padding: 4px 0;
-}
+/* Jornadas del evento — solo layout propio (prefijo pi-jor-). Botones (Boton),
+   campos (Campo), tabla (Tabla card), avisos y confirmación son los GLOBALES. */
+
+.pi-jor-seccion { display: flex; flex-direction: column; gap: var(--space-3); }
+
 .pi-jor-titulo {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: 0 0 4px;
-  font-size: 17px;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-lg);
   color: var(--text-primary);
 }
-.pi-jor-ayuda {
-  margin: 0 0 16px;
-  color: var(--text-secondary);
-  font-size: 13px;
-  max-width: 60ch;
-}
-.pi-jor-acciones {
-  display: flex;
-  gap: 6px;
-  justify-content: flex-end;
-}
-.pi-jor-btn-editar,
-.pi-jor-btn-borrar {
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  border-radius: 8px;
-  padding: 6px 8px;
-  cursor: pointer;
-}
-.pi-jor-btn-borrar:hover { color: var(--danger); border-color: var(--danger); }
-.pi-jor-btn-editar:hover { color: var(--indigo-profundo); border-color: var(--indigo-profundo); }
 
-.pi-jor-error {
-  margin: 10px 0 0;
-  color: var(--danger);
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+.pi-jor-titulo svg { color: var(--action); }
 
-/* Texto + mini calendario a un costado, la tabla al lado — en vez de apilado
-   (dejaba un hueco enorme a la derecha del calendario chico). Se apila solo
-   en pantallas angostas. */
-.pi-jor-arriba {
-  display: flex;
-  align-items: flex-start;
-  gap: 24px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-.pi-jor-arriba-izq { flex: 0 1 280px; }
-.pi-jor-arriba-der { flex: 1 1 320px; min-width: 280px; }
+/* Mini calendario a un costado y la tabla al lado; se apila en angosto. */
+.pi-jor-arriba { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-6); }
+.pi-jor-arriba-izq { flex: 0 1 17.5rem; }
+.pi-jor-arriba-der { flex: 1 1 20rem; min-width: 0; }
+.pi-jor-mini-calendario { max-width: 16.25rem; }
 
-.pi-jor-mini-calendario { max-width: 260px; }
+.pi-jor-fila--editando td { background: var(--brand-bg); }
 
 .pi-jor-form {
-  margin-top: 20px;
-  padding: 16px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--bg-surface);
-  transition: border-color 0.2s, background 0.2s;
-}
-/* Se nota que hay algo cargado para editar — si no, con el formulario
-   siempre visible parece que "Editar" no hizo nada. */
-.pi-jor-form--editando {
-  border-color: var(--cian-digital);
-  border-width: 2px;
-  background: var(--cian-digital-suave);
-}
-.pi-jor-form h4 {
-  margin: 0 0 12px;
-  font-size: 14px;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-.pi-jor-form--editando h4 { color: var(--indigo-profundo); }
-.pi-jor-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-}
-.pi-jor-grid label {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-.pi-jor-grid label span {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-.pi-jor-grid input {
-  padding: 8px 10px;
+  gap: var(--space-3);
+  padding: var(--space-4);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-base, var(--bg-surface));
-  color: var(--text-primary);
-  font-size: 14px;
-  font-weight: 400;
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
 }
-.pi-jor-form-acciones {
+
+/* Se nota que hay algo cargado para editar (si no, parece que "Editar" no hizo nada). */
+.pi-jor-form--editando { border-color: var(--action); background: var(--brand-bg); }
+
+.pi-jor-form h4 {
   display: flex;
-  gap: 10px;
-  margin-top: 14px;
-}
-.pi-jor-btn-guardar {
-  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border: none;
-  border-radius: 8px;
-  background: var(--indigo-profundo);
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-primary);
 }
-.pi-jor-btn-guardar:disabled { opacity: 0.6; cursor: default; }
-.pi-jor-btn-cancelar {
-  padding: 8px 16px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
+
+.pi-jor-form--editando h4 { color: var(--action); }
+
+.pi-jor-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11.25rem, 1fr));
+  gap: var(--space-3);
 }

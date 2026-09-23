@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react';
 import {
-  FaStore, FaPlus, FaMinus, FaWallet, FaUndoAlt, FaTrashAlt, FaChevronDown, FaCalculator,
+  FaStore, FaPlus, FaWallet, FaUndoAlt, FaTrashAlt, FaChevronDown, FaCalculator,
 } from 'react-icons/fa';
 import './EventoPuestos.css';
 import Boton from '../../../components/Boton.jsx';
 import Filtros from '../../../components/Filtros.jsx';
+import SelectorCantidad from '../../../components/SelectorCantidad.jsx';
 
 const PRODUCTOS_VISIBLES = 4;
 const bs = new Intl.NumberFormat('es-BO', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
@@ -58,7 +59,7 @@ export default function EventoPuestos({ puestos, diasParaRetiro }) {
   if (conMenu.length === 0) return null;
 
   return (
-    <div className="ev-menu">
+    <div>
       {categorias.length > 1 && (
         <Filtros
           className="ev-menu__filtros"
@@ -106,19 +107,14 @@ export default function EventoPuestos({ puestos, diasParaRetiro }) {
                         </span>
                         <b className="ev-menu__precio">Bs {bs.format(Number(pr.precio))}</b>
                         {!agotado && (
-                          <span className="ev-menu__cant">
-                            {n > 0 && (
-                              <>
-                                <button type="button" onClick={() => cambiar(clave, -1)} aria-label={`Quitar un ${pr.nombre}`}>
-                                  <FaMinus aria-hidden="true" />
-                                </button>
-                                <span aria-live="polite">{n}</span>
-                              </>
-                            )}
-                            <button type="button" onClick={() => cambiar(clave, 1)} aria-label={`Sumar un ${pr.nombre} al presupuesto`}>
-                              <FaPlus aria-hidden="true" />
-                            </button>
-                          </span>
+                          <SelectorCantidad
+                            tamano="sm"
+                            ocultarEnCero
+                            valor={n}
+                            nombre={pr.nombre}
+                            onMenos={() => cambiar(clave, -1)}
+                            onMas={() => cambiar(clave, 1)}
+                          />
                         )}
                       </li>
                     );

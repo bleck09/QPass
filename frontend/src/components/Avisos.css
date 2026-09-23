@@ -39,6 +39,18 @@
 
 .qp-aviso--exito { --tono: var(--ok); --tono-bg: var(--ok-bg); --tono-texto: var(--ok-text); }
 .qp-aviso--error { --tono: var(--danger); --tono-bg: var(--danger-bg); --tono-texto: var(--danger-text); }
+.qp-aviso--aviso { --tono: var(--warn); --tono-bg: var(--warn-bg); --tono-texto: var(--warn-text); }
+
+/* Aviso fijo en la página (<AvisoFijo>): mismo molde, sin sombra flotante ni
+   barra de tiempo; fondo suave del tono. */
+.qp-aviso--fijo {
+  padding-bottom: var(--space-4);
+  border-color: color-mix(in srgb, var(--tono) 30%, transparent);
+  border-left-color: var(--tono);
+  background: var(--tono-bg);
+  box-shadow: none;
+  animation: qp-aparecer var(--duration-normal) var(--ease-out);
+}
 
 .qp-aviso.saliendo { animation: qpAvisoSalir 250ms var(--ease-out) forwards; }
 

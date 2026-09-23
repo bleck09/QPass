@@ -12,10 +12,18 @@ import { useApi } from '../../utils/useApi.js';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { estadoStockProducto } from '../../utils/stock.js';
 import { ROLES } from '../../constants/roles.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import Card from '../../components/Card.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import Pestanas from '../../components/Pestanas.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
+import { enfocarPrimero, MIN_CONTRASENA } from '../../utils/validacion.js';
+import { erroresAyudante } from '../../utils/ayudantes.js';
 import {
   FaStore, FaBoxOpen, FaUsers, FaUserTie, FaHamburger,
-  FaBan, FaCheckCircle, FaPen, FaLock, FaPlus, FaUnlink, FaSave, FaTimes,
+  FaBan, FaCheckCircle, FaPen, FaLock, FaPlus, FaUnlink, FaSave, FaTimes, FaSearch, FaEnvelope,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
@@ -29,6 +37,14 @@ const FILTROS_MENU = [
 ];
 const FORM_AYUDANTE = { nombre: '', email: '', password: '' };
 
+const validarAyudante = (f) => erroresAyudante(f, 'pd-ay');
+
+// Estado de stock (utils/stock.js) -> insignia de la celda de stock.
+const INSIGNIA_STOCK = {
+  bajo: { tono: 'warn', texto: 'Stock bajo' },
+  sin_stock: { tono: 'danger', texto: 'Sin stock' },
+};
+
 /**
  * Detalle de un puesto DENTRO de un evento: su menú para ese evento
  * (precio / stock / disponibilidad) y su equipo de ayudantes — con buscador,
@@ -39,6 +55,7 @@ export default function MiPuestoDetalle() {
   const navigate = useNavigate();
   const sesion = leerSesion();
   const [confirmar, DialogoConfirmar] = useConfirmar();
+  const avisos = useAvisos();
 
   const cargar = useCallback(
     () => api.puestos.listar({ eventoId, negocioId: sesion.id }),
@@ -54,7 +71,6 @@ export default function MiPuestoDetalle() {
 
   const [tab, setTab] = useState('menu'); // menu | equipo
   const [editandoMenu, setEditandoMenu] = useState(false);
-  const [err, setErr] = useState('');
 
   // Menú: buscador + filtro por estado de stock.
   const [busqMenu, setBusqMenu] = useState('');
@@ -67,7 +83,11 @@ export default function MiPuestoDetalle() {
   const [asignandoId, setAsignandoId] = useState(null);
   const [showCrear, setShowCrear] = useState(false);
   const [formCrear, setFormCrear] = useState(FORM_AYUDANTE);
+  // Alta de ayudante: error del servidor y errores por campo (tras el primer intento).
   const [crearErr, setCrearErr] = useState('');
+  const [intentoCrear, setIntentoCrear] = useState(false);
+  const [creando, setCreando] = useState(false);
+  const erroresCrear = intentoCrear ? validarAyudante(formCrear) : {};
 
   const volver = () => navigate(`/usuarionegocio?evento=${eventoId}`);
   const migas = [
@@ -109,7 +129,6 @@ export default function MiPuestoDetalle() {
   // `cambios`: activo? / stock? / precio? (null = sin override para ese evento).
   const cambiarEstadoProducto = async (producto, cambios) => {
     if (!puesto) return;
-    setErr('');
     try {
       await api.productos.actualizarEstado({
         puestoId: puesto.id,
@@ -124,17 +143,21 @@ export default function MiPuestoDetalle() {
       setPuestos(prev => prev.map(p => p.id === puesto.id
         ? { ...p, productos: p.productos.map(pr => pr.id === producto.id ? { ...pr, ...local } : pr) }
         : p));
-    } catch (e2) { setErr(e2.message); }
+      avisos.exito(`${producto.nombre}: cambio guardado.`, { duracion: 2500 });
+    } catch (e2) {
+      avisos.error(e2.message, { titulo: `No se pudo guardar ${producto.nombre}` });
+    }
   };
 
   const asignarAyudante = async (ayu) => {
-    setErr('');
     setAsignandoId(ayu.id);
     try {
       await api.puestoAyudantes.asignar({ puestoId, ayudanteId: ayu.id });
       await Promise.all([recargar(), recargarMisAyudantes()]);
-    } catch (e2) { setErr(e2.message); }
-    finally { setAsignandoId(null); }
+      avisos.exito(`${ayu.nombre} ya puede vender en ${puesto.nombre}.`, { titulo: 'Ayudante asignado' });
+    } catch (e2) {
+      avisos.error(e2.message, { titulo: 'No se pudo asignar' });
+    } finally { setAsignandoId(null); }
   };
 
   const quitarAyudante = async (asignacion) => {
@@ -145,29 +168,43 @@ export default function MiPuestoDetalle() {
       peligroso: true,
     });
     if (!ok) return;
-    setErr('');
     try {
       await api.puestoAyudantes.quitar(asignacion.id);
       await Promise.all([recargar(), recargarMisAyudantes()]);
-    } catch (e2) { setErr(e2.message); }
+      avisos.exito(`${asignacion.ayudante.nombre} ya no está en este puesto.`);
+    } catch (e2) {
+      avisos.error(e2.message, { titulo: 'No se pudo quitar' });
+    }
   };
 
   const crearYAsignar = async (e) => {
     e.preventDefault();
     setCrearErr('');
+    setIntentoCrear(true);
+    const errs = validarAyudante(formCrear);
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ['pd-ay-nombre', 'pd-ay-email', 'pd-ay-pass']);
+
+    setCreando(true);
     try {
       const nuevo = await api.auth.registro({
         rol: ROLES.AYUDANTE,
-        nombre: formCrear.nombre,
-        email: formCrear.email,
+        nombre: formCrear.nombre.trim(),
+        email: formCrear.email.trim(),
         password: formCrear.password,
       });
       await api.puestoAyudantes.asignar({ puestoId, ayudanteId: nuevo.id });
       await Promise.all([recargar(), recargarMisAyudantes()]);
       setShowCrear(false);
+      avisos.exito(`${formCrear.nombre.trim()} ya puede entrar con su correo y la contraseña temporal.`, { titulo: 'Ayudante creado y asignado' });
       setFormCrear(FORM_AYUDANTE);
-    } catch (e2) { setCrearErr(e2.message); }
+    } catch (e2) {
+      setCrearErr(e2.message);
+    } finally {
+      setCreando(false);
+    }
   };
+
+  const abrirCrear = () => { setFormCrear(FORM_AYUDANTE); setCrearErr(''); setIntentoCrear(false); setShowCrear(true); };
 
   const cabecera = (
     <div className="qp-nav">
@@ -201,38 +238,38 @@ export default function MiPuestoDetalle() {
         </div>
       </div>
 
-      <div className="pi-unegocio-tabs">
-        <button type="button" className={tab === 'menu' ? 'activo' : ''} aria-current={tab === 'menu' ? 'page' : undefined} onClick={() => setTab('menu')}>
-          <FaBoxOpen aria-hidden="true" /> Menú ({puesto.productos.length})
-        </button>
-        <button type="button" className={tab === 'equipo' ? 'activo' : ''} aria-current={tab === 'equipo' ? 'page' : undefined} onClick={() => setTab('equipo')}>
-          <FaUsers aria-hidden="true" /> Equipo ({puesto.ayudantes.length})
-        </button>
-      </div>
-
-      {err && <p className="pi-unegocio-nota pi-unegocio-nota--error">{err}</p>}
+      <Pestanas
+        className="pi-unegocio-pestanas"
+        etiqueta="Secciones del puesto"
+        activo={tab}
+        onCambio={setTab}
+        items={[
+          { id: 'menu', etiqueta: `Menú (${puesto.productos.length})`, icono: FaBoxOpen },
+          { id: 'equipo', etiqueta: `Equipo (${puesto.ayudantes.length})`, icono: FaUsers },
+        ]}
+      />
 
       {/* ================= MENÚ ================= */}
       {tab === 'menu' && (
         <>
           <div className="pi-unegocio-action-bar">
-            <p className="pi-unegocio-nota">
+            <p className="texto-ayuda">
               El catálogo sale de <strong>Mi Catálogo</strong>. Acá ajustás precio, stock y disponibilidad
               solo para este evento.
             </p>
-            <button
-              type="button"
-              className={editandoMenu ? 'btn-cancelar' : 'btn-primario'}
+            <Boton
+              variante={editandoMenu ? 'secundario' : 'primario'}
+              icono={editandoMenu ? FaLock : FaPen}
               onClick={() => setEditandoMenu(v => !v)}
             >
-              {editandoMenu ? <><FaLock aria-hidden="true" /> Terminar edición</> : <><FaPen aria-hidden="true" /> Editar menú</>}
-            </button>
+              {editandoMenu ? 'Terminar edición' : 'Editar menú'}
+            </Boton>
           </div>
 
           {editandoMenu && (
-            <p className="pi-unegocio-nota pi-unegocio-nota--aviso">
-              Modo edición: los cambios de precio / stock se guardan al salir del campo. Precio vacío = usa el precio base.
-            </p>
+            <AvisoFijo tono="aviso" icono={FaPen} titulo="Modo edición">
+              Los cambios de precio y stock se guardan al salir del campo. Precio vacío = usa el precio base.
+            </AvisoFijo>
           )}
 
           <div className="pi-unegocio-buscador">
@@ -248,14 +285,23 @@ export default function MiPuestoDetalle() {
             />
           </div>
 
-          <div className="pi-unegocio-card">
+          {productosMenu.length === 0 ? (
+            busqMenu.trim() || filtroMenu !== 'todos'
+              ? <EstadoVacio compacto icono={FaSearch} titulo="Ningún producto coincide con el filtro" />
+              : (
+                <EstadoVacio
+                  icono={FaHamburger}
+                  titulo="Este puesto no tiene productos"
+                  mensaje="Agregalos en Mi Catálogo y aparecen acá solos."
+                  accion={<Boton variante="secundario" onClick={() => navigate(`/usuarionegocio/catalogo/${puesto.puestoBaseId}`)}>Ir a Mi Catálogo</Boton>}
+                />
+              )
+          ) : (
             <Tabla
+              card
               columnas={['Producto', 'Categoría', { texto: 'Precio evento', align: 'right' }, { texto: 'Stock', align: 'center' }, { texto: 'Estado', align: 'center' }]}
               datos={productosMenu}
               porPagina={10}
-              vacio={busqMenu.trim() || filtroMenu !== 'todos'
-                ? 'Ningún producto coincide con el filtro.'
-                : 'Este puesto base no tiene productos. Agregalos en Mi Catálogo.'}
               renderFila={producto => (
                 <tr key={producto.id} className={producto.activo === false ? 'pi-unegocio-prod-inactivo' : ''}>
                   <td>
@@ -307,29 +353,39 @@ export default function MiPuestoDetalle() {
                         }}
                       />
                     ) : (
-                      <span className="celda-secundaria">{producto.stock ?? 'libre'}</span>
+                      <span className="pi-unegocio-stock">
+                        <span className="celda-secundaria">{producto.stock ?? 'libre'}</span>
+                        {INSIGNIA_STOCK[estadoStockProducto(producto)] && (
+                          <Insignia tono={INSIGNIA_STOCK[estadoStockProducto(producto)].tono}>
+                            {INSIGNIA_STOCK[estadoStockProducto(producto)].texto}
+                          </Insignia>
+                        )}
+                      </span>
                     )}
                   </td>
                   <td className="td-centro">
                     {editandoMenu ? (
-                      <button
-                        type="button"
-                        className={producto.activo === false ? 'pi-unegocio-toggle inactivo' : 'pi-unegocio-toggle activo'}
+                      <Boton
+                        variante={producto.activo === false ? 'peligro-suave' : 'secundario'}
+                        tamano="sm"
+                        pildora
+                        icono={producto.activo === false ? FaBan : FaCheckCircle}
                         onClick={() => cambiarEstadoProducto(producto, { activo: producto.activo === false })}
                         title={producto.activo === false ? 'Marcar como disponible' : 'Marcar como agotado'}
+                        aria-pressed={producto.activo !== false}
                       >
-                        {producto.activo === false ? <><FaBan /> Agotado</> : <><FaCheckCircle /> Activo</>}
-                      </button>
+                        {producto.activo === false ? 'Agotado' : 'Activo'}
+                      </Boton>
+                    ) : producto.activo === false ? (
+                      <Insignia tono="danger" icono={FaBan}>Agotado</Insignia>
                     ) : (
-                      <span className={producto.activo === false ? 'pi-unegocio-toggle inactivo' : 'pi-unegocio-toggle activo'}>
-                        {producto.activo === false ? <><FaBan /> Agotado</> : <><FaCheckCircle /> Activo</>}
-                      </span>
+                      <Insignia tono="ok" icono={FaCheckCircle}>Activo</Insignia>
                     )}
                   </td>
                 </tr>
               )}
             />
-          </div>
+          )}
         </>
       )}
 
@@ -338,17 +394,18 @@ export default function MiPuestoDetalle() {
         <>
           <div className="pi-unegocio-action-bar">
             <h2 className="pi-unegocio-subtitulo"><FaUsers aria-hidden="true" /> Ayudantes de este puesto</h2>
-            <button
-              type="button"
-              className={showAsignar ? 'btn-cancelar' : 'btn-primario'}
+            <Boton
+              variante={showAsignar ? 'secundario' : 'primario'}
+              icono={showAsignar ? FaTimes : FaPlus}
               onClick={() => { setShowAsignar(v => !v); setBusqAsignar(''); }}
+              aria-expanded={showAsignar}
             >
-              {showAsignar ? <><FaTimes aria-hidden="true" /> Cerrar</> : <><FaPlus aria-hidden="true" /> Asignar ayudante</>}
-            </button>
+              {showAsignar ? 'Cerrar' : 'Asignar ayudante'}
+            </Boton>
           </div>
 
           {showAsignar && (
-            <div className="pi-unegocio-card pi-unegocio-asignar">
+            <Card className="pi-unegocio-asignar">
               <div className="pi-unegocio-action-bar">
                 <Buscador
                   valor={busqAsignar}
@@ -356,14 +413,12 @@ export default function MiPuestoDetalle() {
                   placeholder="Buscar ayudante de tu negocio…"
                   etiqueta="Buscar ayudante para asignar"
                 />
-                <button type="button" className="btn-secundario-sm" onClick={() => { setFormCrear(FORM_AYUDANTE); setCrearErr(''); setShowCrear(true); }}>
-                  <FaPlus aria-hidden="true" /> Crear ayudante nuevo
-                </button>
+                <Boton variante="secundario" tamano="sm" icono={FaPlus} onClick={abrirCrear}>Crear ayudante nuevo</Boton>
               </div>
               {disponiblesAsignar.length === 0 ? (
-                <p className="tabla-vacia">
-                  {busqAsignar.trim() ? 'Ningún ayudante coincide.' : 'Todos tus ayudantes ya están en este puesto. Creá uno nuevo.'}
-                </p>
+                busqAsignar.trim()
+                  ? <EstadoVacio compacto icono={FaSearch} titulo="Ningún ayudante coincide" />
+                  : <EstadoVacio compacto icono={FaUsers} titulo="Todos tus ayudantes ya están en este puesto" mensaje="Creá uno nuevo si necesitás más gente." />
               ) : (
                 <>
                 <ul className="pi-unegocio-asignar-lista">
@@ -378,14 +433,16 @@ export default function MiPuestoDetalle() {
                           <div className="celda-secundaria">{a.email}</div>
                         </div>
                       </div>
-                      <button
-                        type="button"
-                        className="btn-secundario-sm"
+                      <Boton
+                        variante="secundario"
+                        tamano="sm"
+                        icono={FaPlus}
                         onClick={() => asignarAyudante(a)}
-                        disabled={asignandoId === a.id}
+                        cargando={asignandoId === a.id}
+                        disabled={asignandoId !== null && asignandoId !== a.id}
                       >
-                        <FaPlus aria-hidden="true" /> {asignandoId === a.id ? 'Asignando…' : 'Asignar'}
-                      </button>
+                        Asignar
+                      </Boton>
                     </li>
                   ))}
                 </ul>
@@ -398,7 +455,7 @@ export default function MiPuestoDetalle() {
                 />
                 </>
               )}
-            </div>
+            </Card>
           )}
 
           <div className="pi-unegocio-buscador">
@@ -410,8 +467,8 @@ export default function MiPuestoDetalle() {
             />
           </div>
 
-          <div className="pi-unegocio-card">
-            <Tabla
+          <Tabla
+              card
               columnas={['Ayudante', 'Correo', { texto: 'Acciones', align: 'center' }]}
               datos={equipoFiltrado}
               porPagina={10}
@@ -430,19 +487,16 @@ export default function MiPuestoDetalle() {
                   </td>
                   <td><span className="celda-secundaria">{asignacion.ayudante.email}</span></td>
                   <td className="td-centro">
-                    <button type="button" className="btn-secundario-sm btn-secundario-sm--peligro" onClick={() => quitarAyudante(asignacion)}>
-                      <FaUnlink aria-hidden="true" /> Quitar
-                    </button>
+                    <Boton variante="peligro-suave" tamano="sm" icono={FaUnlink} onClick={() => quitarAyudante(asignacion)}>Quitar</Boton>
                   </td>
                 </tr>
               )}
             />
-          </div>
 
-          <div className="modal-actions modal-actions--gap-top">
-            <button type="button" className="btn-secundario-sm" onClick={() => navigate('/usuarionegocio/ayudantes')}>
-              <FaUsers aria-hidden="true" /> Gestionar todos en Mis Ayudantes
-            </button>
+          <div className="pi-unegocio-pie">
+            <Boton variante="secundario" tamano="sm" icono={FaUsers} onClick={() => navigate('/usuarionegocio/ayudantes')}>
+              Gestionar todos en Mis Ayudantes
+            </Boton>
           </div>
         </>
       )}
@@ -450,29 +504,31 @@ export default function MiPuestoDetalle() {
       {/* Alta rápida de ayudante (se asigna a este puesto al crearse) */}
       {showCrear && (
         <Modal
-          titulo={<><FaUserTie color="var(--indigo-profundo)" aria-hidden="true" /> Nuevo ayudante para {puesto.nombre}</>}
+          titulo={<><FaUserTie aria-hidden="true" /> Nuevo ayudante para {puesto.nombre}</>}
           onCerrar={() => setShowCrear(false)}
         >
-          <form onSubmit={crearYAsignar} className="formulario">
-            <div className="input-group">
-              <label htmlFor="pd-ay-nombre">Nombre completo</label>
-              <input id="pd-ay-nombre" type="text" autoComplete="name" value={formCrear.nombre}
-                onChange={(e) => setFormCrear(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Juan Pérez" required />
-            </div>
-            <div className="input-group">
-              <label htmlFor="pd-ay-email">Correo electrónico</label>
-              <input id="pd-ay-email" type="email" autoComplete="email" value={formCrear.email}
-                onChange={(e) => setFormCrear(f => ({ ...f, email: e.target.value }))} placeholder="juan@email.com" required />
-            </div>
-            <div className="input-group">
-              <label htmlFor="pd-ay-pass">Contraseña temporal</label>
-              <input id="pd-ay-pass" type="text" autoComplete="new-password" value={formCrear.password}
-                onChange={(e) => setFormCrear(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" required minLength={6} />
-            </div>
-            {crearErr && <p className="pi-unegocio-nota pi-unegocio-nota--error">{crearErr}</p>}
+          <form onSubmit={crearYAsignar} className="formulario" noValidate>
+            <Campo
+              id="pd-ay-nombre" etiqueta="Nombre completo" icono={FaUserTie} autoComplete="name" placeholder="Ej: Juan Pérez"
+              value={formCrear.nombre} onChange={(e) => setFormCrear(f => ({ ...f, nombre: e.target.value }))}
+              error={erroresCrear['pd-ay-nombre']}
+            />
+            <Campo
+              id="pd-ay-email" etiqueta="Correo electrónico" icono={FaEnvelope} type="email" autoComplete="email" placeholder="juan@email.com"
+              value={formCrear.email} onChange={(e) => setFormCrear(f => ({ ...f, email: e.target.value }))}
+              error={erroresCrear['pd-ay-email']}
+            />
+            <Campo
+              id="pd-ay-pass" etiqueta="Contraseña temporal" contrasena autoComplete="new-password"
+              placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`}
+              ayuda="Se la das al ayudante; la puede cambiar después desde su perfil."
+              value={formCrear.password} onChange={(e) => setFormCrear(f => ({ ...f, password: e.target.value }))}
+              error={erroresCrear['pd-ay-pass']}
+            />
+            {crearErr && <AvisoFijo tono="error">{crearErr}</AvisoFijo>}
             <div className="modal-actions">
-              <button type="button" className="btn-cancelar" onClick={() => setShowCrear(false)}>Cancelar</button>
-              <button type="submit" className="btn-primario"><FaSave /> Crear y asignar</button>
+              <Boton variante="secundario" onClick={() => setShowCrear(false)} disabled={creando}>Cancelar</Boton>
+              <Boton type="submit" icono={FaSave} cargando={creando}>Crear y asignar</Boton>
             </div>
           </form>
         </Modal>

@@ -1,13 +1,16 @@
 import { useCallback, useState } from 'react';
-import {
-  FaCashRegister, FaLockOpen, FaLock, FaCheckCircle, FaExclamationTriangle,
-} from 'react-icons/fa';
+import { FaCashRegister, FaLockOpen, FaLock, FaCheckCircle, FaHistory } from 'react-icons/fa';
 import { useApi } from '../utils/useApi.js';
 import api from '../api/index.js';
 import StatCard from './StatCard.jsx';
 import Tabla from './Tabla.jsx';
 import Modal from './Modal.jsx';
-import { EstadoCarga, EstadoError } from './EstadosAsync.jsx';
+import Boton from './Boton.jsx';
+import Campo from './Campo.jsx';
+import Insignia from './Insignia.jsx';
+import { AvisoFijo, useAvisos } from './Avisos.jsx';
+import { useConfirmar } from './ConfirmarModal.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from './EstadosAsync.jsx';
 import './CorteCaja.css';
 
 const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })}`;
@@ -21,6 +24,8 @@ const tonoDif = (d) => {
   if (a <= 5) return 'warn';
   return 'danger';
 };
+// Tono de <Insignia> -> tono de <AvisoFijo>.
+const AVISO_DE = { ok: 'exito', warn: 'aviso', danger: 'error' };
 
 /**
  * Arqueo de caja de un operador con efectivo (§5.2). Se monta dentro del panel
@@ -28,6 +33,8 @@ const tonoDif = (d) => {
  *   modo: 'recarga' (Recargador, entra efectivo) | 'devolucion' (Devolución, sale efectivo)
  */
 export default function CorteCaja({ evento, modo }) {
+  const avisos = useAvisos();
+  const [confirmar, DialogoConfirmar] = useConfirmar();
   const eventoId = evento?.id;
   const esDevol = modo === 'devolucion';
   const etiquetaSistema = esDevol ? 'Pagado en retiros (sistema)' : 'Recargado (sistema)';
@@ -58,10 +65,18 @@ export default function CorteCaja({ evento, modo }) {
   const [observacion, setObservacion] = useState('');
   const [enviando, setEnviando] = useState(false);
   const [errMut, setErrMut] = useState('');
+  const [intentoCerrar, setIntentoCerrar] = useState(false);
 
   const caja = data?.caja || null;
 
-  const abrir = async () => {
+  const errorInicial = montoInicial !== '' && Number(montoInicial) < 0 ? 'El fondo no puede ser negativo.' : null;
+  const errorDeclarado = !intentoCerrar ? null
+    : montoDeclarado === '' ? 'Escribí cuánto efectivo contaste (0 si no hay).'
+      : Number(montoDeclarado) < 0 ? 'El monto no puede ser negativo.' : null;
+
+  const abrir = async (e) => {
+    e.preventDefault();
+    if (errorInicial) return document.getElementById('caja-inicial')?.focus();
     setEnviando(true);
     setErrMut('');
     try {
@@ -69,15 +84,32 @@ export default function CorteCaja({ evento, modo }) {
       setModalAbrir(false);
       setMontoInicial('');
       await recargar();
-    } catch (e) {
-      setErrMut(e.message);
+      avisos.exito('Ya podés operar en este evento.', { titulo: 'Caja abierta' });
+    } catch (e2) {
+      setErrMut(e2.message);
     } finally {
       setEnviando(false);
     }
   };
 
-  const cerrar = async () => {
-    if (montoDeclarado === '' || Number(montoDeclarado) < 0) return;
+  const difPreview = caja ? Number(montoDeclarado || 0) - Number(caja.montoEsperadoParcial || 0) : 0;
+
+  const cerrar = async (e) => {
+    e.preventDefault();
+    setIntentoCerrar(true);
+    if (montoDeclarado === '' || Number(montoDeclarado) < 0) return document.getElementById('caja-declarado')?.focus();
+
+    // Si no cuadra, se confirma antes de cerrar (no se puede reabrir el mismo arqueo).
+    if (Math.abs(difPreview) >= 0.01) {
+      const ok = await confirmar({
+        titulo: '¿Cerrar la caja con diferencia?',
+        mensaje: `El conteo no cuadra: ${difPreview > 0 ? 'sobran' : 'faltan'} ${fmtBs(Math.abs(difPreview))}. Revisá el efectivo antes de cerrar; queda registrado en el historial.`,
+        textoConfirmar: 'Cerrar igual',
+        peligroso: true,
+      });
+      if (!ok) return;
+    }
+
     setEnviando(true);
     setErrMut('');
     try {
@@ -85,15 +117,18 @@ export default function CorteCaja({ evento, modo }) {
       setModalCerrar(false);
       setMontoDeclarado('');
       setObservacion('');
+      setIntentoCerrar(false);
       await recargar();
-    } catch (e) {
-      setErrMut(e.message);
+      avisos.exito(Math.abs(difPreview) < 0.01 ? 'El efectivo cuadró.' : 'Quedó registrado con su diferencia.', { titulo: 'Caja cerrada' });
+    } catch (e2) {
+      setErrMut(e2.message);
     } finally {
       setEnviando(false);
     }
   };
 
-  const difPreview = caja ? Number(montoDeclarado || 0) - Number(caja.montoEsperadoParcial || 0) : 0;
+  const abrirModalCerrar = () => { setErrMut(''); setIntentoCerrar(false); setModalCerrar(true); };
+  const abrirModalAbrir = () => { setErrMut(''); setModalAbrir(true); };
 
   return (
     <div className="pi-caja-wrap">
@@ -105,36 +140,37 @@ export default function CorteCaja({ evento, modo }) {
         ) : cargando || !data ? (
           <EstadoCarga filas={3} />
         ) : !caja ? (
-          <div className="pi-caja-cerrada">
-            <p>No tenés una caja abierta para este evento.</p>
-            <button type="button" className="pi-caja-btn-primario" onClick={() => setModalAbrir(true)}>
-              <FaLockOpen aria-hidden="true" /> Abrir caja
-            </button>
-          </div>
+          <EstadoVacio
+            compacto
+            icono={FaLock}
+            titulo="No tenés una caja abierta para este evento"
+            mensaje={ayudaFondo}
+            accion={<Boton icono={FaLockOpen} onClick={abrirModalAbrir}>Abrir caja</Boton>}
+          />
         ) : (
           <>
-            <div className="pi-caja-grid">
+            <div className="qp-stats">
               <StatCard valor={fmtFechaHora(caja.abiertaEn)} label="Caja abierta desde" />
               <StatCard valor={fmtBs(caja.montoInicial)} label={labelFondo} />
               <StatCard tono="total" valor={fmtBs(caja.montoSistemaParcial)} label={etiquetaSistema} />
               <StatCard tono="info" valor={fmtBs(caja.montoEsperadoParcial)} label={labelEsperado} />
             </div>
-            <p className="pi-caja-ayuda">
+            <p className="texto-ayuda">
               {esDevol
                 ? `${labelEsperado} = fondo (${fmtBs(caja.montoInicial)}) − pagado en retiros (${fmtBs(caja.montoSistemaParcial)}).`
                 : `${labelEsperado} = fondo (${fmtBs(caja.montoInicial)}) + recargado en efectivo (${fmtBs(caja.montoSistemaParcial)}).`}
             </p>
-            <button type="button" className="pi-caja-btn-primario" onClick={() => setModalCerrar(true)}>
-              <FaLock aria-hidden="true" /> Cerrar caja
-            </button>
+            <div>
+              <Boton icono={FaLock} onClick={abrirModalCerrar}>Cerrar caja</Boton>
+            </div>
           </>
         )}
       </section>
 
       {data && data.historial.length > 0 && (
         <section className="pi-caja-seccion">
-          <h3 className="pi-caja-titulo">Cierres anteriores</h3>
-          <p className="pi-caja-ayuda">
+          <h3 className="pi-caja-titulo"><FaHistory aria-hidden="true" /> Cierres anteriores</h3>
+          <p className="texto-ayuda">
             {esDevol
               ? 'Efectivo esperado = Fondo inicial − Pagado en retiros. Diferencia = Contado − Esperado.'
               : 'Efectivo esperado = Fondo inicial + Recargado. Diferencia = Contado − Esperado.'}
@@ -148,16 +184,16 @@ export default function CorteCaja({ evento, modo }) {
             renderFila={(c) => (
               <tr key={c.id}>
                 <td>{fmtFechaHora(c.abiertaEn)}</td>
-                <td>{c.cerradaEn ? fmtFechaHora(c.cerradaEn) : <span className="pi-caja-abierta-badge">Abierta</span>}</td>
+                <td>{c.cerradaEn ? fmtFechaHora(c.cerradaEn) : <Insignia tono="ok" punto latido>Abierta</Insignia>}</td>
                 <td>{fmtBs(c.montoInicial)}</td>
                 <td>{c.montoSistema == null ? '—' : fmtBs(c.montoSistema)}</td>
                 <td>{c.montoEsperado == null ? '—' : fmtBs(c.montoEsperado)}</td>
                 <td>{c.montoDeclarado == null ? '—' : fmtBs(c.montoDeclarado)}</td>
                 <td>
                   {c.diferencia == null ? '—' : (
-                    <span className={`pi-caja-dif pi-caja-dif--${tonoDif(c.diferencia)}`}>
+                    <Insignia tono={tonoDif(c.diferencia)}>
                       {c.diferencia > 0 ? '+' : ''}{fmtBs(c.diferencia)}
-                    </span>
+                    </Insignia>
                   )}
                 </td>
               </tr>
@@ -167,81 +203,69 @@ export default function CorteCaja({ evento, modo }) {
       )}
 
       {modalAbrir && (
-        <Modal titulo="Abrir caja" onCerrar={() => setModalAbrir(false)} tamano="sm">
-          <div className="pi-caja-form">
-            <label htmlFor="caja-inicial">{labelFondo}{esDevol ? '' : ' (opcional)'}</label>
-            <input
-              id="caja-inicial"
-              type="number"
-              min="0"
-              inputMode="decimal"
-              placeholder="0"
-              value={montoInicial}
-              onChange={(e) => setMontoInicial(e.target.value)}
-              autoFocus
+        <Modal titulo={<><FaLockOpen aria-hidden="true" /> Abrir caja</>} onCerrar={() => setModalAbrir(false)} tamano="sm">
+          <form className="formulario" onSubmit={abrir} noValidate>
+            <Campo
+              id="caja-inicial" etiqueta={`${labelFondo}${esDevol ? '' : ' (opcional)'}`} prefijo="Bs"
+              type="number" min="0" inputMode="decimal" placeholder="0" autoFocus
+              ayuda={ayudaFondo}
+              value={montoInicial} onChange={(e) => setMontoInicial(e.target.value)}
+              error={errorInicial}
+              className="pi-caja-campo-monto"
             />
-            <p className="pi-caja-ayuda">{ayudaFondo}</p>
-            {errMut && <p className="pi-caja-err"><FaExclamationTriangle aria-hidden="true" /> {errMut}</p>}
-            <div className="pi-caja-acciones">
-              <button type="button" className="pi-caja-btn-sec" onClick={() => setModalAbrir(false)} disabled={enviando}>Cancelar</button>
-              <button type="button" className="pi-caja-btn-primario" onClick={abrir} disabled={enviando}>
-                <FaLockOpen aria-hidden="true" /> Abrir caja
-              </button>
+            {errMut && <AvisoFijo tono="error">{errMut}</AvisoFijo>}
+            <div className="modal-actions">
+              <Boton variante="secundario" onClick={() => setModalAbrir(false)} disabled={enviando}>Cancelar</Boton>
+              <Boton type="submit" icono={FaLockOpen} cargando={enviando}>Abrir caja</Boton>
             </div>
-          </div>
+          </form>
         </Modal>
       )}
 
       {modalCerrar && caja && (
-        <Modal titulo="Cerrar caja" onCerrar={() => setModalCerrar(false)} tamano="sm">
-          <div className="pi-caja-form">
+        <Modal titulo={<><FaLock aria-hidden="true" /> Cerrar caja</>} onCerrar={() => setModalCerrar(false)} tamano="sm">
+          <form className="formulario" onSubmit={cerrar} noValidate>
             <div className="pi-caja-resumen">
               <span>{labelEsperado}</span>
               <strong>{fmtBs(caja.montoEsperadoParcial)}</strong>
             </div>
-            <label htmlFor="caja-declarado">Efectivo contado en la caja</label>
-            <input
-              id="caja-declarado"
-              type="number"
-              min="0"
-              inputMode="decimal"
-              placeholder="0"
-              value={montoDeclarado}
-              onChange={(e) => setMontoDeclarado(e.target.value)}
-              autoFocus
+            <Campo
+              id="caja-declarado" etiqueta="Efectivo contado en la caja" prefijo="Bs"
+              type="number" min="0" inputMode="decimal" placeholder="0" autoFocus
+              value={montoDeclarado} onChange={(e) => setMontoDeclarado(e.target.value)}
+              error={errorDeclarado}
+              className="pi-caja-campo-monto"
             />
-            {montoDeclarado !== '' && (
-              <div className={`pi-caja-preview pi-caja-preview--${tonoDif(difPreview)}`}>
-                {Math.abs(difPreview) < 0.01
-                  ? <><FaCheckCircle aria-hidden="true" /> Cuadra</>
-                  : <>Diferencia: {difPreview > 0 ? 'sobran ' : 'faltan '}{fmtBs(Math.abs(difPreview))}</>}
-              </div>
-            )}
-            <label htmlFor="caja-obs">Observación (opcional)</label>
-            <textarea
-              id="caja-obs"
-              rows={2}
-              placeholder={esDevol
-                ? 'Ej: un retiro se pagó con un billete de más y quedó faltando cambio'
-                : 'Ej: se descontó cambio para colación'}
-              value={observacion}
-              onChange={(e) => setObservacion(e.target.value)}
-            />
-            {errMut && <p className="pi-caja-err"><FaExclamationTriangle aria-hidden="true" /> {errMut}</p>}
-            <div className="pi-caja-acciones">
-              <button type="button" className="pi-caja-btn-sec" onClick={() => setModalCerrar(false)} disabled={enviando}>Cancelar</button>
-              <button
-                type="button"
-                className="pi-caja-btn-primario"
-                onClick={cerrar}
-                disabled={enviando || montoDeclarado === '' || Number(montoDeclarado) < 0}
+            {montoDeclarado !== '' && Number(montoDeclarado) >= 0 && (
+              <AvisoFijo
+                tono={AVISO_DE[tonoDif(difPreview)]}
+                icono={Math.abs(difPreview) < 0.01 ? FaCheckCircle : undefined}
+                titulo={Math.abs(difPreview) < 0.01 ? 'Cuadra' : `${difPreview > 0 ? 'Sobran' : 'Faltan'} ${fmtBs(Math.abs(difPreview))}`}
               >
-                <FaLock aria-hidden="true" /> Confirmar cierre
-              </button>
+                {Math.abs(difPreview) < 0.01 ? null : 'Volvé a contar antes de cerrar.'}
+              </AvisoFijo>
+            )}
+            <Campo id="caja-obs" etiqueta="Observación (opcional)">
+              <textarea
+                id="caja-obs"
+                rows={2}
+                placeholder={esDevol
+                  ? 'Ej: un retiro se pagó con un billete de más y quedó faltando cambio'
+                  : 'Ej: se descontó cambio para colación'}
+                value={observacion}
+                onChange={(e) => setObservacion(e.target.value)}
+              />
+            </Campo>
+            {errMut && <AvisoFijo tono="error">{errMut}</AvisoFijo>}
+            <div className="modal-actions">
+              <Boton variante="secundario" onClick={() => setModalCerrar(false)} disabled={enviando}>Cancelar</Boton>
+              <Boton type="submit" icono={FaLock} cargando={enviando}>Confirmar cierre</Boton>
             </div>
-          </div>
+          </form>
         </Modal>
       )}
+
+      {DialogoConfirmar}
     </div>
   );
 }

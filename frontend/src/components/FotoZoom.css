@@ -51,3 +51,9 @@
 .qp-foto-zoom-cerrar:hover {
   background: rgba(255, 255, 255, 0.28);
 }
+
+/* Movimiento reducido: quien lo pide en su sistema no ve la animación
+   (§2.11 / Manual de accesibilidad). */
+@media (prefers-reduced-motion: reduce) {
+  .qp-foto-zoom-overlay { animation: none; }
+}

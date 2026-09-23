@@ -7,14 +7,17 @@ import {
 } from 'react-icons/fa';
 import Modal from '../../components/Modal.jsx';
 import Boton from '../../components/Boton.jsx';
-import { useAvisos } from '../../components/Avisos.jsx';
+import { useAvisos, AvisoFijo } from '../../components/Avisos.jsx';
 import CuentaRegresiva from '../../components/CuentaRegresiva.jsx';
 import { VERSION_TERMINOS, TEXTO_TERMINOS } from '../../constants/terminos.js';
 import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
 import { formatearFecha, imagenEvento, nombreJornada, nombreJornadaConAnio, mostrarJornada, agruparPorJornada } from '../../utils/eventos.js';
 import { qrDe } from '../../utils/qr.js';
+import { erroresEntradas, hayErrores, enfocarPrimerError } from '../../utils/entradas.js';
+import CamposEntrada from './CamposEntrada.jsx';
 import './CompraEntradas.css';
+import Pasos from '../../components/Pasos.jsx';
 
 const MAX_ENTRADAS = 6;
 
@@ -70,13 +73,35 @@ export default function CompraTab({
 
   const montoTotalEntradas = entradasCart.reduce((acc, entrada) => acc + Number(entrada.precio), 0);
 
-  // Una entrada está completa cuando tiene nombre, correo con forma de correo
-  // y (si es de un invitado) celular. Guía visual; la validación final sigue
-  // siendo la de handleEnviarComprobante.
-  const entradaCompleta = (e) =>
-    !!e.nombre.trim() && /\S+@\S+\.\S+/.test(e.correo.trim()) && (e.isTitular || !!e.celular.trim());
+  // La entrada titular ("para ti") se controla POR JORNADA, no por evento: podés
+  // tener tu entrada de la noche 1 y comprar la tuya para la noche 2. Solo cuando
+  // ya tenés entrada propia en TODAS las jornadas ofrecidas se te obliga a comprar
+  // solo para invitados.
+  const jornadaDeCategoria = useCallback(
+    (catId) => categoriasEntradas.find(c => c.id === catId)?.diaEventoId ?? null,
+    [categoriasEntradas],
+  );
+
+  // Validación de los datos de cada entrada (utils/entradas.js, la misma de
+  // "Revisar mi solicitud"). Los errores se muestran junto a cada campo
+  // recién después de intentar pagar; desde ahí se actualizan al escribir.
+  const erroresDatos = erroresEntradas(entradasCart, (e) => jornadaDeCategoria(e.categoriaTicketId));
+  const [intentoPagar, setIntentoPagar] = useState(false);
+  const entradaCompleta = (e) => !erroresDatos[e.id];
   const entradasCompletas = entradasCart.filter(entradaCompleta).length;
-  const datosCompletos = entradasCart.length > 0 && entradasCompletas === entradasCart.length;
+  const datosCompletos = entradasCart.length > 0 && !hayErrores(erroresDatos);
+
+  // "Pagar": si falta algo no se deshabilita en silencio; marca los campos
+  // con error y lleva el foco al primero (PLAN §2.5).
+  const irAPagar = () => {
+    setErrorForm('');
+    if (!datosCompletos) {
+      setIntentoPagar(true);
+      enfocarPrimerError(entradasCart, erroresDatos, 'compra');
+      return;
+    }
+    setPagoIniciado(true);
+  };
   // Paso actual del indicador de arriba: 0 elegir, 1 datos, 2 pago.
   const pasoCompra = entradasCart.length === 0 ? 0 : !datosCompletos ? 1 : 2;
 
@@ -96,15 +121,6 @@ export default function CompraTab({
       setTimeout(() => setMontoCopiado(false), 2000);
     } catch { /* sin permiso de portapapeles: el monto sigue a la vista */ }
   };
-
-  // La entrada titular ("para ti") se controla POR JORNADA, no por evento: podés
-  // tener tu entrada de la noche 1 y comprar la tuya para la noche 2. Solo cuando
-  // ya tenés entrada propia en TODAS las jornadas ofrecidas se te obliga a comprar
-  // solo para invitados.
-  const jornadaDeCategoria = useCallback(
-    (catId) => categoriasEntradas.find(c => c.id === catId)?.diaEventoId ?? null,
-    [categoriasEntradas],
-  );
 
   // Jornadas ofrecidas por el evento seleccionado (una entrada "sin jornada" cuenta como null).
   const jornadasDelEvento = useMemo(
@@ -241,20 +257,9 @@ export default function CompraTab({
     if (!comprobante) return setErrorForm('Debes subir el comprobante de pago para continuar.');
     if (!aceptoTerminos) return setErrorForm('Debes aceptar los términos y condiciones para continuar.');
 
-    const invitadosIncompletos = entradasCart.some(ent => !ent.nombre.trim() || !ent.correo.trim() || (!ent.isTitular && !ent.celular.trim()));
-    if (invitadosIncompletos) return setErrorForm('Completa el nombre, correo y celular de todas las personas asignadas.');
-
-    // El correo debe ser único DENTRO de cada jornada, no en todo el carrito:
-    // la misma persona puede tener una entrada la noche 1 y otra la noche 2.
-    const correosPorJornada = new Map();
-    entradasCart.forEach(e => {
-      const clave = jornadaDeCategoria(e.categoriaTicketId) ?? '__sin_jornada__';
-      const lista = correosPorJornada.get(clave) ?? [];
-      lista.push(e.correo.toLowerCase());
-      correosPorJornada.set(clave, lista);
-    });
-    const hayCorreoRepetido = [...correosPorJornada.values()].some(lista => lista.length !== new Set(lista).size);
-    if (hayCorreoRepetido) return setErrorForm('Cada entrada de una misma jornada necesita un correo electrónico único.');
+    // Los datos ya se validaron al abrir el pago (irAPagar); esto es por si
+    // cambiaron mientras tanto.
+    if (!datosCompletos) return setErrorForm('Revisa los datos de las entradas antes de enviar.');
 
     setEnviandoCompra(true);
     try {
@@ -305,25 +310,20 @@ export default function CompraTab({
             <CuentaRegresiva fecha={eventoSeleccionado.fecha} variante="oscura" segundos={false} llegada={null} />
           </header>
 
-          <ol className="pi-cmp-pasos" aria-label="Pasos de la compra">
-            {['Elegí tus entradas', 'Datos de cada persona', 'Pago y comprobante', 'Aprobación'].map((t, i) => (
-              <li key={t} className={i < pasoCompra ? 'listo' : i === pasoCompra ? 'actual' : ''} aria-current={i === pasoCompra ? 'step' : undefined}>
-                <span className="pi-cmp-paso-num">{i < pasoCompra ? <FaCheckCircle aria-hidden="true" /> : i + 1}</span>
-                <span className="pi-cmp-paso-txt">{t}</span>
-              </li>
-            ))}
-          </ol>
+          <Pasos
+            variante="compacto"
+            etiqueta="Pasos de la compra"
+            actual={pasoCompra}
+            pasos={['Elegí tus entradas', 'Datos de cada persona', 'Pago y comprobante', 'Aprobación'].map((titulo) => ({ id: titulo, titulo }))}
+          />
 
           {!puedoSerTitular && (
-            <div className="pi-cmp-aviso">
-              <FaUserPlus aria-hidden="true" />
-              <p>
-                {jornadasDelEvento.length > 1
-                  ? <>Ya tenés tu propia entrada en <b>todas las jornadas</b>: las que agregues serán para tus invitados.</>
-                  : <>Ya tenés <b>tu entrada</b> para este evento: las que agregues serán para tus invitados.</>}
-                {' '}Cada invitado recibe su propia cuenta al aprobarse la compra.
-              </p>
-            </div>
+            <AvisoFijo tono="info" icono={FaUserPlus}>
+              {jornadasDelEvento.length > 1
+                ? <>Ya tenés tu propia entrada en <b>todas las jornadas</b>: las que agregues serán para tus invitados.</>
+                : <>Ya tenés <b>tu entrada</b> para este evento: las que agregues serán para tus invitados.</>}
+              {' '}Cada invitado recibe su propia cuenta al aprobarse la compra.
+            </AvisoFijo>
           )}
 
           <div className="pi-cmp-grid">
@@ -438,18 +438,12 @@ export default function CompraTab({
                                 <Boton variante="peligro-suave" tamano="sm" icono={FaTrash} onClick={() => quitarEntrada(entrada.id)} aria-label={`Quitar ${etiqueta}`} />
                               </div>
                               <div className="pi-cmp-item-campos">
-                                <div className="input-group">
-                                  <label htmlFor={`compra-nombre-${entrada.id}`}>Nombre completo</label>
-                                  <input id={`compra-nombre-${entrada.id}`} type="text" autoComplete="name" placeholder="Ej: Ana López" value={entrada.nombre} onChange={(e) => actualizarEntrada(entrada.id, 'nombre', e.target.value)} disabled={entrada.isTitular} />
-                                </div>
-                                <div className="input-group">
-                                  <label htmlFor={`compra-correo-${entrada.id}`}>Correo electrónico</label>
-                                  <input id={`compra-correo-${entrada.id}`} type="email" autoComplete="email" placeholder="Para enviar su acceso" value={entrada.correo} onChange={(e) => actualizarEntrada(entrada.id, 'correo', e.target.value)} disabled={entrada.isTitular} />
-                                </div>
-                                <div className="input-group">
-                                  <label htmlFor={`compra-celular-${entrada.id}`}>Celular (WhatsApp){entrada.isTitular && ' · opcional'}</label>
-                                  <input id={`compra-celular-${entrada.id}`} type="tel" inputMode="numeric" autoComplete="tel-national" placeholder="Ej: 71234567" value={entrada.celular} onChange={(e) => actualizarEntrada(entrada.id, 'celular', e.target.value)} />
-                                </div>
+                                <CamposEntrada
+                                  entrada={entrada}
+                                  errores={intentoPagar ? erroresDatos[entrada.id] : undefined}
+                                  onCambio={(campo, valor) => actualizarEntrada(entrada.id, campo, valor)}
+                                  prefijo="compra"
+                                />
                               </div>
                             </article>
                           );
@@ -497,15 +491,17 @@ export default function CompraTab({
                 tamano="lg"
                 icono={FaQrcode}
                 anchoCompleto
-                disabled={!datosCompletos}
-                onClick={() => { setErrorForm(''); setPagoIniciado(true); }}
+                disabled={entradasCart.length === 0}
+                onClick={irAPagar}
               >
                 Pagar Bs {montoTotalEntradas.toFixed(2)}
               </Boton>
               {!datosCompletos && entradasCart.length > 0 && (
                 <p className="pi-cmp-ayuda">Completá los datos de todas las entradas para continuar.</p>
               )}
-              {errorForm && !pagoIniciado && <div className="pi-usr-alerta-error"><FaExclamationTriangle aria-hidden="true" /> {errorForm}</div>}
+              {errorForm && !pagoIniciado && (
+                <p className="form-nota form-nota--error" role="alert"><FaExclamationTriangle aria-hidden="true" /> {errorForm}</p>
+              )}
             </aside>
           </div>
 
@@ -513,7 +509,7 @@ export default function CompraTab({
           {entradasCart.length > 0 && (
             <div className="pi-cmp-barra-movil">
               <span><small>{entradasCart.length} entrada{entradasCart.length === 1 ? '' : 's'}</small><b>Bs {montoTotalEntradas.toFixed(2)}</b></span>
-              <Boton variante="compra" icono={FaQrcode} disabled={!datosCompletos} onClick={() => { setErrorForm(''); setPagoIniciado(true); }}>
+              <Boton variante="compra" icono={FaQrcode} onClick={irAPagar}>
                 Pagar
               </Boton>
             </div>
@@ -527,8 +523,7 @@ export default function CompraTab({
             ? <><FaCheckCircle color="var(--verde-recarga-texto)" aria-hidden="true" /> Solicitud enviada</>
             : <><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Pagar entradas</>}
           onCerrar={cerrarPago}
-          tamano="lg"
-          className="pi-usr-modal-pago"
+          tamano="md"
         >
           {compraEnviada ? (
             <div className="pi-cmp-exito">
@@ -622,8 +617,10 @@ export default function CompraTab({
                       <strong>{eventoSeleccionado?.diasParaRetiro ?? 30} días</strong> tras el cierre para retirar lo que no consuma.
                     </span>
                   </label>
-                  {errorForm && <div className="pi-usr-alerta-error"><FaExclamationTriangle aria-hidden="true" /> {errorForm}</div>}
-                  <div className="pi-usr-modal-acciones">
+                  {errorForm && (
+                    <p className="form-nota form-nota--error" role="alert"><FaExclamationTriangle aria-hidden="true" /> {errorForm}</p>
+                  )}
+                  <div className="modal-actions">
                     <Boton variante="secundario" icono={FaArrowLeft} onClick={cerrarPago} disabled={enviandoCompra}>Volver</Boton>
                     <Boton variante="compra" icono={FaCheckCircle} onClick={handleEnviarComprobante} cargando={enviandoCompra} disabled={!comprobante || !aceptoTerminos}>
                       {enviandoCompra ? 'Enviando…' : 'Enviar solicitud'}

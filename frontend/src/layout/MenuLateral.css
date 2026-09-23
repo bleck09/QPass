@@ -28,7 +28,7 @@
   transition: width 0.4s cubic-bezier(0.2, 0, 0, 1);
   position: relative;
   z-index: 100;
-  padding-top: 8px;
+  padding-top: var(--space-2);
 }
 
 .pi-layout-sidebar.collapsed { width: 90px; }
@@ -40,24 +40,24 @@
 /* Sección del Logo */
 .pi-layout-logo-section {
   display: flex; align-items: center; justify-content: space-between;
-  padding: 20px 20px 32px 20px; position: relative;
+  padding: var(--space-5) var(--space-5) var(--space-8) var(--space-5); position: relative;
 }
 
-.pi-layout-logo { display: flex; align-items: center; gap: 16px; overflow: hidden; }
+.pi-layout-logo { display: flex; align-items: center; gap: var(--space-4); overflow: hidden; }
 
-.logo-icon-wrapper {
+.pi-layout-logo-icon-wrapper {
   min-width: 40px; height: 40px; border-radius: var(--radius-lg);
   background-color: rgba(0, 180, 216, 0.15);
   display: flex; justify-content: center; align-items: center;
 }
 
-.logo-text { white-space: nowrap; }
-.logo-text h2 { margin: 0; font-size: var(--text-lg); font-weight: 800; color: var(--text-on-accent); letter-spacing: 0.5px; }
-.logo-text p { margin: 0; font-size: var(--text-xs); color: var(--cian-digital); font-weight: 600; }
+.pi-layout-logo-text { white-space: nowrap; }
+.pi-layout-logo-text h2 { margin: 0; font-size: var(--text-lg); font-weight: 800; color: var(--texto-sobre-oscuro); letter-spacing: 0.5px; }
+.pi-layout-logo-text p { margin: 0; font-size: var(--text-xs); color: var(--cian-digital); font-weight: 600; }
 
 .pi-btn-collapse {
   position: absolute; right: -15px; top: 30px; width: 30px; height: 30px;
-  background-color: var(--indigo-profundo); color: var(--text-on-accent);
+  background-color: var(--indigo-profundo); color: var(--texto-sobre-oscuro);
   border: 4px solid var(--sidebar-bg); border-radius: 50%;
   display: flex; justify-content: center; align-items: center;
   cursor: pointer; z-index: 10; transition: transform 0.2s, background 0.2s;
@@ -68,8 +68,8 @@
 /* --- MENÚ DE NAVEGACIÓN --- */
 .pi-layout-nav {
   flex: 1; display: flex; flex-direction: column;
-  padding-left: 20px; padding-top: 20px; padding-bottom: 20px;
-  gap: 8px; overflow-y: auto; overflow-x: visible; 
+  padding-left: var(--space-5); padding-top: var(--space-5); padding-bottom: var(--space-5);
+  gap: var(--space-2); overflow-y: auto; overflow-x: visible; 
 }
 
 .pi-layout-nav::-webkit-scrollbar { width: 4px; }
@@ -97,8 +97,8 @@
 
 /* El contenedor del texto y el icono */
 .pi-layout-nav-content {
-  display: flex; align-items: center; gap: 16px;
-  padding: 16px 20px;
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
   /* El sidebar siempre es azul-noche, no sigue el tema: texto claro fijo */
   color: rgba(255, 255, 255, 0.72);
   position: relative;
@@ -117,7 +117,7 @@
 .pi-layout-nav-text { font-size: var(--text-sm); font-weight: 600; }
 
 /* --- MAGIA MATEMÁTICA: LAS CURVAS --- */
-.curve-top, .curve-bottom {
+.pi-layout-curve-top, .pi-layout-curve-bottom {
   position: absolute; right: 0;
   width: 40px; height: 40px;
   border-radius: 50%; /* Círculo perfecto */
@@ -126,8 +126,8 @@
   display: none; /* CRÍTICO: Totalmente apagadas por defecto */
 }
 
-.curve-top { top: -40px; box-shadow: 20px 20px 0 0 var(--bg-page); }
-.curve-bottom { bottom: -40px; box-shadow: 20px -20px 0 0 var(--bg-page); }
+.pi-layout-curve-top { top: -40px; box-shadow: 20px 20px 0 0 var(--bg-page); }
+.pi-layout-curve-bottom { bottom: -40px; box-shadow: 20px -20px 0 0 var(--bg-page); }
 
 
 /* =======================================================
@@ -140,8 +140,8 @@
   padding-left: 0;
 }
 
-.pi-layout-nav-item.activo .curve-top,
-.pi-layout-nav-item.activo .curve-bottom {
+.pi-layout-nav-item.activo .pi-layout-curve-top,
+.pi-layout-nav-item.activo .pi-layout-curve-bottom {
   display: block; /* Se muestran en seco, sin fundidos negros */
 }
 
@@ -173,15 +173,15 @@
 }
 
 /* --- BOTÓN SALIR (LOGOUT) --- */
-.pi-layout-logout-section { padding: 20px 0 20px 20px; border-top: 1px solid rgba(255,255,255,0.05); }
+.pi-layout-logout-section { padding: var(--space-5) 0 var(--space-5) var(--space-5); border-top: 1px solid rgba(255,255,255,0.05); }
 
-.logout-btn .pi-layout-nav-content { color: var(--rojo-error); }
+.pi-layout-logout-btn .pi-layout-nav-content { color: var(--rojo-error); }
 
-.logout-btn:hover:not(.activo) .pi-layout-nav-content {
+.pi-layout-logout-btn:hover:not(.activo) .pi-layout-nav-content {
   color: var(--rojo-error-texto);
   transform: translateX(8px);
 }
-.logout-btn:hover:not(.activo) .pi-layout-nav-icon {
+.pi-layout-logout-btn:hover:not(.activo) .pi-layout-nav-icon {
   color: var(--rojo-error);
   transform: scale(1.15);
 }
@@ -192,7 +192,7 @@
 .pi-layout-main-wrapper {
   flex: 1; display: flex; flex-direction: column; 
   background-color: var(--sidebar-bg); 
-  padding: 16px 16px 16px 0; min-width: 0; 
+  padding: var(--space-4) var(--space-4) var(--space-4) 0; min-width: 0; 
 }
 
 .pi-layout-main {
@@ -212,17 +212,17 @@
 /* HEADER DEL ÁREA PRINCIPAL */
 .pi-layout-header {
   height: 75px; background-color: transparent; display: flex;
-  justify-content: space-between; align-items: center; padding: 0 32px; position: relative; z-index: 10;
+  justify-content: space-between; align-items: center; padding: 0 var(--space-8); position: relative; z-index: 10;
 }
 
-.pi-layout-header-left { display: flex; align-items: center; gap: 16px; }
+.pi-layout-header-left { display: flex; align-items: center; gap: var(--space-4); }
 .pi-btn-mobile-menu { display: none; background: none; border: none; color: var(--text-primary); cursor: pointer; }
 .pi-layout-header-left h3 { margin: 0; color: var(--text-primary); font-size: var(--text-lg); font-weight: 700; }
 .pi-layout-header-right { position: relative; }
 
 /* BOTÓN DEL PERFIL SUPERIOR */
 .pi-layout-perfil-btn {
-  display: flex; align-items: center; gap: 12px; cursor: pointer; padding: 8px 12px;
+  display: flex; align-items: center; gap: var(--space-3); cursor: pointer; padding: var(--space-2) var(--space-3);
   border-radius: var(--radius-xl); background-color: var(--bg-surface); border: 1px solid var(--border);
   box-shadow: 0 2px 5px rgba(10, 14, 39,0.02); transition: all 0.2s;
   font: inherit; color: inherit; appearance: none; -webkit-appearance: none;
@@ -231,7 +231,7 @@
 
 .pi-layout-avatar {
   width: 36px; height: 36px; border-radius: 50%; background-color: var(--indigo-profundo);
-  color: var(--text-on-accent); display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: var(--text-sm); overflow: hidden;
+  color: var(--texto-sobre-oscuro); display: flex; justify-content: center; align-items: center; font-weight: bold; font-size: var(--text-sm); overflow: hidden;
 }
 .pi-layout-avatar-img { width: 100%; height: 100%; object-fit: cover; }
 
@@ -249,28 +249,28 @@
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
 .pi-layout-dropdown-header {
-  padding: 16px; background-color: var(--bg-page); border-bottom: 1px solid var(--border); display: flex; flex-direction: column;
+  padding: var(--space-4); background-color: var(--bg-page); border-bottom: 1px solid var(--border); display: flex; flex-direction: column;
 }
 .pi-layout-dropdown-header strong { font-size: var(--text-sm); color: var(--text-primary); }
 .pi-layout-dropdown-header span { font-size: var(--text-xs); color: var(--text-secondary); margin-top: 2px; }
 
-.pi-layout-dropdown-body { padding: 8px 0; }
+.pi-layout-dropdown-body { padding: var(--space-2) 0; }
 .pi-layout-dropdown-body button {
-  width: 100%; padding: 12px 20px; background: none; border: none; text-align: left;
-  display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); font-weight: 600; cursor: pointer;
+  width: 100%; padding: var(--space-3) var(--space-5); background: none; border: none; text-align: left;
+  display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: 600; cursor: pointer;
   color: var(--text-primary); transition: background 0.2s;
 }
 .pi-layout-dropdown-body button:hover { background-color: var(--bg-page); color: var(--indigo-profundo); }
 
 .pi-layout-dropdown-body button.btn-logout {
-  color: var(--rojo-error-texto); border-top: 1px solid var(--border); margin-top: 4px; padding-top: 16px;
+  color: var(--rojo-error-texto); border-top: 1px solid var(--border); margin-top: var(--space-1); padding-top: var(--space-4);
 }
 .pi-layout-dropdown-body button.btn-logout:hover { background-color: var(--rojo-error-suave); color: var(--rojo-error); }
 
 /* CONTENIDO PRINCIPAL */
 /* isolation: los z-index de las tarjetas de cada página quedan encerrados acá
    adentro, así nunca tapan al header ni a su menú desplegable del perfil. */
-.pi-layout-content { padding: 0 32px 32px 32px; flex: 1; min-height: 0; overflow-y: auto; isolation: isolate; }
+.pi-layout-content { padding: 0 var(--space-8) var(--space-8) var(--space-8); flex: 1; min-height: 0; overflow-y: auto; isolation: isolate; }
 
 /* =======================================================
    TABLET / PANTALLAS TÁCTILES ANCHAS (> 900px)
@@ -332,17 +332,17 @@
     background-color: rgba(10, 14, 39, 0.7); z-index: var(--z-overlay); backdrop-filter: blur(3px);
   }
 
-  .pi-layout-nav { padding-left: 8px; }
-  .pi-layout-nav-item.activo .curve-top, 
-  .pi-layout-nav-item.activo .curve-bottom { display: none; }
-  .pi-layout-nav-item.activo { border-radius: var(--radius-lg); margin: 0 8px; }
+  .pi-layout-nav { padding-left: var(--space-2); }
+  .pi-layout-nav-item.activo .pi-layout-curve-top, 
+  .pi-layout-nav-item.activo .pi-layout-curve-bottom { display: none; }
+  .pi-layout-nav-item.activo { border-radius: var(--radius-lg); margin: 0 var(--space-2); }
   
   /* aire al final + zona segura del iPhone (barra de inicio) */
   .pi-layout-content {
     padding: 16px 16px calc(32px + env(safe-area-inset-bottom));
     overscroll-behavior: contain;
   }
-  .pi-layout-header { padding: 0 16px; height: 60px; }
+  .pi-layout-header { padding: 0 var(--space-4); height: 60px; }
 }
 
 /* =======================================================
@@ -355,4 +355,10 @@
   .pi-layout-main-wrapper { padding: 0; background: none; }
   .pi-layout-main { border-radius: 0; box-shadow: none; overflow: visible; background: none; }
   .pi-layout-content { padding: 0; overflow: visible; }
+}
+
+/* Movimiento reducido: quien lo pide en su sistema no ve la animación
+   (§2.11 / Manual de accesibilidad). */
+@media (prefers-reduced-motion: reduce) {
+  /* MENÚ DESPLEGABLE (DROPDOWN PERFIL) */ .pi-layout-dropdown { animation: none; }
 }

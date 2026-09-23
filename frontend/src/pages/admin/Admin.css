@@ -27,49 +27,6 @@
 }
 
 /* Ruta de migas: reemplaza los botones "Cambiar de evento" / "Volver al dashboard". */
-.pi-dash-crumbs {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 2px;
-  font-size: var(--text-xs);
-}
-
-.pi-dash-crumb-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.pi-dash-crumb-sep {
-  color: var(--text-muted);
-  font-size: 9px;
-  margin: 0 2px;
-}
-
-.pi-dash-crumb {
-  background: none;
-  border: none;
-  padding: 2px 4px;
-  font: inherit;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: color 0.15s, background-color 0.15s;
-}
-
-button.pi-dash-crumb:hover {
-  color: var(--action);
-  background: var(--bg-hover);
-}
-
-.pi-dash-crumb.is-current {
-  color: var(--text-primary);
-  font-weight: 700;
-  cursor: default;
-}
 
 /* --- SELECCIÓN DE EVENTO (CARDS) --- */
 .pi-dash-eventos-grid {
@@ -77,59 +34,6 @@ button.pi-dash-crumb:hover {
   grid-template-columns: repeat(auto-fill, minmax(300px, 340px));
   justify-content: start;
   gap: 20px;
-}
-
-.pi-dash-evento-card {
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  background-color: var(--bg-page);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  overflow: hidden;
-  padding: 0;
-  cursor: pointer;
-  transition: all 0.2s;
-  text-align: left;
-  font: inherit;
-}
-
-.pi-dash-evento-card:hover {
-  border-color: var(--indigo-profundo);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(10, 14, 39, 0.08);
-}
-
-.pi-dash-evento-imagen {
-  width: 100%;
-  height: 120px;
-  object-fit: cover;
-  display: block;
-}
-
-.pi-dash-evento-info {
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.pi-dash-evento-info strong {
-  font-size: var(--text-base);
-  color: var(--text-primary);
-}
-
-.pi-dash-evento-info span {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-.pi-dash-evento-detalle {
-  color: var(--indigo-profundo) !important;
-  font-weight: 600;
 }
 
 /* --- SECCIONES --- */
@@ -172,64 +76,6 @@ button.pi-dash-crumb:hover {
   margin-bottom: 16px;
 }
 
-.pi-dash-stat-card {
-  background: var(--bg-page);
-  border: none;
-  border-radius: var(--radius-lg);
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  position: relative;
-  width: 100%;
-  text-align: left;
-  font: inherit;
-}
-
-.pi-dash-stat-card-click {
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pi-dash-stat-card-click:hover {
-  background-color: var(--indigo-profundo-suave);
-  transform: translateY(-2px);
-}
-
-.pi-dash-stat-icon {
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
-  border-radius: var(--radius-md);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: var(--text-lg);
-  color: var(--texto-sobre-oscuro);
-}
-
-.pi-dash-icon-total { background-color: var(--indigo-profundo); }
-.pi-dash-icon-ok { background-color: var(--verde-recarga); color: var(--texto-sobre-vivo); }
-.pi-dash-icon-pend { background-color: var(--ambar-aviso); color: var(--texto-sobre-vivo); }
-.pi-dash-icon-dentro { background-color: var(--cian-digital); color: var(--texto-sobre-vivo); }
-.pi-dash-icon-salio { background-color: var(--text-secondary); color: var(--texto-sobre-vivo); }
-
-.pi-dash-stat-info {
-  display: flex;
-  flex-direction: column;
-}
-
-.pi-dash-stat-info .numero {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.pi-dash-stat-info .label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
 .pi-dash-porcentaje {
   font-size: var(--text-xs);
   font-weight: 700;
@@ -256,25 +102,6 @@ button.pi-dash-crumb:hover {
 
 /* Antes usaba --coral-compra (el color de "comprar"/CTA de venta): acá es solo
    "ver más", así que lleva el mismo azul de acción que el resto de la app. */
-.pi-dash-btn-detalle {
-  display: inline-flex;
-  align-self: flex-start;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--action);
-  color: var(--text-on-accent);
-  border: none;
-  padding: 12px 20px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-
-.pi-dash-btn-detalle:hover {
-  background-color: var(--action-hover);
-}
 
 /* --- ROLES (PERSONAL DEL EVENTO) --- */
 .pi-dash-roles-grid {
@@ -322,26 +149,6 @@ button.pi-dash-crumb:hover {
 }
 
 /* --- BUSCADOR --- */
-.pi-dash-buscador {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--bg-page);
-  border-radius: var(--radius-md);
-  padding: 8px 12px;
-  color: var(--text-secondary);
-  max-width: 320px;
-  margin-bottom: 16px;
-}
-
-.pi-dash-buscador input {
-  border: none;
-  background: none;
-  outline: none;
-  font-size: var(--text-xs);
-  color: var(--text-primary);
-  width: 100%;
-}
 
 /* --- TABLA --- */
 .pi-dash-fila-persona {
@@ -452,73 +259,7 @@ button.pi-dash-crumb:hover {
   gap: 16px;
 }
 
-.pi-dash-resumen-card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  background-color: var(--bg-page);
-  border-radius: var(--radius-lg);
-  padding: 16px;
-}
-
-.pi-dash-resumen-card .numero {
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin-top: 4px;
-}
-
-.pi-dash-resumen-card .label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
 /* --- ACTIVIDAD RECIENTE --- */
-.pi-dash-actividad-lista {
-  display: flex;
-  flex-direction: column;
-}
-
-.pi-dash-actividad-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 4px;
-  border-bottom: 1px solid var(--border);
-  font-size: var(--text-xs);
-}
-
-.pi-dash-actividad-item:last-child {
-  border-bottom: none;
-}
-
-.pi-dash-actividad-icono {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 30px;
-  min-width: 30px;
-  border-radius: 50%;
-  background-color: var(--bg-page);
-}
-
-.pi-dash-actividad-detalle {
-  flex: 1;
-  color: var(--text-primary);
-}
-
-.pi-dash-actividad-monto {
-  font-weight: 700;
-  color: var(--indigo-profundo);
-}
-
-.pi-dash-actividad-hora {
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  min-width: 42px;
-  text-align: right;
-}
 
 /* --- ENCABEZADO DE DETALLE (persona/negocio seleccionado) --- */
 .pi-dash-detalle-header {
@@ -557,27 +298,6 @@ button.pi-dash-crumb:hover {
 
 .pi-dash-total-destacado strong {
   color: var(--verde-recarga-texto);
-}
-
-.pi-dash-btn-ver {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-surface);
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-primary);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pi-dash-btn-ver:hover {
-  background-color: var(--indigo-profundo);
-  border-color: var(--indigo-profundo);
-  color: var(--texto-sobre-oscuro);
 }
 
 /* --- NECESITA TU ATENCIÓN: separada del resto (accionable, no informativa) --- */
@@ -662,28 +382,6 @@ button.pi-dash-crumb:hover {
   max-width: 640px;
 }
 
-.pi-dash-btn-guardar {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  background: var(--indigo-profundo);
-  color: var(--text-on-accent);
-  padding: 9px 16px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.pi-dash-btn-guardar:hover:not(:disabled) {
-  background: var(--indigo-profundo-hover);
-}
-.pi-dash-btn-guardar:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
 /* --- MODAL DE RESOLUCIÓN DE REPORTE (incidencia / dato) --- */
 .pi-dash-reporte-datos {
   display: grid;
@@ -745,12 +443,6 @@ button.pi-dash-crumb:hover {
   color: var(--text-secondary);
   margin: 8px 0 0;
 }
-.pi-dash-reporte-acciones {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 24px;
-}
 
 /* --- SOLICITUDES DE COMPRA DE ENTRADAS --- */
 /* La sección ya separa con gap; se conserva la clase por compatibilidad. */
@@ -791,28 +483,6 @@ button.pi-dash-crumb:hover {
   color: var(--rojo-error-texto);
 }
 
-.pi-dash-btn-anular {
-  border: 1px solid var(--border-strong);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-}
-.pi-dash-btn-anular:hover:not(:disabled) {
-  border-color: var(--rojo-error);
-  color: var(--rojo-error-texto);
-}
-.pi-dash-btn-anular:disabled { opacity: 0.5; cursor: default; }
-.pi-dash-btn-anular--fuerte {
-  background: var(--rojo-error);
-  color: var(--texto-sobre-vivo);
-  border-color: var(--rojo-error);
-}
-.pi-dash-btn-anular--fuerte:hover:not(:disabled) { background: var(--rojo-error-hover); }
-
 .pi-dash-form-anular {
   display: flex;
   flex-direction: column;
@@ -838,28 +508,6 @@ button.pi-dash-crumb:hover {
   outline: none;
 }
 .pi-dash-form-anular textarea:focus { border-color: var(--cian-digital); }
-.pi-dash-err-anular {
-  color: var(--rojo-error-texto);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  margin: 0;
-}
-.pi-dash-form-anular-acciones {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  margin-top: 10px;
-}
-.pi-dash-btn-cancelar-anular {
-  background: var(--bg-page);
-  color: var(--text-primary);
-  border: none;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-}
 
 /* --- Estadísticas de ventas: ranking, productos por venta, compras de cliente --- */
 .pi-dash-rank {

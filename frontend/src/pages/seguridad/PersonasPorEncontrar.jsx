@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaCoins, FaHandPaper, FaUserSecret } from 'react-icons/fa';
+import { FaCoins, FaHandPaper, FaUserSecret, FaCheckCircle, FaSearch } from 'react-icons/fa';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useApi } from '../../utils/useApi.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Card from '../../components/Card.jsx';
 import FotoZoom from '../../components/FotoZoom.jsx';
@@ -32,9 +36,9 @@ export default function PersonasPorEncontrar() {
   const { data: casos, cargando, error, recargar } = useApi(cargar, { inicial: [] });
   const [filtro, setFiltro] = useState('pendiente');
   const [busqueda, setBusqueda] = useState('');
-  const [aviso, setAviso] = useState('');
-  const [avisoOk, setAvisoOk] = useState('');
+  const avisos = useAvisos();
   const [reponiendo, setReponiendo] = useState(null);
+  const [recuperando, setRecuperando] = useState(null);
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
   // Mismo ritmo que las alertas: la última ubicación se mantiene al día.
@@ -64,24 +68,25 @@ export default function PersonasPorEncontrar() {
       textoConfirmar: 'Marcar recuperada',
     });
     if (sancion === null) return;
+    setRecuperando(caso.id);
     try {
       await api.casosDuplicado.recuperar(caso.id, sancion.trim() || undefined);
-      setAviso('');
       await recargar();
+      avisos.exito(`La manilla N.º ${caso.codigoCopia.numero} quedó recuperada.`, { titulo: 'Caso cerrado' });
     } catch (err) {
-      setAviso(err.message);
+      avisos.error(err.message, { titulo: 'No se pudo marcar como recuperada' });
+    } finally {
+      setRecuperando(null);
     }
   };
 
   return (
     <div className="qp-duplicados">
-      <header className="qp-duplicados__header">
-        <h1><FaUserSecret aria-hidden="true" /> Personas por encontrar</h1>
-        <p>
-          Personas que entraron con una copia de la manilla de otro asistente. Su manilla ya no
-          sirve para nada: cada vez que alguien la escanea, aparece acá dónde fue.
-        </p>
-      </header>
+      <EncabezadoPagina
+        titulo="Personas por encontrar"
+        icono={FaUserSecret}
+        subtitulo="Personas que entraron con una copia de la manilla de otro asistente. Su manilla ya no sirve para nada: cada vez que alguien la escanea, aparece acá dónde fue."
+      />
 
       <Buscador
         valor={busqueda}
@@ -96,17 +101,17 @@ export default function PersonasPorEncontrar() {
         etiquetaFiltros="Filtrar casos"
       />
 
-      {aviso && <p className="form-nota form-nota--error" role="alert">{aviso}</p>}
-      {avisoOk && <p className="qp-duplicados__ok" role="status">{avisoOk}</p>}
 
       {error ? (
         <EstadoError onReintentar={recargar} />
       ) : cargando && !casos.length ? (
         <EstadoCarga filas={3} />
       ) : visibles.length === 0 ? (
-        <p className="qp-duplicados__vacio">
-          {filtro === 'pendiente' ? 'No hay nadie por encontrar.' : 'Todavía no se recuperó ninguna manilla.'}
-        </p>
+        busqueda.trim()
+          ? <EstadoVacio compacto icono={FaSearch} titulo="Ningún caso coincide con la búsqueda" />
+          : filtro === 'pendiente'
+            ? <EstadoVacio icono={FaCheckCircle} titulo="No hay nadie por encontrar" mensaje="Si alguien entra con una copia de una manilla, aparece acá." />
+            : <EstadoVacio icono={FaHandPaper} titulo="Todavía no se recuperó ninguna manilla" />
       ) : (
         <div className="qp-duplicados__grilla">
           {visibles.map((c) => (
@@ -156,14 +161,14 @@ export default function PersonasPorEncontrar() {
               {(puedeRecuperar && c.estado === 'pendiente') || esAdmin ? (
                 <div className="qp-duplicados__acciones">
                   {puedeRecuperar && c.estado === 'pendiente' && (
-                    <button type="button" className="btn-primario" onClick={() => recuperar(c)}>
-                      <FaHandPaper aria-hidden="true" /> Marcar recuperada
-                    </button>
+                    <Boton icono={FaHandPaper} onClick={() => recuperar(c)} cargando={recuperando === c.id}>
+                      Marcar recuperada
+                    </Boton>
                   )}
                   {esAdmin && (
-                    <button type="button" className="btn-secundario-sm" onClick={() => setReponiendo(c)}>
-                      <FaCoins aria-hidden="true" /> Reponer saldo al dueño
-                    </button>
+                    <Boton variante="secundario" tamano="sm" icono={FaCoins} onClick={() => setReponiendo(c)}>
+                      Reponer saldo al dueño
+                    </Boton>
                   )}
                 </div>
               ) : null}
@@ -178,8 +183,7 @@ export default function PersonasPorEncontrar() {
           onCerrar={() => setReponiendo(null)}
           onListo={(msg) => {
             setReponiendo(null);
-            setAviso('');
-            setAvisoOk(msg);
+            avisos.exito(msg, { titulo: 'Saldo repuesto' });
           }}
         />
       )}
@@ -194,7 +198,9 @@ export default function PersonasPorEncontrar() {
   Se listan los consumos de la entrada hasta la verificación como referencia.
 */
 function ReponerSaldoModal({ caso, onCerrar, onListo }) {
+  const [confirmar, DialogoConfirmar] = useConfirmar();
   const [monto, setMonto] = useState('');
+  const [intento, setIntento] = useState(false);
   const [nota, setNota] = useState('');
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
@@ -209,10 +215,23 @@ function ReponerSaldoModal({ caso, onCerrar, onListo }) {
   );
 
   const montoNum = Number(monto);
-  const valido = montoNum > 0 && nota.trim().length >= 5;
+  const errorMonto = intento && !(montoNum > 0) ? 'Escribí cuántos puntos se reponen.' : null;
+  const errorNota = intento && nota.trim().length < 5 ? 'Contá el motivo (al menos 5 letras): queda en el registro.' : null;
 
-  const enviar = async () => {
-    if (!valido) return;
+  const enviar = async (e) => {
+    e.preventDefault();
+    setIntento(true);
+    if (!(montoNum > 0)) return document.getElementById('qp-reponer-monto')?.focus();
+    if (nota.trim().length < 5) return document.getElementById('qp-reponer-nota')?.focus();
+
+    // Mueve dinero: se confirma con monto y a quién (PLAN §2.4).
+    const ok = await confirmar({
+      titulo: `¿Reponer ${montoNum} pts?`,
+      mensaje: `Se le acreditan a ${caso.entrada.nombre} como un ajuste nuevo. Las ventas originales no se tocan.`,
+      textoConfirmar: `Sí, reponer ${montoNum} pts`,
+    });
+    if (!ok) return;
+
     setEnviando(true);
     setError('');
     try {
@@ -239,7 +258,7 @@ function ReponerSaldoModal({ caso, onCerrar, onListo }) {
       {cargando ? (
         <EstadoCarga filas={2} />
       ) : antesDeDetectar.length === 0 ? (
-        <p className="form-nota">No hubo consumos antes de la detección.</p>
+        <EstadoVacio compacto icono={FaCoins} titulo="No hubo consumos antes de la detección" />
       ) : (
         <ul className="qp-duplicados__consumos">
           {antesDeDetectar.map((t) => (
@@ -251,37 +270,33 @@ function ReponerSaldoModal({ caso, onCerrar, onListo }) {
         </ul>
       )}
 
-      <div className="formulario">
-        <div className="input-group">
-          <label htmlFor="qp-reponer-monto">Monto a reponer (pts)</label>
-          <input
-            id="qp-reponer-monto"
-            type="number"
-            min="0"
-            step="0.01"
-            value={monto}
-            onChange={(e) => setMonto(e.target.value)}
-          />
-        </div>
-        <div className="input-group">
-          <label htmlFor="qp-reponer-nota">Motivo</label>
+      <form className="formulario" onSubmit={enviar} noValidate>
+        <Campo
+          id="qp-reponer-monto" etiqueta="Monto a reponer" prefijo="pts"
+          type="number" min="0" step="0.01" value={monto} onChange={(e) => setMonto(e.target.value)}
+          error={errorMonto}
+        />
+        <Campo id="qp-reponer-nota" etiqueta="Motivo" error={errorNota}>
           <textarea
             id="qp-reponer-nota"
             rows={2}
             value={nota}
             onChange={(e) => setNota(e.target.value)}
             placeholder="Ej.: el organizador repone lo consumido por el falso"
+            aria-invalid={!!errorNota}
+            aria-describedby={errorNota ? 'qp-reponer-nota-error' : undefined}
           />
-        </div>
-        {error && <p className="form-nota form-nota--error" role="alert">{error}</p>}
-      </div>
+        </Campo>
+        {error && <AvisoFijo tono="error">{error}</AvisoFijo>}
 
-      <div className="modal-actions">
-        <button type="button" className="btn-cancelar" onClick={onCerrar}>Cancelar</button>
-        <button type="button" className="btn-primario" onClick={enviar} disabled={!valido || enviando}>
-          {enviando ? 'Guardando…' : 'Reponer saldo'}
-        </button>
-      </div>
+        <div className="modal-actions">
+          <Boton variante="secundario" onClick={onCerrar} disabled={enviando}>Cancelar</Boton>
+          <Boton type="submit" icono={FaCoins} cargando={enviando}>
+            {montoNum > 0 ? `Reponer ${montoNum} pts` : 'Reponer saldo'}
+          </Boton>
+        </div>
+      </form>
+      {DialogoConfirmar}
     </Modal>
   );
 }

@@ -56,7 +56,7 @@ export default function EcosistemaSection({ enCartelera = 0, realizados = 0 }) {
 
   return (
     <div ref={ref} className={`qp-eco${visible ? ' es-visible' : ''}`}>
-      <div className="section-header qp-eco__header">
+      <div className="pi-home-section-header qp-eco__header">
         <span className="qp-info__eyebrow">La plataforma</span>
         <h2>Una plataforma, <span className="qp-info__resalte">todos conectados</span></h2>
         <p>
@@ -113,7 +113,7 @@ export default function EcosistemaSection({ enCartelera = 0, realizados = 0 }) {
         <div className="qp-eco__lado">
           {/* Sin aria-live a propósito: con el recorrido automático el lector de
               pantalla anunciaría un rol nuevo cada 3,5 s sin parar. */}
-          <article key={activo} className="qp-eco__detalle glass-morphism">
+          <article key={activo} className="qp-eco__detalle pi-home-glass-morphism">
             <span className="qp-eco__detalle-cab">
               <span className="qp-eco__detalle-ic" aria-hidden="true"><Icono /></span>
               <span>

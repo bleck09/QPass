@@ -216,7 +216,7 @@ export default function HeroSection() {
           {/* Sin aria-hidden a propósito: es contenido real, y el desvanecido
               es puramente visual. No tiene elementos enfocables, así que al
               estar transparente tampoco captura el foco del teclado. */}
-          <div className="qp-hero__pasos glass-morphism" ref={pasosRef}>
+          <div className="qp-hero__pasos pi-home-glass-morphism" ref={pasosRef}>
             <p className="qp-hero__pasos-chip">
               <span className="qp-hero__chip-punto" aria-hidden="true" />
               CÓMO FUNCIONA
@@ -284,7 +284,7 @@ export default function HeroSection() {
             </div>
 
             {/* ---- Tarjeta 1: saldo de la manilla ---- */}
-            <div className="qp-hero__tarjeta qp-hero__tarjeta--saldo glass-morphism">
+            <div className="qp-hero__tarjeta qp-hero__tarjeta--saldo pi-home-glass-morphism">
               <div className="qp-hero__tarjeta-cab">
                 <FaWallet className="qp-hero__tarjeta-ic" aria-hidden="true" />
                 <strong>Saldo en manilla</strong>
@@ -303,7 +303,7 @@ export default function HeroSection() {
             </div>
 
             {/* ---- Tarjeta 2: actividad de la puerta ---- */}
-            <div className="qp-hero__tarjeta qp-hero__tarjeta--grafico glass-morphism">
+            <div className="qp-hero__tarjeta qp-hero__tarjeta--grafico pi-home-glass-morphism">
               <div className="qp-hero__tarjeta-cab">
                 <FaChartLine className="qp-hero__tarjeta-ic" aria-hidden="true" />
                 <strong>Actividad del evento</strong>
@@ -345,7 +345,7 @@ export default function HeroSection() {
             </div>
 
             {/* ---- Tarjeta 3: validación en puerta ---- */}
-            <div className="qp-hero__tarjeta qp-hero__tarjeta--acceso glass-morphism">
+            <div className="qp-hero__tarjeta qp-hero__tarjeta--acceso pi-home-glass-morphism">
               <span className="qp-hero__acceso-ic" aria-hidden="true"><FaQrcode /></span>
               <span className="qp-hero__acceso-txt">
                 <strong>Acceso validado</strong>

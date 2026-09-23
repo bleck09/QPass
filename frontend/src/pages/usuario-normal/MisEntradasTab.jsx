@@ -17,10 +17,13 @@ import CuentaRegresiva from '../../components/CuentaRegresiva.jsx';
 import ModalQr from '../../components/ModalQr.jsx';
 import { EstadoVacio } from '../../components/EstadosAsync.jsx';
 import Boton from '../../components/Boton.jsx';
-import { useAvisos } from '../../components/Avisos.jsx';
+import { useAvisos, AvisoFijo } from '../../components/Avisos.jsx';
+import Card from '../../components/Card.jsx';
 import api from '../../api/index.js';
 import { esVigente, estadoEvento, formatearFecha, imagenEvento, nombreJornada, mostrarJornada } from '../../utils/eventos.js';
 import { qrDe } from '../../utils/qr.js';
+import { erroresEntradas, hayErrores, enfocarPrimerError } from '../../utils/entradas.js';
+import CamposEntrada from './CamposEntrada.jsx';
 import './MisEntradasTab.css';
 
 const ETIQUETA_CAMPO = { nombre: 'Nombre completo', correo: 'Correo electrónico', celular: 'Celular' };
@@ -43,7 +46,12 @@ export default function MisEntradasTab({
   // --- REVISAR MI SOLICITUD: edición mientras está pendiente, reporte si ya fue aprobada ---
   const [compraEnRevision, setCompraEnRevision] = useState(null);
   const [entradasEdicion, setEntradasEdicion] = useState([]);
+  // Error del servidor al guardar (la validación de cada campo va junto al campo).
   const [errorRevision, setErrorRevision] = useState('');
+  // Los errores por campo se muestran recién después del primer "Guardar";
+  // desde ahí se actualizan mientras la persona escribe.
+  const [intentoRevision, setIntentoRevision] = useState(false);
+  const erroresRevision = intentoRevision ? erroresEntradas(entradasEdicion, (e) => e.diaEventoId) : {};
 
   // Reporte de datos incorrectos (compartido entre "Revisar mi solicitud" y Mis Entradas):
   // entradaReportando = { compraId, entrada } de la entrada que se está reportando.
@@ -205,6 +213,7 @@ export default function MisEntradasTab({
     setCompraEnRevision(compra);
     setEntradasEdicion(compra.entradas.map(ent => ({ ...ent })));
     setErrorRevision('');
+    setIntentoRevision(false);
     cancelarReporte();
   };
 
@@ -212,6 +221,7 @@ export default function MisEntradasTab({
     setCompraEnRevision(null);
     setEntradasEdicion([]);
     setErrorRevision('');
+    setIntentoRevision(false);
     cancelarReporte();
   };
 
@@ -222,19 +232,9 @@ export default function MisEntradasTab({
   // Solo aplica mientras la solicitud sigue pendiente: aún se puede corregir sin generar un reporte.
   const guardarRevision = async () => {
     setErrorRevision('');
-    const incompleto = entradasEdicion.some(ent => !ent.nombre.trim() || !ent.correo.trim() || !ent.celular.trim());
-    if (incompleto) return setErrorRevision('Completa nombre, correo y celular de cada entrada.');
-
-    // El correo debe ser único DENTRO de cada jornada, no en toda la solicitud.
-    const correosPorJornada = new Map();
-    entradasEdicion.forEach(ent => {
-      const clave = ent.diaEventoId ?? '__sin_jornada__';
-      const lista = correosPorJornada.get(clave) ?? [];
-      lista.push(ent.correo.toLowerCase());
-      correosPorJornada.set(clave, lista);
-    });
-    const hayCorreoRepetido = [...correosPorJornada.values()].some(lista => lista.length !== new Set(lista).size);
-    if (hayCorreoRepetido) return setErrorRevision('Cada entrada de una misma jornada necesita un correo electrónico único.');
+    setIntentoRevision(true);
+    const errores = erroresEntradas(entradasEdicion, (e) => e.diaEventoId);
+    if (hayErrores(errores)) return enfocarPrimerError(entradasEdicion, errores, 'rev');
 
     setGuardandoRevision(true);
     try {
@@ -267,7 +267,6 @@ export default function MisEntradasTab({
     setCamposReporte(prev => prev.includes(campo) ? prev.filter(c => c !== campo) : [...prev, campo]);
   };
 
-
   // Genera un reporte por cada dato marcado (nombre, correo y/o celular), así se pueden
   // reportar varios datos mal puestos de una sola vez en lugar de solo uno.
   const enviarReporte = async () => {
@@ -298,7 +297,7 @@ export default function MisEntradasTab({
   // Formulario reutilizado tanto dentro de "Revisar mi solicitud" como en Mis Entradas.
   const formularioReporte = (
     <div className="pi-usr-form-reporte">
-      <fieldset style={{ border: 0, padding: 0, margin: 0 }}>
+      <fieldset className="input-group input-group--fieldset">
         <legend>¿Qué datos están mal? (puedes marcar varios)</legend>
         <div className="pi-usr-checks-reporte">
           {camposReportables.map(campo => (
@@ -309,16 +308,18 @@ export default function MisEntradasTab({
           ))}
         </div>
       </fieldset>
-      <label htmlFor="usr-reporte-desc">Cuéntale a Admin cuáles son los datos correctos</label>
-      <textarea
-        id="usr-reporte-desc"
-        rows={3}
-        placeholder="Ej: el nombre correcto es Juan Pérez y el celular es 71234567"
-        value={descripcionReporte}
-        onChange={(e) => setDescripcionReporte(e.target.value)}
-        autoFocus
-      />
-      <div className="pi-usr-modal-acciones">
+      <div className="input-group">
+        <label htmlFor="usr-reporte-desc">Cuéntale a Admin cuáles son los datos correctos</label>
+        <textarea
+          id="usr-reporte-desc"
+          rows={3}
+          placeholder="Ej: el nombre correcto es Juan Pérez y el celular es 71234567"
+          value={descripcionReporte}
+          onChange={(e) => setDescripcionReporte(e.target.value)}
+          autoFocus
+        />
+      </div>
+      <div className="modal-actions">
         <Boton variante="secundario" onClick={cancelarReporte}>Cancelar</Boton>
         <Boton
           icono={FaExclamationTriangle}
@@ -479,23 +480,23 @@ export default function MisEntradasTab({
           />
 
           {filasMisEntradas.length === 0 ? (
-            <div className="pi-usr-card">
+            <Card>
               <EstadoVacio
                 icono={FaTicketAlt}
                 titulo="Todavía no tenés entradas"
                 mensaje="Cuando compres o alguien te regale una entrada, la vas a ver acá con tu código QR."
                 accion={<Boton icono={FaCalendarAlt} onClick={() => navigate('/usuarionormal/eventos')}>Ver eventos</Boton>}
               />
-            </div>
+            </Card>
           ) : filasMisEntradasFiltradas.length === 0 ? (
-            <div className="pi-usr-card">
+            <Card>
               <EstadoVacio
                 compacto
                 icono={FaSearch}
                 titulo="Ninguna entrada coincide"
                 mensaje="Probá con otra búsqueda o quitá los filtros."
               />
-            </div>
+            </Card>
           ) : vistaMisEntradas === 'tabla' ? (
             <Tabla
               columnas={['Origen', 'Evento', 'Lugar / Detalle', 'Estado', 'Entradas', 'Fecha', { texto: 'Acción', align: 'center' }]}
@@ -549,9 +550,8 @@ export default function MisEntradasTab({
         <Modal
           titulo={<><FaExclamationTriangle color="var(--ambar-aviso-texto)" aria-hidden="true" /> Reportar error de datos</>}
           onCerrar={cancelarReporte}
-          className="pi-usr-modal"
         >
-            <div className="pi-usr-modal-body">
+            <div className="pi-me-modal-cuerpo">
               <p className="texto-ayuda">Entrada de: <strong>{entradaReportando.entrada.nombre}</strong></p>
               {formularioReporte}
             </div>
@@ -563,21 +563,20 @@ export default function MisEntradasTab({
         <Modal
           titulo={<><FaSearch color="var(--indigo-profundo)" aria-hidden="true" /> Revisar mi solicitud</>}
           onCerrar={cerrarRevision}
-          className="pi-usr-modal"
+          tamano="lg"
         >
-            <div className="pi-usr-modal-body">
+            <div className="pi-me-modal-cuerpo">
               <p className="texto-ayuda">
                 Lote de {compraEnRevision.entradas.length} entrada(s) · {formatearFecha(compraEnRevision.createdAt)}
               </p>
 
               {compraEnRevision.estado === 'rechazado' && (
                 <>
-                  <div className="pi-usr-alerta-error">
-                    <FaExclamationTriangle /> Esta solicitud fue rechazada
-                    {compraEnRevision.motivoRechazo ? `: ${compraEnRevision.motivoRechazo}` : '.'}
-                  </div>
+                  <AvisoFijo tono="error" titulo="Esta solicitud fue rechazada">
+                    {compraEnRevision.motivoRechazo || null}
+                  </AvisoFijo>
                   <p className="texto-ayuda">Si crees que fue un error, contacta al organizador o realiza una nueva compra.</p>
-                  <div className="pi-usr-modal-acciones">
+                  <div className="modal-actions">
                     <Boton variante="secundario" onClick={cerrarRevision}>Cerrar</Boton>
                   </div>
                 </>
@@ -598,47 +597,24 @@ export default function MisEntradasTab({
                           {ent.isTitular ? ' Tu entrada' : ` Entrada ${i + 1} (Invitado)`}
                         </span>
                         <div className="pi-usr-ticket-inputs">
-                          <div className="input-group">
-                            <label htmlFor={`rev-nombre-${ent.id}`}>Nombre completo</label>
-                            <input
-                              id={`rev-nombre-${ent.id}`}
-                              type="text"
-                              autoComplete="name"
-                              value={ent.nombre}
-                              onChange={(e) => actualizarEntradaEdicion(ent.id, 'nombre', e.target.value)}
-                              disabled={ent.isTitular}
-                            />
-                          </div>
-                          <div className="input-group">
-                            <label htmlFor={`rev-correo-${ent.id}`}>Correo electrónico</label>
-                            <input
-                              id={`rev-correo-${ent.id}`}
-                              type="email"
-                              autoComplete="email"
-                              value={ent.correo}
-                              onChange={(e) => actualizarEntradaEdicion(ent.id, 'correo', e.target.value)}
-                              disabled={ent.isTitular}
-                            />
-                          </div>
-                          <div className="input-group">
-                            <label htmlFor={`rev-celular-${ent.id}`}>Celular (WhatsApp)</label>
-                            <input
-                              id={`rev-celular-${ent.id}`}
-                              type="tel"
-                              inputMode="numeric"
-                              autoComplete="tel-national"
-                              value={ent.celular}
-                              onChange={(e) => actualizarEntradaEdicion(ent.id, 'celular', e.target.value)}
-                            />
-                          </div>
+                          <CamposEntrada
+                            entrada={ent}
+                            errores={erroresRevision[ent.id]}
+                            onCambio={(campo, valor) => actualizarEntradaEdicion(ent.id, campo, valor)}
+                            prefijo="rev"
+                          />
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {errorRevision && <div className="pi-usr-alerta-error"><FaExclamationTriangle /> {errorRevision}</div>}
+                  {errorRevision && (
+                    <p className="form-nota form-nota--error" role="alert">
+                      <FaExclamationTriangle aria-hidden="true" /> {errorRevision}
+                    </p>
+                  )}
 
-                  <div className="pi-usr-modal-acciones">
+                  <div className="modal-actions">
                     <Boton variante="secundario" onClick={cerrarRevision}>Cerrar</Boton>
                     <Boton icono={FaSave} onClick={guardarRevision} cargando={guardandoRevision}>
                       Guardar cambios
@@ -653,9 +629,9 @@ export default function MisEntradasTab({
                   </p>
 
                   {!esVigente(compraEnRevision.evento || proximosEventos[0]) && (
-                    <div className="pi-usr-alerta-error">
-                      <FaExclamationTriangle /> El evento de esta solicitud ya pasó, así que ya no se pueden reportar datos.
-                    </div>
+                    <AvisoFijo tono="aviso">
+                      El evento de esta solicitud ya pasó, así que ya no se pueden reportar datos.
+                    </AvisoFijo>
                   )}
 
                   <div className="pi-usr-cart-list">
@@ -713,7 +689,7 @@ export default function MisEntradasTab({
                     })}
                   </div>
 
-                  <div className="pi-usr-modal-acciones">
+                  <div className="modal-actions">
                     <Boton variante="secundario" onClick={cerrarRevision}>Cerrar</Boton>
                   </div>
                 </>

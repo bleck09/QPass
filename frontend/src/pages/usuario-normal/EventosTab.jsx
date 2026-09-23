@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { FaHistory, FaCoins, FaMapMarkerAlt, FaCalendarAlt, FaCalendarTimes, FaArrowRight } from 'react-icons/fa';
+import { FaHistory, FaCoins, FaCalendarTimes } from 'react-icons/fa';
 import EventosDestacados from '../../components/EventosDestacados.jsx';
 import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
 import Insignia from '../../components/Insignia.jsx';
-import Boton from '../../components/Boton.jsx';
-import { formatearFecha, imagenEvento } from '../../utils/eventos.js';
+import Card from '../../components/Card.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import { imagenEvento } from '../../utils/eventos.js';
 import './EventosTab.css';
 
 /** Pestaña "Eventos": cartelera para elegir a qué evento comprar + eventos pasados. */
@@ -16,22 +18,22 @@ export default function EventosTab({
   return (
     <div className="pi-usr-eventos">
       {errorEventos ? (
-        <div className="pi-usr-card">
+        <Card>
           <EstadoError onReintentar={recargarEventos} titulo="No se pudo cargar la cartelera" />
-        </div>
+        </Card>
       ) : cargandoEventos ? (
-        <div className="pi-usr-card">
+        <Card>
           <EstadoCarga filas={3} etiqueta="Cargando cartelera…" />
-        </div>
+        </Card>
       ) : proximosEventos.length === 0 ? (
         // Sin eventos la cartelera no dibuja nada: antes quedaba un panel oscuro vacío.
-        <div className="pi-usr-card">
+        <Card>
           <EstadoVacio
             icono={FaCalendarTimes}
             titulo="No hay eventos en cartelera por ahora"
             mensaje="Cuando se publique un evento nuevo lo vas a ver acá para comprar tus entradas."
           />
-        </div>
+        </Card>
       ) : (
         <div className="pi-usr-eventos-panel">
           <EventosDestacados
@@ -46,38 +48,30 @@ export default function EventosTab({
       )}
 
       {eventosPasados.length > 0 && (
-        <section className="pi-usr-card pi-evp">
+        <Card as="section" className="pi-evp">
           <h3 className="pi-evp-titulo">
             <FaHistory aria-hidden="true" /> Eventos pasados
             <Insignia tono="neutro">{eventosPasados.length}</Insignia>
           </h3>
-          <ul className="pi-evp-grid">
-            {eventosPasados.map((ev, i) => {
+          {/* Tarjetas de evento: SIEMPRE EventoCard + GrillaEventos (§6). Si te
+              quedó saldo ahí, la tarjeta lleva a retirarlo; si no, al evento. */}
+          <GrillaEventos eventos={eventosPasados} gridClassName="pi-evp-grid">
+            {(ev) => {
               const saldoAhi = saldoPorEvento.get(ev.id);
               return (
-                <li key={ev.id} className="pi-evp-card" style={{ '--i': i }}>
-                  <div className="pi-evp-img">
-                    <img src={imagenEvento(ev)} alt="" width="320" height="140" loading="lazy" />
-                    <Insignia tono="neutro" solida className="pi-evp-estado">Realizado</Insignia>
-                  </div>
-                  <div className="pi-evp-info">
-                    <strong>{ev.nombre}</strong>
-                    <span><FaMapMarkerAlt aria-hidden="true" /> {ev.lugar}</span>
-                    <span><FaCalendarAlt aria-hidden="true" /> {formatearFecha(ev.fecha)}</span>
-                    {saldoAhi > 0 && (
-                      <div className="pi-evp-saldo">
-                        <Insignia tono="warn" icono={FaCoins}>Te quedan {saldoAhi} pts</Insignia>
-                        <Boton variante="fantasma" tamano="sm" iconoDerecha={FaArrowRight} onClick={() => navigate('/usuarionormal/saldo')}>
-                          Retirar
-                        </Boton>
-                      </div>
-                    )}
-                  </div>
-                </li>
+                <EventoCard
+                  key={ev.id}
+                  evento={{ ...ev, imagen: imagenEvento(ev) }}
+                  estado={false}
+                  badges={<Insignia tono="neutro" solida>Realizado</Insignia>}
+                  meta={saldoAhi > 0 ? <><FaCoins aria-hidden="true" /> Te quedan {saldoAhi} pts</> : null}
+                  cta={saldoAhi > 0 ? 'Retirar saldo' : 'Ver evento'}
+                  onClick={() => navigate(saldoAhi > 0 ? '/usuarionormal/saldo' : `/evento/${ev.id}`)}
+                />
               );
-            })}
-          </ul>
-        </section>
+            }}
+          </GrillaEventos>
+        </Card>
       )}
     </div>
   );

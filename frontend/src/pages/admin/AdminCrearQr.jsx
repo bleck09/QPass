@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useModal } from '../../utils/useModal.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import StatCard from '../../components/StatCard.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import SelectorEvento from '../../components/SelectorEvento.jsx';
+import Card from '../../components/Card.jsx';
+import Modal from '../../components/Modal.jsx';
+import Paginador from '../../components/Paginador.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import { useApi } from '../../utils/useApi.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { limpiarErrores, enfocarPrimero } from '../../utils/validacion.js';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaCalendarAlt, FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
-  FaEye, FaTimes, FaChevronLeft, FaChevronRight, FaLink, FaBan
+  FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
+  FaEye, FaLink, FaBan,
 } from 'react-icons/fa';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import api from '../../api/index.js';
@@ -23,6 +31,7 @@ const cmAPx = (cm) => Math.round(Number(cm) * PX_POR_CM);
 // vez. Por eso la lista por defecto solo muestra el texto del código, y las imágenes
 // (dibujadas localmente, sin red) se acotan por página.
 const TAMANO_PAGINA = 100;
+const MAX_TANDA = 2000;
 
 // Dibuja el QR de un código bajo demanda (con la librería `qrcode`, sin red de por medio).
 // El tamaño (ancho/alto) es solo un dato de impresión, no viene del backend: se aplica el
@@ -44,10 +53,31 @@ function QrImg({ qr, ancho = 180, alto = 180 }) {
   );
 }
 
+// Un lado del QR en cm: entre 1 y 26 (26 cm ya no entra en una hoja A4).
+const errorMedida = (valor, que) => {
+  if (!String(valor).trim()) return `Indicá el ${que} del QR.`;
+  const n = Number(valor);
+  return Number.isFinite(n) && n >= 1 && n <= 26 ? null : 'Debe estar entre 1 y 26 cm.';
+};
+
+const validarGeneracion = ({ cantidad, prefijo, anchoCm, altoCm }) => limpiarErrores({
+  'qr-cantidad': !String(cantidad).trim()
+    ? 'Indicá cuántos códigos generar.'
+    : !(Number.isFinite(Number(cantidad)) && Number(cantidad) >= 1)
+      ? 'Debe ser un número mayor a 0.'
+      : Number(cantidad) > MAX_TANDA ? `El máximo por tanda es ${MAX_TANDA}.` : null,
+  'qr-prefijo': prefijo.trim() ? null : 'Escribí un prefijo de 1 a 3 letras.',
+  'qr-ancho': errorMedida(anchoCm, 'ancho'),
+  'qr-alto': errorMedida(altoCm, 'alto'),
+});
+
+const ORDEN_CAMPOS = ['qr-cantidad', 'qr-prefijo', 'qr-ancho', 'qr-alto'];
+
 export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManilla = null, embebido = false } = {}) {
   useTituloPagina('Generar códigos QR', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
+  const avisos = useAvisos();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(eventoIdProp || location.state?.eventoId || '');
 
@@ -69,19 +99,18 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
   const cargarCategorias = useCallback(() => api.categoriasTicket.listar(eventoId), [eventoId]);
   const { data: categorias } = useApi(cargarCategorias, { inicial: [], activo: !!eventoId });
 
-  const [cantidad, setCantidad] = useState('50');
-  const [prefijo, setPrefijo] = useState('QP');
-  const [anchoCm, setAnchoCm] = useState('5');
-  const [altoCm, setAltoCm] = useState('5');
-  const [errores, setErrores] = useState({});
-  const limpiarError = (campo) => setErrores((prev) => (prev[campo] ? { ...prev, [campo]: undefined } : prev));
+  const [form, setForm] = useState({ cantidad: '50', prefijo: 'QP', anchoCm: '5', altoCm: '5' });
+  const [intento, setIntento] = useState(false);
+  const [generando, setGenerando] = useState(false);
+  const [errorGenerar, setErrorGenerar] = useState('');
+  const errores = intento ? validarGeneracion(form) : {};
+  const cambiar = (campo) => (e) => setForm(f => ({ ...f, [campo]: e.target.value }));
+
   const [pagina, setPagina] = useState(0);
   const [mostrarImagenes, setMostrarImagenes] = useState(false);
   const [codigoAVer, setCodigoAVer] = useState(null);
+  const [vaciando, setVaciando] = useState(false);
   const [confirmar, DialogoConfirmar] = useConfirmar();
-
-  // Modal del QR ampliado (look propio): foco + ESC + scroll-lock (Manual 8.6).
-  const modalQrRef = useModal(!!codigoAVer, () => setCodigoAVer(null));
   const [generandoPdf, setGenerandoPdf] = useState(null); // { actual, total } | null
 
   useEffect(() => {
@@ -105,9 +134,8 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
     return () => { vigente = false; };
   }, [embebido, eventoId]);
 
-
-  const anchoPx = cmAPx(anchoCm) || 180;
-  const altoPx = cmAPx(altoCm) || 180;
+  const anchoPx = cmAPx(form.anchoCm) || 180;
+  const altoPx = cmAPx(form.altoCm) || 180;
 
   const eventoActual = eventosDisponibles.find(ev => ev.id === eventoId);
   // Embebido o llegado desde Gestión de Eventos: evento fijo (sin selector/volver).
@@ -141,54 +169,56 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
     setMostrarImagenes(false);
   };
 
+  // Generar una tanda: sin confirmación (se puede vaciar lo no vinculado), pero
+  // CON cargando — antes se podía disparar dos tandas de 2000 con doble clic — y
+  // con el error a la vista (antes la promesa se rompía en silencio).
   const handleGenerar = async (e) => {
     e.preventDefault();
-
-    const errs = {};
-    const n = Number(cantidad);
-    if (!String(cantidad).trim()) errs.cantidad = 'Indicá cuántos códigos generar.';
-    else if (!Number.isFinite(n) || n < 1) errs.cantidad = 'Debe ser un número mayor a 0.';
-    else if (n > 2000) errs.cantidad = 'El máximo por tanda es 2000.';
-
-    if (!prefijo.trim()) errs.prefijo = 'Escribí un prefijo de 1 a 3 letras.';
-
-    const a = Number(anchoCm);
-    if (!String(anchoCm).trim()) errs.ancho = 'Indicá el ancho del QR.';
-    else if (!Number.isFinite(a) || a < 1 || a > 26) errs.ancho = 'Debe estar entre 1 y 26 cm.';
-
-    const h = Number(altoCm);
-    if (!String(altoCm).trim()) errs.alto = 'Indicá el alto del QR.';
-    else if (!Number.isFinite(h) || h < 1 || h > 26) errs.alto = 'Debe estar entre 1 y 26 cm.';
-
-    setErrores(errs);
-    if (Object.keys(errs).length > 0) return;
-
-    await api.codigosQr.generar({ eventoId, cantidad: n, prefijo });
-    await recargarCodigos();
-    setPagina(0);
-    setMostrarImagenes(false);
+    setIntento(true);
+    const errs = validarGeneracion(form);
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ORDEN_CAMPOS);
+    setGenerando(true);
+    setErrorGenerar('');
+    try {
+      const n = Number(form.cantidad);
+      await api.codigosQr.generar({ eventoId, cantidad: n, prefijo: form.prefijo });
+      await recargarCodigos();
+      setPagina(0);
+      setMostrarImagenes(false);
+      setIntento(false);
+      avisos.exito(`Se generaron ${n} códigos QR.`);
+    } catch (err) {
+      setErrorGenerar(err?.message || 'No se pudieron generar los códigos.');
+    } finally {
+      setGenerando(false);
+    }
   };
 
   const handleVaciar = async () => {
+    const libres = stats.libres;
     const ok = await confirmar({
       titulo: '¿Borrar los códigos sin vincular?',
-      mensaje: 'Se eliminarán todos los códigos QR de este evento que aún no estén vinculados a una manilla. Los ya vinculados no se tocan.',
-      textoConfirmar: 'Borrar códigos',
+      mensaje: `Se eliminarán ${libres} código(s) QR de este evento que aún no están vinculados a una manilla. Los ya vinculados y los anulados no se tocan.`,
+      textoConfirmar: `Borrar ${libres} códigos`,
       peligroso: true,
     });
     if (!ok) return;
-    await api.codigosQr.eliminarNoVinculados(eventoId);
-    await recargarCodigos();
-    setPagina(0);
-    setMostrarImagenes(false);
-  };
-
-  const irAPagina = (n) => {
-    setPagina(Math.min(Math.max(n, 0), totalPaginas - 1));
+    setVaciando(true);
+    try {
+      await api.codigosQr.eliminarNoVinculados(eventoId);
+      await recargarCodigos();
+      setPagina(0);
+      setMostrarImagenes(false);
+      avisos.exito('Se borraron los códigos sin vincular.');
+    } catch (err) {
+      avisos.error(err?.message || 'No se pudieron borrar los códigos.', { titulo: 'No se pudo borrar' });
+    } finally {
+      setVaciando(false);
+    }
   };
 
   // Arma el PDF entero en el navegador (QR dibujado localmente, sin pedirle nada a
-  // ninguna API externa) y lo descarga como archivo. `codigos` puede ser la página
+  // ninguna API externa) y lo descarga como archivo. `lista` puede ser la página
   // actual o el evento completo; en lotes grandes se ve el progreso en vivo.
   const descargarPdf = async (lista) => {
     if (lista.length === 0 || generandoPdf) return;
@@ -196,6 +226,8 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
     try {
       const conTamano = lista.map(qr => ({ ...qr, ancho: anchoPx, alto: altoPx }));
       await construirPdfQr(conTamano, (actual, total) => setGenerandoPdf({ actual, total }), eventoActual);
+    } catch (err) {
+      avisos.error(err?.message || 'No se pudo armar el PDF.', { titulo: 'No se pudo descargar' });
     } finally {
       setGenerandoPdf(null);
     }
@@ -211,188 +243,130 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
       )}
 
       {!embebido && (
-        <div className="pi-adqr-header">
-          <div>
-            <h1><FaQrcode color="var(--indigo-profundo)" aria-hidden="true" /> Generar códigos QR</h1>
-            <p>Genera una cantidad de códigos QR únicos para el evento y descárgalos en PDF.</p>
-          </div>
-          <div className="pi-adqr-selector-evento">
-            <FaCalendarAlt />
-            {eventoBloqueado ? (
-              <strong>{eventoActual?.nombre || 'Evento'}</strong>
-            ) : (
-              <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
-                {eventosDisponibles.map(ev => (
-                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        </div>
+        <EncabezadoPagina
+          titulo="Generar códigos QR"
+          subtitulo="Genera una cantidad de códigos QR únicos para el evento y descárgalos en PDF."
+          icono={FaQrcode}
+          acciones={
+            <SelectorEvento
+              id="qr-evento"
+              eventos={eventosDisponibles}
+              valor={eventoId}
+              onCambio={cambiarEvento}
+              bloqueado={eventoBloqueado}
+              nombre={eventoActual?.nombre}
+            />
+          }
+        />
       )}
 
       {(tipoManilla || eventoActual?.tipoManilla) === 'digital' && (
-        <p className="pi-adqr-aviso-digital">
-          <FaQrcode /> Este evento es de <strong>manilla digital</strong>: cada entrada recibe su
-          código QR solo al aprobarse la compra. Generar un lote acá es opcional (por ejemplo,
-          para staff u otro uso aparte de las entradas).
-        </p>
+        <AvisoFijo tono="info" icono={FaQrcode}>
+          Este evento es de <strong>manilla digital</strong>: cada entrada recibe su código QR
+          solo al aprobarse la compra. Generar un lote acá es opcional (por ejemplo, para staff
+          u otro uso aparte de las entradas).
+        </AvisoFijo>
       )}
 
-      <div className="pi-adqr-kpi-grid">
+      <div className="qp-stats">
         <StatCard icon={<FaQrcode />} tono="total" valor={stats.total} label="Códigos generados" />
         <StatCard icon={<FaLink />} tono="ok" valor={stats.vinculados} label="Vinculados (activos)" />
         <StatCard icon={<FaBan />} tono="danger" valor={stats.anulados} label="Anulados (cambio de manilla)" />
         <StatCard icon={<FaBoxes />} tono="total" valor={stats.libres} label="Libres (sin vincular)" />
       </div>
 
-      <div className="pi-adqr-card">
+      <Card>
         <h3 className="pi-adqr-subtitulo">Generar nuevos códigos</h3>
-        <form onSubmit={handleGenerar} className="pi-adqr-form" noValidate>
-          <div className="pi-adqr-input-group">
-            <label htmlFor="qr-cantidad">Cantidad a generar</label>
-            <div className="pi-adqr-input-wrapper">
-              <FaBoxes className="pi-adqr-input-icon" aria-hidden="true" />
-              <input
-                id="qr-cantidad"
-                type="number"
-                inputMode="numeric"
-                min="1"
-                max="2000"
-                value={cantidad}
-                onChange={(e) => { setCantidad(e.target.value); limpiarError('cantidad'); }}
-                placeholder="Ej: 50"
-                aria-invalid={!!errores.cantidad}
-                aria-describedby={errores.cantidad ? 'qr-cantidad-error' : undefined}
-              />
-            </div>
-            {errores.cantidad && <p id="qr-cantidad-error" className="pi-adqr-error">{errores.cantidad}</p>}
-            {resumenEvento.cupo > 0 && (
-              <p className="pi-adqr-sugerencia">
-                Cupo del evento: <strong>{resumenEvento.cupo}</strong> entradas
-                {' · '}{resumenEvento.confirmadas} confirmadas
-                {' · '}{resumenEvento.yaGeneradas} manillas ya generadas.
-                {resumenEvento.sugerido > 0 ? (
-                  <button
-                    type="button"
-                    className="pi-adqr-btn-sugerido"
-                    onClick={() => { setCantidad(String(resumenEvento.sugerido)); limpiarError('cantidad'); }}
-                  >
-                    Usar sugerido: {resumenEvento.sugerido}
-                  </button>
-                ) : (
-                  <span> Ya hay manillas para todo el cupo (+10% de reserva).</span>
-                )}
-              </p>
-            )}
+        <form onSubmit={handleGenerar} noValidate>
+          <div className="pi-adqr-form-grid">
+            <Campo
+              id="qr-cantidad" etiqueta="Cantidad a generar" icono={FaBoxes} type="number"
+              inputMode="numeric" min="1" max={MAX_TANDA} value={form.cantidad}
+              onChange={cambiar('cantidad')} placeholder="Ej: 50" error={errores['qr-cantidad']}
+            />
+            <Campo
+              id="qr-prefijo" etiqueta="Prefijo (1 a 3 letras)" icono={FaFont} maxLength={3}
+              value={form.prefijo} placeholder="Ej: VIP" error={errores['qr-prefijo']}
+              onChange={(e) => setForm(f => ({ ...f, prefijo: e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3) }))}
+            />
+            <Campo
+              id="qr-ancho" etiqueta="Ancho del QR (cm)" icono={FaArrowsAltH} type="number"
+              min="1" max="26" step="0.1" value={form.anchoCm} onChange={cambiar('anchoCm')}
+              placeholder="Ej: 5" error={errores['qr-ancho']}
+            />
+            <Campo
+              id="qr-alto" etiqueta="Alto del QR (cm)" icono={FaArrowsAltV} type="number"
+              min="1" max="26" step="0.1" value={form.altoCm} onChange={cambiar('altoCm')}
+              placeholder="Ej: 5" error={errores['qr-alto']}
+            />
           </div>
-          <div className="pi-adqr-input-group">
-            <label htmlFor="qr-prefijo">Prefijo (1 a 3 letras)</label>
-            <div className="pi-adqr-input-wrapper">
-              <FaFont className="pi-adqr-input-icon" aria-hidden="true" />
-              <input
-                id="qr-prefijo"
-                type="text"
-                value={prefijo}
-                onChange={(e) => { setPrefijo(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3)); limpiarError('prefijo'); }}
-                placeholder="Ej: VIP"
-                maxLength={3}
-                aria-invalid={!!errores.prefijo}
-                aria-describedby={errores.prefijo ? 'qr-prefijo-error' : undefined}
-              />
-            </div>
-            {errores.prefijo && <p id="qr-prefijo-error" className="pi-adqr-error">{errores.prefijo}</p>}
-          </div>
-          <div className="pi-adqr-input-group">
-            <label htmlFor="qr-ancho">Ancho del QR (cm)</label>
-            <div className="pi-adqr-input-wrapper">
-              <FaArrowsAltH className="pi-adqr-input-icon" aria-hidden="true" />
-              <input
-                id="qr-ancho"
-                type="number"
-                min="1"
-                max="26"
-                step="0.1"
-                value={anchoCm}
-                onChange={(e) => { setAnchoCm(e.target.value); limpiarError('ancho'); }}
-                placeholder="Ej: 5"
-                aria-invalid={!!errores.ancho}
-                aria-describedby={errores.ancho ? 'qr-ancho-error' : undefined}
-              />
-            </div>
-            {errores.ancho && <p id="qr-ancho-error" className="pi-adqr-error">{errores.ancho}</p>}
-          </div>
-          <div className="pi-adqr-input-group">
-            <label htmlFor="qr-alto">Alto del QR (cm)</label>
-            <div className="pi-adqr-input-wrapper">
-              <FaArrowsAltV className="pi-adqr-input-icon" aria-hidden="true" />
-              <input
-                id="qr-alto"
-                type="number"
-                min="1"
-                max="26"
-                step="0.1"
-                value={altoCm}
-                onChange={(e) => { setAltoCm(e.target.value); limpiarError('alto'); }}
-                placeholder="Ej: 5"
-                aria-invalid={!!errores.alto}
-                aria-describedby={errores.alto ? 'qr-alto-error' : undefined}
-              />
-            </div>
-            {errores.alto && <p id="qr-alto-error" className="pi-adqr-error">{errores.alto}</p>}
-          </div>
-          <button type="submit" className="pi-adqr-btn-add">
-            <FaPlus /> Generar Códigos
-          </button>
-        </form>
-      </div>
 
-      <div className="pi-adqr-card">
+          {resumenEvento.cupo > 0 && (
+            <p className="texto-ayuda">
+              Cupo del evento: <strong>{resumenEvento.cupo}</strong> entradas
+              {' · '}{resumenEvento.confirmadas} confirmadas
+              {' · '}{resumenEvento.yaGeneradas} manillas ya generadas.
+              {resumenEvento.sugerido > 0 ? (
+                <Boton
+                  variante="fantasma"
+                  tamano="sm"
+                  onClick={() => setForm(f => ({ ...f, cantidad: String(resumenEvento.sugerido) }))}
+                >
+                  Usar sugerido: {resumenEvento.sugerido}
+                </Boton>
+              ) : (
+                <span> Ya hay manillas para todo el cupo (+10% de reserva).</span>
+              )}
+            </p>
+          )}
+
+          {errorGenerar && <AvisoFijo tono="error">{errorGenerar}</AvisoFijo>}
+
+          <div className="pi-adqr-form-actions">
+            <Boton type="submit" icono={FaPlus} cargando={generando}>Generar códigos</Boton>
+          </div>
+        </form>
+      </Card>
+
+      <Card>
         <div className="pi-adqr-card-header">
           <h3 className="pi-adqr-subtitulo">
             Códigos de {eventoActual?.nombre || 'este evento'}
           </h3>
           {codigos.length > 0 && (
-            <div className="pi-adqr-acciones-lista">
-              <button
-                type="button"
-                className="pi-adqr-btn-vaciar"
-                style={{ background: 'transparent', color: 'var(--indigo-profundo)' }}
-                onClick={() => setMostrarImagenes(v => !v)}
-              >
-                <FaEye /> {mostrarImagenes ? 'Ocultar QR de esta página' : 'Ver QR de esta página'}
-              </button>
-              <button
-                type="button"
-                className="pi-adqr-btn-imprimir"
+            <div className="btn-acciones">
+              <Boton variante="fantasma" icono={FaEye} onClick={() => setMostrarImagenes(v => !v)}>
+                {mostrarImagenes ? 'Ocultar QR de esta página' : 'Ver QR de esta página'}
+              </Boton>
+              <Boton
+                variante="secundario" icono={FaFileDownload} disabled={!!generandoPdf}
                 onClick={() => descargarPdf(codigosPagina)}
-                disabled={!!generandoPdf}
               >
-                <FaFileDownload /> Descargar PDF (esta página)
-              </button>
-              <button
-                type="button"
-                className="pi-adqr-btn-imprimir"
+                PDF (esta página)
+              </Boton>
+              <Boton
+                variante="secundario" icono={FaFileDownload} disabled={!!generandoPdf}
                 onClick={() => descargarPdf(codigos)}
-                disabled={!!generandoPdf}
               >
-                <FaFileDownload /> Descargar PDF (todo el evento)
-              </button>
-              <button type="button" className="pi-adqr-btn-vaciar" onClick={handleVaciar}>
-                <FaTrash /> Vaciar
-              </button>
+                PDF (todo el evento)
+              </Boton>
+              <Boton
+                variante="peligro-suave" icono={FaTrash} onClick={handleVaciar}
+                cargando={vaciando} disabled={stats.libres === 0}
+              >
+                Vaciar
+              </Boton>
             </div>
           )}
         </div>
 
         {generandoPdf && (
           <div className="pi-adqr-progreso">
-            <div className="pi-adqr-progreso-barra">
-              <div
-                className="pi-adqr-progreso-relleno"
-                style={{ width: `${(generandoPdf.actual / generandoPdf.total) * 100}%` }}
-              />
-            </div>
+            <progress
+              className="pi-adqr-progreso-barra"
+              value={generandoPdf.actual}
+              max={generandoPdf.total}
+            />
             <span>Generando PDF… {generandoPdf.actual} / {generandoPdf.total}</span>
           </div>
         )}
@@ -402,36 +376,32 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
         ) : cargandoCodigos ? (
           <EstadoCarga filas={5} />
         ) : codigos.length === 0 ? (
-          <p className="pi-adqr-empty">Aún no se generaron códigos QR para este evento.</p>
+          <EstadoVacio icono={FaQrcode} titulo="Aún no se generaron códigos QR para este evento." />
         ) : (
           <>
-            {totalPaginas > 1 && (
-              <div className="pi-adqr-paginador">
-                <button type="button" onClick={() => irAPagina(pagina - 1)} disabled={pagina === 0}>
-                  <FaChevronLeft />
-                </button>
-                <span>Página {pagina + 1} de {totalPaginas} ({codigos.length} códigos en total)</span>
-                <button type="button" onClick={() => irAPagina(pagina + 1)} disabled={pagina === totalPaginas - 1}>
-                  <FaChevronRight />
-                </button>
-              </div>
-            )}
+            <Paginador
+              pagina={pagina}
+              totalPaginas={totalPaginas}
+              onCambio={setPagina}
+              total={codigos.length}
+              unidad="códigos"
+            />
 
             <div className="pi-adqr-grid">
               {codigosPagina.map(qr => (
                 mostrarImagenes ? (
                   <div key={qr.id} className="pi-adqr-tarjeta">
-                    <QrImg key={qr.id} qr={qr} ancho={anchoPx} alto={altoPx} />
+                    <QrImg qr={qr} ancho={anchoPx} alto={altoPx} />
                     <span className="pi-adqr-codigo">{qr.codigo}</span>
                   </div>
                 ) : (
-                  <button type="button"
+                  <button
                     key={qr.id}
                     type="button"
                     className="pi-adqr-chip"
                     onClick={() => setCodigoAVer(qr)}
                   >
-                    <FaQrcode />
+                    <FaQrcode aria-hidden="true" />
                     <span className="pi-adqr-codigo">{qr.codigo}</span>
                   </button>
                 )
@@ -439,18 +409,16 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
             </div>
           </>
         )}
-      </div>
+      </Card>
 
+      {/* El QR ampliado usa el Modal global (antes: overlay a mano con useModal). */}
       {codigoAVer && (
-        <div className="pi-adqr-modal-fondo" onClick={() => setCodigoAVer(null)}>
-          <div ref={modalQrRef} tabIndex={-1} className="pi-adqr-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Código QR ampliado">
-            <button type="button" className="pi-adqr-modal-cerrar" onClick={() => setCodigoAVer(null)} aria-label="Cerrar">
-              <FaTimes aria-hidden="true" />
-            </button>
-            <QrImg key={codigoAVer.id} qr={codigoAVer} ancho={anchoPx} alto={altoPx} />
+        <Modal titulo={codigoAVer.codigo} onCerrar={() => setCodigoAVer(null)} tamano="sm">
+          <div className="pi-adqr-ampliado">
+            <QrImg qr={codigoAVer} ancho={anchoPx} alto={altoPx} />
             <span className="pi-adqr-codigo">{codigoAVer.codigo}</span>
           </div>
-        </div>
+        </Modal>
       )}
 
       {DialogoConfirmar}

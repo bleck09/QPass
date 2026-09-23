@@ -1,8 +1,8 @@
 /* =========================================================================
    SECCIONES INFORMATIVAS — landing pública.
    "Para asistentes" (AsistentesSection) y "Para organizadores y negocios"
-   (OrganizadoresSection). Reusan .qpass-home-section, .section-header,
-   .glass-morphism e .icon-circle de PaginaPrincipal.css y la entrada
+   (OrganizadoresSection). Reusan .pi-home-qpass-home-section, .pi-home-section-header,
+   .pi-home-glass-morphism e .pi-home-icon-circle de PaginaPrincipal.css y la entrada
    escalonada .qp-escalonado de styles/layout.css. La landing es siempre oscura.
 
    COLOR: solo tokens de QPass. Ni un hex suelto.
@@ -358,58 +358,18 @@
 
 /* =======================================================
    ORGANIZADORES — pestañas
+   <Pestanas> global; acá solo sus variables (landing siempre oscura).
 ======================================================= */
-.qp-info__tabs {
-  position: relative;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.qp-pestanas.qp-info__pestanas {
+  --pest-fondo: color-mix(in srgb, var(--azul-noche) 60%, transparent);
+  --pest-texto: var(--n-300);
+  --pest-texto-hover: var(--blanco);
+  --pest-texto-activa: var(--texto-sobre-vivo);
+  --pest-indicador: var(--cian-digital);
+  --pest-radio: var(--radius-full);
   width: min(100%, 30rem);
   margin: var(--space-16) auto 0;
-  padding: var(--space-1);
-  border-radius: var(--radius-full);
   border: 1px solid color-mix(in srgb, var(--blanco) 14%, transparent);
-  background: color-mix(in srgb, var(--azul-noche) 60%, transparent);
-}
-
-/* Píldora que se desliza bajo la pestaña activa. */
-.qp-info__tabs-indicador {
-  position: absolute;
-  top: var(--space-1);
-  bottom: var(--space-1);
-  left: var(--space-1);
-  width: calc(50% - var(--space-1));
-  border-radius: var(--radius-full);
-  background: var(--cian-digital);
-  box-shadow: 0 6px 20px color-mix(in srgb, var(--cian-digital) 40%, transparent);
-  transition: transform 450ms var(--ease-out);
-}
-
-.qp-info__tab {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
-  min-height: 2.75rem;
-  padding: var(--space-2) var(--space-4);
-  border: none;
-  border-radius: var(--radius-full);
-  background: none;
-  color: var(--n-300);
-  font-family: inherit;
-  font-size: var(--text-sm);
-  font-weight: var(--weight-bold);
-  cursor: pointer;
-  transition: color var(--duration-normal) var(--ease-out);
-}
-
-.qp-info__tab.es-activa { color: var(--texto-sobre-vivo); }
-.qp-info__tab:not(.es-activa):hover { color: var(--blanco); }
-
-.qp-info__tab:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 3px;
 }
 
 .qp-info__tabpanel { animation: qpInfoPanel 500ms var(--ease-out); }
@@ -802,7 +762,6 @@
   .qp-info__banda { padding: var(--space-8) var(--space-5); }
   .qp-info__cta-fila,
   .qp-info__cta-fila > .qp-btn { width: 100%; }
-  .qp-info__tab { font-size: var(--text-xs); padding: var(--space-2); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -817,8 +776,7 @@
   .qp-info__servicio,
   .qp-info__beneficios li,
   .qp-info__foto img,
-  .qp-info__collage img,
-  .qp-info__tabs-indicador { transition: none; }
+  .qp-info__collage img { transition: none; }
   .qp-info__servicio:hover,
   .qp-info__beneficios li:hover,
   .qp-info__foto:hover img,

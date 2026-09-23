@@ -1,8 +1,8 @@
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend,
 } from 'recharts';
-import { PanelGrafico } from './GraficosAdmin.jsx';
-import { ejeTick, tooltipStyle, grid, fmtBs } from './graficosEstilos.jsx';
+import PanelGrafico from '../../components/PanelGrafico.jsx';
+import { ejeTick, tooltipStyle, grid, fmtBs } from '../../utils/graficos.jsx';
 
 /* Gráficos del dashboard de UN evento (Admin.jsx, vista general). Reutilizan el
  * mismo marco (PanelGrafico) y los mismos tokens que GraficosAdmin.jsx (el
@@ -103,7 +103,7 @@ export function GraficoVentasPorNegocio({ filas }) {
         ),
       }}
     >
-      <div style={{ height: '100%', overflowY: 'auto' }}>
+      <div className="qp-panel-grafico__desborde">
         <ResponsiveContainer width="100%" height={alto}>
           <BarChart data={filas} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
             {grid}

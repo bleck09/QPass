@@ -1,146 +1,127 @@
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { forzarTemaClaro } from '../../utils/tema.js';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useNavigate } from 'react-router-dom';
-import {
-  MdEmail, MdLock, MdArrowBack, MdVisibility, MdVisibilityOff
-} from 'react-icons/md';
-import { FaShieldAlt, FaEnvelopeOpenText, FaKey } from 'react-icons/fa';
+import { FaShieldAlt, FaEnvelopeOpenText, FaKey, FaEnvelope, FaArrowLeft, FaPaperPlane, FaCheck } from 'react-icons/fa';
 import api from '../../api/index.js';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import InputCodigo from '../../components/InputCodigo.jsx';
+import ErrorCampo from '../../components/ErrorCampo.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
+import {
+  errorCorreo, errorContrasenaNueva, errorConfirmacion, limpiarErrores, enfocarPrimero, MIN_CONTRASENA,
+} from '../../utils/validacion.js';
 import './auth.css';
-import './RecuperarContra.css';
 
 export default function RecuperarContra() {
+  // Esta pantalla se ve siempre en claro: el tema oscuro es solo del
+  // panel (ver utils/tema.js).
+  useEffect(() => { forzarTemaClaro(); }, []);
+
   useTituloPagina('Recuperar contraseña');
   const navigate = useNavigate();
+  const avisos = useAvisos();
 
-  // --- PASOS DEL FLUJO ---  1: Correo | 2: Código OTP | 3: Nueva contraseña
+  // --- PASOS DEL FLUJO ---  1: Correo | 2: Código | 3: Nueva contraseña
   const [step, setStep] = useState(1);
 
-  // --- ESTADOS DE DATOS ---
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [codigo, setCodigo] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   // No hay servicio de correo: el backend devuelve el código en la respuesta para
   // poder probar el flujo. En producción llegaría solo por correo.
   const [codigoDemo, setCodigoDemo] = useState('');
 
-  // --- ESTADOS DE UI ---
-  const inputRefs = useRef([]);
-  const [showPassword, setShowPassword] = useState(false);
+  // Error de cada campo (después del primer intento) y del servidor.
+  const [errores, setErrores] = useState({});
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [enviando, setEnviando] = useState(false);
 
-  // PASO 1: enviar correo
-  const handlePedirCodigo = async (e) => {
-    e.preventDefault();
+  // Envuelve cada llamada: spinner en el botón y error del servidor en línea.
+  const conEnvio = async (fn) => {
     setError('');
-    if (!email) {
-      setError('Por favor, ingresa tu correo electrónico.');
-      return;
-    }
+    setEnviando(true);
     try {
-      const { codigoDemo: codigo } = await api.auth.recuperarSolicitar(email);
-      setCodigoDemo(codigo);
-      setOtp(['', '', '', '', '', '']);
+      await fn();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setEnviando(false);
+    }
+  };
+
+  // PASO 1: pedir el código
+  const handlePedirCodigo = (e) => {
+    e.preventDefault();
+    const errs = limpiarErrores({ 'rec-email': errorCorreo(email) });
+    setErrores(errs);
+    if (errs['rec-email']) return enfocarPrimero(errs, ['rec-email']);
+    conEnvio(async () => {
+      const { codigoDemo: c } = await api.auth.recuperarSolicitar(email.trim());
+      setCodigoDemo(c);
+      setCodigo('');
       setStep(2);
-    } catch (err) {
-      setError(err.message);
-    }
+    });
   };
 
-  // PASO 2: verificar OTP
-  const handleOtpChange = (index, value) => {
-    const soloNumeros = value.replace(/\D/g, '');
-    if (!soloNumeros && value !== '') return;
-    const newOtp = [...otp];
-    newOtp[index] = soloNumeros;
-    setOtp(newOtp);
-    if (soloNumeros && index < 5) inputRefs.current[index + 1].focus();
-  };
-
-  const handleOtpKeyDown = (index, e) => {
-    if (e.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1].focus();
-    }
-  };
-
-  const handleVerificarCodigo = async (e) => {
+  // PASO 2: verificar el código
+  const handleVerificarCodigo = (e) => {
     e.preventDefault();
-    setError('');
-    const codigoIngresado = otp.join('');
-    if (codigoIngresado.length < 6) {
-      setError('Debes ingresar los 6 dígitos del código.');
-      return;
-    }
-    try {
-      await api.auth.recuperarVerificar(email, codigoIngresado);
+    if (codigo.length < 6) return setErrores({ codigo: 'Escribí los 6 dígitos del código.' });
+    setErrores({});
+    conEnvio(async () => {
+      await api.auth.recuperarVerificar(email.trim(), codigo);
       setStep(3);
-    } catch (err) {
-      setError(err.message);
-    }
+    });
   };
 
-  const handleReenviarCodigo = async () => {
-    setError('');
-    try {
-      const { codigoDemo: codigo } = await api.auth.recuperarSolicitar(email);
-      setCodigoDemo(codigo);
-      setOtp(['', '', '', '', '', '']);
-      setSuccess('Se generó un nuevo código.');
-      setTimeout(() => setSuccess(''), 3000);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
+  const handleReenviarCodigo = () => conEnvio(async () => {
+    const { codigoDemo: c } = await api.auth.recuperarSolicitar(email.trim());
+    setCodigoDemo(c);
+    setCodigo('');
+    setErrores({});
+    avisos.info('Te generamos un código nuevo.');
+  });
 
-  // PASO 3: cambiar contraseña
-  const handleRestablecerContra = async (e) => {
+  // PASO 3: nueva contraseña
+  const validarPaso3 = (p, c) => limpiarErrores({
+    'rec-password': errorContrasenaNueva(p),
+    'rec-password-2': errorConfirmacion(c, p),
+  });
+
+  const handleRestablecerContra = (e) => {
     e.preventDefault();
-    setError('');
-    if (!password || !confirmPassword) {
-      setError('Completa ambos campos de contraseña.');
-      return;
-    }
-    if (password.length < 6) {
-      setError('La contraseña debe tener al menos 6 caracteres.');
-      return;
-    }
-    if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden.');
-      return;
-    }
-    try {
-      await api.auth.recuperarRestablecer(email, otp.join(''), password);
-      setSuccess('¡Contraseña actualizada! Redirigiendo al login…');
-      setTimeout(() => navigate('/login'), 2500);
-    } catch (err) {
-      setError(err.message);
-    }
+    const errs = validarPaso3(password, confirmPassword);
+    setErrores({ ...errs, intento3: true });
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ['rec-password', 'rec-password-2']);
+    conEnvio(async () => {
+      await api.auth.recuperarRestablecer(email.trim(), codigo, password);
+      avisos.exito('Ya podés iniciar sesión con tu nueva contraseña.', { titulo: 'Contraseña actualizada' });
+      navigate('/login');
+    });
   };
+
+  // En el paso 3 los errores se recalculan al escribir, una vez intentado.
+  const erroresPaso3 = errores.intento3 ? validarPaso3(password, confirmPassword) : {};
+
+  const irA = (paso) => { setStep(paso); setError(''); setErrores({}); };
 
   return (
     <div className="pi-auth">
-      {step === 1 ? (
-        <button type="button" className="pi-auth__back" onClick={() => navigate('/login')}>
-          <MdArrowBack size={18} aria-hidden="true" /> Volver al login
-        </button>
-      ) : step === 2 ? (
-        <button type="button" className="pi-auth__back" onClick={() => { setStep(1); setError(''); }}>
-          <MdArrowBack size={18} aria-hidden="true" /> Cambiar correo
-        </button>
-      ) : (
-        <button type="button" className="pi-auth__back" onClick={() => navigate('/login')}>
-          <MdArrowBack size={18} aria-hidden="true" /> Cancelar recuperación
-        </button>
-      )}
+      <Boton
+        variante="translucido" tamano="sm" pildora icono={FaArrowLeft} className="pi-auth__volver"
+        onClick={() => (step === 2 ? irA(1) : navigate('/login'))}
+      >
+        {step === 2 ? 'Cambiar correo' : 'Volver al login'}
+      </Boton>
 
       <div className="pi-auth__card">
         <div className="pi-auth__panel">
-        {/* Landmark principal de la pantalla (Manual 11) */}
         <main className="pi-auth__body" id="contenido">
 
-          {/* ===== PASO 1: pedir correo ===== */}
+          {/* ===== PASO 1: CORREO ===== */}
           {step === 1 && (
             <div className="animate-fade pi-auth__step">
               <div className="pi-auth__step-icon"><FaShieldAlt size={34} aria-hidden="true" /></div>
@@ -149,33 +130,22 @@ export default function RecuperarContra() {
                 Ingresá el correo asociado a tu cuenta. Te enviaremos un código de seguridad para verificar tu identidad.
               </p>
 
-              <form onSubmit={handlePedirCodigo} className="pi-auth__form">
-                <div className="pi-auth__field">
-                  <label htmlFor="rec-email">Correo electrónico registrado</label>
-                  <div className="pi-auth__control">
-                    <span className="pi-auth__icon" aria-hidden="true"><MdEmail size={18} /></span>
-                    <input
-                      id="rec-email"
-                      type="email"
-                      autoComplete="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="usuario@qpass.com"
-                      required
-                      autoFocus
-                    />
-                  </div>
-                </div>
-
-                {error && <p className="pi-auth__error" role="alert">{error}</p>}
-                {success && <p className="pi-auth__success" role="status">{success}</p>}
-
-                <button type="submit" className="pi-auth__submit">Enviar código</button>
+              <form onSubmit={handlePedirCodigo} className="pi-auth__form" noValidate>
+                <Campo
+                  id="rec-email" etiqueta="Correo electrónico" icono={FaEnvelope} type="email" autoComplete="email"
+                  placeholder="usuario@qpass.com" value={email}
+                  onChange={(e) => { setEmail(e.target.value); if (errores['rec-email']) setErrores({ 'rec-email': errorCorreo(e.target.value) }); }}
+                  error={errores['rec-email']}
+                />
+                {error && <AvisoFijo tono="error">{error}</AvisoFijo>}
+                <Boton type="submit" tamano="lg" pildora anchoCompleto icono={FaPaperPlane} cargando={enviando}>
+                  Enviar código
+                </Boton>
               </form>
             </div>
           )}
 
-          {/* ===== PASO 2: verificar OTP ===== */}
+          {/* ===== PASO 2: CÓDIGO ===== */}
           {step === 2 && (
             <div className="animate-fade pi-auth__step">
               <div className="pi-auth__step-icon"><FaEnvelopeOpenText size={34} aria-hidden="true" /></div>
@@ -184,103 +154,58 @@ export default function RecuperarContra() {
                 Generamos un código de 6 dígitos para <strong>{email}</strong>. Ingresálo abajo para continuar.
               </p>
               {codigoDemo && (
-                <p className="pi-auth__subtitle">
-                  Modo desarrollo (sin correo real): tu código es <strong>{codigoDemo}</strong>
-                </p>
+                <AvisoFijo tono="info" titulo="Modo desarrollo (sin correo real)">
+                  Tu código es <strong>{codigoDemo}</strong>
+                </AvisoFijo>
               )}
 
-              <form onSubmit={handleVerificarCodigo} className="pi-auth__form">
-                <fieldset className="otp-inputs-container" style={{ border: 0, padding: 0, margin: 0 }}>
-                  <legend className="sr-only">Código de seguridad de 6 dígitos</legend>
-                  {otp.map((digit, index) => (
-                    <input
-                      key={index}
-                      ref={(el) => (inputRefs.current[index] = el)}
-                      type="text"
-                      inputMode="numeric"
-                      autoComplete={index === 0 ? 'one-time-code' : 'off'}
-                      maxLength="1"
-                      className="otp-digit-input"
-                      aria-label={`Dígito ${index + 1} de 6`}
-                      value={digit}
-                      onChange={(e) => handleOtpChange(index, e.target.value)}
-                      onKeyDown={(e) => handleOtpKeyDown(index, e)}
-                      autoFocus={index === 0}
-                    />
-                  ))}
-                </fieldset>
-
-                {error && <p className="pi-auth__error" role="alert">{error}</p>}
-                {success && <p className="pi-auth__success" role="status">{success}</p>}
-
-                <button type="submit" className="pi-auth__submit" style={{ marginTop: '20px' }}>
+              <form onSubmit={handleVerificarCodigo} className="pi-auth__form pi-auth__form--codigo" noValidate>
+                <InputCodigo
+                  valor={codigo}
+                  onCambio={(v) => { setCodigo(v); setErrores({}); }}
+                  etiqueta="Código de seguridad de 6 dígitos"
+                  error={!!errores.codigo}
+                  idError="rec-codigo-error"
+                />
+                <ErrorCampo id="rec-codigo-error" mensaje={errores.codigo} />
+                {error && <AvisoFijo tono="error">{error}</AvisoFijo>}
+                <Boton type="submit" tamano="lg" pildora anchoCompleto icono={FaCheck} cargando={enviando}>
                   Verificar código
-                </button>
+                </Boton>
               </form>
-              <p className="otp-resend">¿No lo recibiste? <button type="button" onClick={handleReenviarCodigo}>Reenviar código</button></p>
+
+              <p className="pi-auth__reenviar">
+                ¿No lo recibiste?
+                <Boton variante="fantasma" tamano="sm" onClick={handleReenviarCodigo} disabled={enviando}>Reenviar código</Boton>
+              </p>
             </div>
           )}
 
-          {/* ===== PASO 3: nueva contraseña ===== */}
+          {/* ===== PASO 3: NUEVA CONTRASEÑA ===== */}
           {step === 3 && (
             <div className="animate-fade pi-auth__step">
               <div className="pi-auth__step-icon"><FaKey size={34} aria-hidden="true" /></div>
               <h1 className="pi-auth__title">Crear nueva contraseña</h1>
-              <p className="pi-auth__subtitle">
-                Identidad verificada. Escribí una contraseña segura que no hayas usado antes.
-              </p>
+              <p className="pi-auth__subtitle">Identidad verificada. Escribí una contraseña segura que no hayas usado antes.</p>
 
-              <form onSubmit={handleRestablecerContra} className="pi-auth__form">
-                <div className="pi-auth__field">
-                  <label htmlFor="rec-password">Nueva contraseña</label>
-                  <div className="pi-auth__control">
-                    <span className="pi-auth__icon" aria-hidden="true"><MdLock size={18} /></span>
-                    <input
-                      id="rec-password"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder="Mínimo 6 caracteres"
-                      required
-                      autoFocus
-                    />
-                    <button
-                      type="button"
-                      className="pi-auth__ghost-btn"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                      aria-pressed={showPassword}
-                    >
-                      {showPassword ? <MdVisibilityOff size={18} aria-hidden="true" /> : <MdVisibility size={18} aria-hidden="true" />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="pi-auth__field">
-                  <label htmlFor="rec-password-2">Confirmar nueva contraseña</label>
-                  <div className="pi-auth__control">
-                    <span className="pi-auth__icon" aria-hidden="true"><MdLock size={18} /></span>
-                    <input
-                      id="rec-password-2"
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Repetí tu contraseña"
-                      required
-                    />
-                  </div>
-                </div>
-
-                {error && <p className="pi-auth__error" role="alert">{error}</p>}
-                {success && <p className="pi-auth__success" role="status">{success}</p>}
-
-                <button type="submit" className="pi-auth__submit">Restablecer contraseña</button>
+              <form onSubmit={handleRestablecerContra} className="pi-auth__form" noValidate>
+                <Campo
+                  id="rec-password" etiqueta="Nueva contraseña" contrasena autoComplete="new-password"
+                  placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`} value={password}
+                  onChange={(e) => setPassword(e.target.value)} error={erroresPaso3['rec-password']}
+                />
+                <Campo
+                  id="rec-password-2" etiqueta="Confirmar contraseña" contrasena autoComplete="new-password"
+                  placeholder="Repetí la contraseña" value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)} error={erroresPaso3['rec-password-2']}
+                />
+                {error && <AvisoFijo tono="error">{error}</AvisoFijo>}
+                <Boton type="submit" tamano="lg" pildora anchoCompleto icono={FaKey} cargando={enviando}>
+                  Restablecer contraseña
+                </Boton>
               </form>
             </div>
           )}
-
         </main>
       </div>
 
@@ -291,6 +216,6 @@ export default function RecuperarContra() {
         </div>
       </aside>
       </div>
-  </div>
+    </div>
   );
 }

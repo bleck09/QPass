@@ -1,39 +1,53 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { forzarTemaClaro } from '../../utils/tema.js';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  MdEmail,
-  MdLock,
-  MdArrowBack,
-  MdVisibility,
-  MdVisibilityOff
-} from 'react-icons/md';
+import { FaEnvelope, FaArrowLeft, FaSignInAlt } from 'react-icons/fa';
 import { ROLE_HOME_PATH } from '../../constants/roles.js';
 import { guardarSesion } from '../../api/client.js';
 import api from '../../api/index.js';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import { AvisoFijo } from '../../components/Avisos.jsx';
+import { errorCorreo, errorObligatorio, limpiarErrores, enfocarPrimero } from '../../utils/validacion.js';
 import './auth.css';
-import './Login.css';
+
+const validar = ({ email, password }) => limpiarErrores({
+  'login-email': errorCorreo(email),
+  'login-password': errorObligatorio(password, 'Escribí tu contraseña.'),
+});
 
 export default function Login() {
+  // Esta pantalla se ve siempre en claro: el tema oscuro es solo del
+  // panel (ver utils/tema.js).
+  useEffect(() => { forzarTemaClaro(); }, []);
+
   useTituloPagina('Iniciar sesión');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  // Error del servidor (credenciales, red). Los de cada campo van junto al campo.
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
+  // Los errores por campo se ven recién después del primer intento (PLAN §2.5).
+  const [intento, setIntento] = useState(false);
   const navigate = useNavigate();
+
+  const errores = intento ? validar({ email, password }) : {};
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
-    setCargando(true);
+    setIntento(true);
+    const errs = validar({ email, password });
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ['login-email', 'login-password']);
 
+    setCargando(true);
     try {
-      const { token, usuario } = await api.auth.login(email, password);
+      const { token, usuario } = await api.auth.login(email.trim(), password);
       guardarSesion({ ...usuario, token });
       navigate(ROLE_HOME_PATH[usuario.rol] || '/');
     } catch (err) {
-      setError(err.message === 'Credenciales inválidas' ? 'Credenciales incorrectas. Verifica tu correo o contraseña.' : err.message);
+      setError(err.message === 'Credenciales inválidas' ? 'Credenciales incorrectas. Verificá tu correo o contraseña.' : err.message);
     } finally {
       setCargando(false);
     }
@@ -41,9 +55,9 @@ export default function Login() {
 
   return (
     <div className="pi-auth">
-      <button type="button" className="pi-auth__back" onClick={() => navigate('/')}>
-        <MdArrowBack size={18} aria-hidden="true" /> Volver al inicio
-      </button>
+      <Boton variante="translucido" tamano="sm" pildora icono={FaArrowLeft} className="pi-auth__volver" onClick={() => navigate('/')}>
+        Volver al inicio
+      </Boton>
 
       <div className="pi-auth__card">
         <div className="pi-auth__panel">
@@ -52,73 +66,32 @@ export default function Login() {
           <h1 className="pi-auth__title">Iniciar sesión</h1>
           <p className="pi-auth__subtitle">Ingresá tus credenciales para acceder al portal de QPass.</p>
 
-          <form onSubmit={handleLogin} className="pi-auth__form">
+          <form onSubmit={handleLogin} className="pi-auth__form" noValidate>
+            <Campo
+              id="login-email" etiqueta="Correo electrónico" icono={FaEnvelope}
+              type="email" autoComplete="email" placeholder="usuario@qpass.com"
+              value={email} onChange={(e) => setEmail(e.target.value)}
+              error={errores['login-email']}
+            />
+            <Campo
+              id="login-password" etiqueta="Contraseña" contrasena
+              etiquetaExtra={<Link to="/recuperar" className="pi-auth__link">¿Olvidaste tu contraseña?</Link>}
+              autoComplete="current-password" placeholder="••••••••"
+              value={password} onChange={(e) => setPassword(e.target.value)}
+              error={errores['login-password']}
+            />
 
-            <div className="pi-auth__field">
-              <label htmlFor="login-email">Correo electrónico</label>
-              <div className="pi-auth__control">
-                <span className="pi-auth__icon" aria-hidden="true"><MdEmail size={18} /></span>
-                <input
-                  id="login-email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="usuario@qpass.com"
-                  required
-                />
-              </div>
-            </div>
+            {error && <AvisoFijo tono="error">{error}</AvisoFijo>}
 
-            <div className="pi-auth__field">
-              <label htmlFor="login-password">Contraseña</label>
-              <div className="pi-auth__control">
-                <span className="pi-auth__icon" aria-hidden="true"><MdLock size={18} /></span>
-                <input
-                  id="login-password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                />
-                <button
-                  type="button"
-                  className="pi-auth__ghost-btn"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                  aria-pressed={showPassword}
-                >
-                  {showPassword
-                    ? <MdVisibilityOff size={18} aria-hidden="true" />
-                    : <MdVisibility size={18} aria-hidden="true" />}
-                </button>
-              </div>
-            </div>
+            <Boton type="submit" tamano="lg" pildora anchoCompleto icono={FaSignInAlt} cargando={cargando}>
+              {cargando ? 'Entrando…' : 'Entrar'}
+            </Boton>
 
-            <div className="pi-login-options">
-              <label className="pi-login-checkbox">
-                <input type="checkbox" /> Recordarme
-              </label>
-              <Link to="/recuperar" className="pi-auth__link">¿Olvidaste tu contraseña?</Link>
-            </div>
+            <div className="pi-auth__separador"><span>o</span></div>
 
-            {error && <p className="pi-auth__error" role="alert">{error}</p>}
-
-            <button type="submit" className="pi-auth__submit" disabled={cargando}>
-              {cargando ? 'Entrando…' : 'Entrar '}
-            </button>
-
-            <div className="pi-login-divider"><span>o</span></div>
-
-            <button
-              type="button"
-              className="pi-login-btn-register"
-              onClick={() => navigate('/registrar')}
-            >
+            <Boton variante="secundario" tamano="lg" pildora anchoCompleto onClick={() => navigate('/registrar')}>
               Crear una cuenta
-            </button>
+            </Boton>
           </form>
         </main>
       </div>

@@ -10,17 +10,21 @@ import Migas from '../../components/Migas.jsx';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import Paginador from '../../components/Paginador.jsx';
 import AvisosStockPanel from '../../components/AvisosStockPanel.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import StatCard from '../../components/StatCard.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import Boton from '../../components/Boton.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import { estadoStockProducto } from '../../utils/stock.js';
 import { usePaginacion } from '../../utils/usePaginacion.js';
 import { useApi } from '../../utils/useApi.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
 import {
-  FaStore, FaPlus, FaListUl, FaTrash, FaExternalLinkAlt, FaExclamationTriangle,
+  FaStore, FaPlus, FaListUl, FaTrash, FaExternalLinkAlt, FaExclamationTriangle, FaCalendarTimes, FaCheckCircle,
 } from 'react-icons/fa';
 import './UsuarioNegocio.css';
-import '../supervisor/GestionEntrega.css';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 
@@ -28,6 +32,7 @@ export default function UsuarioNegocio() {
   useTituloPagina('Mi negocio');
   const sesion = leerSesion();
   const navigate = useNavigate();
+  const avisos = useAvisos();
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
   // El evento abierto vive en la URL (?evento=<id>): así al volver del detalle
@@ -63,7 +68,6 @@ export default function UsuarioNegocio() {
   const cargarBase = useCallback(() => api.puestosBase.listar(), []);
   const { data: puestosBase } = useApi(cargarBase, { inicial: [] });
 
-
   const eventosFiltrados = useMemo(
     () => filtrarEventos(eventos, busquedaEvento, filtroEvento),
     [eventos, busquedaEvento, filtroEvento],
@@ -72,7 +76,10 @@ export default function UsuarioNegocio() {
   const eventoSeleccionado = eventos.find(e => e.id === eventoId) || null;
 
   const [showActivar, setShowActivar] = useState(false);
+  // Error del servidor dentro del modal de activar (fuera del modal va como aviso).
   const [err, setErr] = useState('');
+  // Id del puesto base que se está activando: su botón muestra el spinner.
+  const [activando, setActivando] = useState(null);
   // Logos que fallaron al cargar: caen al placeholder <FaStore/> en vez de mostrar la imagen rota.
   const [logosRotos, setLogosRotos] = useState(() => new Set());
   const marcarLogoRoto = (id) => setLogosRotos(prev => new Set(prev).add(id));
@@ -89,7 +96,7 @@ export default function UsuarioNegocio() {
   const abrirDetallePuesto = (puesto) =>
     navigate(`/usuarionegocio/evento/${eventoId}/puesto/${puesto.id}`);
 
-  // Productos sin stock / bajos por puesto (derivado, para el badge de la tabla).
+  // Productos sin stock / bajos por puesto (derivado, para las insignias de la tabla).
   const alertaStockDe = (puesto) => {
     let sin = 0;
     let bajo = 0;
@@ -104,11 +111,17 @@ export default function UsuarioNegocio() {
   // --- ACTIVAR UN PUESTO BASE EN EL EVENTO ---
   const activarPuesto = async (base) => {
     setErr('');
+    setActivando(base.id);
     try {
       await api.puestos.crear({ eventoId, puestoBaseId: base.id });
       await recargarPuestos();
       setShowActivar(false);
-    } catch (e2) { setErr(e2.message); }
+      avisos.exito(`"${base.nombre}" ya está activo en este evento.`, { titulo: 'Puesto activado' });
+    } catch (e2) {
+      setErr(e2.message);
+    } finally {
+      setActivando(null);
+    }
   };
 
   const desactivarPuesto = async (puesto) => {
@@ -122,25 +135,31 @@ export default function UsuarioNegocio() {
     try {
       await api.puestos.desactivar(puesto.id);
       await recargarPuestos();
-    } catch (e2) { setErr(e2.message); }
+      avisos.exito(`"${puesto.nombre}" se quitó de este evento.`);
+    } catch (e2) {
+      avisos.error(e2.message, { titulo: 'No se pudo quitar el puesto' });
+    }
   };
 
   if (!eventoSeleccionado) {
     return (
       <div className="pi-unegocio-container">
         <Migas items={[{ texto: 'Panel de negocio', actual: true }]} />
-        <div className="pi-unegocio-header-wrapper">
-          <div className="pi-unegocio-header">
-            <h1>Panel de negocio</h1>
-            <p>Elige el evento en el que quieres administrar tus puestos.</p>
-          </div>
-        </div>
+        <EncabezadoPagina
+          titulo="Panel de negocio"
+          subtitulo="Elegí el evento en el que querés administrar tus puestos."
+          icono={FaStore}
+        />
         {errorEventos ? (
           <EstadoError onReintentar={recargarEventos} />
         ) : cargandoEventos ? (
           <EstadoCarga filas={3} />
         ) : eventos.length === 0 ? (
-          <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+          <EstadoVacio
+            icono={FaCalendarTimes}
+            titulo="Todavía no tenés ningún evento asignado"
+            mensaje="Pedile a Admin que te asigne uno para empezar a vender."
+          />
         ) : (
           <>
             <Buscador
@@ -153,7 +172,7 @@ export default function UsuarioNegocio() {
               onFiltro={setFiltroEvento}
               etiquetaFiltros="Filtrar eventos por estado"
             />
-            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+            <GrillaEventos eventos={eventosFiltrados}>
               {ev => (
                 <EventoCard
                   key={ev.id}
@@ -182,132 +201,113 @@ export default function UsuarioNegocio() {
         />
       </div>
 
-      <div className="pi-unegocio-header-wrapper">
-        <div className="pi-unegocio-header">
-          <h1>{eventoSeleccionado.nombre}</h1>
-          <p>Activá los puestos de tu catálogo en este evento y ajustá su menú (precios, stock y disponibilidad) solo para acá.</p>
-        </div>
-
-        <div className="pi-unegocio-kpi">
-          <span className="micro-etiqueta">Puestos en este evento</span>
-          <div className="kpi-valor">
-            <FaStore className="kpi-icon" />
-            <span className="numero-grande">{puestos.length}</span>
-          </div>
-        </div>
-      </div>
+      <EncabezadoPagina
+        titulo={eventoSeleccionado.nombre}
+        subtitulo="Activá los puestos de tu catálogo en este evento y ajustá su menú (precios, stock y disponibilidad) solo para acá."
+        icono={FaStore}
+        acciones={<StatCard icon={<FaStore />} tono="info" valor={puestos.length} label="Puestos en este evento" />}
+      />
 
       <div className="pi-unegocio-action-bar">
-        <h2 className="pi-unegocio-subtitulo"><FaStore aria-hidden="true" /> Mis Puestos</h2>
-        <div className="qp-btn-group">
-          <button type="button" className="btn-secundario-sm" onClick={() => navigate('/usuarionegocio/catalogo')}>
-            <FaExternalLinkAlt /> Mi Catálogo
-          </button>
-          <button type="button" className="btn-primario" onClick={() => { setErr(''); setShowActivar(true); }}>
-            <FaPlus /> Activar puesto
-          </button>
+        <h2 className="pi-unegocio-subtitulo"><FaStore aria-hidden="true" /> Mis puestos</h2>
+        <div className="btn-acciones">
+          <Boton variante="secundario" icono={FaExternalLinkAlt} onClick={() => navigate('/usuarionegocio/catalogo')}>
+            Mi catálogo
+          </Boton>
+          <Boton icono={FaPlus} onClick={() => { setErr(''); setShowActivar(true); }}>
+            Activar puesto
+          </Boton>
         </div>
       </div>
 
       <AvisosStockPanel />
 
-      {err && !showActivar && <p className="pi-unegocio-nota pi-unegocio-nota--error">{err}</p>}
-
       {errorPuestos && <EstadoError onReintentar={recargarPuestos} />}
       {!errorPuestos && cargandoPuestos && <EstadoCarga filas={4} />}
       {!errorPuestos && !cargandoPuestos && (
-      <div className="pi-unegocio-card">
         <Tabla
+          card
           columnas={['Puesto', 'Catálogo', 'Ayudantes', { texto: 'Acciones', align: 'center' }]}
           datos={puestos}
           vacio="Aún no activaste ningún puesto en este evento. Usá “Activar puesto”."
           renderFila={puesto => {
             const stk = alertaStockDe(puesto);
             return (
-            <tr key={puesto.id}>
-              <td>
-                <div className="item-info">
-                  {puesto.logo && !logosRotos.has(puesto.id) ? (
-                    <img
-                      width="48"
-                      height="48"
-                      src={puesto.logo}
-                      alt=""
-                      className="item-img"
-                      onError={() => marcarLogoRoto(puesto.id)}
-                    />
-                  ) : (
-                    <div className="item-no-img"><FaStore /></div>
-                  )}
-                  <div>
-                    <div className="fila-nombre">{puesto.nombre}</div>
-                    <div className="celda-secundaria">{puesto.descripcion}</div>
+              <tr key={puesto.id}>
+                <td>
+                  <div className="item-info">
+                    {puesto.logo && !logosRotos.has(puesto.id) ? (
+                      <img
+                        width="48"
+                        height="48"
+                        src={puesto.logo}
+                        alt=""
+                        className="item-img"
+                        onError={() => marcarLogoRoto(puesto.id)}
+                      />
+                    ) : (
+                      <div className="item-no-img"><FaStore aria-hidden="true" /></div>
+                    )}
+                    <div>
+                      <div className="fila-nombre">{puesto.nombre}</div>
+                      <div className="celda-secundaria">{puesto.descripcion}</div>
+                    </div>
                   </div>
-                </div>
-              </td>
-              <td>
-                <div className="pi-unegocio-catalogo-cel">
-                  <span className="badge-info">
-                    {puesto.productos.length} {puesto.productos.length === 1 ? 'producto' : 'productos'}
-                  </span>
-                  {stk.sin > 0 && (
-                    <span className="pi-unegocio-badge-falta">
-                      <FaExclamationTriangle aria-hidden="true" /> {stk.sin} sin stock
-                    </span>
+                </td>
+                <td>
+                  <div className="pi-unegocio-catalogo-cel">
+                    <Insignia tono="info">
+                      {puesto.productos.length} {puesto.productos.length === 1 ? 'producto' : 'productos'}
+                    </Insignia>
+                    {stk.sin > 0 && <Insignia tono="danger" icono={FaExclamationTriangle}>{stk.sin} sin stock</Insignia>}
+                    {stk.bajo > 0 && <Insignia tono="warn">{stk.bajo} bajo</Insignia>}
+                  </div>
+                </td>
+                <td>
+                  {puesto.ayudantes.length > 0 ? (
+                    <Insignia tono="neutro" icono={FaCheckCircle}>
+                      {puesto.ayudantes.length} {puesto.ayudantes.length === 1 ? 'asignado' : 'asignados'}
+                    </Insignia>
+                  ) : (
+                    <Insignia tono="warn" icono={FaExclamationTriangle} punto latido>Falta asignar</Insignia>
                   )}
-                  {stk.bajo > 0 && (
-                    <span className="badge-ayudantes">{stk.bajo} bajo</span>
-                  )}
-                </div>
-              </td>
-              <td>
-                {puesto.ayudantes.length > 0 ? (
-                  <span className="badge-ayudantes">
-                    {puesto.ayudantes.length} {puesto.ayudantes.length === 1 ? 'asignado' : 'asignados'}
-                  </span>
-                ) : (
-                  <span className="pi-unegocio-badge-falta">
-                    <FaExclamationTriangle aria-hidden="true" /> Falta asignar
-                  </span>
-                )}
-              </td>
-              <td className="td-centro">
-                <div className="btn-acciones">
-                  <button type="button" className="btn-secundario-sm" onClick={() => abrirDetallePuesto(puesto)}>
-                    <FaListUl aria-hidden="true" /> <span className="btn-acciones__texto">Detalles</span>
-                  </button>
-                  <button type="button" className="btn-secundario-sm btn-secundario-sm--peligro" onClick={() => desactivarPuesto(puesto)} title="Quitar del evento">
-                    <FaTrash aria-hidden="true" /> <span className="btn-acciones__texto">Quitar</span>
-                  </button>
-                </div>
-              </td>
-            </tr>
+                </td>
+                <td className="td-centro">
+                  <div className="btn-acciones">
+                    <Boton variante="secundario" tamano="sm" icono={FaListUl} onClick={() => abrirDetallePuesto(puesto)}>
+                      Detalles
+                    </Boton>
+                    <Boton variante="peligro-suave" tamano="sm" icono={FaTrash} onClick={() => desactivarPuesto(puesto)} title="Quitar del evento">
+                      Quitar
+                    </Boton>
+                  </div>
+                </td>
+              </tr>
             );
           }}
         />
-      </div>
       )}
 
       {/* =========================================
-          MODAL 1: ACTIVAR UN PUESTO BASE EN EL EVENTO
+          MODAL: ACTIVAR UN PUESTO BASE EN EL EVENTO
       ========================================= */}
       {showActivar && (
         <Modal
-          titulo={<><FaStore color="var(--indigo-profundo)" aria-hidden="true" /> Activar un puesto en {eventoSeleccionado.nombre}</>}
+          titulo={<><FaStore aria-hidden="true" /> Activar un puesto en {eventoSeleccionado.nombre}</>}
           onCerrar={() => setShowActivar(false)}
         >
-          <div className="modal-body">
-            {puestosBase.length === 0 ? (
-              <div className="pi-unegocio-vacio-modal">
-                <p>Todavía no tenés puestos en tu catálogo.</p>
-                <button type="button" className="btn-primario" onClick={() => navigate('/usuarionegocio/catalogo')}>
-                  <FaExternalLinkAlt /> Ir a Mi Catálogo
-                </button>
-              </div>
-            ) : basesDisponibles.length === 0 ? (
-              <p className="tabla-vacia">Ya activaste todos tus puestos del catálogo en este evento.</p>
-            ) : (
-              <>
+          {puestosBase.length === 0 ? (
+            <EstadoVacio
+              compacto
+              icono={FaStore}
+              titulo="Todavía no tenés puestos en tu catálogo"
+              mensaje="Primero creá tus puestos en Mi catálogo; después los activás en cada evento."
+              accion={<Boton icono={FaExternalLinkAlt} onClick={() => navigate('/usuarionegocio/catalogo')}>Ir a Mi catálogo</Boton>}
+            />
+          ) : basesDisponibles.length === 0 ? (
+            <EstadoVacio compacto icono={FaCheckCircle} titulo="Ya activaste todos tus puestos del catálogo en este evento" />
+          ) : (
+            <>
               <div className="pi-unegocio-base-lista">
                 {basesPag.slice.map(base => (
                   <div key={base.id} className="pi-unegocio-base-item">
@@ -322,7 +322,7 @@ export default function UsuarioNegocio() {
                           onError={() => marcarLogoRoto(base.id)}
                         />
                       ) : (
-                        <div className="item-no-img"><FaStore /></div>
+                        <div className="item-no-img"><FaStore aria-hidden="true" /></div>
                       )}
                       <div>
                         <div className="fila-nombre">{base.nombre}</div>
@@ -331,9 +331,15 @@ export default function UsuarioNegocio() {
                         </div>
                       </div>
                     </div>
-                    <button type="button" className="btn-primario" onClick={() => activarPuesto(base)}>
-                      <FaPlus /> Activar
-                    </button>
+                    <Boton
+                      tamano="sm"
+                      icono={FaPlus}
+                      onClick={() => activarPuesto(base)}
+                      cargando={activando === base.id}
+                      disabled={activando !== null && activando !== base.id}
+                    >
+                      Activar
+                    </Boton>
                   </div>
                 ))}
               </div>
@@ -344,12 +350,11 @@ export default function UsuarioNegocio() {
                 total={basesPag.total}
                 unidad="puestos"
               />
-              </>
-            )}
-            {err && <p className="pi-unegocio-nota pi-unegocio-nota--error">{err}</p>}
-            <div className="modal-actions">
-              <button type="button" className="btn-cancelar" onClick={() => setShowActivar(false)}>Cerrar</button>
-            </div>
+            </>
+          )}
+          {err && <AvisoFijo tono="error">{err}</AvisoFijo>}
+          <div className="modal-actions">
+            <Boton variante="secundario" onClick={() => setShowActivar(false)}>Cerrar</Boton>
           </div>
         </Modal>
       )}

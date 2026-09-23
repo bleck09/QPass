@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { FaExclamationTriangle } from 'react-icons/fa';
 import { useFocoModal } from '../utils/useFocoModal.js';
 import { bloquearScroll } from '../utils/bloqueoScroll.js';
+import Boton from './Boton.jsx';
 import './ConfirmarModal.css';
 
 /*
@@ -102,21 +103,16 @@ export function useConfirmar() {
         )}
 
         <div className="confirmar-acciones">
-          <button
-            type="button"
-            className="confirmar-btn confirmar-btn-cancelar"
-            onClick={() => responder(valorCancelar)}
-          >
+          <Boton variante="secundario" onClick={() => responder(valorCancelar)}>
             {o.textoCancelar || 'Cancelar'}
-          </button>
-          <button
-            type="button"
-            className={`confirmar-btn confirmar-btn-ok${o.peligroso ? ' es-peligroso' : ''}`}
+          </Boton>
+          <Boton
+            variante={o.peligroso ? 'peligro' : 'primario'}
             onClick={() => responder(conNota ? nota : true)}
             disabled={confirmarDeshabilitado}
           >
             {o.textoConfirmar || 'Confirmar'}
-          </button>
+          </Boton>
         </div>
       </div>
     </div>

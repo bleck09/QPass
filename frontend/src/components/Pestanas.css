@@ -1,11 +1,20 @@
 /* =========================================================================
    PESTAÑAS ÚNICAS — ver Pestanas.jsx. Tokens semánticos (claro/oscuro).
    Animaciones: keyframes compartidos de styles/animaciones.css.
+
+   Páginas con colores propios (landing pública) NO crean pestañas nuevas:
+   redefinen las variables --pest-* en su contenedor (PLAN §2.0).
    ========================================================================= */
 
 .qp-pestanas {
   --ind-x: 0px;
   --ind-ancho: 0px;
+  --pest-texto: var(--text-secondary);
+  --pest-texto-hover: var(--text-primary);
+  --pest-texto-activa: var(--action);
+  --pest-fondo: var(--bg-sunken);
+  --pest-indicador: var(--bg-surface);
+  --pest-radio: var(--radius-md);
   position: relative;
   display: inline-flex;
   align-items: stretch;
@@ -29,7 +38,7 @@
   padding: 0 var(--space-4);
   border: none;
   background: none;
-  color: var(--text-secondary);
+  color: var(--pest-texto);
   font-family: inherit;
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
@@ -38,8 +47,8 @@
   transition: color var(--duration-normal) var(--ease-out);
 }
 
-.qp-pestana:hover:not(:disabled) { color: var(--text-primary); }
-.qp-pestana.activa { color: var(--action); }
+.qp-pestana:hover:not(:disabled, .activa) { color: var(--pest-texto-hover); }
+.qp-pestana.activa { color: var(--pest-texto-activa); }
 .qp-pestana:disabled { opacity: 0.45; cursor: not-allowed; }
 .qp-pestana:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: -2px; border-radius: var(--radius-md); }
 
@@ -74,17 +83,17 @@
 /* ---------- Variante segmento (píldora) ---------- */
 .qp-pestanas--segmento {
   padding: var(--space-1);
-  border-radius: var(--radius-lg);
-  background: var(--bg-sunken);
+  border-radius: calc(var(--pest-radio) + var(--space-1));
+  background: var(--pest-fondo);
 }
 
-.qp-pestanas--segmento .qp-pestana { border-radius: var(--radius-md); }
+.qp-pestanas--segmento .qp-pestana { border-radius: var(--pest-radio); }
 
 .qp-pestanas--segmento .qp-pestanas-indicador {
   top: var(--space-1);
   bottom: var(--space-1);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
+  border-radius: var(--pest-radio);
+  background: var(--pest-indicador);
   box-shadow: var(--shadow-sm);
 }
 
@@ -100,7 +109,7 @@
   bottom: 0;
   height: 3px;
   border-radius: var(--radius-full) var(--radius-full) 0 0;
-  background: var(--action);
+  background: var(--pest-texto-activa);
 }
 
 @media (max-width: 36rem) {

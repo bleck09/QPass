@@ -4,15 +4,22 @@ import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import SelectorEvento from '../../components/SelectorEvento.jsx';
+import Card from '../../components/Card.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
 import FiltroJornada from '../../components/FiltroJornada.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import { opcionesJornada } from '../../utils/eventos.js';
 import { useApi } from '../../utils/useApi.js';
+import { limpiarErrores, enfocarPrimero } from '../../utils/validacion.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaCalendarAlt, FaCalendarDay, FaTicketAlt, FaPlus, FaTrash, FaPen, FaTags, FaAlignLeft,
+  FaCalendarDay, FaTicketAlt, FaPlus, FaTrash, FaPen, FaTags, FaAlignLeft,
   FaBoxes, FaDollarSign, FaCoins, FaCheckCircle, FaHourglassHalf, FaCheck, FaTimes,
-  FaInfoCircle, FaExclamationTriangle
 } from 'react-icons/fa';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import api from '../../api/index.js';
@@ -44,20 +51,15 @@ function EditorBeneficios({ beneficios, onCambiar, inputId }) {
   return (
     <>
       <div className="pi-adtick-beneficio-agregar">
-        <div className="pi-adtick-input-wrapper">
-          <FaAlignLeft className="pi-adtick-input-icon" />
-          <input
-            type="text"
-            id={inputId}
-            value={actual}
-            onChange={(e) => setActual(e.target.value)}
-            onKeyDown={keyDown}
-            placeholder="Ej: Baño compartido — Enter para agregar"
-          />
-        </div>
-        <button type="button" className="pi-adtick-btn-agregar-beneficio" onClick={agregar}>
-          <FaPlus /> Agregar
-        </button>
+        <Campo
+          id={inputId}
+          icono={FaAlignLeft}
+          value={actual}
+          onChange={(e) => setActual(e.target.value)}
+          onKeyDown={keyDown}
+          placeholder="Ej: Baño compartido — Enter para agregar"
+        />
+        <Boton variante="secundario" icono={FaPlus} onClick={agregar}>Agregar</Boton>
       </div>
       {beneficios.length > 0 && (
         <ul className="pi-adtick-beneficios-lista">
@@ -76,10 +78,26 @@ function EditorBeneficios({ beneficios, onCambiar, inputId }) {
   );
 }
 
+const FORM_VACIO = { nombre: '', beneficios: [], cantidad: '', precio: '', diaEventoId: '' };
+
+// Misma validación para crear y para editar (los ids cambian: tk- / edit-tk-).
+const validarCategoria = (f, pre, minCantidad = 1) => limpiarErrores({
+  [`${pre}nombre`]: f.nombre.trim() ? null : 'Poné un nombre (VIP, General…).',
+  [`${pre}cantidad`]: !String(f.cantidad).trim()
+    ? 'Escribí cuántos tickets hay.'
+    : !(Number(f.cantidad) >= minCantidad)
+      ? `Tiene que ser ${minCantidad} o más (ya hay ${minCantidad} vendidas o reservadas).`
+      : null,
+  [`${pre}precio`]: String(f.precio).trim() === ''
+    ? 'Escribí el precio (0 si es gratis).'
+    : !(Number(f.precio) >= 0) ? 'El precio no puede ser negativo.' : null,
+});
+
 export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embebido = false } = {}) {
   useTituloPagina('Categorías de ticket', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
+  const avisos = useAvisos();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(eventoIdProp || location.state?.eventoId || '');
   // Embebido (pestaña del detalle de evento) o llegado desde Gestión de Eventos:
@@ -107,7 +125,11 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
   // beneficios: lista de líneas ("Baño compartido", "Acceso VIP"...) que se
   // muestran como bullets en el card de la landing — en vez de una sola
   // descripción larga (se veía todo en un solo bloque).
-  const [formCategoria, setFormCategoria] = useState({ nombre: '', beneficios: [], cantidad: '', precio: '', diaEventoId: '' });
+  const [formCategoria, setFormCategoria] = useState(FORM_VACIO);
+  const [intento, setIntento] = useState(false);
+  const [creando, setCreando] = useState(false);
+  const [errorCrear, setErrorCrear] = useState('');
+  const errores = intento ? validarCategoria(formCategoria, 'tk-') : {};
 
   const nombreJornada = (j, i) => j?.nombre || `Día ${j?.orden ?? i + 1}`;
   // Jornada efectiva: la elegida a mano, o la primera por defecto (sin efecto).
@@ -152,39 +174,64 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
     setFormCategoria({ ...formCategoria, [e.target.name]: e.target.value });
   };
 
+  // Alta normal: sin confirmación (PLAN §2.4), con validación en línea,
+  // cargando (antes se podía crear la misma categoría dos veces) y aviso.
   const agregarCategoria = async (e) => {
     e.preventDefault();
-    if (!formCategoria.nombre || !formCategoria.cantidad || formCategoria.precio === '' || !diaSel) return;
-
-    const nuevaCategoria = await api.categoriasTicket.crear({
-      eventoId,
-      diaEventoId: diaSel,
-      nombre: formCategoria.nombre,
-      beneficios: formCategoria.beneficios,
-      cantidad: Number(formCategoria.cantidad),
-      precio: Number(formCategoria.precio),
-    });
-
-    setCategorias(prev => [...prev, nuevaCategoria]);
-    setFormCategoria(f => ({ nombre: '', beneficios: [], cantidad: '', precio: '', diaEventoId: f.diaEventoId }));
+    setIntento(true);
+    const errs = validarCategoria(formCategoria, 'tk-');
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ['tk-nombre', 'tk-cantidad', 'tk-precio']);
+    if (!diaSel) return setErrorCrear('Este evento todavía no tiene jornadas: creá una antes de cargar tickets.');
+    setCreando(true);
+    setErrorCrear('');
+    try {
+      const nuevaCategoria = await api.categoriasTicket.crear({
+        eventoId,
+        diaEventoId: diaSel,
+        nombre: formCategoria.nombre.trim(),
+        beneficios: formCategoria.beneficios,
+        cantidad: Number(formCategoria.cantidad),
+        precio: Number(formCategoria.precio),
+      });
+      setCategorias(prev => [...prev, nuevaCategoria]);
+      setFormCategoria(f => ({ ...FORM_VACIO, diaEventoId: f.diaEventoId }));
+      setIntento(false);
+      avisos.exito(`La categoría "${nuevaCategoria.nombre}" quedó creada.`);
+    } catch (err) {
+      setErrorCrear(err?.message || 'No se pudo crear la categoría.');
+    } finally {
+      setCreando(false);
+    }
   };
 
-  const eliminarCategoria = async (id) => {
+  const eliminarCategoria = async (cat) => {
+    const colocadas = Number(cat.cantidadVendida ?? 0);
     const ok = await confirmar({
-      titulo: '¿Eliminar la categoría?',
-      mensaje: 'Se eliminará esta categoría de ticket del evento.',
+      titulo: `¿Eliminar la categoría "${cat.nombre}"?`,
+      mensaje: colocadas > 0
+        ? `Esta categoría ya tiene ${colocadas} ticket(s) vendidos o reservados. Si el sistema no deja borrarla, primero hay que anular esas entradas.`
+        : 'Se eliminará esta categoría de ticket del evento.',
       textoConfirmar: 'Eliminar',
       peligroso: true,
     });
     if (!ok) return;
-    await api.categoriasTicket.eliminar(id);
-    setCategorias(prev => prev.filter(c => c.id !== id));
+    try {
+      await api.categoriasTicket.eliminar(cat.id);
+      setCategorias(prev => prev.filter(c => c.id !== cat.id));
+      avisos.exito(`La categoría "${cat.nombre}" se eliminó.`);
+    } catch (err) {
+      avisos.error(err?.message || 'No se pudo eliminar la categoría.', { titulo: 'No se pudo eliminar' });
+    }
   };
 
   // --- Editar una categoría ya creada (típicamente: subirle el cupo) ---
   const [categoriaEditando, setCategoriaEditando] = useState(null);
   const [formEdicion, setFormEdicion] = useState({ nombre: '', beneficios: [], cantidad: '', precio: '' });
+  const [intentoEdicion, setIntentoEdicion] = useState(false);
+  const [guardandoEdicion, setGuardandoEdicion] = useState(false);
   const [errorEdicion, setErrorEdicion] = useState('');
+  const minCupo = Number(categoriaEditando?.cantidadVendida ?? 0);
+  const erroresEdicion = intentoEdicion ? validarCategoria(formEdicion, 'edit-tk-', minCupo || 1) : {};
 
   const abrirEditarCategoria = (cat) => {
     setCategoriaEditando(cat);
@@ -194,6 +241,7 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
       cantidad: String(cat.cantidad),
       precio: String(cat.precio),
     });
+    setIntentoEdicion(false);
     setErrorEdicion('');
   };
 
@@ -201,18 +249,27 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
 
   const guardarEdicionCategoria = async (e) => {
     e.preventDefault();
+    setIntentoEdicion(true);
+    const errs = validarCategoria(formEdicion, 'edit-tk-', minCupo || 1);
+    if (Object.keys(errs).length) {
+      return enfocarPrimero(errs, ['edit-tk-nombre', 'edit-tk-cantidad', 'edit-tk-precio']);
+    }
+    setGuardandoEdicion(true);
     setErrorEdicion('');
     try {
       const actualizada = await api.categoriasTicket.actualizar(categoriaEditando.id, {
-        nombre: formEdicion.nombre,
+        nombre: formEdicion.nombre.trim(),
         beneficios: formEdicion.beneficios,
         cantidad: Number(formEdicion.cantidad),
         precio: Number(formEdicion.precio),
       });
       setCategorias(prev => prev.map(c => (c.id === actualizada.id ? { ...c, ...actualizada } : c)));
+      avisos.exito(`Los cambios de "${actualizada.nombre}" quedaron guardados.`);
       cerrarEdicion();
     } catch (err) {
-      setErrorEdicion(err.message);
+      setErrorEdicion(err?.message || 'No se pudieron guardar los cambios.');
+    } finally {
+      setGuardandoEdicion(false);
     }
   };
 
@@ -226,115 +283,68 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
       )}
 
       {!embebido && (
-        <div className="pi-adtick-header">
-          <div>
-            <h1>Tickets del evento</h1>
-            <p>Crea las categorías de ticket disponibles para cada evento: cantidad, descripción y precio.</p>
-          </div>
-          <div className="pi-adtick-selector-evento">
-            <FaCalendarAlt />
-            {eventoBloqueado ? (
-              <strong>{eventosDisponibles.find(ev => ev.id === eventoId)?.nombre || 'Evento'}</strong>
-            ) : (
-              <select value={eventoId} onChange={(e) => setEventoId(e.target.value)}>
-                {eventosDisponibles.map(ev => (
-                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        </div>
+        <EncabezadoPagina
+          titulo="Tickets del evento"
+          subtitulo="Crea las categorías de ticket disponibles para cada evento: cantidad, beneficios y precio."
+          icono={FaTicketAlt}
+          acciones={
+            <SelectorEvento
+              id="tk-evento"
+              eventos={eventosDisponibles}
+              valor={eventoId}
+              onCambio={setEventoId}
+              bloqueado={eventoBloqueado}
+              nombre={eventosDisponibles.find(ev => ev.id === eventoId)?.nombre}
+            />
+          }
+        />
       )}
 
       {/* --- KPIs --- */}
-      <div className="pi-adtick-kpi-grid">
+      <div className="qp-stats">
         <StatCard icon={<FaTags />} tono="total" valor={totales.totalCategorias} label="Categorías creadas" />
         <StatCard icon={<FaTicketAlt />} tono="info" valor={totales.cupoTotal} label="Cupo total" />
         <StatCard icon={<FaCheckCircle />} tono="ok" valor={totales.vendidas} label="Vendidas (aprobadas)" />
         <StatCard icon={<FaHourglassHalf />} tono="warn" valor={totales.reservadas} label="Reservadas (por aprobar)" />
         <StatCard icon={<FaBoxes />} tono="total" valor={totales.disponibles} label="Disponibles" />
-        <StatCard icon={<FaCoins />} tono="ok" valor={`Bs. ${totales.ingresoPotencial}`} label="Ingreso potencial" />
+        <StatCard icon={<FaCoins />} tono="ok" valor={totales.ingresoPotencial} unidad="Bs." label="Ingreso potencial" />
       </div>
 
       {/* --- FORMULARIO: NUEVA CATEGORÍA --- */}
-      <div className="pi-adtick-card">
-        <h3 className="pi-adtick-subtitulo">Añadir Categoría de Ticket</h3>
-        <form onSubmit={agregarCategoria} className="pi-adtick-form">
+      <Card>
+        <h3 className="pi-adtick-subtitulo">Añadir categoría de ticket</h3>
+        <form onSubmit={agregarCategoria} noValidate>
           <div className="pi-adtick-form-grid">
             {jornadas.length > 1 && (
-              <div className="pi-adtick-input-group">
-                <label htmlFor="tk-jornada">Jornada</label>
-                <div className="pi-adtick-input-wrapper">
-                  <FaCalendarDay className="pi-adtick-input-icon" />
-                  <select
-                    id="tk-jornada"
-                    name="diaEventoId"
-                    value={diaSel}
-                    onChange={handleChange}
-                    required
-                  >
+              <Campo id="tk-jornada" etiqueta="Jornada" icono={FaCalendarDay}>
+                <div className="input-group__control">
+                  <FaCalendarDay className="input-group__icono" aria-hidden="true" />
+                  <select id="tk-jornada" name="diaEventoId" value={diaSel} onChange={handleChange}>
                     {jornadas.map((j, i) => (
                       <option key={j.id} value={j.id}>{nombreJornada(j, i)}</option>
                     ))}
                   </select>
                 </div>
-              </div>
+              </Campo>
             )}
 
-            <div className="pi-adtick-input-group">
-              <label htmlFor="tk-nombre">Nombre de la categoría</label>
-              <div className="pi-adtick-input-wrapper">
-                <FaTags className="pi-adtick-input-icon" />
-                <input
-                  type="text"
-                  id="tk-nombre"
-                  name="nombre"
-                  value={formCategoria.nombre}
-                  onChange={handleChange}
-                  placeholder="Ej: VIP"
-                  required
-                />
-              </div>
-            </div>
+            <Campo
+              id="tk-nombre" etiqueta="Nombre de la categoría" icono={FaTags} name="nombre"
+              value={formCategoria.nombre} onChange={handleChange} placeholder="Ej: VIP"
+              error={errores['tk-nombre']}
+            />
+            <Campo
+              id="tk-cantidad" etiqueta="Cantidad de tickets" icono={FaBoxes} type="number" min="1"
+              inputMode="numeric" name="cantidad" value={formCategoria.cantidad} onChange={handleChange}
+              placeholder="Ej: 200" error={errores['tk-cantidad']}
+            />
+            <Campo
+              id="tk-precio" etiqueta="Precio (Bs.)" icono={FaDollarSign} type="number" min="0" step="0.50"
+              inputMode="decimal" name="precio" value={formCategoria.precio} onChange={handleChange}
+              placeholder="Ej: 150" ayuda="0 = entrada gratis." error={errores['tk-precio']}
+            />
 
-            <div className="pi-adtick-input-group">
-              <label htmlFor="tk-cantidad">Cantidad de tickets</label>
-              <div className="pi-adtick-input-wrapper">
-                <FaBoxes className="pi-adtick-input-icon" />
-                <input
-                  type="number"
-                  min="1"
-                  id="tk-cantidad"
-                  inputMode="numeric"
-                  name="cantidad"
-                  value={formCategoria.cantidad}
-                  onChange={handleChange}
-                  placeholder="Ej: 200"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="pi-adtick-input-group">
-              <label htmlFor="tk-precio">Precio (Bs.)</label>
-              <div className="pi-adtick-input-wrapper">
-                <FaDollarSign className="pi-adtick-input-icon" />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.50"
-                  id="tk-precio"
-                  inputMode="decimal"
-                  name="precio"
-                  value={formCategoria.precio}
-                  onChange={handleChange}
-                  placeholder="Ej: 150"
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="pi-adtick-input-group pi-adtick-input-descripcion">
+            <div className="input-group pi-adtick-input-descripcion">
               <label htmlFor="tk-beneficio">Beneficios (uno por línea)</label>
               <EditorBeneficios
                 inputId="tk-beneficio"
@@ -344,16 +354,16 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
             </div>
           </div>
 
+          {errorCrear && <AvisoFijo tono="error">{errorCrear}</AvisoFijo>}
+
           <div className="pi-adtick-form-actions">
-            <button type="submit" className="pi-adtick-btn-add">
-              <FaPlus /> Crear Categoría
-            </button>
+            <Boton type="submit" icono={FaPlus} cargando={creando}>Crear categoría</Boton>
           </div>
         </form>
-      </div>
+      </Card>
 
       {/* --- TABLA DE CATEGORÍAS --- */}
-      <div className="pi-adtick-card">
+      <Card>
         <div className="pi-adtick-tabla-header">
           <h3 className="pi-adtick-subtitulo">Categorías creadas para este evento</h3>
           {filtrosJornada.length > 0 && (
@@ -370,83 +380,77 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
         ) : cargandoCategorias ? (
           <EstadoCarga filas={4} />
         ) : (
-        <Tabla
-          columnas={[
-            'Categoría',
-            ...(jornadas.length > 1 ? ['Jornada'] : []),
-            'Beneficios', 'Cupo', 'Vendidas', 'Reservadas', 'Disponibles', 'Precio',
-            { texto: 'Acción', align: 'center' },
-          ]}
-          datos={categoriasFiltradas}
-          vacio={filtroJornada !== 'todas' ? 'Ninguna categoría en esta jornada.' : 'Aún no hay categorías de ticket para este evento.'}
-          renderFila={cat => {
-            const disp = cat.disponibles ?? (cat.cantidad - (cat.cantidadVendida || 0));
-            return (
-              <tr key={cat.id}>
-                <td><span className="pi-adtick-badge-nombre">{cat.nombre}</span></td>
-                {jornadas.length > 1 && (
-                  <td><span className="celda-secundaria">{cat.diaEvento?.nombre || `Día ${cat.diaEvento?.orden ?? '?'}`}</span></td>
-                )}
-                <td><span className="celda-secundaria">{cat.beneficios?.length ? cat.beneficios.join(' · ') : '—'}</span></td>
-                <td>{cat.cantidad}</td>
-                <td>{cat.vendidas ?? 0}</td>
-                <td>{cat.reservadas ?? 0}</td>
-                <td className={disp <= 0 ? 'pi-adtick-agotado' : undefined}>{disp}</td>
-                <td className="pi-adtick-precio-celda">{cat.precio > 0 ? `Bs. ${cat.precio}` : 'Gratis'}</td>
-                <td style={{ textAlign: 'center' }}>
-                  <button type="button" className="pi-adtick-btn-editar-cat" onClick={() => abrirEditarCategoria(cat)} title="Editar categoría">
-                    <FaPen />
-                  </button>
-                  <button type="button" className="pi-adtick-btn-delete" onClick={() => eliminarCategoria(cat.id)} title="Eliminar categoría">
-                    <FaTrash />
-                  </button>
-                </td>
-              </tr>
-            );
-          }}
-        />
+          <Tabla
+            columnas={[
+              'Categoría',
+              ...(jornadas.length > 1 ? ['Jornada'] : []),
+              'Beneficios', 'Cupo', 'Vendidas', 'Reservadas', 'Disponibles', 'Precio',
+              { texto: 'Acción', srOnly: true },
+            ]}
+            datos={categoriasFiltradas}
+            vacio={filtroJornada !== 'todas' ? 'Ninguna categoría en esta jornada.' : 'Aún no hay categorías de ticket para este evento.'}
+            renderFila={cat => {
+              const disp = cat.disponibles ?? (cat.cantidad - (cat.cantidadVendida || 0));
+              return (
+                <tr key={cat.id}>
+                  <td><span className="fila-nombre">{cat.nombre}</span></td>
+                  {jornadas.length > 1 && (
+                    <td><span className="celda-secundaria">{cat.diaEvento?.nombre || `Día ${cat.diaEvento?.orden ?? '?'}`}</span></td>
+                  )}
+                  <td><span className="celda-secundaria">{cat.beneficios?.length ? cat.beneficios.join(' · ') : '—'}</span></td>
+                  <td>{cat.cantidad}</td>
+                  <td>{cat.vendidas ?? 0}</td>
+                  <td>{cat.reservadas ?? 0}</td>
+                  <td>{disp <= 0 ? <Insignia tono="danger">Agotado</Insignia> : disp}</td>
+                  <td className="celda-normal">{cat.precio > 0 ? `Bs. ${cat.precio}` : 'Gratis'}</td>
+                  <td className="td-derecha">
+                    <div className="btn-acciones">
+                      <Boton
+                        variante="secundario" tamano="sm" icono={FaPen}
+                        onClick={() => abrirEditarCategoria(cat)}
+                        aria-label={`Editar la categoría ${cat.nombre}`}
+                      />
+                      <Boton
+                        variante="peligro-suave" tamano="sm" icono={FaTrash}
+                        onClick={() => eliminarCategoria(cat)}
+                        aria-label={`Eliminar la categoría ${cat.nombre}`}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            }}
+          />
         )}
-      </div>
+      </Card>
 
       {categoriaEditando && (
-        <Modal
-          titulo={<><FaPen color="var(--indigo-profundo)" aria-hidden="true" /> Editar {categoriaEditando.nombre}</>}
-          onCerrar={cerrarEdicion}
-        >
-          <form onSubmit={guardarEdicionCategoria} className="formulario">
-            <p className="info-text">
-              <FaInfoCircle aria-hidden="true" /> El cupo no se puede bajar de {categoriaEditando.cantidadVendida ?? 0}
-              {' '}(ya vendidas/reservadas) — para achicarlo más, primero hay que anular esas entradas.
-            </p>
+        <Modal titulo={`Editar ${categoriaEditando.nombre}`} onCerrar={cerrarEdicion}>
+          <form onSubmit={guardarEdicionCategoria} className="formulario" noValidate>
+            <AvisoFijo tono="info">
+              El cupo no se puede bajar de {minCupo} (ya vendidas/reservadas) — para achicarlo más,
+              primero hay que anular esas entradas.
+            </AvisoFijo>
 
-            <div className="input-group">
-              <label htmlFor="edit-tk-nombre">Nombre de la categoría</label>
-              <input
-                id="edit-tk-nombre" type="text" value={formEdicion.nombre}
-                onChange={(e) => setFormEdicion(f => ({ ...f, nombre: e.target.value }))}
-                required
-              />
-            </div>
+            <Campo
+              id="edit-tk-nombre" etiqueta="Nombre de la categoría" value={formEdicion.nombre}
+              onChange={(e) => setFormEdicion(f => ({ ...f, nombre: e.target.value }))}
+              error={erroresEdicion['edit-tk-nombre']}
+            />
 
             <div className="form-inline">
-              <div className="input-group flex-1">
-                <label htmlFor="edit-tk-cantidad">Cantidad de tickets</label>
-                <input
-                  id="edit-tk-cantidad" type="number" min={categoriaEditando.cantidadVendida ?? 0}
-                  value={formEdicion.cantidad}
-                  onChange={(e) => setFormEdicion(f => ({ ...f, cantidad: e.target.value }))}
-                  required
-                />
-              </div>
-              <div className="input-group flex-1">
-                <label htmlFor="edit-tk-precio">Precio (Bs.)</label>
-                <input
-                  id="edit-tk-precio" type="number" min="0" step="0.50"
-                  value={formEdicion.precio}
-                  onChange={(e) => setFormEdicion(f => ({ ...f, precio: e.target.value }))}
-                  required
-                />
-              </div>
+              <Campo
+                id="edit-tk-cantidad" etiqueta="Cantidad de tickets" className="flex-1"
+                type="number" min={minCupo} value={formEdicion.cantidad}
+                onChange={(e) => setFormEdicion(f => ({ ...f, cantidad: e.target.value }))}
+                error={erroresEdicion['edit-tk-cantidad']}
+              />
+              <Campo
+                id="edit-tk-precio" etiqueta="Precio (Bs.)" className="flex-1"
+                type="number" min="0" step="0.50" value={formEdicion.precio}
+                onChange={(e) => setFormEdicion(f => ({ ...f, precio: e.target.value }))}
+                error={erroresEdicion['edit-tk-precio']}
+              />
             </div>
 
             <div className="input-group">
@@ -458,13 +462,11 @@ export default function AdminCrearTickets({ eventoId: eventoIdProp = null, embeb
               />
             </div>
 
-            {errorEdicion && (
-              <p className="pi-jor-error"><FaExclamationTriangle aria-hidden="true" /> {errorEdicion}</p>
-            )}
+            {errorEdicion && <AvisoFijo tono="error">{errorEdicion}</AvisoFijo>}
 
             <div className="modal-actions">
-              <button type="button" className="btn-cancelar" onClick={cerrarEdicion}>Cancelar</button>
-              <button type="submit" className="btn-primario"><FaCheck /> Guardar cambios</button>
+              <Boton variante="secundario" onClick={cerrarEdicion} disabled={guardandoEdicion}>Cancelar</Boton>
+              <Boton type="submit" icono={FaCheck} cargando={guardandoEdicion}>Guardar cambios</Boton>
             </div>
           </form>
         </Modal>

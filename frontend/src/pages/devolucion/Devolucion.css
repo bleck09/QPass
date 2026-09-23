@@ -1,51 +1,14 @@
-/* Prefix único: pi-dev- */
+/* =========================================================================
+   DEVOLUCIÓN (retiros de saldo) — layout propio (prefijo pi-dev-): las dos
+   columnas de la tarjeta de retiro y la foto obligatoria. Encabezado,
+   pestañas, números, botones, campos, montos rápidos (Filtros), insignias,
+   avisos, ficha del participante y modales son los GLOBALES.
+   ========================================================================= */
+
 .pi-dev-container {
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-.pi-dev-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.pi-dev-header h1,
-.pi-dev-header h2 {
-  color: var(--text-primary);
-  font-size: var(--text-xl);
-}
-
-.pi-dev-tabs {
-  display: flex;
-  gap: 8px;
-  background-color: var(--bg-page);
-  padding: 4px;
-  border-radius: var(--radius-md);
-}
-
-.pi-dev-tabs button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  background: none;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pi-dev-tabs button.activo {
-  background-color: var(--bg-surface);
-  color: var(--indigo-profundo);
-  box-shadow: 0 1px 4px rgba(10, 14, 39, 0.1);
 }
 
 /* --- PANEL DE ESCANEO --- */
@@ -75,64 +38,11 @@
   margin-bottom: 8px;
 }
 
-.pi-dev-btn-escanear {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--cian-digital);
-  color: var(--texto-sobre-vivo);
-  border: none;
-  padding: 16px 24px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-base);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 180, 216, 0.35);
-  transition: background 0.2s;
-}
-
-.pi-dev-btn-escanear:hover:not(:disabled) {
-  background-color: var(--cian-digital-hover);
-}
-
-.pi-dev-btn-escanear:disabled {
-  opacity: 0.7;
-  cursor: default;
-}
-
 /* --- HISTORIAL --- */
 .pi-dev-historial {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-/* --- RESUMEN DEL DÍA --- */
-.pi-dev-resumen {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-}
-
-.pi-dev-resumen-stat {
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
-}
-
-.pi-dev-resumen-stat .numero {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.pi-dev-resumen-stat .label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
 }
 
 /* --- TABLA DE HISTORIAL --- */
@@ -156,58 +66,6 @@
   color: var(--indigo-profundo);
 }
 
-.pi-dev-badge-tipo {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: var(--radius-xl);
-}
-
-.pi-dev-badge-tipo.normal {
-  background-color: var(--indigo-profundo-suave);
-  color: var(--indigo-profundo);
-}
-
-.pi-dev-badge-tipo.negocio {
-  background-color: var(--cian-digital-suave);
-  color: var(--cian-digital-texto);
-}
-
-/* --- MODAL / TARJETA GRANDE AL ESCANEAR --- */
-.pi-dev-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(10, 14, 39, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-modal);
-  padding: 20px;
-  animation: pi-dev-fadeIn 0.15s ease-out;
-}
-
-@keyframes pi-dev-fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.pi-dev-modal-tarjeta {
-  background: var(--bg-surface);
-  width: 100%;
-  max-width: 720px;
-  max-height: 92vh;
-  overflow-y: auto;
-  border-radius: var(--radius-xl);
-  padding: 32px 28px 24px;
-  position: relative;
-  text-align: center;
-  box-shadow: 0 20px 50px rgba(10, 14, 39, 0.25);
-  animation: pi-dev-slideUp 0.2s ease-out;
-}
-
 /* Dos columnas: identidad a la izquierda, formulario a la derecha, para que
    la tarjeta no crezca a lo largo hasta abajo de la pantalla. */
 .pi-dev-tarjeta-cols {
@@ -220,163 +78,22 @@
 }
 .pi-dev-col-id { text-align: center; }
 .pi-dev-col-form { min-width: 0; }
-.pi-dev-col-form > .pi-dev-form-monto { margin-top: 0; }
 
 @media (max-width: 680px) {
-  .pi-dev-modal-tarjeta { max-width: 440px; }
   .pi-dev-tarjeta-cols { grid-template-columns: 1fr; gap: 20px; }
-}
-
-@keyframes pi-dev-slideUp {
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.pi-dev-btn-cerrar {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  border: none;
-  background-color: var(--bg-page);
-  color: var(--text-secondary);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.pi-dev-tarjeta-estado {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  padding: 8px 16px;
-  border-radius: var(--radius-xl);
-  margin-bottom: 20px;
-  background-color: var(--verde-recarga-suave);
-  color: var(--verde-recarga-texto);
-}
-
-.pi-dev-tarjeta-foto {
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 5px solid var(--cian-digital-suave);
-  box-shadow: 0 6px 18px rgba(26, 43, 107, 0.2);
-}
-
-.pi-dev-tarjeta-nombre {
-  margin-top: 16px;
-  font-size: var(--text-xl);
-  color: var(--text-primary);
-}
-
-.pi-dev-tarjeta-nombre + .pi-dev-badge-tipo {
-  margin-top: 8px;
-}
-
-.pi-dev-tarjeta-datos {
-  margin-top: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  text-align: left;
-  background-color: var(--bg-page);
-  border-radius: var(--radius-lg);
-  padding: 16px 16px;
-}
-
-.pi-dev-tarjeta-dato {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: var(--indigo-profundo);
-  font-size: var(--text-lg);
-}
-
-.pi-dev-tarjeta-dato > div {
-  display: flex;
-  flex-direction: column;
-}
-
-.pi-dev-tarjeta-dato .label {
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-}
-
-.pi-dev-tarjeta-dato .valor {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-/* --- FORMULARIO DE MONTO --- */
-.pi-dev-form-monto {
-  margin-top: 20px;
-  text-align: left;
-}
-
-.pi-dev-form-monto label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.pi-dev-form-monto input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--text-primary);
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.pi-dev-form-monto input:focus {
-  border-color: var(--cian-digital);
-}
-
-.pi-dev-montos-rapidos {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.pi-dev-montos-rapidos button {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid var(--border);
-  background-color: var(--bg-page);
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--indigo-profundo);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pi-dev-montos-rapidos button:hover {
-  background-color: var(--cian-digital-suave);
-  border-color: var(--cian-digital);
 }
 
 /* --- FOTO DEL CARNET --- */
 .pi-dev-form-carnet {
-  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-4);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
   text-align: left;
+  transition: border-color var(--duration-fast) var(--ease-out);
 }
 
 .pi-dev-form-carnet label,
@@ -388,28 +105,6 @@
   font-weight: 600;
   color: var(--text-primary);
   margin: 0 0 8px;
-}
-
-.pi-dev-btn-tomar-foto {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  padding: 12px;
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-md);
-  background-color: var(--bg-page);
-  color: var(--indigo-profundo);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pi-dev-btn-tomar-foto:hover {
-  background-color: var(--cian-digital-suave);
-  border-color: var(--cian-digital);
 }
 
 .pi-dev-carnet-preview {
@@ -428,50 +123,11 @@
   border-radius: var(--radius-md);
 }
 
-.pi-dev-btn-retomar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--indigo-profundo);
-  cursor: pointer;
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  background-color: var(--bg-surface);
-}
-
-.pi-dev-btn-retomar:hover {
-  background-color: var(--cian-digital-suave);
-}
-
 .pi-dev-mini-carnet {
   width: 40px;
   height: 40px;
   object-fit: cover;
   border-radius: var(--radius-sm);
-}
-
-.pi-dev-sin-carnet {
-  color: var(--text-secondary);
-}
-
-.pi-dev-alerta-error {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  background-color: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  padding: 10px 12px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 600;
-  line-height: 1.5;
-  margin-top: 12px;
-}
-.pi-dev-alerta-error svg {
-  flex-shrink: 0;
-  margin-top: 3px;
 }
 
 .pi-dev-tarjeta-acciones {
@@ -492,30 +148,6 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-}
-
-.pi-dev-btn-cancelar {
-  background-color: var(--bg-page);
-  color: var(--text-primary);
-}
-
-.pi-dev-btn-cancelar:hover {
-  background-color: var(--border);
-}
-
-/* Botón de acción principal (confirmar retiro) */
-.pi-dev-btn-confirmar {
-  background-color: var(--coral-compra);
-  color: var(--texto-sobre-vivo);
-}
-
-.pi-dev-btn-confirmar:hover:not(:disabled) {
-  background-color: var(--coral-compra-hover);
-}
-
-.pi-dev-btn-confirmar:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 /* --- ESTADO DE ÉXITO --- */
@@ -549,54 +181,14 @@
   margin: 8px 0 16px;
 }
 
-.pi-dev-exito .pi-dev-btn-confirmar {
-  width: 100%;
-  padding: 12px 20px;
-  min-height: 48px;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--text-base);
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
+/* ---------- Tarjeta de retiro dentro del <Modal> ---------- */
+.pi-dev-escanear-ic { font-size: 4.4rem; color: var(--accent); }
+.pi-dev-exito-ic { font-size: 3.75rem; color: var(--ok); animation: qp-pop 500ms var(--ease-rebote); }
+.pi-dev-campo-monto input { font-size: var(--text-xl); font-weight: var(--weight-bold); }
+.pi-dev-tarjeta-acciones { grid-column: 1 / -1; }
+.pi-dev-col-form { display: flex; flex-direction: column; gap: var(--space-4); }
+.pi-dev-form-carnet.falta { border-color: var(--danger); }
 
-/* --- Motivo tipado del retiro (§5.11) --- */
-.pi-dev-motivo-label {
-  display: block;
-  margin-top: 12px;
-  margin-bottom: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-.pi-dev-motivo-select,
-.pi-dev-motivo-nota {
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: 14px;
-}
-.pi-dev-motivo-nota { margin-top: 6px; }
-
-/* Aviso "sin caja abierta" (§5.2) -> componente <AvisoSinCaja> (components/) */
-
-/* Aviso en la tarjeta de retiro de un negocio (§seguridad) */
-.pi-dev-negocio-aviso {
-  display: flex;
-  gap: 8px;
-  align-items: flex-start;
-  margin: 12px 0;
-  padding: 10px 12px;
-  border-radius: 8px;
-  background: var(--ambar-aviso-suave, rgba(255, 193, 7, 0.12));
-  color: var(--ambar-aviso-texto, #8a6d00);
-  font-size: 12.5px;
-  line-height: 1.45;
+@media (prefers-reduced-motion: reduce) {
+  .pi-dev-exito-ic { animation: none; }
 }

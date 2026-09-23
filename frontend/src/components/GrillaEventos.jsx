@@ -18,7 +18,7 @@ export default function GrillaEventos({
   children,
   porPagina = 9,
   vacio = 'Ningún evento coincide con la búsqueda.',
-  gridClassName = 'pi-entrega-eventos-grid',
+  gridClassName = 'qp-grilla-eventos__grid',
 }) {
   const { paginaActual, setPagina, totalPaginas, slice, total } = usePaginacion(eventos, porPagina);
 

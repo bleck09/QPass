@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useSearchParams } from 'react-router-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Tabla from '../../components/Tabla.jsx';
@@ -15,14 +13,21 @@ import Migas from '../../components/Migas.jsx';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import { useApi } from '../../utils/useApi.js';
 import FotoZoom from '../../components/FotoZoom.jsx';
+import FichaParticipante from '../../components/FichaParticipante.jsx';
 import { estadoEvento, imagenEvento, formatearFecha, nombreJornada, mostrarJornada, FILTROS_ESTADO_EVENTO, ciDeEntrada } from '../../utils/eventos.js';
 import { estadoStockProducto } from '../../utils/stock.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import Boton from '../../components/Boton.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import Pestanas from '../../components/Pestanas.jsx';
+import SelectorCantidad from '../../components/SelectorCantidad.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import {
-  FaStore, FaShoppingCart, FaPlus, FaMinus, FaTrash, FaQrcode, FaTimes,
+  FaStore, FaShoppingCart, FaPlus, FaTrash, FaQrcode,
   FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle, FaHistory,
   FaReceipt, FaHamburger, FaMapMarkerAlt, FaCalendarAlt, FaBell,
-  FaTicketAlt, FaMoon, FaHashtag
+  FaTicketAlt, FaMoon, FaHashtag, FaSearch,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
@@ -30,11 +35,11 @@ import EscanerQr from '../../components/EscanerQr.jsx';
 import ManillaFalsaModal from '../../components/ManillaFalsaModal.jsx';
 import { esManillaFalsa } from '../../utils/duplicados.js';
 import './Ayudante.css';
-import '../supervisor/GestionEntrega.css';
 
 export default function Ayudante() {
   useTituloPagina('Vender y cobrar');
   const sesion = leerSesion();
+  const avisos = useAvisos();
 
   // Carga primaria (puestos donde trabaja el ayudante) con cargando/error/reintentar (Manual 8.9).
   const cargarPuestos = useCallback(
@@ -53,6 +58,9 @@ export default function Ayudante() {
   const [avisandoStock, setAvisandoStock] = useState(null);
   const [avisoCantidad, setAvisoCantidad] = useState(null); // { id, texto } — "solo quedan N"
   const [errorCobro, setErrorCobro] = useState('');
+  // Mientras se registra el cobro el botón queda con spinner: evita cobrar dos
+  // veces con un doble toque (o con la conexión lenta).
+  const [cobrando, setCobrando] = useState(false);
 
   const [pestana, setPestana] = useState('vender'); // vender | historial
   const [carrito, setCarrito] = useState([]);
@@ -271,7 +279,11 @@ export default function Ayudante() {
 
   const quitarDelCarrito = (id) => setCarrito(prev => prev.filter(item => item.id !== id));
 
-  const vaciarCarrito = () => setCarrito([]);
+  const vaciarCarrito = () => {
+    const anterior = carrito;
+    setCarrito([]);
+    avisos.info('Vaciaste la venta.', { accion: { texto: 'Deshacer', onClick: () => setCarrito(anterior) } });
+  };
 
   // Avisar al Usuario Negocio que un producto quedó sin stock / por agotarse.
   const avisarStock = async (producto) => {
@@ -280,8 +292,9 @@ export default function Ayudante() {
     try {
       await api.avisosStock.crear({ puestoId: puesto.id, productoBaseId: producto.id });
       setAvisadosStock(prev => new Set(prev).add(producto.id));
-    } catch {
-      /* silencioso: el negocio igual lo ve por el stock en su panel */
+      avisos.exito(`Le avisamos al negocio que ${producto.nombre} se está acabando.`);
+    } catch (err) {
+      avisos.error(err.message, { titulo: 'No se pudo avisar al negocio' });
     } finally {
       setAvisandoStock(null);
     }
@@ -326,15 +339,13 @@ export default function Ayudante() {
     setErrorCobro('');
   };
 
-  // Foco + ESC + scroll-lock de la tarjeta de cobro (look propio). El escáner
-  // usa <Modal>, que ya trae ese comportamiento.
-  const refTarjeta = useModal(!!tarjetaQR, cerrarTarjeta);
 
   const confirmarCobro = async () => {
-    if (!tarjetaQR || eventoNoCoincide || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
+    if (cobrando || !tarjetaQR || eventoNoCoincide || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
 
     const nuevoSaldo = Number(tarjetaQR.saldo) - totalCarrito;
     setErrorCobro('');
+    setCobrando(true);
     try {
       await api.ventas.crear({
         puestoId: puesto.id,
@@ -352,6 +363,8 @@ export default function Ayudante() {
       setErrorCobro(err.message);
       recargarProductos();
       return;
+    } finally {
+      setCobrando(false);
     }
 
     api.ventas.listar({ puestoId: puesto.id }).then(setVentas);
@@ -363,9 +376,7 @@ export default function Ayudante() {
   if (errorPuestos || cargandoPuestos) {
     return (
       <div className="pi-ayu-container">
-        <div className="pi-ayu-header-wrapper">
-          <h1>Vender / cobrar</h1>
-        </div>
+        <EncabezadoPagina titulo="Vender / cobrar" icono={FaShoppingCart} />
         {errorPuestos
           ? <EstadoError onReintentar={recargarPuestos} />
           : <EstadoCarga filas={3} />}
@@ -376,10 +387,12 @@ export default function Ayudante() {
   if (puestosAsignados.length === 0) {
     return (
       <div className="pi-ayu-container">
-        <div className="pi-ayu-header-wrapper">
-          <h1>Vender / cobrar</h1>
-        </div>
-        <p className="pi-ayu-carrito-vacio">Todavía no tienes ningún puesto asignado. Pídele a tu Usuario Negocio que te asigne uno.</p>
+        <EncabezadoPagina titulo="Vender / cobrar" icono={FaShoppingCart} />
+        <EstadoVacio
+          icono={FaStore}
+          titulo="Todavía no tenés ningún puesto asignado"
+          mensaje="Pedile al negocio para el que trabajás que te asigne a un puesto."
+        />
       </div>
     );
   }
@@ -391,7 +404,7 @@ export default function Ayudante() {
   if (!puesto && (saltaEvento || saltaPuesto)) {
     return (
       <div className="pi-ayu-container">
-        <div className="pi-ayu-header-wrapper"><h1>Vender / cobrar</h1></div>
+        <EncabezadoPagina titulo="Vender / cobrar" icono={FaShoppingCart} />
         <EstadoCarga filas={3} />
       </div>
     );
@@ -401,9 +414,7 @@ export default function Ayudante() {
   if (!puesto && !grupoSel) {
     return (
       <div className="pi-ayu-container">
-        <div className="pi-ayu-header-wrapper">
-          <h1>¿En qué evento vas a vender?</h1>
-        </div>
+        <EncabezadoPagina titulo="¿En qué evento vas a vender?" icono={FaCalendarAlt} />
         <Buscador
           valor={busquedaEvento}
           onCambio={setBusquedaEvento}
@@ -416,8 +427,8 @@ export default function Ayudante() {
         />
         <GrillaEventos
           eventos={eventosFiltrados}
-          gridClassName="pi-entrega-eventos-grid"
-          vacio="Ningún evento coincide con la búsqueda."
+         
+          vacio={<EstadoVacio compacto icono={FaSearch} titulo="Ningún evento coincide con la búsqueda" />}
         >
           {g => (
             <EventoCard
@@ -457,20 +468,16 @@ export default function Ayudante() {
                 <BadgeEstadoEvento evento={grupoSel.evento} className="pi-ayu-badge-evento" />
               </h1>
               <div className="pi-ayu-header-meta">
-                {grupoSel.evento.lugar && (
-                  <span className="pi-ayu-header-chip"><FaMapMarkerAlt aria-hidden="true" /> {grupoSel.evento.lugar}</span>
-                )}
-                {grupoSel.evento.fecha && (
-                  <span className="pi-ayu-header-chip"><FaCalendarAlt aria-hidden="true" /> {formatearFecha(grupoSel.evento.fecha, false)}</span>
-                )}
+                {grupoSel.evento.lugar && <Insignia tono="neutro" icono={FaMapMarkerAlt}>{grupoSel.evento.lugar}</Insignia>}
+                {grupoSel.evento.fecha && <Insignia tono="neutro" icono={FaCalendarAlt}>{formatearFecha(grupoSel.evento.fecha, false)}</Insignia>}
               </div>
             </div>
           </div>
         </div>
         <GrillaEventos
           eventos={grupoSel.puestos}
-          gridClassName="pi-entrega-eventos-grid"
-          vacio="Este evento no tiene puestos asignados a tu cuenta."
+         
+          vacio={<EstadoVacio compacto icono={FaStore} titulo="Este evento no tiene puestos asignados a tu cuenta" />}
         >
           {p => (
             <EventoCard
@@ -525,36 +532,26 @@ export default function Ayudante() {
             </h1>
             {puesto.descripcion && <p>{puesto.descripcion}</p>}
             <div className="pi-ayu-header-meta">
-              {puesto.categoria && (
-                <span className="pi-ayu-header-chip"><FaHamburger aria-hidden="true" /> {puesto.categoria}</span>
-              )}
-              {puesto.evento?.lugar && (
-                <span className="pi-ayu-header-chip"><FaMapMarkerAlt aria-hidden="true" /> {puesto.evento.lugar}</span>
-              )}
-              {puesto.evento?.fecha && (
-                <span className="pi-ayu-header-chip"><FaCalendarAlt aria-hidden="true" /> {formatearFecha(puesto.evento.fecha, false)}</span>
-              )}
+              {puesto.categoria && <Insignia tono="neutro" icono={FaHamburger}>{puesto.categoria}</Insignia>}
+              {puesto.evento?.lugar && <Insignia tono="neutro" icono={FaMapMarkerAlt}>{puesto.evento.lugar}</Insignia>}
+              {puesto.evento?.fecha && <Insignia tono="neutro" icono={FaCalendarAlt}>{formatearFecha(puesto.evento.fecha, false)}</Insignia>}
             </div>
           </div>
         </div>
 
-        <div className="pi-ayu-kpi">
-          <span className="micro-etiqueta">Vendido hoy</span>
-          <div className="kpi-valor">
-            <FaReceipt className="kpi-icon" />
-            <span className="numero-grande">{totalVentasHoy} pts</span>
-          </div>
-        </div>
+        <StatCard icon={<FaReceipt />} tono="ok" valor={totalVentasHoy} unidad="pts" label="Vendido hoy" />
       </div>
 
-      <div className="pi-ayu-tabs">
-        <button type="button" className={pestana === 'vender' ? 'activo' : ''} aria-current={pestana === 'vender' ? 'page' : undefined} onClick={() => setPestana('vender')}>
-          <FaShoppingCart aria-hidden="true" /> Vender
-        </button>
-        <button type="button" className={pestana === 'historial' ? 'activo' : ''} aria-current={pestana === 'historial' ? 'page' : undefined} onClick={() => setPestana('historial')}>
-          <FaHistory aria-hidden="true" /> Historial ({ventas.length})
-        </button>
-      </div>
+      <Pestanas
+        className="pi-ayu-pestanas"
+        etiqueta="Secciones del punto de venta"
+        activo={pestana}
+        onCambio={setPestana}
+        items={[
+          { id: 'vender', etiqueta: 'Vender', icono: FaShoppingCart, contador: cantidadItemsCarrito || null },
+          { id: 'historial', etiqueta: `Historial (${ventas.length})`, icono: FaHistory },
+        ]}
+      />
 
       {/* --- PESTAÑA: VENDER --- */}
       {pestana === 'vender' && (
@@ -577,44 +574,37 @@ export default function Ayudante() {
                     <span className="pi-ayu-producto-precio">{Number(producto.precio)} pts</span>
 
                     {bloqueado ? (
-                      <span className="pi-ayu-badge-agotado">
-                        <FaExclamationTriangle aria-hidden="true" /> {estadoStk === 'inactivo' ? 'No disponible' : 'Sin stock'}
-                      </span>
+                      <Insignia tono="danger" icono={FaExclamationTriangle}>{estadoStk === 'inactivo' ? 'No disponible' : 'Sin stock'}</Insignia>
                     ) : estadoStk === 'bajo' ? (
-                      <span className="pi-ayu-badge-bajo">
-                        <FaExclamationTriangle aria-hidden="true" /> Quedan {producto.stock}
-                      </span>
+                      <Insignia tono="warn" icono={FaExclamationTriangle}>Quedan {producto.stock}</Insignia>
                     ) : null}
 
                     {!bloqueado && (enCarrito ? (
-                      <div className="pi-ayu-producto-stepper">
-                        <button type="button" onClick={() => cambiarCantidad(producto.id, -1)}><FaMinus /></button>
-                        <span>{enCarrito.cantidad}</span>
-                        <button type="button" onClick={() => cambiarCantidad(producto.id, 1)}><FaPlus /></button>
-                      </div>
+                      <SelectorCantidad
+                        valor={enCarrito.cantidad}
+                        nombre={producto.nombre}
+                        onMenos={() => cambiarCantidad(producto.id, -1)}
+                        onMas={() => cambiarCantidad(producto.id, 1)}
+                      />
                     ) : (
-                      <button type="button" className="pi-ayu-btn-agregar" onClick={() => agregarProducto(producto)}>
-                        <FaPlus /> Agregar
-                      </button>
+                      <Boton tamano="sm" pildora icono={FaPlus} onClick={() => agregarProducto(producto)}>Agregar</Boton>
                     ))}
 
                     {avisoCantidad?.id === producto.id && (
-                      <span className="pi-ayu-cantidad-aviso">
-                        <FaExclamationTriangle aria-hidden="true" /> {avisoCantidad.texto}
-                      </span>
+                      <Insignia tono="warn" icono={FaExclamationTriangle}>{avisoCantidad.texto}</Insignia>
                     )}
 
                     {(bloqueado || estadoStk === 'bajo') && (
-                      <button
-                        type="button"
-                        className="pi-ayu-btn-avisar"
+                      <Boton
+                        variante="fantasma"
+                        tamano="sm"
+                        icono={avisado ? FaCheckCircle : FaBell}
                         onClick={() => avisarStock(producto)}
-                        disabled={avisado || avisandoStock === producto.id}
+                        cargando={avisandoStock === producto.id}
+                        disabled={avisado}
                       >
-                        {avisado
-                          ? <><FaCheckCircle aria-hidden="true" /> Negocio avisado</>
-                          : <><FaBell aria-hidden="true" /> Avisar al negocio</>}
-                      </button>
+                        {avisado ? 'Negocio avisado' : 'Avisar al negocio'}
+                      </Boton>
                     )}
                   </div>
                 );
@@ -626,7 +616,7 @@ export default function Ayudante() {
             <h3><FaShoppingCart /> Venta actual</h3>
 
             {carrito.length === 0 ? (
-              <p className="pi-ayu-carrito-vacio">Selecciona productos del catálogo para iniciar una venta.</p>
+              <EstadoVacio compacto icono={FaShoppingCart} titulo="Todavía no hay productos" mensaje="Tocá “Agregar” en el catálogo para empezar una venta." />
             ) : (
               <>
                 <div className="pi-ayu-carrito-lista">
@@ -636,15 +626,15 @@ export default function Ayudante() {
                         <span className="nombre">{item.nombre}</span>
                         <span className="precio-unit">{item.precio} pts c/u</span>
                       </div>
-                      <div className="pi-ayu-producto-stepper">
-                        <button type="button" onClick={() => cambiarCantidad(item.id, -1)}><FaMinus /></button>
-                        <span>{item.cantidad}</span>
-                        <button type="button" onClick={() => cambiarCantidad(item.id, 1)}><FaPlus /></button>
-                      </div>
+                      <SelectorCantidad
+                        tamano="sm"
+                        valor={item.cantidad}
+                        nombre={item.nombre}
+                        onMenos={() => cambiarCantidad(item.id, -1)}
+                        onMas={() => cambiarCantidad(item.id, 1)}
+                      />
                       <span className="pi-ayu-carrito-subtotal">{item.precio * item.cantidad} pts</span>
-                      <button type="button" className="pi-ayu-btn-quitar" onClick={() => quitarDelCarrito(item.id)}>
-                        <FaTrash />
-                      </button>
+                      <Boton variante="peligro-suave" tamano="sm" icono={FaTrash} onClick={() => quitarDelCarrito(item.id)} aria-label={`Quitar ${item.nombre} de la venta`} />
                     </div>
                   ))}
                 </div>
@@ -654,25 +644,22 @@ export default function Ayudante() {
                   <strong>{totalCarrito} pts</strong>
                 </div>
 
-                <button type="button" className="pi-ayu-btn-vaciar" onClick={vaciarCarrito}>
-                  Vaciar venta
-                </button>
+                <Boton variante="fantasma" tamano="sm" icono={FaTrash} onClick={vaciarCarrito}>Vaciar venta</Boton>
               </>
             )}
 
-            <button
-              type="button"
-              className="pi-ayu-btn-escanear"
+            <Boton
+              variante="compra"
+              tamano="lg"
+              anchoCompleto
+              icono={FaQrcode}
               onClick={iniciarCobro}
-              disabled={carrito.length === 0 || escaneando || buscando}
+              cargando={buscando}
+              disabled={carrito.length === 0 || escaneando}
             >
-              <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear QR para cobrar'}
-            </button>
-            {errorEscaneo && (
-              <p className="pi-ayu-alerta-error">
-                <FaExclamationTriangle /> {errorEscaneo}
-              </p>
-            )}
+              {buscando ? 'Buscando…' : 'Escanear QR para cobrar'}
+            </Boton>
+            {errorEscaneo && <AvisoFijo tono="error">{errorEscaneo}</AvisoFijo>}
           </div>
         </div>
       )}
@@ -733,7 +720,7 @@ export default function Ayudante() {
             datos={ventasFiltradas}
             vacio={busquedaVentas.trim()
               ? 'No hay ventas que coincidan con la búsqueda.'
-              : 'Aún no has realizado ninguna venta.'}
+              : 'Todavía no hiciste ninguna venta.'}
             renderFila={venta => (
               <tr
                 key={venta.id}
@@ -756,19 +743,15 @@ export default function Ayudante() {
                 </td>
                 <td className="pi-ayu-monto-celda">
                   {venta.anuladaEn
-                    ? <span className="pi-ayu-badge-anulada">Anulada</span>
+                    ? <Insignia tono="danger">Anulada</Insignia>
                     : `-${Number(venta.montoTotal)} pts`}
                 </td>
                 <td>{new Date(venta.createdAt).toLocaleDateString('es-BO')}</td>
                 <td>{new Date(venta.createdAt).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' })}</td>
                 <td>
-                  <button
-                    type="button"
-                    className="btn-secundario-sm"
-                    onClick={(e) => { e.stopPropagation(); setVentaDetalle(venta); }}
-                  >
+                  <Boton variante="secundario" tamano="sm" onClick={(e) => { e.stopPropagation(); setVentaDetalle(venta); }}>
                     Ver detalle
-                  </button>
+                  </Boton>
                 </td>
               </tr>
             )}
@@ -793,105 +776,47 @@ export default function Ayudante() {
       )}
 
       {/* --- TARJETA GRANDE AL ESCANEAR QR --- */}
-      {tarjetaQR && createPortal(
-        <div className="pi-ayu-modal-overlay" onClick={cerrarTarjeta}>
-          <div
-            ref={refTarjeta}
-            tabIndex={-1}
-            className="pi-ayu-modal-tarjeta"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Cobro a ${tarjetaQR.nombre}`}
-          >
-            <button type="button" className="pi-ayu-btn-cerrar" onClick={cerrarTarjeta} aria-label="Cerrar">
-              <FaTimes aria-hidden="true" />
-            </button>
+      {/* --- TARJETA DE COBRO AL ESCANEAR EL QR (<Modal> global) --- */}
+      {tarjetaQR && (
+        <Modal
+          titulo={ventaExitosa ? 'Venta cobrada' : `Cobro a ${tarjetaQR.nombre}`}
+          onCerrar={cerrarTarjeta}
+          className="pi-ayu-modal-tarjeta"
+          cerrarEnBackdrop={!cobrando}
+        >
 
             {ventaExitosa ? (
               <div className="pi-ayu-exito">
-                <FaCheckCircle size={60} color="var(--verde-recarga)" />
+                <FaCheckCircle className="pi-ayu-exito-ic" aria-hidden="true" />
                 <h3>¡Venta cobrada!</h3>
                 <p>Se descontaron <strong>{ventaExitosa.monto} pts</strong> a {tarjetaQR.nombre}.</p>
                 <div className="pi-ayu-exito-saldo">
-                  <FaWallet /> Saldo restante: <strong>{ventaExitosa.saldo} pts</strong>
+                  <FaWallet aria-hidden="true" /> Saldo restante: <strong>{ventaExitosa.saldo} pts</strong>
                 </div>
-                <button type="button" className="pi-ayu-btn-confirmar" onClick={cerrarTarjeta}>Listo</button>
+                <Boton variante="exito" tamano="lg" icono={FaCheckCircle} onClick={cerrarTarjeta}>Listo</Boton>
               </div>
             ) : (
               <>
-                <div className={`pi-ayu-tarjeta-estado ${saldoInsuficiente || eventoNoCoincide ? 'aviso' : 'ok'}`}>
-                  {eventoNoCoincide
-                    ? <><FaExclamationTriangle /> Manilla de otro evento</>
+                <FichaParticipante
+                  estado={eventoNoCoincide
+                    ? <Insignia tono="danger" icono={FaExclamationTriangle} solida>Manilla de otro evento</Insignia>
                     : saldoInsuficiente
-                      ? <><FaExclamationTriangle /> Saldo insuficiente</>
-                      : <><FaCheckCircle /> Código QR Válido</>}
-                </div>
-
-                {(tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
-                  <FotoZoom
-                    width={120}
-                    height={120}
-                    src={tarjetaQR.usuario?.foto || tarjetaQR.foto}
-                    alt={`Foto de ${tarjetaQR.nombre}`}
-                    className="pi-ayu-tarjeta-foto"
-                  />
-                )}
-                <h2 className="pi-ayu-tarjeta-nombre">{tarjetaQR.nombre}</h2>
-
-                <div className="pi-ayu-tarjeta-datos">
-                  <div className="pi-ayu-tarjeta-dato">
-                    <FaIdCard />
-                    <div>
-                      <span className="label">Documento</span>
-                      <span className="valor">{ciDeEntrada(tarjetaQR) || '—'}</span>
-                    </div>
-                  </div>
-                  <div className="pi-ayu-tarjeta-dato">
-                    <FaCalendarAlt />
-                    <div>
-                      <span className="label">Evento</span>
-                      <span className="valor">{tarjetaQR.evento?.nombre || '—'}</span>
-                    </div>
-                  </div>
-                  {mostrarJornada(tarjetaQR.diaEvento) && (
-                    <div className="pi-ayu-tarjeta-dato">
-                      <FaMoon />
-                      <div>
-                        <span className="label">Jornada</span>
-                        <span className="valor">{nombreJornada(tarjetaQR.diaEvento)}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="pi-ayu-tarjeta-dato">
-                    <FaTicketAlt />
-                    <div>
-                      <span className="label">Tipo de entrada</span>
-                      <span className="valor">{tarjetaQR.categoriaTicket?.nombre || '—'}</span>
-                    </div>
-                  </div>
-                  {tarjetaQR.numero != null && (
-                    <div className="pi-ayu-tarjeta-dato">
-                      <FaHashtag />
-                      <div>
-                        <span className="label">N.º de entrada</span>
-                        <span className="valor">{tarjetaQR.numero}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="pi-ayu-tarjeta-dato">
-                    <FaWallet />
-                    <div>
-                      <span className="label">Saldo disponible</span>
-                      <span className="valor">{tarjetaQR.saldo} pts</span>
-                      {tarjetaQR.saldoBloqueado > 0 && (
-                        <span className="pi-ayu-saldo-disputa">
-                          + {tarjetaQR.saldoBloqueado} pts en disputa (no se pueden usar)
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
+                      ? <Insignia tono="warn" icono={FaExclamationTriangle} solida>Saldo insuficiente</Insignia>
+                      : <Insignia tono="ok" icono={FaCheckCircle} solida>Código QR válido</Insignia>}
+                  foto={tarjetaQR.usuario?.foto || tarjetaQR.foto}
+                  nombre={tarjetaQR.nombre}
+                  datos={[
+                    { icono: FaIdCard, etiqueta: 'Documento', valor: ciDeEntrada(tarjetaQR) || '—' },
+                    { icono: FaCalendarAlt, etiqueta: 'Evento', valor: tarjetaQR.evento?.nombre || '—' },
+                    mostrarJornada(tarjetaQR.diaEvento) && { icono: FaMoon, etiqueta: 'Jornada', valor: nombreJornada(tarjetaQR.diaEvento) },
+                    { icono: FaTicketAlt, etiqueta: 'Tipo de entrada', valor: tarjetaQR.categoriaTicket?.nombre || '—' },
+                    tarjetaQR.numero != null && { icono: FaHashtag, etiqueta: 'N.º de entrada', valor: tarjetaQR.numero },
+                    {
+                      icono: FaWallet, etiqueta: 'Saldo disponible', valor: `${tarjetaQR.saldo} pts`, destacado: true,
+                      nota: tarjetaQR.saldoBloqueado > 0 ? `+ ${tarjetaQR.saldoBloqueado} pts en disputa (no se pueden usar)` : null,
+                    },
+                  ]}
+                />
 
                 <div className="pi-ayu-resumen-venta">
                   <span className="pi-ayu-resumen-titulo">Resumen de la venta</span>
@@ -908,41 +833,38 @@ export default function Ayudante() {
                 </div>
 
                 {eventoNoCoincide && (
-                  <div className="pi-ayu-alerta-error">
-                    <FaExclamationTriangle /> Esta manilla es de «{tarjetaQR.evento?.nombre || 'otro evento'}» y
-                    este puesto es de «{puesto.evento?.nombre || 'este evento'}»: su saldo solo sirve en su
-                    propio evento, así que no se puede cobrar acá.
-                  </div>
+                  <AvisoFijo tono="error" titulo="No se puede cobrar acá">
+                    Esta manilla es de «{tarjetaQR.evento?.nombre || 'otro evento'}» y este puesto es de
+                    «{puesto.evento?.nombre || 'este evento'}»: su saldo solo sirve en su propio evento.
+                  </AvisoFijo>
                 )}
 
                 {!eventoNoCoincide && saldoInsuficiente && (
-                  <div className="pi-ayu-alerta-error">
-                    <FaExclamationTriangle /> El saldo disponible ({tarjetaQR.saldo} pts) no alcanza para cubrir esta venta.
-                  </div>
+                  <AvisoFijo tono="aviso" titulo="Saldo insuficiente">
+                    El saldo disponible ({tarjetaQR.saldo} pts) no alcanza para cubrir esta venta.
+                  </AvisoFijo>
                 )}
 
-                {errorCobro && (
-                  <div className="pi-ayu-alerta-error">
-                    <FaExclamationTriangle /> {errorCobro}
-                  </div>
-                )}
+                {errorCobro && <AvisoFijo tono="error" titulo="No se pudo cobrar">{errorCobro}</AvisoFijo>}
 
-                <div className="pi-ayu-tarjeta-acciones">
-                  <button type="button" className="pi-ayu-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
-                  <button
-                    className="pi-ayu-btn-confirmar"
+                <div className="modal-actions">
+                  <Boton variante="secundario" onClick={cerrarTarjeta} disabled={cobrando}>Cancelar</Boton>
+                  <Boton
+                    variante="exito"
+                    tamano="lg"
+                    icono={FaCheckCircle}
                     onClick={confirmarCobro}
+                    cargando={cobrando}
                     disabled={saldoInsuficiente || eventoNoCoincide}
                   >
-                    <FaCheckCircle /> Confirmar Cobro
-                  </button>
+                    {cobrando ? 'Cobrando…' : `Cobrar ${totalCarrito} pts`}
+                  </Boton>
                 </div>
               </>
             )}
-          </div>
-        </div>,
-        document.body,
+        </Modal>
       )}
+
 
       {manillaFalsa && (
         <ManillaFalsaModal detalle={manillaFalsa} onCerrar={() => setManillaFalsa(null)} />

@@ -18,7 +18,6 @@ import {
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
-import { subirImagenDeInput } from '../../utils/imagenes.js';
 import { formatearFecha, estadoEvento, filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
 import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
@@ -30,8 +29,11 @@ import Mapa from './Mapa.jsx';
 import Admin from './Admin.jsx';
 import FormularioEventoPasos from './FormularioEventoPasos.jsx';
 import Boton from '../../components/Boton.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import './AdminGestionEventos.css';
 import './GestionEventosNav.css';
+import Pasos from '../../components/Pasos.jsx';
+import Pestanas from '../../components/Pestanas.jsx';
 
 // Pestañas del detalle de evento (todo se ve acá mismo, sin cambiar de página),
 // en dos grupos:
@@ -87,7 +89,6 @@ const diasEntre = (desdeISO, hastaISO) => {
   }
   return dias;
 };
-const MAX_IMAGEN_BYTES = 3 * 1024 * 1024; // 3 MB
 
 // ISO -> valor para <input type="datetime-local"> (YYYY-MM-DDTHH:mm, hora local).
 const isoADatetimeLocal = (iso) => {
@@ -98,6 +99,7 @@ const isoADatetimeLocal = (iso) => {
 };
 
 export default function AdminGestionEventos() {
+  const avisos = useAvisos();
   useTituloPagina('Gestión de eventos');
   const location = useLocation();
 
@@ -160,12 +162,13 @@ export default function AdminGestionEventos() {
     abrirEventoUrl(id);
   };
   const [modalSolicitudesAbierto, setModalSolicitudesAbierto] = useState(false);
+  // Acción del evento en curso ('archivar', 'publicar'...): ninguna de estas
+  // tenía guarda, así que el doble clic mandaba dos veces la misma operación.
+  const [accionEvento, setAccionEvento] = useState(null);
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
   const [formEvento, setFormEvento] = useState(FORM_EVENTO_VACIO);
-  const [errorImagen, setErrorImagen] = useState('');
   const [errorFormEvento, setErrorFormEvento] = useState('');
-  const [previewFallo, setPreviewFallo] = useState(false);
   // Falta la ubicación (obligatoria): remarca el campo del mapa y lo trae a
   // la vista en vez de solo mostrar un texto de error al fondo del formulario
   // — si no, con un formulario largo parece que el botón "no hizo nada".
@@ -184,10 +187,8 @@ export default function AdminGestionEventos() {
     if (formularioParam === 'crear') {
       setFormularioParamAplicado(formularioParam);
       setFormEvento(FORM_EVENTO_VACIO);
-      setErrorImagen('');
       setErrorFormEvento('');
       setFaltaUbicacion(false);
-      setPreviewFallo(false);
     } else if (formularioParam) {
       const ev = eventos.find(e => e.id === formularioParam);
       if (ev) {
@@ -206,10 +207,8 @@ export default function AdminGestionEventos() {
           clienteId: ev.clienteId != null ? String(ev.clienteId) : '',
           diasParaRetiro: ev.diasParaRetiro != null ? String(ev.diasParaRetiro) : '',
         });
-        setErrorImagen('');
         setErrorFormEvento('');
         setFaltaUbicacion(false);
-        setPreviewFallo(false);
       }
       // si el evento todavía no está en `eventos` (aún cargando), no se marca
       // aplicado: se reintenta en el próximo render.
@@ -244,6 +243,7 @@ export default function AdminGestionEventos() {
       setEventos(prev => [nuevo, ...prev]);
       setSolicitudes(prev => prev.filter(x => x.id !== s.id));
       abrirDetalle(nuevo.id);
+      avisos.exito(`El evento "${nuevo.nombre}" se creó a partir de la solicitud.`);
     } catch (err) {
       // Ej.: las fechas propuestas se cruzan con otro evento activo ("un
       // evento a la vez") — hay que editar la solicitud o rechazarla.
@@ -260,8 +260,14 @@ export default function AdminGestionEventos() {
       peligroso: true,
     });
     if (motivo === null) return;
-    await api.solicitudesEvento.rechazar(s.id, motivo);
-    setSolicitudes(prev => prev.filter(x => x.id !== s.id));
+    setErrorSolicitudes('');
+    try {
+      await api.solicitudesEvento.rechazar(s.id, motivo);
+      setSolicitudes(prev => prev.filter(x => x.id !== s.id));
+      avisos.exito(`La solicitud "${s.nombreEvento}" quedó rechazada.`);
+    } catch (err) {
+      setErrorSolicitudes(err.message || 'No se pudo rechazar la solicitud.');
+    }
   };
 
   const eventosFiltrados = useMemo(
@@ -339,30 +345,6 @@ export default function AdminGestionEventos() {
     setFormEvento({ ...formEvento, [e.target.name]: e.target.value });
   };
 
-  // La imagen se sube como archivo real a /uploads y en el formulario solo se guarda
-  // la URL devuelta (antes se codificaba entera en base64 dentro del propio formulario).
-  const handleImagenUpload = async (e) => {
-    const file = e.target.files?.[0];
-    e.target.value = ''; // permite volver a elegir el mismo archivo
-    if (!file) return;
-    if (!file.type.startsWith('image/')) {
-      setErrorImagen('El archivo debe ser una imagen.');
-      return;
-    }
-    if (file.size > MAX_IMAGEN_BYTES) {
-      setErrorImagen('La imagen no debe superar los 3 MB.');
-      return;
-    }
-    try {
-      setErrorImagen('Subiendo imagen...');
-      const url = await subirImagenDeInput(file, 'eventos');
-      setErrorImagen('');
-      setPreviewFallo(false);
-      setFormEvento(f => ({ ...f, imagen: url }));
-    } catch (err) {
-      setErrorImagen(err.message);
-    }
-  };
 
   const handleGuardarEvento = async (e) => {
     e.preventDefault();
@@ -443,10 +425,18 @@ export default function AdminGestionEventos() {
   };
 
   const handleAsignar = async (usuario) => {
-    if (!eventoIdDetalle) return;
-    // El backend deriva el rol del evento del rol de la cuenta; se manda igual por compat.
-    await api.asignaciones.asignar({ eventoId: eventoIdDetalle, usuarioId: usuario.id, rol: usuario.rol });
-    setAsignaciones(await api.asignaciones.listar());
+    if (!eventoIdDetalle || accionEvento) return;
+    setAccionEvento('asignar');
+    try {
+      // El backend deriva el rol del evento del rol de la cuenta; se manda igual por compat.
+      await api.asignaciones.asignar({ eventoId: eventoIdDetalle, usuarioId: usuario.id, rol: usuario.rol });
+      setAsignaciones(await api.asignaciones.listar());
+      avisos.exito(`${usuario.nombre} quedó asignado a este evento.`);
+    } catch (err) {
+      avisos.error(err.message || 'No se pudo asignar al usuario.', { titulo: 'No se pudo asignar' });
+    } finally {
+      setAccionEvento(null);
+    }
   };
 
   const handleQuitarAsignacion = async (id) => {
@@ -457,8 +447,13 @@ export default function AdminGestionEventos() {
       peligroso: true,
     });
     if (!ok) return;
-    await api.asignaciones.quitar(id);
-    setAsignaciones(prev => prev.filter(a => a.id !== id));
+    try {
+      await api.asignaciones.quitar(id);
+      setAsignaciones(prev => prev.filter(a => a.id !== id));
+      avisos.exito('El usuario ya no tiene acceso a este evento.');
+    } catch (err) {
+      avisos.error(err.message || 'No se pudo quitar al usuario.', { titulo: 'No se pudo quitar' });
+    }
   };
 
   const handleArchivar = async () => {
@@ -470,8 +465,16 @@ export default function AdminGestionEventos() {
       peligroso: true,
     });
     if (!ok) return;
-    const actualizado = await api.eventos.archivar(eventoDetalle.id);
-    setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+    setAccionEvento('archivar');
+    try {
+      const actualizado = await api.eventos.archivar(eventoDetalle.id);
+      setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+      avisos.exito(`"${actualizado.nombre}" quedó archivado (solo lectura).`);
+    } catch (err) {
+      avisos.error(err.message || 'No se pudo archivar el evento.', { titulo: 'No se pudo archivar' });
+    } finally {
+      setAccionEvento(null);
+    }
   };
 
   const handleDesarchivar = async () => {
@@ -482,8 +485,16 @@ export default function AdminGestionEventos() {
       textoConfirmar: 'Desarchivar',
     });
     if (!ok) return;
-    const actualizado = await api.eventos.desarchivar(eventoDetalle.id);
-    setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+    setAccionEvento('desarchivar');
+    try {
+      const actualizado = await api.eventos.desarchivar(eventoDetalle.id);
+      setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+      avisos.exito(`"${actualizado.nombre}" vuelve a admitir cambios.`);
+    } catch (err) {
+      avisos.error(err.message || 'No se pudo desarchivar el evento.', { titulo: 'No se pudo desarchivar' });
+    } finally {
+      setAccionEvento(null);
+    }
   };
 
   const [errorPublicar, setErrorPublicar] = useState('');
@@ -491,11 +502,15 @@ export default function AdminGestionEventos() {
   const handlePublicar = async () => {
     if (!eventoDetalle) return;
     setErrorPublicar('');
+    setAccionEvento('publicar');
     try {
       const actualizado = await api.eventos.publicar(eventoDetalle.id);
       setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+      avisos.exito(`"${actualizado.nombre}" ya se ve en la página pública.`);
     } catch (err) {
       setErrorPublicar(err.message);
+    } finally {
+      setAccionEvento(null);
     }
   };
 
@@ -508,8 +523,16 @@ export default function AdminGestionEventos() {
       peligroso: true,
     });
     if (!ok) return;
-    const actualizado = await api.eventos.despublicar(eventoDetalle.id);
-    setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+    setAccionEvento('despublicar');
+    try {
+      const actualizado = await api.eventos.despublicar(eventoDetalle.id);
+      setEventos(prev => prev.map(ev => (ev.id === actualizado.id ? { ...ev, ...actualizado } : ev)));
+      avisos.exito(`"${actualizado.nombre}" volvió a borrador.`);
+    } catch (err) {
+      avisos.error(err.message || 'No se pudo volver a borrador.', { titulo: 'No se pudo despublicar' });
+    } finally {
+      setAccionEvento(null);
+    }
   };
 
   // Borrado real (no archivar): solo tiene sentido para un borrador que
@@ -526,12 +549,17 @@ export default function AdminGestionEventos() {
     });
     if (!ok) return;
     setErrorEliminar('');
+    setAccionEvento('eliminar');
+    const nombre = eventoDetalle.nombre;
     try {
       await api.eventos.eliminar(eventoDetalle.id);
       setEventos(prev => prev.filter(ev => ev.id !== eventoDetalle.id));
       cerrarDetalle();
+      avisos.exito(`El evento "${nombre}" se eliminó.`);
     } catch (err) {
       setErrorEliminar(err.message);
+    } finally {
+      setAccionEvento(null);
     }
   };
 
@@ -573,11 +601,6 @@ export default function AdminGestionEventos() {
             setFormEvento={setFormEvento}
             onChange={handleChangeFormEvento}
             editando={!!editandoId}
-            onImagen={handleImagenUpload}
-            onQuitarImagen={() => { setErrorImagen(''); setFormEvento(f => ({ ...f, imagen: '' })); }}
-            errorImagen={errorImagen}
-            previewFallo={previewFallo}
-            setPreviewFallo={setPreviewFallo}
             errorGuardar={errorFormEvento}
             faltaUbicacion={faltaUbicacion}
             setFaltaUbicacion={setFaltaUbicacion}
@@ -613,53 +636,60 @@ export default function AdminGestionEventos() {
             <div className="pi-ges-detalle-acciones">
               {!eventoDetalle.archivadoEn && (
                 eventoDetalle.publicadoEn ? (
-                  <button type="button" className="pi-ges-btn-despublicar" onClick={handleDespublicar}>
-                    <FaEyeSlash /> Volver a borrador
-                  </button>
+                  <Boton
+                    variante="secundario" icono={FaEyeSlash} onClick={handleDespublicar}
+                    cargando={accionEvento === 'despublicar'} disabled={!!accionEvento}
+                  >
+                    Volver a borrador
+                  </Boton>
                 ) : (
-                  <button
-                    type="button"
-                    className="pi-ges-btn-publicar"
-                    onClick={handlePublicar}
-                    disabled={progresoEvento ? !progresoEvento.listoParaPublicar : true}
+                  <Boton
+                    variante="exito" icono={FaRocket} onClick={handlePublicar}
+                    cargando={accionEvento === 'publicar'}
+                    disabled={!!accionEvento || (progresoEvento ? !progresoEvento.listoParaPublicar : true)}
                     title={progresoEvento && !progresoEvento.listoParaPublicar ? 'Completa los pasos de abajo antes de publicar' : undefined}
                   >
-                    <FaRocket /> Publicar evento
-                  </button>
+                    Publicar evento
+                  </Boton>
                 )
               )}
               {!eventoDetalle.archivadoEn && (
-                <button type="button" className="pi-ges-btn-editar" onClick={() => abrirEditarEvento(eventoDetalle)}>
-                  <FaPen /> Editar
-                </button>
+                <Boton variante="secundario" icono={FaPen} onClick={() => abrirEditarEvento(eventoDetalle)} disabled={!!accionEvento}>
+                  Editar
+                </Boton>
               )}
               {eventoDetalle.archivadoEn ? (
-                <button type="button" className="pi-ges-btn-desarchivar" onClick={handleDesarchivar}>
-                  <FaUndo /> Desarchivar
-                </button>
+                <Boton
+                  variante="secundario" icono={FaUndo} onClick={handleDesarchivar}
+                  cargando={accionEvento === 'desarchivar'} disabled={!!accionEvento}
+                >
+                  Desarchivar
+                </Boton>
               ) : (
-                <button
-                  type="button"
-                  className="pi-ges-btn-archivar"
-                  onClick={handleArchivar}
-                  disabled={estadoEvento(eventoDetalle) !== 'finalizado'}
+                <Boton
+                  variante="secundario" icono={FaArchive} onClick={handleArchivar}
+                  cargando={accionEvento === 'archivar'}
+                  disabled={!!accionEvento || estadoEvento(eventoDetalle) !== 'finalizado'}
                   title={estadoEvento(eventoDetalle) !== 'finalizado' ? 'Solo se archiva un evento finalizado' : undefined}
                 >
-                  <FaArchive /> Archivar
-                </button>
+                  Archivar
+                </Boton>
               )}
               {/* Borrado real: solo para un borrador (nunca publicado), a
                   diferencia de "Archivar" que es para uno que ya terminó. */}
               {!eventoDetalle.archivadoEn && !eventoDetalle.publicadoEn && (
-                <button type="button" className="pi-ges-btn-eliminar" onClick={handleEliminar}>
-                  <FaTrash /> Eliminar
-                </button>
+                <Boton
+                  variante="peligro" icono={FaTrash} onClick={handleEliminar}
+                  cargando={accionEvento === 'eliminar'} disabled={!!accionEvento}
+                >
+                  Eliminar
+                </Boton>
               )}
             </div>
           </div>
 
           {errorEliminar && (
-            <p className="pi-ges-progreso-error"><FaExclamationTriangle /> {errorEliminar}</p>
+            <AvisoFijo tono="error">{errorEliminar}</AvisoFijo>
           )}
 
           {eventoDetalle.archivadoEn && (
@@ -715,9 +745,12 @@ export default function AdminGestionEventos() {
               {progresoEvento.listoParaPublicar && (
                 <div className="pi-ges-progreso-listo">
                   <span><FaRocket aria-hidden="true" /> ¡Todo listo! Ya podés publicar el evento.</span>
-                  <button type="button" className="pi-ges-btn-publicar" onClick={handlePublicar}>
-                    <FaRocket aria-hidden="true" /> Publicar ahora
-                  </button>
+                  <Boton
+                    variante="exito" icono={FaRocket} onClick={handlePublicar}
+                    cargando={accionEvento === 'publicar'} disabled={!!accionEvento}
+                  >
+                    Publicar ahora
+                  </Boton>
                 </div>
               )}
               <p className="pi-ges-progreso-nota">
@@ -725,49 +758,39 @@ export default function AdminGestionEventos() {
                 antes o después de publicar. Si queda sin configurar, simplemente no se muestra en la página del evento.
               </p>
               {errorPublicar && (
-                <p className="pi-ges-progreso-error"><FaExclamationTriangle /> {errorPublicar}</p>
+                <AvisoFijo tono="error">{errorPublicar}</AvisoFijo>
               )}
             </div>
           )}
 
+          {/* Navegación del evento: "Preparar" es un recorrido por pasos (<Pasos>)
+              y "Operación" son pestañas (<Pestanas>). Comparten la pestaña activa. */}
           <nav className="pi-ges-nav" aria-label="Secciones del evento">
-            {[
-              { grupo: 'preparar', titulo: 'Preparar el evento' },
-              { grupo: 'operacion', titulo: 'Operación' },
-            ].map(({ grupo, titulo }) => (
-              <div key={grupo} className={`pi-ges-nav-grupo pi-ges-nav-grupo--${grupo}`}>
-                <span className="pi-ges-nav-titulo">{titulo}</span>
-                <div className="pi-ges-tabs" role="tablist" aria-label={titulo}>
-                  {pestanasVisibles.filter(p => p.grupo === grupo).map((p, i) => {
-                    const est = grupo === 'preparar' ? estadoPaso(p) : null;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        role="tab"
-                        aria-selected={pestanaActiva === p.id}
-                        className={`pi-ges-tab${pestanaActiva === p.id ? ' activo' : ''}${est ? ` paso-${est}` : ''}`}
-                        onClick={() => setPestana(p.id)}
-                      >
-                        {grupo === 'preparar' && (
-                          <span className="pi-ges-tab-num" aria-hidden="true">
-                            {est === 'listo' ? <FaCheckCircle /> : i + 1}
-                          </span>
-                        )}
-                        {grupo === 'operacion' && p.icono}
-                        {p.label}
-                        {est === 'opcional' && <small className="pi-ges-tab-opcional">opcional</small>}
-                        {est === 'pendiente' && <span className="sr-only"> (pendiente)</span>}
-                        {est === 'listo' && <span className="sr-only"> (listo)</span>}
-                        {p.id === 'solicitudes' && comprasPendientes > 0 && (
-                          <span className="pi-ges-badge-contador">{comprasPendientes}</span>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+            <div className="pi-ges-nav-grupo">
+              <span className="pi-ges-nav-titulo">Preparar el evento</span>
+              <Pasos
+                variante="compacto"
+                etiqueta="Preparar el evento"
+                actual={pestanaActiva}
+                onIr={(_, paso) => setPestana(paso.id)}
+                pasos={pasosPreparar.map((p) => ({ id: p.id, titulo: p.label, estado: estadoPaso(p) === 'pendiente' ? 'falta' : estadoPaso(p) }))}
+              />
+            </div>
+            <div className="pi-ges-nav-grupo">
+              <span className="pi-ges-nav-titulo">Operación</span>
+              <Pestanas
+                navegacion
+                etiqueta="Operación"
+                activo={pestanaActiva}
+                onCambio={setPestana}
+                items={pestanasVisibles.filter((p) => p.grupo === 'operacion').map((p) => ({
+                  id: p.id,
+                  etiqueta: p.label,
+                  icono: () => p.icono,
+                  contador: p.id === 'solicitudes' ? comprasPendientes : null,
+                }))}
+              />
+            </div>
           </nav>
 
           <div key={pestanaActiva} className="pi-ges-panel-pestana">
@@ -804,9 +827,11 @@ export default function AdminGestionEventos() {
                     <td>{usuario.email}</td>
                     <td><span className="pi-ges-badge">{ROLE_LABELS[a.rol] || a.rol}</span></td>
                     <td>
-                      <button type="button" className="pi-ges-btn-quitar" onClick={() => handleQuitarAsignacion(a.id)} title="Quitar del evento">
-                        <FaTrash />
-                      </button>
+                      <Boton
+                        variante="peligro-suave" tamano="sm" icono={FaTrash}
+                        onClick={() => handleQuitarAsignacion(a.id)}
+                        aria-label={`Quitar a ${usuario.nombre} del evento`}
+                      />
                     </td>
                   </tr>
                 );
@@ -843,9 +868,12 @@ export default function AdminGestionEventos() {
                     <td>{u.email}</td>
                     <td><span className="pi-ges-badge">{ROLE_LABELS[u.rol] || u.rol}</span></td>
                     <td>
-                      <button type="button" className="pi-ges-btn-asignar" onClick={() => handleAsignar(u)}>
-                        <FaUserPlus /> Asignar
-                      </button>
+                      <Boton
+                        variante="secundario" tamano="sm" icono={FaUserPlus}
+                        onClick={() => handleAsignar(u)} disabled={!!accionEvento}
+                      >
+                        Asignar
+                      </Boton>
                     </td>
                   </tr>
                 )}
@@ -901,13 +929,17 @@ export default function AdminGestionEventos() {
             etiquetaFiltros="Filtrar eventos por estado"
           />
 
-          <div className="pi-ges-vista-tabs" role="group" aria-label="Vista de eventos">
-            <button type="button" className={vistaEventos === 'lista' ? 'activo' : ''} onClick={() => setVistaEventos('lista')}>
-              <FaListUl aria-hidden="true" /> Lista
-            </button>
-            <button type="button" className={vistaEventos === 'calendario' ? 'activo' : ''} onClick={() => setVistaEventos('calendario')}>
-              <FaCalendarAlt aria-hidden="true" /> Calendario
-            </button>
+          <div className="pi-ges-vista-selector">
+            <Pestanas
+              variante="segmento"
+              etiqueta="Vista de eventos"
+              activo={vistaEventos}
+              onCambio={setVistaEventos}
+              items={[
+                { id: 'lista', etiqueta: 'Lista', icono: FaListUl },
+                { id: 'calendario', etiqueta: 'Calendario', icono: FaCalendarAlt },
+              ]}
+            />
           </div>
 
           {vistaEventos === 'calendario' ? (
@@ -944,7 +976,7 @@ export default function AdminGestionEventos() {
           tamano="lg"
         >
           {errorSolicitudes && (
-            <p className="pi-ges-error-fechas"><FaExclamationTriangle aria-hidden="true" /> {errorSolicitudes}</p>
+            <AvisoFijo tono="error">{errorSolicitudes}</AvisoFijo>
           )}
           {solicitudes.length === 0 ? (
             <p className="pi-ges-modal-vacio">No hay solicitudes pendientes.</p>
@@ -959,13 +991,17 @@ export default function AdminGestionEventos() {
                   <td>{s.cliente?.nombre} ({s.cliente?.email})</td>
                   <td>{s.lugar}</td>
                   <td>{formatearFecha(s.fecha)}</td>
-                  <td style={{ display: 'flex', gap: '8px' }}>
-                    <button type="button" className="pi-ges-btn-asignar" onClick={() => aprobarSolicitud(s)}>
-                      <FaCheckCircle /> Aprobar
-                    </button>
-                    <button type="button" className="pi-ges-btn-quitar" onClick={() => rechazarSolicitud(s)} title="Rechazar">
-                      <FaBan />
-                    </button>
+                  <td>
+                    <div className="btn-acciones">
+                      <Boton variante="exito" tamano="sm" icono={FaCheckCircle} onClick={() => aprobarSolicitud(s)}>
+                        Aprobar
+                      </Boton>
+                      <Boton
+                        variante="peligro-suave" tamano="sm" icono={FaBan}
+                        onClick={() => rechazarSolicitud(s)}
+                        aria-label={`Rechazar la solicitud "${s.nombreEvento}"`}
+                      />
+                    </div>
                   </td>
                 </tr>
               )}

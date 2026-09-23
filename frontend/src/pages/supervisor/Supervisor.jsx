@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
 import Buscador from '../../components/Buscador.jsx';
@@ -11,12 +10,17 @@ import GrillaEventos from '../../components/GrillaEventos.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
+import Boton from '../../components/Boton.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import FichaParticipante from '../../components/FichaParticipante.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import {
-  FaUsers, FaCheckCircle, FaQrcode, FaTimes,
-  FaIdCard, FaTicketAlt,  FaUserCheck, FaExclamationTriangle,
+  FaUsers, FaCheckCircle, FaQrcode,
+  FaIdCard, FaTicketAlt, FaUserCheck,
   FaSignOutAlt, FaCamera, FaHistory, FaSignInAlt, FaUserSecret, FaSyncAlt,
-  FaArrowLeft, FaCalendarAlt, FaMoon, FaUserShield
+  FaArrowLeft, FaCalendarAlt, FaMoon, FaUserShield, FaCalendarTimes, FaDoorOpen,
 } from 'react-icons/fa';
 
 // Debe coincidir con MARGEN_INGRESO_ANTICIPADO_HORAS del backend
@@ -38,6 +42,7 @@ import './GestionEntrega.css';
 export default function Supervisor() {
   useTituloPagina('Control de acceso');
   const sesion = leerSesion();
+  const avisos = useAvisos();
 
   // Carga primaria (eventos asignados) con estados cargando/error/reintentar (Manual 8.9).
   const cargarEventos = useCallback(
@@ -72,6 +77,9 @@ export default function Supervisor() {
   const [busquedaEvento, setBusquedaEvento] = useState('');
   const [filtroEvento, setFiltroEvento] = useState('todos');
   const [alertaToggle, setAlertaToggle] = useState(''); // Mensaje de error interno del modal
+  // Movimiento que se está registrando ('ingreso' | 'salida'): spinner y sin
+  // segundo toque (antes un doble toque mostraba un falso "ya ingresado").
+  const [registrando, setRegistrando] = useState(null);
   // Al registrar un movimiento: un "flash" de confirmación de ~1 s ({ tipo, nombre }) y
   // después se vuelve a mostrar la tarjeta del asistente ya actualizada (como un reescaneo),
   // que se cierra a mano o sola a los 5 s (tarjetaAutoCierre).
@@ -166,10 +174,6 @@ export default function Supervisor() {
     setTarjetaAutoCierre(false);
   };
 
-  // Modal abierto: ESC lo cierra y el fondo no scrollea (Manual 8.6).
-  // Foco + ESC + scroll-lock de la tarjeta del asistente (look propio). El
-  // escáner usa <Modal>; el flash de confirmación es transitorio (1 s).
-  const refTarjeta = useModal(!!tarjetaQR, cerrarTarjeta);
 
   // Paso 1: el flash de confirmación dura ~1 s; al terminar se vuelve a la tarjeta del
   // asistente (ya actualizada) y arranca su cuenta regresiva de cierre.
@@ -287,7 +291,9 @@ export default function Supervisor() {
       setAlertaToggle('Toma una foto de esta entrada antes de registrar el movimiento.');
       return;
     }
+    if (registrando) return;
     setAlertaToggle('');
+    setRegistrando(tipo);
     try {
       const codigoQr = tarjetaQR.codigoQrVinculado?.codigo;
       const actualizado = tipo === 'salida'
@@ -308,6 +314,8 @@ export default function Supervisor() {
       } else {
         setAlertaToggle(err.message);
       }
+    } finally {
+      setRegistrando(null);
     }
   };
 
@@ -326,15 +334,17 @@ export default function Supervisor() {
   if (!eventoDetalle) {
     return (
       <div className="pi-sup-container">
-        <div className="pi-sup-header">
-          <h1>Punto de control de accesos</h1>
-        </div>
+        <EncabezadoPagina titulo="Punto de control de accesos" icono={FaDoorOpen} subtitulo="Elegí el evento en el que vas a controlar la entrada." />
         {errorEventos ? (
           <EstadoError onReintentar={recargarEventos} />
         ) : cargandoEventos ? (
           <EstadoCarga filas={3} />
         ) : eventos.length === 0 ? (
-          <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+          <EstadoVacio
+            icono={FaCalendarTimes}
+            titulo="Todavía no tenés ningún evento asignado"
+            mensaje="Pedile a Admin que te asigne uno para controlar la entrada."
+          />
         ) : (
           <>
             <Buscador
@@ -347,7 +357,7 @@ export default function Supervisor() {
               onFiltro={setFiltroEvento}
               etiquetaFiltros="Filtrar eventos por estado"
             />
-            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+            <GrillaEventos eventos={eventosFiltrados}>
               {ev => (
                 <EventoCard
                   key={ev.id}
@@ -367,44 +377,40 @@ export default function Supervisor() {
   return (
     <div className="pi-sup-container">
 
-      <div className="pi-sup-header">
-        <div>
-          <button type="button" className="pi-entrega-btn-volver" onClick={volverALista}>
-            <FaArrowLeft /> Cambiar de evento
-          </button>
-          <h1>{eventoDetalle.nombre}</h1>
-        </div>
-
-        <div className="pi-sup-simuladores">
-          <button type="button" className="pi-sup-btn-escanear-general" onClick={iniciarEscaneo} disabled={escaneando || buscando}>
-            <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
-          </button>
-        </div>
+      <div className="qp-nav">
+        <Boton variante="fantasma" tamano="sm" icono={FaArrowLeft} onClick={volverALista}>Cambiar de evento</Boton>
       </div>
 
-      {errorEscaneo && (
-        <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginBottom: '16px' }}>
-          <FaExclamationTriangle /> {errorEscaneo}
-        </p>
-      )}
+      <EncabezadoPagina
+        titulo={eventoDetalle.nombre}
+        icono={FaDoorOpen}
+        subtitulo="Escaneá la manilla para registrar ingresos y salidas."
+        acciones={(
+          <Boton tamano="lg" pildora icono={FaQrcode} onClick={iniciarEscaneo} cargando={buscando} disabled={escaneando}>
+            {buscando ? 'Buscando…' : 'Escanear código QR'}
+          </Boton>
+        )}
+      />
+
+      {errorEscaneo && <AvisoFijo tono="error">{errorEscaneo}</AvisoFijo>}
 
       {/* --- ESTADÍSTICAS --- */}
-      <div className="pi-sup-stats-grid">
-        <StatCard icon={<FaUsers />} tono="total" valor={stats.total} label="Total Participantes" />
+      <div className="qp-stats">
+        <StatCard icon={<FaUsers />} tono="total" valor={stats.total} label="Total de participantes" />
         <StatCard
           icon={<FaUserCheck />}
           tono="ok"
           valor={stats.adentro}
-          label="Personas Adentro"
-          extra={<span className="pi-sup-stat-porcentaje pi-sup-badge-ok">{stats.pctAdentro}%</span>}
+          label="Personas adentro"
+          extra={<Insignia tono="ok">{stats.pctAdentro}%</Insignia>}
         />
-        <StatCard icon={<FaSignOutAlt />} valor={stats.afuera} label="Salieron Temporalmente" />
+        <StatCard icon={<FaSignOutAlt />} valor={stats.afuera} label="Salieron temporalmente" />
       </div>
 
       {/* --- LISTADO DE AUDITORÍA --- */}
       <div className="pi-sup-lista-card">
         <div className="pi-sup-lista-header">
-          <h3>Auditoría de Asistentes</h3>
+          <h3>Auditoría de asistentes</h3>
           <div className="pi-sup-lista-controles">
             <Buscador
               valor={busqueda}
@@ -458,7 +464,7 @@ export default function Supervisor() {
               {multiJornada && (
                 <td>
                   {mostrarJornada(p.diaEvento)
-                    ? <span className="pi-sup-badge-jornada">{nombreJornada(p.diaEvento)}</span>
+                    ? <Insignia tono="info" icono={FaMoon}>{nombreJornada(p.diaEvento)}</Insignia>
                     : '—'}
                 </td>
               )}
@@ -466,9 +472,9 @@ export default function Supervisor() {
               <td>{p.vecesIngreso}</td>
               <td>{p.vecesSalida}</td>
               <td>
-                {p.estadoIngreso === 'ingresado' && <span className="pi-sup-badge pi-sup-badge-ok">Adentro</span>}
-                {p.estadoIngreso === 'salio' && <span className="pi-sup-badge pi-sup-badge-out">Salió</span>}
-                {p.estadoIngreso === 'pendiente' && <span className="pi-sup-badge pi-sup-badge-pend">Pendiente</span>}
+                {p.estadoIngreso === 'ingresado' && <Insignia tono="ok" punto>Adentro</Insignia>}
+                {p.estadoIngreso === 'salio' && <Insignia tono="neutro">Salió</Insignia>}
+                {p.estadoIngreso === 'pendiente' && <Insignia tono="warn">Pendiente</Insignia>}
               </td>
             </tr>
           )}
@@ -489,51 +495,33 @@ export default function Supervisor() {
       {/* =========================================================
           MODAL DE CONTROL DINÁMICO (INTERRUPTOR)
       ========================================================= */}
-      {/* Portal al <body>, igual que <Modal>: el contenido de la página vive en un
-          contexto de apilado propio (.pi-layout-content tiene isolation), así que
-          acá adentro esta capa quedaba POR DEBAJO del header del panel. */}
-      {tarjetaQR && createPortal(
-        <div className="pi-sup-modal-overlay" onClick={cerrarTarjeta}>
-          <div
-            ref={refTarjeta}
-            tabIndex={-1}
-            className="pi-sup-modal-tarjeta"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Control de acceso de ${tarjetaQR.nombre}`}
-          >
-
-            <button type="button" className="pi-sup-btn-cerrar" onClick={cerrarTarjeta} aria-label="Cerrar">
-              <FaTimes aria-hidden="true" />
-            </button>
-
-            {/* HEADER DE ESTADO */}
-            <div className="pi-sup-tarjeta-estado">
-              <div className="estado-badge">
-                <FaCheckCircle /> Lectura Exitosa
-              </div>
-            </div>
+      {tarjetaQR && (
+        <Modal
+          titulo={<><FaDoorOpen aria-hidden="true" /> Control de acceso</>}
+          onCerrar={cerrarTarjeta}
+          cerrarEnBackdrop={!registrando}
+          className="pi-sup-modal-tarjeta"
+        >
 
             {/* FOTO (un solo círculo: la recién tomada, o la última que hay, o el botón para tomar una) */}
-            <div className="pi-sup-fotos-comparacion single-photo">
+            <div className="pi-sup-fotos-comparacion pi-sup-single-photo">
               {!capturandoFoto && (
-                <div className="foto-box">
+                <div className="pi-sup-foto-box">
                   {fotoCapturadaTemporal ? (
-                    <div className="foto-capturada-container foto-recien-capturada">
-                      <FotoZoom width={110} height={110} src={fotoCapturadaTemporal} alt="Foto tomada en la puerta" className="foto-img border-cyan" />
-                      <span className="foto-badge-ok"><FaCheckCircle /> Foto capturada</span>
-                      <button type="button" className="btn-retake" onClick={descartarFoto} aria-label="Volver a tomar la foto"><FaSyncAlt aria-hidden="true" /></button>
-                      <span className="foto-label text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
+                    <div className="pi-sup-foto-capturada-container pi-sup-foto-recien-capturada">
+                      <FotoZoom width={110} height={110} src={fotoCapturadaTemporal} alt="Foto tomada en la puerta" className="pi-sup-foto-img pi-sup-border-cyan" />
+                      <Insignia tono="ok" icono={FaCheckCircle} solida className="pi-sup-foto-badge-ok">Foto capturada</Insignia>
+                      <button type="button" className="pi-sup-btn-retake" onClick={descartarFoto} aria-label="Volver a tomar la foto"><FaSyncAlt aria-hidden="true" /></button>
+                      <span className="pi-sup-foto-label pi-sup-text-cyan"><FaUserSecret/> FOTO EN PUERTA</span>
                     </div>
                   ) : fotoReferencia ? (
-                    <div className="foto-capturada-container">
-                      <FotoZoom width={110} height={110} src={fotoReferencia} alt="Foto de referencia registrada" className="foto-img" />
-                      <button type="button" className="btn-retake" onClick={() => setCapturandoFoto(true)} aria-label="Tomar una foto nueva"><FaCamera aria-hidden="true" /></button>
-                      <span className="foto-label text-gray">{fotoReferenciaLabel}</span>
+                    <div className="pi-sup-foto-capturada-container">
+                      <FotoZoom width={110} height={110} src={fotoReferencia} alt="Foto de referencia registrada" className="pi-sup-foto-img" />
+                      <button type="button" className="pi-sup-btn-retake" onClick={() => setCapturandoFoto(true)} aria-label="Tomar una foto nueva"><FaCamera aria-hidden="true" /></button>
+                      <span className="pi-sup-foto-label pi-sup-text-gray">{fotoReferenciaLabel}</span>
                     </div>
                   ) : (
-                    <button type="button" className="foto-placeholder" onClick={() => setCapturandoFoto(true)}>
+                    <button type="button" className="pi-sup-foto-placeholder" onClick={() => setCapturandoFoto(true)}>
                       <FaCamera size={26} aria-hidden="true" />
                       <span>Tomar Foto<br/>Obligatoria</span>
                     </button>
@@ -549,73 +537,51 @@ export default function Supervisor() {
                   try {
                     setFotoCapturadaTemporal(await subirFotoCapturada(foto, 'ingresos'));
                   } catch (err) {
-                    setErrorEscaneo(err.message);
+                    // Antes iba a errorEscaneo, que queda DETRÁS del modal: no se veía.
+                    avisos.error(err.message, { titulo: 'No se pudo guardar la foto' });
                   }
                 }}
                 onCancelar={() => setCapturandoFoto(false)}
               />
             )}
 
-            <h2 className="pi-sup-tarjeta-nombre">{tarjetaQR.nombre}</h2>
-
-            {alertaToggle && (
-              <div className="pi-sup-alerta-modal">
-                <FaExclamationTriangle /> {alertaToggle}
-              </div>
-            )}
-
             <div className="pi-sup-modal-cuerpo">
-            <div className="pi-sup-info-card">
-              <div className={`info-row${eventoNoCoincide ? ' info-row--alerta' : ''}`}>
-                <FaCalendarAlt className="info-icon" />
-                <div>
-                  <span className="info-label">EVENTO DE LA ENTRADA</span>
-                  <span className="info-valor">{eventoEntrada?.nombre || eventoDetalle.nombre}</span>
-                  {eventoNoCoincide && (
-                    <span className="pi-sup-evento-mismatch">
-                      <FaExclamationTriangle aria-hidden="true" /> Este control es de «{eventoDetalle.nombre}»
-                    </span>
-                  )}
-                </div>
-              </div>
-              {tarjetaQR.diaEvento && (
-                <div className="info-row">
-                  <FaMoon className="info-icon" />
-                  <div>
-                    <span className="info-label">JORNADA</span>
-                    <span className="info-valor">{nombreJornada(tarjetaQR.diaEvento)}</span>
-                    <span className="pi-sup-jornada-horario">
-                      {formatearFecha(tarjetaQR.diaEvento.inicio)} — {formatearFecha(tarjetaQR.diaEvento.fin)}
-                    </span>
-                  </div>
-                </div>
+            <FichaParticipante
+              estado={(
+                <span className="btn-acciones">
+                  <Insignia tono="ok" icono={FaCheckCircle} solida>Lectura exitosa</Insignia>
+                  {tarjetaQR.estadoIngreso === 'ingresado' && <Insignia tono="ok" punto>Adentro</Insignia>}
+                  {tarjetaQR.estadoIngreso === 'salio' && <Insignia tono="neutro">Salió</Insignia>}
+                  {tarjetaQR.estadoIngreso === 'pendiente' && <Insignia tono="warn">Todavía no entró</Insignia>}
+                </span>
               )}
-              <div className="info-row">
-                <FaIdCard className="info-icon" />
-                <div>
-                  <span className="info-label">DOCUMENTO</span>
-                  <span className="info-valor">{ciDeEntrada(tarjetaQR) || '—'}</span>
-                </div>
-              </div>
-              <div className="info-row">
-                <FaTicketAlt className="info-icon" />
-                <div>
-                  <span className="info-label">TIPO DE ENTRADA</span>
-                  <span className="info-valor">{tarjetaQR.categoriaTicket?.nombre || '—'}</span>
-                </div>
-              </div>
-            </div>
+              nombre={tarjetaQR.nombre}
+              datos={[
+                {
+                  icono: FaCalendarAlt, etiqueta: 'Evento de la entrada', valor: eventoEntrada?.nombre || eventoDetalle.nombre,
+                  nota: eventoNoCoincide ? `Este control es de «${eventoDetalle.nombre}»` : null,
+                },
+                tarjetaQR.diaEvento && {
+                  icono: FaMoon, etiqueta: 'Jornada', valor: nombreJornada(tarjetaQR.diaEvento),
+                  nota: `${formatearFecha(tarjetaQR.diaEvento.inicio)} — ${formatearFecha(tarjetaQR.diaEvento.fin)}`,
+                },
+                { icono: FaIdCard, etiqueta: 'Documento', valor: ciDeEntrada(tarjetaQR) || '—' },
+                { icono: FaTicketAlt, etiqueta: 'Tipo de entrada', valor: tarjetaQR.categoriaTicket?.nombre || '—' },
+              ]}
+            />
+
+            {alertaToggle && <AvisoFijo tono="error">{alertaToggle}</AvisoFijo>}
 
             <div className="pi-sup-historial-section">
-              <h4 className="historial-title"><FaHistory /> Historial de Accesos</h4>
+              <h4 className="pi-sup-historial-title"><FaHistory aria-hidden="true" /> Historial de accesos</h4>
               {historialTarjeta.length === 0 ? (
-                <p className="historial-vacio">Sin registros previos.</p>
+                <EstadoVacio compacto icono={FaHistory} titulo="Sin registros previos" />
               ) : (
-                <div className="historial-list">
+                <div className="pi-sup-historial-list">
                   {historialTarjeta.map((mov) => (
-                    <div key={mov.id} className={`historial-item ${mov.tipo === 'salida' ? 'item-out' : 'item-in'}`}>
+                    <div key={mov.id} className={`pi-sup-historial-item ${mov.tipo === 'salida' ? 'pi-sup-item-out' : 'pi-sup-item-in'}`}>
                       {mov.foto
-                        ? <FotoZoom width={32} height={32} src={mov.foto} alt="Foto del registro" className="historial-foto-thumb" />
+                        ? <FotoZoom width={32} height={32} src={mov.foto} alt="Foto del registro" className="pi-sup-historial-foto-thumb" />
                         : (mov.tipo === 'salida' ? <FaSignOutAlt/> : <FaSignInAlt/>)}
                       <span>
                         {mov.tipo === 'verificacion_duplicado'
@@ -637,56 +603,63 @@ export default function Supervisor() {
             ========================================= */}
             <div className="pi-sup-modal-footer">
               {eventoNoCoincide ? (
-                <div className="pi-sup-bloqueo-evento">
-                  <FaExclamationTriangle aria-hidden="true" />
-                  <span>
-                    Esta manilla pertenece al evento <strong>«{eventoEntrada?.nombre || 'otro'}»</strong> y
-                    este control atiende <strong>«{eventoDetalle.nombre}»</strong>. No se puede registrar
-                    ingreso ni salida desde acá.
-                  </span>
-                  <button type="button" className="btn-cancelar" onClick={cerrarTarjeta}>Cerrar</button>
-                </div>
+                <>
+                  <AvisoFijo tono="error" titulo="No se puede registrar desde acá">
+                    Esta manilla pertenece al evento «{eventoEntrada?.nombre || 'otro'}» y este control atiende
+                    «{eventoDetalle.nombre}».
+                  </AvisoFijo>
+                  <div className="modal-actions">
+                    <Boton variante="secundario" onClick={cerrarTarjeta}>Cerrar</Boton>
+                  </div>
+                </>
               ) : (
                 <>
-                  <div className="pi-sup-toggle-switch">
-                    <button
-                      className={`toggle-option ${tarjetaQR.estadoIngreso === 'salio' ? 'active-out' : ''} ${tarjetaQR.estadoIngreso !== 'ingresado' ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
-                      onClick={() => registrarMovimiento('salida')}
-                    >
-                      <FaSignOutAlt /> REGISTRAR SALIDA
-                    </button>
-
-                    <button
-                      className={`toggle-option ${tarjetaQR.estadoIngreso === 'ingresado' ? 'active-in' : ''} ${tarjetaQR.estadoIngreso === 'ingresado' || !ingresoDentroDeVentana ? 'sin-foto' : ''} ${requiereFoto && !fotoCapturadaTemporal ? 'sin-foto' : ''}`}
-                      onClick={() => registrarMovimiento('ingreso')}
-                    >
-                      <FaSignInAlt /> REGISTRAR INGRESO
-                    </button>
-                  </div>
                   {!ingresoDentroDeVentana && (
-                    <p className="pi-sup-hint-foto">
+                    <AvisoFijo tono="aviso">
                       {motivoVentana === 'finalizado'
                         ? `"${eventoDetalle.nombre}" ya finalizó: no se registran más ingresos. La salida sí está habilitada.`
                         : motivoVentana === 'cerrada'
                           ? `${mostrarJornada(jornadaEntrada) ? `La jornada «${nombreJornada(jornadaEntrada)}»` : 'El evento'} cerró el ${formatearFecha(cierreVentana)}: esta entrada ya no es válida para ingresar. La salida sí está habilitada.`
                           : `El ingreso abre el ${formatearFecha(aperturaVentana)} (${MARGEN_INGRESO_ANTICIPADO_HORAS} h antes del inicio). La salida sí está habilitada.`}
-                    </p>
+                    </AvisoFijo>
                   )}
                   {requiereFoto && !fotoCapturadaTemporal && (
-                    <p className="pi-sup-hint-foto">Toma la foto de la puerta (arriba) para poder registrar el ingreso o salida.</p>
+                    <AvisoFijo tono="info" icono={FaCamera}>Tomá la foto de la puerta (arriba) para poder registrar el ingreso o la salida.</AvisoFijo>
                   )}
+                  {/* Los botones siempre responden: si algo falta, explican por qué (alertaToggle). */}
+                  <div className="pi-sup-movimientos">
+                    <Boton
+                      variante="secundario"
+                      tamano="lg"
+                      icono={FaSignOutAlt}
+                      onClick={() => registrarMovimiento('salida')}
+                      cargando={registrando === 'salida'}
+                      disabled={!!registrando && registrando !== 'salida'}
+                      className={tarjetaQR.estadoIngreso !== 'ingresado' ? 'pi-sup-mov-apagado' : ''}
+                    >
+                      Registrar salida
+                    </Boton>
+                    <Boton
+                      variante="exito"
+                      tamano="lg"
+                      icono={FaSignInAlt}
+                      onClick={() => registrarMovimiento('ingreso')}
+                      cargando={registrando === 'ingreso'}
+                      disabled={!!registrando && registrando !== 'ingreso'}
+                      className={tarjetaQR.estadoIngreso === 'ingresado' || !ingresoDentroDeVentana || (requiereFoto && !fotoCapturadaTemporal) ? 'pi-sup-mov-apagado' : ''}
+                    >
+                      Registrar ingreso
+                    </Boton>
+                  </div>
                   {tarjetaQR.estadoIngreso === 'ingresado' && eventoDetalle.estado !== 'finalizado' && (
-                    <button type="button" className="btn-secundario-sm pi-sup-btn-duplicado" onClick={() => setVerificandoDueno(true)}>
-                      <FaUserShield aria-hidden="true" /> ¿Dice que nunca entró? Verificar dueño (posible copia)
-                    </button>
+                    <Boton variante="fantasma" tamano="sm" icono={FaUserShield} onClick={() => setVerificandoDueno(true)}>
+                      ¿Dice que nunca entró? Verificar dueño (posible copia)
+                    </Boton>
                   )}
                 </>
               )}
             </div>
-
-          </div>
-        </div>,
-        document.body,
+        </Modal>
       )}
 
       {verificandoDueno && tarjetaQR && (
@@ -704,9 +677,9 @@ export default function Supervisor() {
 
       {/* --- FLASH DE CONFIRMACIÓN (~1 s) TRAS REGISTRAR INGRESO / SALIDA --- */}
       {confirmacion && createPortal(
-        <div className="pi-sup-modal-overlay pi-sup-confirm-overlay">
+        <div className="pi-sup-confirm-overlay">
           <div
-            className={`pi-sup-confirm ${confirmacion.tipo === 'ingreso' ? 'confirm-in' : 'confirm-out'}`}
+            className={`pi-sup-confirm ${confirmacion.tipo === 'ingreso' ? 'pi-sup-confirm-in' : 'pi-sup-confirm-out'}`}
             role="status"
             aria-live="polite"
           >

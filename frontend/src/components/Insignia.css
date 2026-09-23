@@ -30,7 +30,7 @@
 /* Sólida: fondo lleno, para ponerla sobre fotos o fondos oscuros. */
 .qp-insignia--solida { background: var(--tono); color: var(--text-on-vivid); }
 .qp-insignia--solida.qp-insignia--marca,
-.qp-insignia--solida.qp-insignia--neutro { color: var(--text-on-accent); }
+.qp-insignia--solida.qp-insignia--neutro { color: var(--texto-sobre-oscuro); }
 .qp-insignia--solida.qp-insignia--neutro { --tono: var(--n-700); }
 
 .qp-insignia-ic { flex-shrink: 0; font-size: 0.95em; }

@@ -1,10 +1,15 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { FaPlus, FaTrash, FaPen, FaClock, FaUsers, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaPlus, FaTrash, FaPen, FaClock, FaUsers, FaCheck, FaTag } from 'react-icons/fa';
 import { useApi } from '../../utils/useApi.js';
 import api from '../../api/index.js';
 import Tabla from '../../components/Tabla.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
 import CalendarioEventos from '../../components/CalendarioEventos.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { diaLocalISO } from '../../utils/eventos.js';
+import { limpiarErrores, enfocarPrimero } from '../../utils/validacion.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import './AdminJornadas.css';
 
@@ -22,13 +27,24 @@ const fmt = (iso) =>
 
 const FORM_VACIO = { nombre: '', inicio: '', fin: '', aforoMaximo: '' };
 
+const validarJornada = (f) => limpiarErrores({
+  'jor-inicio': f.inicio ? null : 'Elegí cuándo empieza.',
+  'jor-fin': !f.fin ? 'Elegí cuándo termina.' : f.inicio && f.fin <= f.inicio ? 'Tiene que terminar después de empezar.' : null,
+  'jor-aforo': f.aforoMaximo !== '' && !(Number(f.aforoMaximo) >= 1) ? 'El aforo tiene que ser 1 o más.' : null,
+});
+
+const nombreDe = (j, i) => j.nombre || `Día ${j.orden ?? i + 1}`;
+
 export default function AdminJornadas({ eventoId, soloLectura = false }) {
+  const avisos = useAvisos();
+  const [confirmar, DialogoConfirmar] = useConfirmar();
   const cargar = useCallback(() => api.diasEvento.listar(eventoId), [eventoId]);
   const { data: jornadas, cargando, error, recargar } = useApi(cargar, { inicial: [] });
 
   const [form, setForm] = useState(FORM_VACIO);
   const [editandoId, setEditandoId] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  const [intento, setIntento] = useState(false);
   const [err, setErr] = useState('');
   const formRef = useRef(null);
 
@@ -42,6 +58,7 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
     return { desde, hasta };
   }, [jornadas]);
 
+  const errores = intento ? validarJornada(form) : {};
   const cambiar = (e) => setForm((f) => ({ ...f, [e.target.name]: e.target.value }));
 
   const abrirEditar = (j) => {
@@ -53,9 +70,9 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
       aforoMaximo: j.aforoMaximo != null ? String(j.aforoMaximo) : '',
     });
     setErr('');
+    setIntento(false);
     // Que se note que hay algo cargado para editar (si no, parece que
-    // "Editar" no hizo nada) — ahora que el layout ya no es gigante esto no
-    // debería saltar a un lugar raro.
+    // "Editar" no hizo nada).
     formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   };
 
@@ -63,11 +80,14 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
     setEditandoId(null);
     setForm(FORM_VACIO);
     setErr('');
+    setIntento(false);
   };
 
   const guardar = async (e) => {
     e.preventDefault();
-    if (!form.inicio || !form.fin) return;
+    setIntento(true);
+    const errs = validarJornada(form);
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ['jor-inicio', 'jor-fin', 'jor-aforo']);
     setGuardando(true);
     setErr('');
     try {
@@ -82,6 +102,7 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
       } else {
         await api.diasEvento.crear({ eventoId, ...payload });
       }
+      avisos.exito(editandoId ? 'Los cambios de la jornada quedaron guardados.' : 'La jornada se agregó al evento.');
       cancelar();
       recargar();
     } catch (e2) {
@@ -91,13 +112,23 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
     }
   };
 
-  const eliminar = async (id) => {
-    setErr('');
+  // Borrar una jornada: destructivo (de ella cuelgan categorías de ticket y
+  // manillas) -> se confirma (PLAN §2.4). Antes se borraba al primer clic.
+  const eliminar = async (j, i) => {
+    const ok = await confirmar({
+      titulo: `¿Borrar la jornada "${nombreDe(j, i)}"?`,
+      mensaje: 'Las categorías de ticket y las manillas se generan por jornada. Si ya tiene alguna, el sistema no deja borrarla.',
+      textoConfirmar: 'Borrar jornada',
+      peligroso: true,
+    });
+    if (!ok) return;
     try {
-      await api.diasEvento.eliminar(id);
+      await api.diasEvento.eliminar(j.id);
+      if (editandoId === j.id) cancelar();
       recargar();
+      avisos.exito(`La jornada "${nombreDe(j, i)}" se borró.`);
     } catch (e2) {
-      setErr(e2?.message || 'No se pudo borrar la jornada.');
+      avisos.error(e2?.message || 'No se pudo borrar la jornada.', { titulo: 'No se pudo borrar' });
     }
   };
 
@@ -107,7 +138,7 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
   return (
     <section className="pi-jor-seccion">
       <h3 className="pi-jor-titulo"><FaClock aria-hidden="true" /> Jornadas del evento</h3>
-      <p className="pi-jor-ayuda">
+      <p className="texto-ayuda">
         Cada jornada es una noche del evento (una fiesta puede ir de 20:00 a 02:00).
         Las categorías de ticket y las manillas se generan <strong>por jornada</strong>,
         y el aforo se controla por jornada. Un evento de una sola noche tiene una.
@@ -124,25 +155,22 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
 
         <div className="pi-jor-arriba-der">
           <Tabla
+            card
             columnas={['Jornada', 'Inicio', 'Fin', { texto: 'Aforo', align: 'center' }, { texto: 'Acciones', srOnly: true }]}
             datos={jornadas}
             vacio="Este evento no tiene jornadas."
             renderFila={(j, i) => (
-              <tr key={j.id}>
-                <td>{j.nombre || `Día ${j.orden ?? i + 1}`}</td>
+              <tr key={j.id} className={editandoId === j.id ? 'pi-jor-fila--editando' : ''}>
+                <td className="fila-nombre">{nombreDe(j, i)}</td>
                 <td>{fmt(j.inicio)}</td>
                 <td>{fmt(j.fin)}</td>
-                <td style={{ textAlign: 'center' }}>{j.aforoMaximo ?? '—'}</td>
-                <td className="pi-jor-acciones">
+                <td className="td-centro">{j.aforoMaximo ?? '—'}</td>
+                <td>
                   {!soloLectura && (
-                    <>
-                      <button type="button" className="pi-jor-btn-editar" onClick={() => abrirEditar(j)} title="Editar">
-                        <FaPen />
-                      </button>
-                      <button type="button" className="pi-jor-btn-borrar" onClick={() => eliminar(j.id)} title="Borrar">
-                        <FaTrash />
-                      </button>
-                    </>
+                    <div className="btn-acciones">
+                      <Boton variante="secundario" tamano="sm" icono={FaPen} onClick={() => abrirEditar(j)}>Editar</Boton>
+                      <Boton variante="peligro-suave" tamano="sm" icono={FaTrash} onClick={() => eliminar(j, i)}>Borrar</Boton>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -151,39 +179,30 @@ export default function AdminJornadas({ eventoId, soloLectura = false }) {
         </div>
       </div>
 
-      {err && <p className="pi-jor-error"><FaTimes aria-hidden="true" /> {err}</p>}
-
       {!soloLectura && (
-        <form ref={formRef} className={`pi-jor-form${editandoId ? ' pi-jor-form--editando' : ''}`} onSubmit={guardar}>
-          <h4>{editandoId ? <><FaPen aria-hidden="true" /> Editando: {form.nombre || 'esta jornada'}</> : 'Agregar jornada'}</h4>
+        <form ref={formRef} className={`pi-jor-form${editandoId ? ' pi-jor-form--editando' : ''}`} onSubmit={guardar} noValidate>
+          <h4>{editandoId ? <><FaPen aria-hidden="true" /> Editando: {form.nombre || 'esta jornada'}</> : <><FaPlus aria-hidden="true" /> Agregar jornada</>}</h4>
           <div className="pi-jor-grid">
-            <label>
-              Nombre (opcional)
-              <input type="text" name="nombre" value={form.nombre} onChange={cambiar} placeholder="Noche de apertura" />
-            </label>
-            <label>
-              Inicio
-              <input type="datetime-local" name="inicio" value={form.inicio} onChange={cambiar} required />
-            </label>
-            <label>
-              Fin
-              <input type="datetime-local" name="fin" value={form.fin} onChange={cambiar} required />
-            </label>
-            <label>
-              <span><FaUsers aria-hidden="true" /> Aforo máximo (opcional)</span>
-              <input type="number" name="aforoMaximo" min="1" step="1" value={form.aforoMaximo} onChange={cambiar} placeholder="alerta al 95%" />
-            </label>
+            <Campo id="jor-nombre" etiqueta="Nombre (opcional)" icono={FaTag} name="nombre" placeholder="Noche de apertura"
+              value={form.nombre} onChange={cambiar} />
+            <Campo id="jor-inicio" etiqueta="Inicio" type="datetime-local" name="inicio"
+              value={form.inicio} onChange={cambiar} error={errores['jor-inicio']} />
+            <Campo id="jor-fin" etiqueta="Fin" type="datetime-local" name="fin" min={form.inicio || undefined}
+              value={form.fin} onChange={cambiar} error={errores['jor-fin']} />
+            <Campo id="jor-aforo" etiqueta={<><FaUsers aria-hidden="true" /> Aforo máximo (opcional)</>} type="number" name="aforoMaximo"
+              min="1" step="1" placeholder="Alerta al 95%" ayuda="Se avisa al llegar al 95%."
+              value={form.aforoMaximo} onChange={cambiar} error={errores['jor-aforo']} />
           </div>
-          <div className="pi-jor-form-acciones">
-            <button type="submit" className="pi-jor-btn-guardar" disabled={guardando}>
-              {editandoId ? <><FaCheck /> Guardar cambios</> : <><FaPlus /> Agregar jornada</>}
-            </button>
-            {editandoId && (
-              <button type="button" className="pi-jor-btn-cancelar" onClick={cancelar}>Cancelar</button>
-            )}
+          {err && <AvisoFijo tono="error">{err}</AvisoFijo>}
+          <div className="btn-acciones">
+            <Boton type="submit" icono={editandoId ? FaCheck : FaPlus} cargando={guardando}>
+              {editandoId ? 'Guardar cambios' : 'Agregar jornada'}
+            </Boton>
+            {editandoId && <Boton variante="secundario" onClick={cancelar} disabled={guardando}>Cancelar</Boton>}
           </div>
         </form>
       )}
+      {DialogoConfirmar}
     </section>
   );
 }

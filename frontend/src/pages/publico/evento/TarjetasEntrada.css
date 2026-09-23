@@ -7,17 +7,17 @@
 /* Fondo y borde desde la paleta: antes eran un azul noche y un cian fijos,
    y con paletas claras (Día claro, Arena...) los títulos oscuros quedaban
    sobre fondo oscuro. */
-.pricing-card {
+.pi-ev-pricing-card {
   background: color-mix(in srgb, var(--color-texto-titulo) 6%, color-mix(in srgb, var(--color-fondo) 85%, transparent));
   border-color: color-mix(in srgb, var(--color-primario) 35%, transparent);
   padding: var(--space-8) var(--space-6) var(--space-6);
   gap: var(--space-5);
 }
 
-.pricing-card.destacado { background: color-mix(in srgb, var(--color-primario) 10%, var(--color-fondo)); }
+.pi-ev-pricing-card.destacado { background: color-mix(in srgb, var(--color-primario) 10%, var(--color-fondo)); }
 
 /* Barra de acento arriba, con un brillo que la recorre. */
-.pricing-card::before {
+.pi-ev-pricing-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -34,7 +34,7 @@
 @keyframes evTicketBarra { to { background-position: -200% 0; } }
 
 /* ---------- Cinta "Más vendida" ---------- */
-.ticket-cinta {
+.pi-ev-ticket-cinta {
   position: absolute;
   top: var(--space-4);
   right: calc(var(--space-6) * -1);
@@ -55,14 +55,14 @@
   box-shadow: 0 4px 12px color-mix(in srgb, var(--color-fondo) 60%, transparent);
 }
 
-.ticket-cinta svg { animation: evFuego 1.2s ease-in-out infinite alternate; }
+.pi-ev-ticket-cinta svg { animation: evFuego 1.2s ease-in-out infinite alternate; }
 
 @keyframes evFuego { to { transform: scale(1.25) translateY(-1px); } }
 
 /* ---------- Encabezado ---------- */
-.ticket-cab { display: flex; align-items: center; gap: var(--space-3); }
+.pi-ev-ticket-cab { display: flex; align-items: center; gap: var(--space-3); }
 
-.ticket-ic {
+.pi-ev-ticket-ic {
   flex-shrink: 0;
   display: grid;
   place-items: center;
@@ -76,17 +76,17 @@
   transition: transform 450ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.pricing-card:hover .ticket-ic { transform: rotate(0deg) scale(1.1); }
+.pi-ev-pricing-card:hover .pi-ev-ticket-ic { transform: rotate(0deg) scale(1.1); }
 
-.ticket-cab-txt { display: flex; flex-direction: column; min-width: 0; }
-.ticket-cab-txt .dia-badge { margin-bottom: var(--space-1); background: color-mix(in srgb, var(--color-primario) 14%, transparent); }
-.pricing-card-header .ticket-cab h3 { margin: 0; font-size: var(--text-xl); overflow-wrap: anywhere; }
+.pi-ev-ticket-cab-txt { display: flex; flex-direction: column; min-width: 0; }
+.pi-ev-ticket-cab-txt .pi-ev-dia-badge { margin-bottom: var(--space-1); background: color-mix(in srgb, var(--color-primario) 14%, transparent); }
+.pi-ev-pricing-card-header .pi-ev-ticket-cab h3 { margin: 0; font-size: var(--text-xl); overflow-wrap: anywhere; }
 
-.pricing-card-header { display: flex; flex-direction: column; gap: var(--space-3); }
-.pricing-card-header .stock-badge { align-self: flex-start; }
+.pi-ev-pricing-card-header { display: flex; flex-direction: column; gap: var(--space-3); }
+.pi-ev-pricing-card-header .pi-ev-stock-badge { align-self: flex-start; }
 
 /* Poco cupo: el aviso late. */
-.stock-badge.stk-bajo { animation: evUrgente 1.4s ease-in-out infinite; }
+.pi-ev-stock-badge.stk-bajo { animation: evUrgente 1.4s ease-in-out infinite; }
 
 @keyframes evUrgente {
   0%, 100% { transform: scale(1); }
@@ -94,17 +94,17 @@
 }
 
 /* ---------- Beneficios: entran de a uno cuando aparece la grilla ---------- */
-.pricing-features { gap: var(--space-3); }
-.pricing-features li { font-size: var(--text-sm); color: var(--color-texto-titulo); }
+.pi-ev-pricing-features { gap: var(--space-3); }
+.pi-ev-pricing-features li { font-size: var(--text-sm); color: var(--color-texto-titulo); }
 
-.pricing-grid.es-visible .pricing-features li {
+.pi-ev-pricing-grid.es-visible .pi-ev-pricing-features li {
   animation: evBeneficio 500ms var(--ease-out) backwards;
   animation-delay: calc(350ms + var(--i, 0) * 160ms + var(--j, 0) * 70ms);
 }
 
 @keyframes evBeneficio { from { opacity: 0; transform: translateX(-0.75rem); } }
 
-.pricing-features .check-icon {
+.pi-ev-pricing-features .pi-ev-check-icon {
   padding: 3px;
   width: 1.2em;
   height: 1.2em;
@@ -113,7 +113,7 @@
 }
 
 /* ---------- Troquel (línea perforada con muescas) ---------- */
-.ticket-corte {
+.pi-ev-ticket-corte {
   position: relative;
   height: 0;
   margin: 0 calc(var(--space-6) * -1);
@@ -122,8 +122,8 @@
 
 /* Las muescas son círculos del color de la página que "muerden" el borde
    (la tarjeta tiene overflow: hidden, así que solo se ve la mitad). */
-.ticket-corte::before,
-.ticket-corte::after {
+.pi-ev-ticket-corte::before,
+.pi-ev-ticket-corte::after {
   content: '';
   position: absolute;
   top: -0.85rem;
@@ -134,11 +134,11 @@
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primario) 35%, transparent);
 }
 
-.ticket-corte::before { left: -0.8rem; }
-.ticket-corte::after { right: -0.8rem; }
+.pi-ev-ticket-corte::before { left: -0.8rem; }
+.pi-ev-ticket-corte::after { right: -0.8rem; }
 
 /* ---------- Precio ---------- */
-.pricing-price {
+.pi-ev-pricing-price {
   display: flex;
   align-items: baseline;
   justify-content: center;
@@ -147,13 +147,13 @@
   margin-top: 0;
 }
 
-.price-moneda {
+.pi-ev-price-moneda {
   font-size: var(--text-lg);
   font-weight: 800;
   color: var(--color-primario);
 }
 
-.pricing-price .price-amount {
+.pi-ev-pricing-price .pi-ev-price-amount {
   display: inline-block; /* transform no aplica a elementos en línea */
   font-size: clamp(2.5rem, 2rem + 2vw, 3.25rem);
   line-height: 1;
@@ -161,12 +161,12 @@
   transition: text-shadow 300ms, transform 300ms var(--ease-out);
 }
 
-.pricing-card:hover .price-amount {
+.pi-ev-pricing-card:hover .pi-ev-price-amount {
   transform: scale(1.06);
   text-shadow: 0 0 1.5rem color-mix(in srgb, var(--color-primario) 50%, transparent);
 }
 
-.price-nota {
+.pi-ev-price-nota {
   flex-basis: 100%;
   text-align: center;
   font-size: var(--text-xs);
@@ -174,14 +174,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .pricing-card::before,
-  .ticket-cinta svg,
-  .stock-badge.stk-bajo,
-  .pricing-grid.es-visible .pricing-features li { animation: none; }
-  .ticket-ic, .pricing-price .price-amount { transition: none; }
-  .pricing-card:hover .ticket-ic { transform: rotate(-12deg); }
-  .pricing-card:hover .price-amount { transform: none; }
+  .pi-ev-pricing-card::before,
+  .pi-ev-ticket-cinta svg,
+  .pi-ev-stock-badge.stk-bajo,
+  .pi-ev-pricing-grid.es-visible .pi-ev-pricing-features li { animation: none; }
+  .pi-ev-ticket-ic, .pi-ev-pricing-price .pi-ev-price-amount { transition: none; }
+  .pi-ev-pricing-card:hover .pi-ev-ticket-ic { transform: rotate(-12deg); }
+  .pi-ev-pricing-card:hover .pi-ev-price-amount { transform: none; }
 }
 
 /* Con cinta "Más vendida", el encabezado deja lugar a la esquina. */
-.pricing-card:has(.ticket-cinta) .ticket-cab { padding-right: 3rem; }
+.pi-ev-pricing-card:has(.pi-ev-ticket-cinta) .pi-ev-ticket-cab { padding-right: 3rem; }

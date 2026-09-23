@@ -150,3 +150,82 @@
   .pi-me-manilla-qr { transition: none; }
   .pi-me-manilla-qr:hover { transform: none; }
 }
+
+/* =========================================================================
+   Modales "Revisar mi solicitud" y "Reportar error" (<Modal> global; los
+   campos son .input-group de forms.css y el pie .modal-actions). Acá solo el
+   acomodo del contenido.
+   ========================================================================= */
+.pi-usr-mis-entradas { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.pi-me-modal-cuerpo { display: flex; flex-direction: column; gap: var(--space-4); }
+
+.pi-usr-cart-list { display: flex; flex-direction: column; gap: var(--space-3); }
+
+.pi-usr-revision-entrada {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: var(--bg-sunken);
+}
+
+.pi-usr-revision-titulo { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: var(--weight-bold); color: var(--text-primary); }
+.pi-usr-revision-titulo svg { color: var(--action); }
+.pi-usr-revision-cabecera { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: var(--space-2); }
+.pi-usr-revision-datos { display: flex; flex-wrap: wrap; gap: var(--space-4); font-size: var(--text-xs); color: var(--text-secondary); }
+.pi-usr-revision-datos span { display: flex; align-items: center; gap: var(--space-2); }
+
+.pi-usr-ticket-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: start;
+  gap: var(--space-3);
+}
+
+/* QR de tu entrada dentro del modal (compra ya aprobada). */
+.pi-usr-entrada-qr { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2); border-radius: var(--radius-md); background: var(--bg-surface); }
+.qr-miniatura { width: 3.5rem; height: 3.5rem; border-radius: var(--radius-md); border: 2px solid var(--bg-page); }
+
+/* Formulario de reporte: caja ámbar suave (acción de "algo está mal"). */
+.pi-usr-form-reporte {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding: var(--space-4);
+  border: 1px solid color-mix(in srgb, var(--warn) 35%, var(--border));
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.pi-usr-form-reporte legend { margin-bottom: var(--space-2); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-primary); }
+.pi-usr-checks-reporte { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+
+.pi-usr-check-campo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 2.5rem;
+  padding: 0 var(--space-3);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: border-color var(--duration-fast) var(--ease-out), background-color var(--duration-fast) var(--ease-out);
+}
+
+.pi-usr-check-campo:has(input:checked) { border-color: var(--warn); background: var(--warn-bg); }
+.pi-usr-check-campo input { width: 1rem; height: 1rem; accent-color: var(--warn); cursor: pointer; }
+
+/* Celdas de la tabla de Mis Entradas. */
+.pi-usr-tipo-celda { display: flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-semibold); }
+.pi-usr-detalle-consumo { display: flex; flex-direction: column; gap: 2px; font-size: var(--text-xs); color: var(--text-secondary); }
+.pi-usr-detalle-consumo strong { color: var(--text-primary); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-usr-check-campo { transition: none; }
+}

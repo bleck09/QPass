@@ -57,7 +57,7 @@ export default function AsistentesSection() {
   return (
     <>
       <div className="qp-info__intro">
-        <div className="section-header qp-info__header">
+        <div className="pi-home-section-header qp-info__header">
           <span className="qp-info__eyebrow">Para asistentes</span>
           <h2>Comprás desde el celular. <span className="qp-info__resalte">Adentro solo necesitás tu manilla.</span></h2>
           <p>

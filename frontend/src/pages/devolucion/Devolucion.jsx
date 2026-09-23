@@ -1,20 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import Pestanas from '../../components/Pestanas.jsx';
+import Filtros from '../../components/Filtros.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import FichaParticipante from '../../components/FichaParticipante.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  FaQrcode, FaTimes, FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle,
+  FaQrcode, FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle,
   FaMoneyBillWave, FaUser, FaBuilding, FaHistory, FaCamera, FaRedo, FaArrowLeft,
-  FaCashRegister
+  FaCashRegister, FaCalendarAlt, FaTicketAlt, FaCalendarTimes,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
@@ -28,7 +35,6 @@ import FotoZoom from '../../components/FotoZoom.jsx';
 import ManillaFalsaModal from '../../components/ManillaFalsaModal.jsx';
 import { esManillaFalsa } from '../../utils/duplicados.js';
 import './Devolucion.css';
-import '../supervisor/GestionEntrega.css';
 
 // §5.11 — motivos tipados del retiro (deben coincidir con el enum del backend).
 const MOTIVOS_DEVOLUCION = [
@@ -38,9 +44,54 @@ const MOTIVOS_DEVOLUCION = [
   ['otro', 'Otro (detallar)'],
 ];
 
+/**
+ * Foto obligatoria del retiro (carnet o cara): tomarla con la cámara, verla y
+ * poder repetirla. Antes estaba copiado dos veces y los errores de subida se
+ * perdían detrás del modal.
+ */
+function FotoRequerida({ id, titulo, icono: Icono, valor, onCambio, faltante, alt }) {
+  const avisos = useAvisos();
+  const [capturando, setCapturando] = useState(false);
+  const [subiendo, setSubiendo] = useState(false);
+
+  const alCapturar = async (foto) => {
+    setCapturando(false);
+    setSubiendo(true);
+    try {
+      onCambio(await subirFotoCapturada(foto, 'carnets'));
+    } catch (err) {
+      avisos.error(err.message, { titulo: 'No se pudo guardar la foto' });
+    } finally {
+      setSubiendo(false);
+    }
+  };
+
+  return (
+    <div className={`pi-dev-form-carnet${faltante ? ' falta' : ''}`} id={id}>
+      <p className="pi-dev-form-carnet-titulo"><Icono aria-hidden="true" /> {titulo}</p>
+      {capturando ? (
+        <CapturarFoto onCapturada={alCapturar} onCancelar={() => setCapturando(false)} />
+      ) : valor ? (
+        <div className="pi-dev-carnet-preview">
+          <FotoZoom width={200} height={150} src={valor} alt={alt} />
+          <Boton variante="secundario" tamano="sm" icono={FaRedo} onClick={() => setCapturando(true)}>Tomar otra</Boton>
+        </div>
+      ) : (
+        <Boton variante="secundario" icono={FaCamera} onClick={() => setCapturando(true)} cargando={subiendo}>
+          {subiendo ? 'Guardando foto…' : `Tomar ${titulo.toLowerCase()}`}
+        </Boton>
+      )}
+      {faltante && !valor && !capturando && (
+        <p className="input-group__error"><FaExclamationTriangle aria-hidden="true" /> Es obligatoria para hacer el retiro.</p>
+      )}
+    </div>
+  );
+}
+
 export default function Devolucion() {
   useTituloPagina('Devoluciones');
   const sesion = leerSesion();
+  const [confirmar, DialogoConfirmar] = useConfirmar();
   const location = useLocation();
   const navigate = useNavigate();
   const pestana = location.pathname.endsWith('/caja')
@@ -71,12 +122,14 @@ export default function Devolucion() {
   const [motivoDevol, setMotivoDevol] = useState('retiro_efectivo');
   const [notaDevol, setNotaDevol] = useState('');
   const [fotoCarnet, setFotoCarnet] = useState(null);
-  const [capturandoFotoCarnet, setCapturandoFotoCarnet] = useState(false);
   // Foto de la cara de quien cobra — obligatoria en el retiro de un negocio.
   const [fotoRostro, setFotoRostro] = useState(null);
-  const [capturandoFotoRostro, setCapturandoFotoRostro] = useState(false);
   const [retiroExitoso, setRetiroExitoso] = useState(null);
   const [retiros, setRetiros] = useState([]);
+  // Sale efectivo: mientras se registra, spinner y sin segundo toque.
+  const [retirando, setRetirando] = useState(false);
+  // Tras el primer intento se muestra qué falta (antes el botón quedaba gris sin explicar).
+  const [intento, setIntento] = useState(false);
 
   // §5.2 — no se pueden registrar devoluciones sin una caja de arqueo abierta.
   const cargarCaja = useCallback(
@@ -86,11 +139,13 @@ export default function Devolucion() {
   const { data: cajaAbierta, recargar: recargarCaja } = useApi(cargarCaja, { inicial: null, activo: !!eventoDetalle });
   useEffect(() => { if (pestana === 'escanear') recargarCaja(); }, [pestana, recargarCaja]);
 
+  const recargarRetiros = (evId) => api.transacciones.listar({ eventoId: evId, tipo: 'devolucion' }).then(lista =>
+    setRetiros(lista.filter(t => t.operador.id === sesion.id)),
+  );
+
   const abrirEvento = (ev) => {
     setEventoDetalle(ev);
-    api.transacciones.listar({ eventoId: ev.id, tipo: 'devolucion' }).then(lista =>
-      setRetiros(lista.filter(t => t.operador.id === sesion.id))
-    );
+    recargarRetiros(ev.id);
   };
 
   const volverALista = () => setEventoDetalle(null);
@@ -128,11 +183,11 @@ export default function Devolucion() {
     setEscaneando(true);
   };
 
-  // Un mismo escaneo sirve para la manilla de un asistente o el código de retiro
-  // de un negocio: se prueba primero como entrada, y si no, como código de negocio.
   // Copia de una manilla duplicada (detalle que manda el backend).
   const [manillaFalsa, setManillaFalsa] = useState(null);
 
+  // Un mismo escaneo sirve para la manilla de un asistente o el código de retiro
+  // de un negocio: se prueba primero como entrada, y si no, como código de negocio.
   const handleCodigoDetectado = async (codigo) => {
     setEscaneando(false);
     setBuscando(true);
@@ -143,6 +198,7 @@ export default function Devolucion() {
       setFotoRostro(null);
       setRetiroExitoso(null);
       setErrorRetiro('');
+      setIntento(false);
     };
     try {
       let entrada = null;
@@ -195,27 +251,43 @@ export default function Devolucion() {
     setMotivoDevol('retiro_efectivo');
     setNotaDevol('');
     setFotoCarnet(null);
-    setCapturandoFotoCarnet(false);
     setFotoRostro(null);
-    setCapturandoFotoRostro(false);
     setRetiroExitoso(null);
     setErrorRetiro('');
+    setIntento(false);
   };
-
-  // Foco + ESC + scroll-lock de la tarjeta de devolución (look propio).
-  // El escáner usa <Modal>, que ya trae ese comportamiento.
-  const refTarjeta = useModal(!!tarjetaQR, cerrarTarjeta);
 
   const esNegocio = tarjetaQR?.tipo === 'Negocio';
   // La manilla / código puede ser de OTRO evento: no se puede operar acá.
   const eventoNoCoincide = !!(tarjetaQR && eventoDetalle && tarjetaQR.eventoId && tarjetaQR.eventoId !== eventoDetalle.id);
 
-  const confirmarRetiro = async () => {
-    const valor = Number(monto);
-    setErrorRetiro('');
-    if (!tarjetaQR || eventoNoCoincide || !valor || valor <= 0 || valor > tarjetaQR.saldoDisponible || excedeCaja || !fotoCarnet) return;
-    if (esNegocio && !fotoRostro) return; // foto de la cara obligatoria para negocios
+  const errorMonto = !intento && !monto ? null
+    : !(Number(monto) > 0) ? (intento ? 'Escribí cuántos puntos se retiran.' : null)
+      : excedeSaldo ? `El máximo disponible es ${tarjetaQR.saldoDisponible} pts.`
+        : excedeCaja ? `Tu caja solo tiene Bs. ${efectivoEnCaja.toFixed(2)}. Cerrala y abrí una nueva con más fondo.`
+          : null;
+  const faltaCarnet = intento && !fotoCarnet;
+  const faltaRostro = intento && esNegocio && !fotoRostro;
 
+  const confirmarRetiro = async (e) => {
+    e?.preventDefault();
+    setErrorRetiro('');
+    setIntento(true);
+    const valor = Number(monto);
+    if (retirando || !tarjetaQR || eventoNoCoincide) return;
+    if (!valor || valor <= 0 || valor > tarjetaQR.saldoDisponible || excedeCaja) return document.getElementById('dev-monto')?.focus();
+    if (!fotoCarnet) return document.getElementById('dev-foto-carnet')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    if (esNegocio && !fotoRostro) return document.getElementById('dev-foto-rostro')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Sale dinero: se confirma con monto y a quién (PLAN §2.4).
+    const ok = await confirmar({
+      titulo: `¿Entregar ${valor} pts en efectivo?`,
+      mensaje: `A ${tarjetaQR.nombre}. Se descuentan de su saldo (le quedan ${tarjetaQR.saldoDisponible - valor} pts) y salen de tu caja.`,
+      textoConfirmar: `Sí, retirar ${valor} pts`,
+    });
+    if (!ok) return;
+
+    setRetirando(true);
     try {
       await api.transacciones.devolucion({
         usuarioId: tarjetaQR.usuarioId,
@@ -228,6 +300,9 @@ export default function Devolucion() {
         motivoDevolucion: motivoDevol,
         nota: motivoDevol === 'otro' && notaDevol.trim() ? notaDevol.trim() : undefined,
       });
+      recargarRetiros(eventoDetalle.id);
+      recargarCaja();
+      setRetiroExitoso({ monto: valor, saldo: tarjetaQR.saldoDisponible - valor });
     } catch (err) {
       if (esManillaFalsa(err)) {
         cerrarTarjeta();
@@ -240,29 +315,25 @@ export default function Devolucion() {
       // noticia real del problema.
       setErrorRetiro(err.message);
       recargarCaja();
-      return;
+    } finally {
+      setRetirando(false);
     }
-
-    api.transacciones.listar({ eventoId: eventoDetalle.id, tipo: 'devolucion' }).then(lista =>
-      setRetiros(lista.filter(t => t.operador.id === sesion.id))
-    );
-    recargarCaja();
-
-    setRetiroExitoso({ monto: valor, saldo: tarjetaQR.saldoDisponible - valor });
   };
 
   if (!eventoDetalle) {
     return (
       <div className="pi-dev-container">
-        <div className="pi-dev-header">
-          <h1>Gestión de devoluciones</h1>
-        </div>
+        <EncabezadoPagina titulo="Gestión de devoluciones" icono={FaMoneyBillWave} subtitulo="Elegí el evento en el que vas a hacer retiros." />
         {errorInicial ? (
           <EstadoError onReintentar={recargarInicial} />
         ) : cargandoInicial ? (
           <EstadoCarga filas={3} />
         ) : eventos.length === 0 ? (
-          <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+          <EstadoVacio
+            icono={FaCalendarTimes}
+            titulo="Todavía no tenés ningún evento asignado"
+            mensaje="Pedile a Admin que te asigne uno para empezar a hacer retiros."
+          />
         ) : (
           <>
             <Buscador
@@ -275,7 +346,7 @@ export default function Devolucion() {
               onFiltro={setFiltroEvento}
               etiquetaFiltros="Filtrar eventos por estado"
             />
-            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+            <GrillaEventos eventos={eventosFiltrados}>
               {ev => (
                 <EventoCard
                   key={ev.id}
@@ -294,41 +365,23 @@ export default function Devolucion() {
 
   return (
     <div className="pi-dev-container">
-
-      <div className="pi-dev-header">
-        <div>
-          <button type="button" className="pi-entrega-btn-volver" onClick={volverALista}>
-            <FaArrowLeft /> Cambiar de evento
-          </button>
-          <h1>{eventoDetalle.nombre}</h1>
-        </div>
-        <div className="pi-dev-tabs">
-          <button
-            type="button"
-            className={pestana === 'escanear' ? 'activo' : ''}
-            aria-current={pestana === 'escanear' ? 'page' : undefined}
-            onClick={() => navigate('/devolucion')}
-          >
-            <FaQrcode aria-hidden="true" /> Escanear QR
-          </button>
-          <button
-            type="button"
-            className={pestana === 'historial' ? 'activo' : ''}
-            aria-current={pestana === 'historial' ? 'page' : undefined}
-            onClick={() => navigate('/devolucion/historial')}
-          >
-            <FaHistory aria-hidden="true" /> Historial ({retiros.length})
-          </button>
-          <button
-            type="button"
-            className={pestana === 'caja' ? 'activo' : ''}
-            aria-current={pestana === 'caja' ? 'page' : undefined}
-            onClick={() => navigate('/devolucion/caja')}
-          >
-            <FaCashRegister aria-hidden="true" /> Arqueo de caja
-          </button>
-        </div>
+      <div className="qp-nav">
+        <Boton variante="fantasma" tamano="sm" icono={FaArrowLeft} onClick={volverALista}>Cambiar de evento</Boton>
       </div>
+
+      <EncabezadoPagina titulo={eventoDetalle.nombre} icono={FaMoneyBillWave} subtitulo="Devolvé saldo en efectivo escaneando la manilla o el código del negocio.">
+        <Pestanas
+          navegacion
+          etiqueta="Secciones de devoluciones"
+          activo={pestana}
+          onCambio={(id) => navigate(id === 'escanear' ? '/devolucion' : `/devolucion/${id}`)}
+          items={[
+            { id: 'escanear', etiqueta: 'Escanear QR', icono: FaQrcode },
+            { id: 'historial', etiqueta: `Historial (${retiros.length})`, icono: FaHistory },
+            { id: 'caja', etiqueta: 'Arqueo de caja', icono: FaCashRegister },
+          ]}
+        />
+      </EncabezadoPagina>
 
       {/* --- PESTAÑA: ARQUEO DE CAJA --- */}
       {pestana === 'caja' && <CorteCaja evento={eventoDetalle} modo="devolucion" />}
@@ -337,32 +390,23 @@ export default function Devolucion() {
       {pestana === 'escanear' && (
         <div className="pi-dev-escanear-panel">
           {!cajaAbierta ? (
-          <AvisoSinCaja
-            descripcion="Necesitás un arqueo de caja abierto para este evento antes de escanear y registrar devoluciones."
-            onAbrir={() => navigate('/devolucion/caja')}
-          />
+            <AvisoSinCaja
+              descripcion="Necesitás un arqueo de caja abierto para este evento antes de escanear y registrar devoluciones."
+              onAbrir={() => navigate('/devolucion/caja')}
+            />
           ) : (
-          <>
-          <FaQrcode size={70} color="var(--cian-digital)" />
-          <h3>Escaneá el código QR</h3>
-          <p>
-            Sirve para la <strong>manilla de un asistente</strong> o para el
-            <strong> código de retiro de un negocio</strong> (el que ve en su dashboard).
-          </p>
-          <button
-            type="button"
-            className="pi-dev-btn-escanear"
-            onClick={iniciarEscaneo}
-            disabled={escaneando || buscando}
-          >
-            <FaQrcode /> {buscando ? 'Buscando...' : 'Escanear Código QR'}
-          </button>
-          {errorEscaneo && (
-            <p className="pi-entrega-aviso pi-entrega-aviso-error" style={{ marginTop: '12px' }}>
-              <FaExclamationTriangle /> {errorEscaneo}
-            </p>
-          )}
-          </>
+            <>
+              <FaQrcode className="pi-dev-escanear-ic" aria-hidden="true" />
+              <h3>Escaneá el código QR</h3>
+              <p>
+                Sirve para la <strong>manilla de un asistente</strong> o para el
+                <strong> código de retiro de un negocio</strong> (el que ve en su dashboard).
+              </p>
+              <Boton tamano="lg" pildora icono={FaQrcode} onClick={iniciarEscaneo} cargando={buscando} disabled={escaneando}>
+                {buscando ? 'Buscando…' : 'Escanear código QR'}
+              </Boton>
+              {errorEscaneo && <AvisoFijo tono="error">{errorEscaneo}</AvisoFijo>}
+            </>
           )}
         </div>
       )}
@@ -381,9 +425,9 @@ export default function Devolucion() {
       {/* --- PESTAÑA: HISTORIAL --- */}
       {pestana === 'historial' && (
         <div className="pi-dev-historial">
-          <div className="pi-dev-resumen">
-            <StatCard valor={retiros.length} label="Retiros realizados" />
-            <StatCard valor={`${totalRetiradoHoy} pts`} label="Total devuelto" />
+          <div className="qp-stats">
+            <StatCard icon={<FaHistory />} valor={retiros.length} label="Retiros realizados" />
+            <StatCard icon={<FaMoneyBillWave />} tono="warn" valor={totalRetiradoHoy} unidad="pts" label="Total devuelto" />
           </div>
 
           <Buscador
@@ -394,11 +438,11 @@ export default function Devolucion() {
 
           <Tabla
             card
-            columnas={['Beneficiario', 'Documento', 'Tipo', 'Carnet', 'Monto', 'Saldo Resultante', 'Fecha', 'Hora']}
+            columnas={['Beneficiario', 'Documento', 'Tipo', 'Carnet', 'Monto', 'Saldo resultante', 'Fecha', 'Hora']}
             datos={retirosFiltrados}
             vacio={busquedaHist.trim()
               ? 'No hay devoluciones que coincidan con la búsqueda.'
-              : 'Aún no has procesado ninguna devolución para este evento.'}
+              : 'Todavía no procesaste ninguna devolución para este evento.'}
             renderFila={item => (
               <tr key={item.id}>
                 <td>
@@ -408,15 +452,11 @@ export default function Devolucion() {
                   </div>
                 </td>
                 <td>{ciDeEntrada(item.entrada) || '—'}</td>
-                <td>
-                  <span className="pi-dev-badge-tipo normal">
-                    <FaUser /> Normal
-                  </span>
-                </td>
+                <td><Insignia tono="info" icono={FaUser}>Normal</Insignia></td>
                 <td>
                   {item.fotoCarnetUrl
                     ? <FotoZoom width={40} height={40} src={item.fotoCarnetUrl} alt={`Carnet de ${item.entrada?.nombre}`} className="pi-dev-mini-carnet" />
-                    : <span className="pi-dev-sin-carnet">—</span>}
+                    : <span className="celda-secundaria">—</span>}
                 </td>
                 <td className="pi-dev-monto-celda">-{Number(item.monto)} pts</td>
                 <td>{Number(item.saldoResultante)} pts</td>
@@ -428,257 +468,124 @@ export default function Devolucion() {
         </div>
       )}
 
-      {/* --- TARJETA GRANDE AL ESCANEAR QR --- */}
-      {tarjetaQR && createPortal(
-        <div className="pi-dev-modal-overlay" onClick={cerrarTarjeta}>
-          <div
-            ref={refTarjeta}
-            tabIndex={-1}
-            className="pi-dev-modal-tarjeta"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Devolución de saldo a ${tarjetaQR.nombre}`}
-          >
-            <button type="button" className="pi-dev-btn-cerrar" onClick={cerrarTarjeta} aria-label="Cerrar">
-              <FaTimes aria-hidden="true" />
-            </button>
-
-            {retiroExitoso ? (
-              <div className="pi-dev-exito">
-                <FaCheckCircle size={60} color="var(--verde-recarga)" />
-                <h3>¡Retiro realizado!</h3>
-                <p>Se descontaron <strong>{retiroExitoso.monto} pts</strong> a {tarjetaQR.nombre}.</p>
-                <div className="pi-dev-exito-saldo">
-                  <FaWallet /> Saldo restante: <strong>{retiroExitoso.saldo} pts</strong>
-                </div>
-                <button type="button" className="pi-dev-btn-confirmar" onClick={cerrarTarjeta}>Listo</button>
+      {/* --- TARJETA DE RETIRO AL ESCANEAR (<Modal> global) --- */}
+      {tarjetaQR && (
+        <Modal
+          titulo={retiroExitoso ? 'Retiro realizado' : `Retiro de saldo: ${tarjetaQR.nombre}`}
+          onCerrar={cerrarTarjeta}
+          cerrarEnBackdrop={!retirando}
+          tamano={retiroExitoso || eventoNoCoincide ? 'md' : 'lg'}
+          className="pi-dev-modal-tarjeta"
+        >
+          {retiroExitoso ? (
+            <div className="pi-dev-exito">
+              <FaCheckCircle className="pi-dev-exito-ic" aria-hidden="true" />
+              <h3>¡Retiro realizado!</h3>
+              <p>Se descontaron <strong>{retiroExitoso.monto} pts</strong> a {tarjetaQR.nombre}.</p>
+              <div className="pi-dev-exito-saldo">
+                <FaWallet aria-hidden="true" /> Saldo restante: <strong>{retiroExitoso.saldo} pts</strong>
               </div>
-            ) : (
-              <>
-                <div className="pi-dev-tarjeta-estado">
-                  <FaCheckCircle /> {esNegocio ? 'Código de negocio válido' : 'Código QR Válido'}
-                </div>
-
-                <div className="pi-dev-tarjeta-cols">
-                <div className="pi-dev-col-id">
-                {!esNegocio && (tarjetaQR.usuario?.foto || tarjetaQR.foto) && (
-                  <FotoZoom
-                    width={140} height={140}
-                    src={tarjetaQR.usuario?.foto || tarjetaQR.foto}
-                    alt={`Foto de ${tarjetaQR.nombre}`}
-                    className="pi-dev-tarjeta-foto"
-                  />
-                )}
-                <h2 className="pi-dev-tarjeta-nombre">{tarjetaQR.nombre}</h2>
-                <span className={`pi-dev-badge-tipo ${esNegocio ? 'negocio' : 'normal'}`}>
-                  {esNegocio ? <FaBuilding /> : <FaUser />} Usuario {tarjetaQR.tipo}
-                </span>
-
-                <div className="pi-dev-tarjeta-datos">
-                  {!esNegocio && (
-                    <div className="pi-dev-tarjeta-dato">
-                      <FaIdCard />
-                      <div>
-                        <span className="label">Documento</span>
-                        <span className="valor">{ciDeEntrada(tarjetaQR) || '—'}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="pi-dev-tarjeta-dato">
-                    <FaBuilding />
-                    <div>
-                      <span className="label">Evento</span>
-                      <span className="valor">{tarjetaQR.eventoNombre || eventoDetalle.nombre}</span>
-                    </div>
-                  </div>
-                  {!esNegocio && tarjetaQR.categoriaTicket?.nombre && (
-                    <div className="pi-dev-tarjeta-dato">
-                      <FaIdCard />
-                      <div>
-                        <span className="label">Tipo de entrada</span>
-                        <span className="valor">{tarjetaQR.categoriaTicket.nombre}</span>
-                      </div>
-                    </div>
-                  )}
-                  <div className="pi-dev-tarjeta-dato">
-                    <FaWallet />
-                    <div>
-                      <span className="label">{esNegocio ? 'Disponible para retirar' : 'Saldo Disponible'}</span>
-                      <span className="valor">{tarjetaQR.saldoDisponible} pts</span>
-                    </div>
-                  </div>
-                </div>
-
+              <Boton variante="exito" tamano="lg" icono={FaCheckCircle} onClick={cerrarTarjeta}>Listo</Boton>
+            </div>
+          ) : (
+            <form className="pi-dev-tarjeta-cols" onSubmit={confirmarRetiro} noValidate>
+              <div className="pi-dev-col-id">
+                <FichaParticipante
+                  estado={eventoNoCoincide
+                    ? <Insignia tono="danger" icono={FaExclamationTriangle} solida>De otro evento</Insignia>
+                    : <Insignia tono="ok" icono={FaCheckCircle} solida>{esNegocio ? 'Código de negocio válido' : 'Código QR válido'}</Insignia>}
+                  foto={!esNegocio ? (tarjetaQR.usuario?.foto || tarjetaQR.foto) : null}
+                  nombre={tarjetaQR.nombre}
+                  datos={[
+                    { icono: esNegocio ? FaBuilding : FaUser, etiqueta: 'Tipo', valor: `Usuario ${tarjetaQR.tipo}` },
+                    !esNegocio && { icono: FaIdCard, etiqueta: 'Documento', valor: ciDeEntrada(tarjetaQR) || '—' },
+                    { icono: FaCalendarAlt, etiqueta: 'Evento', valor: tarjetaQR.eventoNombre || eventoDetalle.nombre },
+                    !esNegocio && { icono: FaTicketAlt, etiqueta: 'Tipo de entrada', valor: tarjetaQR.categoriaTicket?.nombre },
+                    { icono: FaWallet, etiqueta: esNegocio ? 'Disponible para retirar' : 'Saldo disponible', valor: `${tarjetaQR.saldoDisponible} pts`, destacado: true },
+                  ]}
+                />
                 {esNegocio && !eventoNoCoincide && (
-                  <p className="pi-dev-negocio-aviso">
-                    <FaExclamationTriangle aria-hidden="true" /> Retiro de un negocio: se exige
-                    foto del carnet <strong>y</strong> foto de la cara de quien cobra.
-                  </p>
+                  <AvisoFijo tono="aviso" titulo="Retiro de un negocio">
+                    Se exige foto del carnet <strong>y</strong> foto de la cara de quien cobra.
+                  </AvisoFijo>
                 )}
-                </div>
+              </div>
 
-                <div className="pi-dev-col-form">
+              <div className="pi-dev-col-form">
                 {eventoNoCoincide ? (
-                  <div className="pi-dev-alerta-error">
-                    <FaExclamationTriangle aria-hidden="true" />
-                    <span>
-                      {esNegocio ? 'Este código' : 'Esta manilla'} es del evento <strong>«{tarjetaQR.eventoNombre}»</strong> y este
-                      puesto atiende <strong>«{eventoDetalle.nombre}»</strong>. No se puede hacer la devolución desde acá.
-                    </span>
-                  </div>
+                  <AvisoFijo tono="error" titulo="No se puede hacer la devolución desde acá">
+                    {esNegocio ? 'Este código' : 'Esta manilla'} es del evento «{tarjetaQR.eventoNombre}» y este
+                    puesto atiende «{eventoDetalle.nombre}».
+                  </AvisoFijo>
                 ) : (
-                <>
-                <div className="pi-dev-form-monto">
-                  <label htmlFor="dev-monto"><FaMoneyBillWave aria-hidden="true" /> Monto a retirar (puntos)</label>
-                  <input
-                    id="dev-monto"
-                    type="number"
-                    min="1"
-                    inputMode="numeric"
-                    placeholder="Ej: 50"
-                    value={monto}
-                    onChange={(e) => setMonto(e.target.value)}
-                    autoFocus
-                  />
-                  <div className="pi-dev-montos-rapidos">
-                    <button type="button" onClick={() => setMonto(String(Math.round(tarjetaQR.saldoDisponible / 2)))}>
-                      Mitad
-                    </button>
-                    <button type="button" onClick={() => setMonto(String(tarjetaQR.saldoDisponible))}>
-                      Retirar todo
-                    </button>
-                  </div>
-
-                  {excedeSaldo && (
-                    <div className="pi-dev-alerta-error">
-                      <FaExclamationTriangle /> Saldo insuficiente: el máximo disponible es {tarjetaQR.saldoDisponible} pts.
-                    </div>
-                  )}
-
-                  {!excedeSaldo && excedeCaja && (
-                    <div className="pi-dev-alerta-error">
-                      <FaExclamationTriangle /> Tu caja no tiene suficiente efectivo: quedan Bs. {efectivoEnCaja.toFixed(2)} disponibles.
-                      Cerrala y abrí una nueva con más fondo para seguir devolviendo.
-                    </div>
-                  )}
-
-                  {errorRetiro && (
-                    <div className="pi-dev-alerta-error">
-                      <FaExclamationTriangle /> {errorRetiro}
-                    </div>
-                  )}
-
-                  <label htmlFor="dev-motivo" className="pi-dev-motivo-label">Motivo del retiro</label>
-                  <select
-                    id="dev-motivo"
-                    className="pi-dev-motivo-select"
-                    value={motivoDevol}
-                    onChange={(e) => setMotivoDevol(e.target.value)}
-                  >
-                    {MOTIVOS_DEVOLUCION.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
-                  </select>
-                  {motivoDevol === 'otro' && (
-                    <input
-                      type="text"
-                      className="pi-dev-motivo-nota"
-                      placeholder="Detalle del motivo"
-                      value={notaDevol}
-                      onChange={(e) => setNotaDevol(e.target.value)}
-                      maxLength={140}
+                  <>
+                    <Campo
+                      id="dev-monto" etiqueta={<><FaMoneyBillWave aria-hidden="true" /> Monto a retirar (puntos)</>} prefijo="pts"
+                      type="number" min="1" inputMode="numeric" placeholder="Ej: 50" autoFocus
+                      value={monto} onChange={(e) => setMonto(e.target.value)}
+                      error={errorMonto}
+                      className="pi-dev-campo-monto"
                     />
-                  )}
-                </div>
-
-                <div className="pi-dev-form-carnet">
-                  <p className="pi-dev-form-carnet-titulo"><FaIdCard aria-hidden="true" /> Foto del carnet de quien retira</p>
-
-                  {capturandoFotoCarnet ? (
-                    <CapturarFoto
-                      onCapturada={async (foto) => {
-                        setCapturandoFotoCarnet(false);
-                        try {
-                          setFotoCarnet(await subirFotoCapturada(foto, 'carnets'));
-                        } catch (err) {
-                          setErrorEscaneo(err.message);
-                        }
-                      }}
-                      onCancelar={() => setCapturandoFotoCarnet(false)}
+                    <Filtros
+                      etiqueta="Montos rápidos"
+                      opciones={[
+                        { valor: String(Math.round(tarjetaQR.saldoDisponible / 2)), texto: 'Mitad' },
+                        { valor: String(tarjetaQR.saldoDisponible), texto: 'Retirar todo' },
+                      ]}
+                      activo={monto}
+                      onCambio={setMonto}
                     />
-                  ) : fotoCarnet ? (
-                    <div className="pi-dev-carnet-preview">
-                      <FotoZoom width={200} height={150} src={fotoCarnet} alt="Carnet de quien retira" />
-                      <button type="button" className="pi-dev-btn-retomar" onClick={() => setCapturandoFotoCarnet(true)}>
-                        <FaRedo /> Tomar otra
-                      </button>
-                    </div>
-                  ) : (
-                    <button type="button" className="pi-dev-btn-tomar-foto" onClick={() => setCapturandoFotoCarnet(true)}>
-                      <FaCamera /> Tomar foto del carnet
-                    </button>
-                  )}
-                </div>
 
-                {esNegocio && (
-                  <div className="pi-dev-form-carnet">
-                    <p className="pi-dev-form-carnet-titulo"><FaUser aria-hidden="true" /> Foto de la cara de quien cobra</p>
-                    {capturandoFotoRostro ? (
-                      <CapturarFoto
-                        onCapturada={async (foto) => {
-                          setCapturandoFotoRostro(false);
-                          try {
-                            setFotoRostro(await subirFotoCapturada(foto, 'carnets'));
-                          } catch (err) {
-                            setErrorEscaneo(err.message);
-                          }
-                        }}
-                        onCancelar={() => setCapturandoFotoRostro(false)}
+                    <Campo id="dev-motivo" etiqueta="Motivo del retiro">
+                      <select id="dev-motivo" value={motivoDevol} onChange={(e) => setMotivoDevol(e.target.value)}>
+                        {MOTIVOS_DEVOLUCION.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+                      </select>
+                    </Campo>
+                    {motivoDevol === 'otro' && (
+                      <Campo
+                        id="dev-motivo-nota" etiqueta="Detalle del motivo" placeholder="Contá brevemente qué pasó"
+                        value={notaDevol} onChange={(e) => setNotaDevol(e.target.value)} maxLength={140}
                       />
-                    ) : fotoRostro ? (
-                      <div className="pi-dev-carnet-preview">
-                        <FotoZoom width={200} height={150} src={fotoRostro} alt="Cara de quien cobra" />
-                        <button type="button" className="pi-dev-btn-retomar" onClick={() => setCapturandoFotoRostro(true)}>
-                          <FaRedo /> Tomar otra
-                        </button>
-                      </div>
-                    ) : (
-                      <button type="button" className="pi-dev-btn-tomar-foto" onClick={() => setCapturandoFotoRostro(true)}>
-                        <FaCamera /> Tomar foto de la cara
-                      </button>
                     )}
-                  </div>
-                )}
-                </>
-                )}
-                </div>
-                </div>
 
-                <div className="pi-dev-tarjeta-acciones">
-                  {eventoNoCoincide ? (
-                    <button type="button" className="pi-dev-btn-cancelar" onClick={cerrarTarjeta}>Cerrar</button>
-                  ) : (
-                    <>
-                      <button type="button" className="pi-dev-btn-cancelar" onClick={cerrarTarjeta}>Cancelar</button>
-                      <button
-                        className="pi-dev-btn-confirmar"
-                        onClick={confirmarRetiro}
-                        disabled={!monto || Number(monto) <= 0 || excedeSaldo || excedeCaja || !fotoCarnet || (esNegocio && !fotoRostro)}
-                      >
-                        <FaCheckCircle /> Confirmar Retiro
-                      </button>
-                    </>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-        </div>,
-        document.body,
+                    <FotoRequerida
+                      id="dev-foto-carnet" titulo="Foto del carnet de quien retira" icono={FaIdCard}
+                      valor={fotoCarnet} onCambio={setFotoCarnet} faltante={faltaCarnet} alt="Carnet de quien retira"
+                    />
+                    {esNegocio && (
+                      <FotoRequerida
+                        id="dev-foto-rostro" titulo="Foto de la cara de quien cobra" icono={FaUser}
+                        valor={fotoRostro} onCambio={setFotoRostro} faltante={faltaRostro} alt="Cara de quien cobra"
+                      />
+                    )}
+
+                    {errorRetiro && <AvisoFijo tono="error" titulo="No se pudo hacer el retiro">{errorRetiro}</AvisoFijo>}
+                  </>
+                )}
+              </div>
+
+              <div className="modal-actions pi-dev-tarjeta-acciones">
+                {eventoNoCoincide ? (
+                  <Boton variante="secundario" onClick={cerrarTarjeta}>Cerrar</Boton>
+                ) : (
+                  <>
+                    <Boton variante="secundario" onClick={cerrarTarjeta} disabled={retirando}>Cancelar</Boton>
+                    <Boton type="submit" variante="exito" tamano="lg" icono={FaCheckCircle} cargando={retirando}>
+                      {retirando ? 'Registrando…' : Number(monto) > 0 ? `Retirar ${Number(monto)} pts` : 'Confirmar retiro'}
+                    </Boton>
+                  </>
+                )}
+              </div>
+            </form>
+          )}
+        </Modal>
       )}
 
       {manillaFalsa && (
         <ManillaFalsaModal detalle={manillaFalsa} onCerrar={() => setManillaFalsa(null)} />
       )}
+
+      {DialogoConfirmar}
     </div>
   );
 }

@@ -118,3 +118,30 @@ const SIN_PROVIDER = { exito: () => {}, error: () => {}, info: () => {}, cerrar:
 export function useAvisos() {
   return useContext(AvisosContext) ?? SIN_PROVIDER;
 }
+
+/*
+  Aviso FIJO en la página (no flotante, no se cierra solo): para estados que
+  siguen vigentes, p. ej. "esta solicitud fue rechazada" (PLAN §2.5). Mismo
+  diseño y tonos que los avisos flotantes.
+
+    <AvisoFijo tono="error" titulo="Solicitud rechazada">Motivo…</AvisoFijo>
+
+  tono: 'info' | 'exito' | 'error' | 'aviso' (ámbar). icono: opcional.
+*/
+const ICONO_FIJO = { ...ICONO, aviso: FaExclamationTriangle };
+
+export function AvisoFijo({ tono = 'info', titulo, icono, children, className = '' }) {
+  const Icono = icono ?? ICONO_FIJO[tono];
+  return (
+    <div
+      className={`qp-aviso qp-aviso--fijo qp-aviso--${tono} ${className}`.trim()}
+      role={tono === 'error' ? 'alert' : 'status'}
+    >
+      <Icono className="qp-aviso-ic" aria-hidden="true" />
+      <div className="qp-aviso-txt">
+        {titulo && <strong>{titulo}</strong>}
+        {children && <span>{children}</span>}
+      </div>
+    </div>
+  );
+}

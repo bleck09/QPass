@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
-  FaArrowLeft, FaTicketAlt, FaCoins, FaHourglassHalf, FaCalendarDay,
-  FaUsers, FaShoppingBag, FaStore, FaCheck, FaTimes, FaBullhorn, FaFilePdf, FaLock,
+  FaArrowLeft, FaCalendarTimes, FaTicketAlt, FaCoins, FaHourglassHalf, FaCalendarDay,
+  FaUsers, FaShoppingBag, FaStore, FaBullhorn, FaFilePdf, FaLock, FaChartPie,
 } from 'react-icons/fa';
 import { exportarInformeCierre } from '../../utils/informeCierrePdf.js';
 import GraficoAforo from './GraficosCliente.jsx';
@@ -16,9 +16,13 @@ import HistorialManillas from '../../components/HistorialManillas.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
 import './ClienteDashboard.css';
-import '../supervisor/GestionEntrega.css';
+import Boton from '../../components/Boton.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import Pasos from '../../components/Pasos.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import { AvisoFijo } from '../../components/Avisos.jsx';
 
 const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })}`;
 const fmtPct = (frac) => `${(Number(frac || 0) * 100).toFixed(1)}%`;
@@ -32,11 +36,12 @@ function textoDias(dias) {
   return 'Ya empezó';
 }
 
+// Preparación del evento (el mapa NO es requisito para publicar: es opcional).
 const PASOS = [
-  ['tickets', 'Categorías de ticket'],
-  ['qr', 'Códigos QR generados'],
-  ['landing', 'Página del evento'],
-  ['mapa', 'Mapa del recinto'],
+  { id: 'tickets', titulo: 'Categorías de ticket' },
+  { id: 'qr', titulo: 'Códigos QR generados' },
+  { id: 'landing', titulo: 'Página del evento' },
+  { id: 'mapa', titulo: 'Mapa del recinto', opcional: true },
 ];
 
 export default function ClienteDashboard() {
@@ -72,18 +77,17 @@ export default function ClienteDashboard() {
   if (!eventoSel) {
     return (
       <div className="pi-cld-container">
-        <div className="pi-cld-header">
-          <h1>Dashboard del evento</h1>
-          <p>Elige uno de tus eventos.</p>
-        </div>
+        <EncabezadoPagina titulo="Dashboard del evento" subtitulo="Elegí uno de tus eventos." icono={FaChartPie} />
         {errorEventos ? (
           <EstadoError onReintentar={recargarEventos} />
         ) : cargandoEventos ? (
           <EstadoCarga filas={3} />
         ) : eventos.length === 0 ? (
-          <p className="pi-entrega-sin-eventos">
-            Todavía no tienes eventos. Cuando Admin apruebe una propuesta tuya, aparecerá acá.
-          </p>
+          <EstadoVacio
+            icono={FaCalendarTimes}
+            titulo="Todavía no tenés eventos"
+            mensaje="Cuando Admin apruebe una propuesta tuya, aparece acá."
+          />
         ) : (
           <>
             <Buscador
@@ -96,7 +100,7 @@ export default function ClienteDashboard() {
               onFiltro={setFiltro}
               etiquetaFiltros="Filtrar eventos por estado"
             />
-            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+            <GrillaEventos eventos={eventosFiltrados}>
               {(ev) => (
                 <EventoCard key={ev.id} evento={ev} onClick={() => setEventoSel(ev)} cta="Ver panel" />
               )}
@@ -113,21 +117,24 @@ export default function ClienteDashboard() {
 
   return (
     <div className="pi-cld-container">
-      <div className="pi-cld-header">
-        <button className="pi-entrega-btn-volver" onClick={volver}>
-          <FaArrowLeft /> Cambiar de evento
-        </button>
-        <h1>
-          {eventoSel.nombre}
-          {data && <BadgeEstadoEvento evento={data.evento} className="pi-cld-badge" />}
-        </h1>
-        {data && esAntes && <p>{textoDias(data.evento.diasRestantes)} para el evento.</p>}
-        {data && data.congeladoEn && (
-          <p className="pi-cld-congelado">
-            <FaLock aria-hidden="true" /> Cifras congeladas al cierre · {new Date(data.congeladoEn).toLocaleDateString('es-BO')}
-          </p>
-        )}
+      <div className="qp-nav">
+        <Boton variante="fantasma" tamano="sm" icono={FaArrowLeft} onClick={volver}>Cambiar de evento</Boton>
       </div>
+      <EncabezadoPagina
+        titulo={eventoSel.nombre}
+        icono={FaChartPie}
+        subtitulo={data && esAntes ? `${textoDias(data.evento.diasRestantes)} para el evento.` : 'Cómo va tu evento, en números.'}
+        acciones={data && (
+          <div className="btn-acciones">
+            <BadgeEstadoEvento evento={data.evento} />
+            {data.congeladoEn && (
+              <Insignia tono="neutro" icono={FaLock}>
+                Cifras congeladas al cierre · {new Date(data.congeladoEn).toLocaleDateString('es-BO')}
+              </Insignia>
+            )}
+          </div>
+        )}
+      />
 
       {error ? (
         <EstadoError onReintentar={recargar} />
@@ -139,34 +146,38 @@ export default function ClienteDashboard() {
           <section className="pi-cld-seccion">
             <h3 className="pi-cld-seccion-titulo">Preparación</h3>
             {!data.evento.publicado && (
-              <p className="pi-cld-aviso">
-                <FaBullhorn aria-hidden="true" /> El evento todavía no está publicado.
+              <AvisoFijo
+                tono={data.preparacion.listoParaPublicar ? 'exito' : 'aviso'}
+                icono={FaBullhorn}
+                titulo="El evento todavía no está publicado"
+              >
                 {data.preparacion.listoParaPublicar
-                  ? ' Ya está todo listo — Admin puede publicarlo.'
-                  : ' Falta completar los pasos de abajo.'}
-              </p>
+                  ? 'Ya está todo listo: Admin puede publicarlo.'
+                  : 'Falta completar los pasos marcados en ámbar.'}
+              </AvisoFijo>
             )}
-            <ul className="pi-cld-checklist">
-              {PASOS.map(([clave, label]) => (
-                <li key={clave} className={data.preparacion[clave] ? 'ok' : 'falta'}>
-                  {data.preparacion[clave] ? <FaCheck aria-hidden="true" /> : <FaTimes aria-hidden="true" />}
-                  {label}
-                </li>
-              ))}
-            </ul>
+            <Pasos
+              variante="compacto"
+              etiqueta="Preparación del evento"
+              actual={-1}
+              pasos={PASOS.map((p) => ({
+                ...p,
+                estado: data.preparacion[p.id] ? 'listo' : p.opcional ? 'opcional' : 'falta',
+              }))}
+            />
           </section>
 
           {/* --- ANTES DEL EVENTO: VENTA --- */}
           {esAntes && (
             <section className="pi-cld-seccion">
               <h3 className="pi-cld-seccion-titulo">Venta de entradas</h3>
-              <div className="pi-cld-grid">
+              <div className="qp-stats">
                 <StatCard
                   icon={<FaTicketAlt />}
                   tono="total"
                   valor={`${data.venta.confirmadasTotal} / ${data.venta.cupoTotal || '—'}`}
                   label="Confirmadas / cupo"
-                  extra={<span className="pi-cld-nota">{fmtPct(data.venta.ocupacion)} ocupación</span>}
+                  extra={<Insignia tono="info">{fmtPct(data.venta.ocupacion)} ocupación</Insignia>}
                 />
                 <StatCard icon={<FaCoins />} tono="ok" valor={fmtBs(data.venta.recaudado)} label="Recaudado" />
                 <StatCard
@@ -192,8 +203,8 @@ export default function ClienteDashboard() {
                 renderFila={(c) => (
                   <tr key={c.nombre}>
                     <td>{c.nombre}</td>
-                    <td style={{ textAlign: 'center' }}>{c.confirmadas} / {c.cupo}</td>
-                    <td style={{ textAlign: 'center' }}>{c.disponibles}</td>
+                    <td className="td-centro">{c.confirmadas} / {c.cupo}</td>
+                    <td className="td-centro">{c.disponibles}</td>
                     <td>{fmtBs(c.precio)}</td>
                     <td>{fmtBs(c.ingreso)}</td>
                   </tr>
@@ -225,16 +236,12 @@ export default function ClienteDashboard() {
               <div className="pi-cld-seccion-cab">
                 <h3 className="pi-cld-seccion-titulo">{esCierre ? 'Informe de cierre' : 'La noche del evento'}</h3>
                 {esCierre && (
-                  <button
-                    type="button"
-                    className="pi-cld-btn-export"
-                    onClick={() => exportarInformeCierre(eventoSel.nombre, data)}
-                  >
-                    <FaFilePdf aria-hidden="true" /> Exportar informe
-                  </button>
+                  <Boton variante="secundario" icono={FaFilePdf} onClick={() => exportarInformeCierre(eventoSel.nombre, data)}>
+                    Exportar informe
+                  </Boton>
                 )}
               </div>
-              <div className="pi-cld-grid">
+              <div className="qp-stats">
                 {!esCierre && (
                   <StatCard icon={<FaUsers />} tono="info" valor={data.operacion.personasDentro} label="Personas dentro ahora" />
                 )}
@@ -243,7 +250,7 @@ export default function ClienteDashboard() {
                   tono="total"
                   valor={`${data.operacion.asistieron} / ${data.venta.confirmadasTotal}`}
                   label="Asistieron / confirmadas"
-                  extra={<span className="pi-cld-nota">{fmtPct(data.operacion.tasaAsistencia)} asistencia</span>}
+                  extra={<Insignia tono="ok">{fmtPct(data.operacion.tasaAsistencia)} asistencia</Insignia>}
                 />
                 <StatCard icon={<FaShoppingBag />} tono="ok" valor={fmtBs(data.operacion.consumoTotal)} label="Consumo total" />
                 <StatCard icon={<FaShoppingBag />} valor={fmtBs(data.operacion.consumoPromedio)} label="Consumo promedio por asistente" />
@@ -259,10 +266,10 @@ export default function ClienteDashboard() {
               {(data.operacion.horaPicoIngreso != null || data.operacion.horaPicoConsumo != null) && (
                 <div className="pi-cld-chips">
                   {data.operacion.horaPicoIngreso != null && (
-                    <span className="pi-cld-chip"><FaUsers aria-hidden="true" /> Hora pico de ingreso: {fmtHora(data.operacion.horaPicoIngreso)}</span>
+                    <Insignia tono="info" icono={FaUsers}>Hora pico de ingreso: {fmtHora(data.operacion.horaPicoIngreso)}</Insignia>
                   )}
                   {data.operacion.horaPicoConsumo != null && (
-                    <span className="pi-cld-chip"><FaShoppingBag aria-hidden="true" /> Hora pico de consumo: {fmtHora(data.operacion.horaPicoConsumo)}</span>
+                    <Insignia tono="info" icono={FaShoppingBag}>Hora pico de consumo: {fmtHora(data.operacion.horaPicoConsumo)}</Insignia>
                   )}
                 </div>
               )}
@@ -275,7 +282,7 @@ export default function ClienteDashboard() {
                 renderFila={(p) => (
                   <tr key={p.nombre}>
                     <td>{p.nombre}</td>
-                    <td style={{ textAlign: 'center' }}>{p.ventas}</td>
+                    <td className="td-centro">{p.ventas}</td>
                     <td>{fmtBs(p.ingresos)}</td>
                   </tr>
                 )}
@@ -291,7 +298,7 @@ export default function ClienteDashboard() {
                     renderFila={(p) => (
                       <tr key={p.nombre}>
                         <td>{p.nombre}</td>
-                        <td style={{ textAlign: 'center' }}>{p.unidades}</td>
+                        <td className="td-centro">{p.unidades}</td>
                         <td>{fmtBs(p.ingresos)}</td>
                       </tr>
                     )}

@@ -2,19 +2,25 @@ import { useCallback, useMemo, useState } from 'react';
 import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import StatCard from '../../components/StatCard.jsx';
+import SubirImagen from '../../components/SubirImagen.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { enfocarPrimero, MIN_CONTRASENA } from '../../utils/validacion.js';
+import { erroresAyudante } from '../../utils/ayudantes.js';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
 import {
-  FaPlus, FaTimes, FaImage, FaUsers, FaUpload, FaCheckSquare,
-  FaUserTie, FaEnvelope, FaLock, FaSave, FaSquare, FaMapMarkerAlt,
-  FaPen, FaKey, FaUnlink,
+  FaPlus, FaUsers, FaCheckSquare, FaUserTie, FaEnvelope, FaSave, FaSquare, FaMapMarkerAlt,
+  FaPen, FaKey, FaUnlink, FaSearch, FaCheck,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
-import { subirImagenDeInput } from '../../utils/imagenes.js';
 import { ROLES } from '../../constants/roles.js';
-import './UsuNegoCreaAyudante.css';
 import './MisAyudantes.css';
 
 const FORM_CREAR = { nombre: '', email: '', password: '', foto: '', puestosAsignados: [] };
@@ -35,7 +41,9 @@ function SelectorPuestos({ grupos, estaSeleccionado, onToggle, defaultOpen = fal
     () => new Set(grupos.filter(g => g.puestos.some(p => estaSeleccionado(p.id))).map(g => g.eventoId)),
   );
 
-  if (!grupos.length) return <p className="tabla-vacia">No tenés puestos todavía.</p>;
+  if (!grupos.length) {
+    return <EstadoVacio compacto icono={FaMapMarkerAlt} titulo="Todavía no tenés puestos" mensaje="Activá un puesto en un evento para poder asignarlo." />;
+  }
 
   const total = grupos.reduce((n, g) => n + g.puestos.length, 0);
   const nSel = grupos.reduce((n, g) => n + g.puestos.filter(p => estaSeleccionado(p.id)).length, 0);
@@ -48,8 +56,8 @@ function SelectorPuestos({ grupos, estaSeleccionado, onToggle, defaultOpen = fal
   return (
     <details className="pi-ma-selector" open={seccionAbierta} onToggle={(e) => setSeccionAbierta(e.currentTarget.open)}>
       <summary>
-        <FaMapMarkerAlt aria-hidden="true" /> <span className="btn-acciones__texto">Puestos</span>
-        <span className="celda-secundaria">· {nSel} de {total} seleccionados</span>
+        <FaMapMarkerAlt aria-hidden="true" /> Puestos
+        <Insignia tono={nSel ? 'info' : 'neutro'}>{nSel} de {total} seleccionados</Insignia>
       </summary>
       <div className="pi-ma-selector-cuerpo">
         {grupos.map(g => {
@@ -84,6 +92,7 @@ function SelectorPuestos({ grupos, estaSeleccionado, onToggle, defaultOpen = fal
 
 export default function MisAyudantes() {
   useTituloPagina('Mis ayudantes');
+  const avisos = useAvisos();
   const [confirmar, DialogoConfirmar] = useConfirmar();
 
   const cargarAyudantes = useCallback(() => api.puestoAyudantes.misAyudantes(), []);
@@ -116,7 +125,10 @@ export default function MisAyudantes() {
   const [asignandoId, setAsignandoId] = useState(null);
   const [reseteandoId, setReseteandoId] = useState(null);
   const [passNueva, setPassNueva] = useState('');
+  // Error del servidor dentro del modal abierto; los de cada campo, junto al campo.
   const [err, setErr] = useState('');
+  const [intento, setIntento] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   const asignando = ayudantes.find(a => a.id === asignandoId) || null;
   const reseteando = ayudantes.find(a => a.id === reseteandoId) || null;
@@ -127,23 +139,34 @@ export default function MisAyudantes() {
     return ayudantes.filter(a => a.nombre.toLowerCase().includes(q) || a.email.toLowerCase().includes(q));
   }, [ayudantes, busqueda]);
 
-  // ---------- CREAR ----------
-  const subirFoto = async (e, setForm) => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if (!file) return;
+  const erroresCrear = intento && showCrear ? erroresAyudante(formCrear, 'ma') : {};
+  const erroresEditar = intento && editandoId ? erroresAyudante(formEditar, 'me', { conCorreo: false, conClave: false }) : {};
+  const erroresReset = intento && reseteandoId ? erroresAyudante({ nombre: 'x', password: passNueva.trim() }, 'mr', { conCorreo: false }) : {};
+
+  const abrir = (accion) => { setErr(''); setIntento(false); accion(); };
+
+  // Envuelve cada guardado: spinner, error del servidor en el modal.
+  const conGuardado = async (fn) => {
+    setGuardando(true);
     try {
-      const url = await subirImagenDeInput(file, 'perfiles');
-      setForm(f => ({ ...f, foto: url }));
-    } catch (e2) { setErr(e2.message); }
+      await fn();
+    } catch (e2) {
+      setErr(e2.message);
+    } finally {
+      setGuardando(false);
+    }
   };
 
-  const crearAyudante = async (e) => {
+  // ---------- CREAR ----------
+  const crearAyudante = (e) => {
     e.preventDefault();
     setErr('');
-    try {
+    setIntento(true);
+    const errs = erroresAyudante(formCrear, 'ma');
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ['ma-nombre', 'ma-email', 'ma-pass']);
+    conGuardado(async () => {
       const nuevo = await api.auth.registro({
-        rol: ROLES.AYUDANTE, nombre: formCrear.nombre, email: formCrear.email,
+        rol: ROLES.AYUDANTE, nombre: formCrear.nombre.trim(), email: formCrear.email.trim(),
         password: formCrear.password, foto: formCrear.foto || undefined,
       });
       await Promise.all(formCrear.puestosAsignados.map(puestoId =>
@@ -151,49 +174,67 @@ export default function MisAyudantes() {
       ));
       await recargarAyudantes();
       setShowCrear(false);
+      avisos.exito(`${formCrear.nombre.trim()} ya puede entrar con su correo y la contraseña temporal.`, { titulo: 'Ayudante creado' });
       setFormCrear(FORM_CREAR);
-    } catch (e2) { setErr(e2.message); }
+    });
   };
 
   // ---------- EDITAR ----------
-  const abrirEditar = (a) => {
+  const abrirEditar = (a) => abrir(() => {
     setEditandoId(a.id);
     setFormEditar({ nombre: a.nombre, foto: a.foto || '' });
-    setErr('');
-  };
-  const guardarEdicion = async (e) => {
+  });
+  const guardarEdicion = (e) => {
     e.preventDefault();
     setErr('');
-    try {
+    setIntento(true);
+    if (Object.keys(erroresAyudante(formEditar, 'me', { conCorreo: false, conClave: false })).length) {
+      return document.getElementById('me-nombre')?.focus();
+    }
+    conGuardado(async () => {
       await api.puestoAyudantes.editarAyudante(editandoId, {
-        nombre: formEditar.nombre,
+        nombre: formEditar.nombre.trim(),
         foto: formEditar.foto || null,
       });
       await recargarAyudantes();
       setEditandoId(null);
-    } catch (e2) { setErr(e2.message); }
+      avisos.exito('Los datos del ayudante quedaron guardados.');
+    });
   };
 
-  // ---------- RESET PASSWORD ----------
+  // ---------- RESET PASSWORD (acción sensible: se confirma) ----------
   const confirmarReset = async (e) => {
     e.preventDefault();
-    if (passNueva.trim().length < 6) { setErr('La contraseña debe tener al menos 6 caracteres.'); return; }
     setErr('');
-    try {
+    setIntento(true);
+    if (Object.keys(erroresAyudante({ nombre: 'x', password: passNueva.trim() }, 'mr', { conCorreo: false })).length) {
+      return document.getElementById('mr-pass')?.focus();
+    }
+    const ok = await confirmar({
+      titulo: `¿Cambiar la contraseña de ${reseteando.nombre}?`,
+      mensaje: 'La contraseña actual deja de funcionar. Pasale la nueva: al entrar la va a tener que cambiar.',
+      textoConfirmar: 'Sí, cambiarla',
+    });
+    if (!ok) return;
+    conGuardado(async () => {
       await api.puestoAyudantes.resetPassword(reseteandoId, { passwordNueva: passNueva.trim() });
+      avisos.exito(`${reseteando.nombre} ya puede entrar con la contraseña nueva.`, { titulo: 'Contraseña cambiada' });
       setReseteandoId(null);
       setPassNueva('');
-    } catch (e2) { setErr(e2.message); }
+    });
   };
 
-  // ---------- ASIGNAR A PUESTOS ----------
+  // ---------- ASIGNAR A PUESTOS (se guarda al instante) ----------
   const togglePuesto = async (puesto) => {
     const existente = asignando.asignaciones.find(x => x.puestoId === puesto.id);
     try {
       if (existente) await api.puestoAyudantes.quitar(existente.id);
       else await api.puestoAyudantes.asignar({ puestoId: puesto.id, ayudanteId: asignando.id });
       await recargarAyudantes();
-    } catch (e2) { setErr(e2.message); }
+      avisos.exito(existente ? `Quitado de ${puesto.nombre}.` : `Asignado a ${puesto.nombre}.`, { duracion: 2500 });
+    } catch (e2) {
+      setErr(e2.message);
+    }
   };
 
   // ---------- DESVINCULAR ----------
@@ -208,56 +249,65 @@ export default function MisAyudantes() {
     try {
       await api.puestoAyudantes.desvincular(a.id);
       await recargarAyudantes();
-    } catch (e2) { setErr(e2.message); }
+      avisos.exito(`${a.nombre} ya no forma parte de tu negocio.`);
+    } catch (e2) {
+      avisos.error(e2.message, { titulo: 'No se pudo desvincular' });
+    }
   };
+
+  const pieModal = (onCancelar, texto, icono = FaSave) => (
+    <div className="modal-actions">
+      <Boton variante="secundario" onClick={onCancelar} disabled={guardando}>Cancelar</Boton>
+      <Boton type="submit" icono={icono} cargando={guardando}>{texto}</Boton>
+    </div>
+  );
 
   return (
     <div className="pi-ayudante-container">
-      <div className="pi-ayudante-header-wrapper">
-        <div className="pi-ayudante-header">
-          <h1>Mis ayudantes</h1>
-          <p>El personal de tu negocio. Son tuyos, no de un evento: acá los creás, editás y asignás a tus puestos.</p>
-        </div>
-        <div className="pi-ayudante-kpi">
-          <span className="micro-etiqueta">Total de Ayudantes</span>
-          <div className="kpi-valor">
-            <FaUsers className="kpi-icon" />
-            <span className="numero-grande">{ayudantes.length}</span>
-          </div>
-        </div>
-      </div>
+      <EncabezadoPagina
+        titulo="Mis ayudantes"
+        subtitulo="El personal de tu negocio. Son tuyos, no de un evento: acá los creás, editás y asignás a tus puestos."
+        icono={FaUsers}
+        acciones={<StatCard icon={<FaUsers />} tono="info" valor={ayudantes.length} label="Total de ayudantes" />}
+      />
 
       <div className="pi-ayudante-action-bar">
         <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar por nombre o email…" />
-        <button type="button" className="btn-primario" onClick={() => { setFormCrear(FORM_CREAR); setShowCrear(true); setErr(''); }}>
-          <FaPlus /> Crear Nuevo Ayudante
-        </button>
+        <Boton icono={FaPlus} onClick={() => abrir(() => { setFormCrear(FORM_CREAR); setShowCrear(true); })}>
+          Crear nuevo ayudante
+        </Boton>
       </div>
-
-      {err && !showCrear && !editandoId && !reseteandoId && (
-        <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>
-      )}
 
       {errorAyudantes ? (
         <EstadoError onReintentar={recargarAyudantes} />
       ) : cargandoAyudantes ? (
         <EstadoCarga filas={4} />
+      ) : ayudantesFiltrados.length === 0 ? (
+        busqueda
+          ? <EstadoVacio compacto icono={FaSearch} titulo="Ningún ayudante coincide con la búsqueda" />
+          : (
+            <EstadoVacio
+              icono={FaUsers}
+              titulo="Aún no tenés ayudantes"
+              mensaje="Creá a tu personal para que pueda cobrar en tus puestos."
+              accion={<Boton icono={FaPlus} onClick={() => abrir(() => { setFormCrear(FORM_CREAR); setShowCrear(true); })}>Crear nuevo ayudante</Boton>}
+            />
+          )
       ) : (
-        <div className="pi-ayudante-card">
-          <Tabla
-            columnas={['Ayudante', 'Puestos', { texto: 'Acciones', align: 'center' }]}
-            datos={ayudantesFiltrados}
-            vacio={busqueda ? 'No se encontraron ayudantes.' : 'Aún no tenés ayudantes.'}
-            renderFila={a => {
-              const eventos = [...new Set(a.asignaciones.map(x => x.eventoNombre).filter(Boolean))];
-              return (
+        <Tabla
+          card
+          columnas={['Ayudante', 'Puestos', { texto: 'Acciones', align: 'center' }]}
+          datos={ayudantesFiltrados}
+          renderFila={a => {
+            const eventos = [...new Set(a.asignaciones.map(x => x.eventoNombre).filter(Boolean))];
+            return (
               <tr key={a.id}>
                 <td>
                   <div className="item-info">
                     {a.foto ? (
-                      <img width="48" height="48" src={a.foto} alt={a.nombre} className="item-img" />
+                      <img width="40" height="40" src={a.foto} alt="" className="item-img item-img--avatar" />
                     ) : (
-                      <div className="item-no-img"><FaUserTie /></div>
+                      <div className="item-no-img item-img--avatar"><FaUserTie aria-hidden="true" /></div>
                     )}
                     <div>
                       <div className="fila-nombre">{a.nombre}</div>
@@ -267,174 +317,129 @@ export default function MisAyudantes() {
                 </td>
                 <td>
                   {a.asignaciones.length === 0 ? (
-                    <span className="badge-sin-puesto">Sin asignar</span>
+                    <Insignia tono="warn" punto>Sin asignar</Insignia>
                   ) : a.asignaciones.length === 1 ? (
-                    <span className="badge-puesto" title={a.asignaciones[0].eventoNombre}>
+                    <Insignia tono="info" icono={FaMapMarkerAlt}>
                       {a.asignaciones[0].puestoNombre}
-                      {a.asignaciones[0].eventoNombre ? <em> · {a.asignaciones[0].eventoNombre}</em> : null}
-                    </span>
+                      {a.asignaciones[0].eventoNombre ? ` · ${a.asignaciones[0].eventoNombre}` : ''}
+                    </Insignia>
                   ) : (
-                    <button
-                      type="button"
-                      className="badge-puesto badge-puesto--btn"
-                      onClick={() => { setAsignandoId(a.id); setErr(''); }}
-                      title="Ver / editar puestos"
-                    >
-                      <FaMapMarkerAlt aria-hidden="true" /> {a.asignaciones.length} puestos
-                      {eventos.length > 0 && (
-                        <em> · {eventos.length === 1 ? eventos[0] : `${eventos.length} eventos`}</em>
-                      )}
-                    </button>
+                    <Insignia tono="info" icono={FaMapMarkerAlt}>
+                      {a.asignaciones.length} puestos
+                      {eventos.length > 0 && ` · ${eventos.length === 1 ? eventos[0] : `${eventos.length} eventos`}`}
+                    </Insignia>
                   )}
                 </td>
                 <td>
                   <div className="btn-acciones">
-                    <button type="button" className="btn-secundario-sm" onClick={() => { setAsignandoId(a.id); setErr(''); }} title="Asignar a puestos">
-                      <FaMapMarkerAlt aria-hidden="true" /> <span className="btn-acciones__texto">Puestos</span>
-                    </button>
-                    <button type="button" className="btn-secundario-sm" onClick={() => abrirEditar(a)} title="Editar nombre / foto">
-                      <FaPen aria-hidden="true" /> <span className="btn-acciones__texto">Editar</span>
-                    </button>
-                    <button type="button" className="btn-secundario-sm" onClick={() => { setReseteandoId(a.id); setPassNueva(''); setErr(''); }} title="Resetear contraseña">
-                      <FaKey aria-hidden="true" /> <span className="btn-acciones__texto">Contraseña</span>
-                    </button>
-                    <button type="button" className="btn-secundario-sm btn-secundario-sm--peligro" onClick={() => desvincular(a)} title="Desvincular del negocio">
-                      <FaUnlink aria-hidden="true" /> <span className="btn-acciones__texto">Desvincular</span>
-                    </button>
+                    <Boton variante="secundario" tamano="sm" icono={FaMapMarkerAlt} onClick={() => abrir(() => setAsignandoId(a.id))} title="Asignar a puestos">Puestos</Boton>
+                    <Boton variante="secundario" tamano="sm" icono={FaPen} onClick={() => abrirEditar(a)} title="Editar nombre / foto">Editar</Boton>
+                    <Boton variante="secundario" tamano="sm" icono={FaKey} onClick={() => abrir(() => { setReseteandoId(a.id); setPassNueva(''); })} title="Cambiar la contraseña">Contraseña</Boton>
+                    <Boton variante="peligro-suave" tamano="sm" icono={FaUnlink} onClick={() => desvincular(a)} title="Desvincular del negocio">Desvincular</Boton>
                   </div>
                 </td>
               </tr>
-              );
-            }}
-          />
-        </div>
+            );
+          }}
+        />
       )}
 
       {/* CREAR */}
       {showCrear && (
-        <Modal titulo={<><FaUserTie color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Nuevo Ayudante</>} onCerrar={() => setShowCrear(false)}>
-          <div className="pi-usr-modal-body">
-            <form onSubmit={crearAyudante} className="formulario">
-              <div className="input-group">
-                <label htmlFor="ma-nombre"><FaUserTie aria-hidden="true" /> Nombre completo</label>
-                <input id="ma-nombre" type="text" autoComplete="name" value={formCrear.nombre} onChange={(e) => setFormCrear(f => ({ ...f, nombre: e.target.value }))} placeholder="Ej: Juan Pérez" required />
-              </div>
-              <div className="input-group">
-                <label htmlFor="ma-email"><FaEnvelope aria-hidden="true" /> Correo electrónico</label>
-                <input id="ma-email" type="email" autoComplete="email" value={formCrear.email} onChange={(e) => setFormCrear(f => ({ ...f, email: e.target.value }))} placeholder="Ej: juan.perez@email.com" required />
-              </div>
-              <div className="input-group">
-                <label htmlFor="ma-pass"><FaLock aria-hidden="true" /> Contraseña temporal</label>
-                <input id="ma-pass" type="text" autoComplete="new-password" value={formCrear.password} onChange={(e) => setFormCrear(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" required minLength={6} />
-              </div>
+        <Modal titulo={<><FaUserTie aria-hidden="true" /> Registrar nuevo ayudante</>} onCerrar={() => setShowCrear(false)}>
+          <form onSubmit={crearAyudante} className="formulario" noValidate>
+            <Campo
+              id="ma-nombre" etiqueta="Nombre completo" icono={FaUserTie} autoComplete="name" placeholder="Ej: Juan Pérez"
+              value={formCrear.nombre} onChange={(e) => setFormCrear(f => ({ ...f, nombre: e.target.value }))}
+              error={erroresCrear['ma-nombre']}
+            />
+            <Campo
+              id="ma-email" etiqueta="Correo electrónico" icono={FaEnvelope} type="email" autoComplete="email" placeholder="Ej: juan.perez@email.com"
+              value={formCrear.email} onChange={(e) => setFormCrear(f => ({ ...f, email: e.target.value }))}
+              error={erroresCrear['ma-email']}
+            />
+            <Campo
+              id="ma-pass" etiqueta="Contraseña temporal" contrasena autoComplete="new-password"
+              placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`}
+              ayuda="Se la das al ayudante; al entrar la va a tener que cambiar."
+              value={formCrear.password} onChange={(e) => setFormCrear(f => ({ ...f, password: e.target.value }))}
+              error={erroresCrear['ma-pass']}
+            />
 
-              <fieldset className="input-group input-group--fieldset">
-                <legend><FaMapMarkerAlt aria-hidden="true" /> Puestos (opcional)</legend>
-                <SelectorPuestos
-                  grupos={puestosPorEvento}
-                  estaSeleccionado={(id) => formCrear.puestosAsignados.includes(id)}
-                  onToggle={(p) => setFormCrear(f => ({
-                    ...f,
-                    puestosAsignados: f.puestosAsignados.includes(p.id)
-                      ? f.puestosAsignados.filter(x => x !== p.id)
-                      : [...f.puestosAsignados, p.id],
-                  }))}
-                />
-              </fieldset>
+            <fieldset className="input-group input-group--fieldset">
+              <legend className="input-group__etiqueta"><FaMapMarkerAlt aria-hidden="true" /> Puestos (opcional)</legend>
+              <SelectorPuestos
+                grupos={puestosPorEvento}
+                estaSeleccionado={(id) => formCrear.puestosAsignados.includes(id)}
+                onToggle={(p) => setFormCrear(f => ({
+                  ...f,
+                  puestosAsignados: f.puestosAsignados.includes(p.id)
+                    ? f.puestosAsignados.filter(x => x !== p.id)
+                    : [...f.puestosAsignados, p.id],
+                }))}
+              />
+            </fieldset>
 
-              <div className="input-group">
-                <label htmlFor="ma-foto"><FaImage aria-hidden="true" /> Foto de perfil (opcional)</label>
-                {!formCrear.foto ? (
-                  <div className="upload-zone">
-                    <FaUpload className="upload-icon" aria-hidden="true" />
-                    <span className="upload-text">Haz clic para subir una foto</span>
-                    <input id="ma-foto" type="file" accept="image/*" onChange={(e) => subirFoto(e, setFormCrear)} className="upload-input-hidden" />
-                  </div>
-                ) : (
-                  <div className="preview-zone">
-                    <img width="80" height="80" src={formCrear.foto} alt="Vista previa" className="img-preview-avatar" />
-                    <button type="button" className="btn-quitar-imagen" onClick={() => setFormCrear(f => ({ ...f, foto: '' }))}><FaTimes aria-hidden="true" /> Quitar foto</button>
-                  </div>
-                )}
-              </div>
-              {err && <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>}
-              <div className="modal-actions">
-                <button type="button" className="btn-cancelar" onClick={() => setShowCrear(false)}>Cancelar</button>
-                <button type="submit" className="btn-primario"><FaSave /> Crear Ayudante</button>
-              </div>
-            </form>
-          </div>
+            <SubirImagen
+              id="ma-foto" etiqueta="Foto de perfil (opcional)" carpeta="perfiles" texto="Hacé clic para subir una foto" avatar
+              valor={formCrear.foto} onCambio={(url) => setFormCrear(f => ({ ...f, foto: url }))}
+            />
+            {err && <AvisoFijo tono="error">{err}</AvisoFijo>}
+            {pieModal(() => setShowCrear(false), 'Crear ayudante')}
+          </form>
         </Modal>
       )}
 
       {/* EDITAR */}
       {editandoId && (
-        <Modal titulo={<><FaPen color="var(--indigo-profundo)" aria-hidden="true" /> Editar ayudante</>} onCerrar={() => setEditandoId(null)}>
-          <div className="pi-usr-modal-body">
-            <form onSubmit={guardarEdicion} className="formulario">
-              <div className="input-group">
-                <label htmlFor="me-nombre"><FaUserTie aria-hidden="true" /> Nombre completo</label>
-                <input id="me-nombre" type="text" value={formEditar.nombre} onChange={(e) => setFormEditar(f => ({ ...f, nombre: e.target.value }))} required />
-              </div>
-              <div className="input-group">
-                <label htmlFor="me-foto"><FaImage aria-hidden="true" /> Foto de perfil</label>
-                {!formEditar.foto ? (
-                  <div className="upload-zone">
-                    <FaUpload className="upload-icon" aria-hidden="true" />
-                    <span className="upload-text">Subir una foto</span>
-                    <input id="me-foto" type="file" accept="image/*" onChange={(e) => subirFoto(e, setFormEditar)} className="upload-input-hidden" />
-                  </div>
-                ) : (
-                  <div className="preview-zone">
-                    <img width="80" height="80" src={formEditar.foto} alt="Vista previa" className="img-preview-avatar" />
-                    <button type="button" className="btn-quitar-imagen" onClick={() => setFormEditar(f => ({ ...f, foto: '' }))}><FaTimes aria-hidden="true" /> Quitar foto</button>
-                  </div>
-                )}
-              </div>
-              {err && <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>}
-              <div className="modal-actions">
-                <button type="button" className="btn-cancelar" onClick={() => setEditandoId(null)}>Cancelar</button>
-                <button type="submit" className="btn-primario"><FaSave /> Guardar</button>
-              </div>
-            </form>
-          </div>
+        <Modal titulo={<><FaPen aria-hidden="true" /> Editar ayudante</>} onCerrar={() => setEditandoId(null)}>
+          <form onSubmit={guardarEdicion} className="formulario" noValidate>
+            <Campo
+              id="me-nombre" etiqueta="Nombre completo" icono={FaUserTie}
+              value={formEditar.nombre} onChange={(e) => setFormEditar(f => ({ ...f, nombre: e.target.value }))}
+              error={erroresEditar['me-nombre']}
+            />
+            <SubirImagen
+              id="me-foto" etiqueta="Foto de perfil" carpeta="perfiles" texto="Subir una foto" avatar
+              valor={formEditar.foto} onCambio={(url) => setFormEditar(f => ({ ...f, foto: url }))}
+            />
+            {err && <AvisoFijo tono="error">{err}</AvisoFijo>}
+            {pieModal(() => setEditandoId(null), 'Guardar')}
+          </form>
         </Modal>
       )}
 
-      {/* RESET PASSWORD */}
+      {/* CAMBIAR CONTRASEÑA */}
       {reseteando && (
-        <Modal titulo={<><FaKey color="var(--indigo-profundo)" aria-hidden="true" /> Resetear contraseña: {reseteando.nombre}</>} onCerrar={() => setReseteandoId(null)}>
-          <div className="pi-usr-modal-body">
-            <form onSubmit={confirmarReset} className="formulario">
-              <p className="pi-ayudante-nota">Se le pone una contraseña temporal. Al entrar, el ayudante deberá cambiarla.</p>
-              <div className="input-group">
-                <label htmlFor="mr-pass"><FaLock aria-hidden="true" /> Nueva contraseña temporal</label>
-                <input id="mr-pass" type="text" value={passNueva} onChange={(e) => setPassNueva(e.target.value)} placeholder="Mínimo 6 caracteres" required minLength={6} autoFocus />
-              </div>
-              {err && <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>}
-              <div className="modal-actions">
-                <button type="button" className="btn-cancelar" onClick={() => setReseteandoId(null)}>Cancelar</button>
-                <button type="submit" className="btn-primario"><FaSave /> Resetear</button>
-              </div>
-            </form>
-          </div>
+        <Modal titulo={<><FaKey aria-hidden="true" /> Cambiar contraseña: {reseteando.nombre}</>} onCerrar={() => setReseteandoId(null)}>
+          <form onSubmit={confirmarReset} className="formulario" noValidate>
+            <p className="texto-ayuda">Se le pone una contraseña temporal. Al entrar, el ayudante deberá cambiarla.</p>
+            <Campo
+              id="mr-pass" etiqueta="Nueva contraseña temporal" contrasena autoComplete="new-password"
+              placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`} autoFocus
+              value={passNueva} onChange={(e) => setPassNueva(e.target.value)}
+              error={erroresReset['mr-pass']}
+            />
+            {err && <AvisoFijo tono="error">{err}</AvisoFijo>}
+            {pieModal(() => setReseteandoId(null), 'Cambiar contraseña', FaKey)}
+          </form>
         </Modal>
       )}
 
       {/* ASIGNAR A PUESTOS */}
       {asignando && (
-        <Modal titulo={<><FaMapMarkerAlt color="var(--indigo-profundo)" aria-hidden="true" /> Asignar Puestos: {asignando.nombre}</>} onCerrar={() => setAsignandoId(null)}>
-          <div className="pi-usr-modal-body">
-            <p className="pi-ayudante-nota">Marcá en qué puestos puede trabajar. Se guarda al instante.</p>
+        <Modal titulo={<><FaMapMarkerAlt aria-hidden="true" /> Asignar puestos: {asignando.nombre}</>} onCerrar={() => setAsignandoId(null)}>
+          <div className="formulario">
+            <p className="texto-ayuda">Marcá en qué puestos puede trabajar. Se guarda al instante.</p>
             <SelectorPuestos
               grupos={puestosPorEvento}
               defaultOpen
               estaSeleccionado={(id) => asignando.asignaciones.some(x => x.puestoId === id)}
               onToggle={togglePuesto}
             />
-            {err && <p className="pi-ayudante-nota pi-ayudante-nota--error">{err}</p>}
+            {err && <AvisoFijo tono="error">{err}</AvisoFijo>}
             <div className="modal-actions">
-              <button type="button" className="btn-primario" onClick={() => setAsignandoId(null)}>Listo</button>
+              <Boton icono={FaCheck} onClick={() => setAsignandoId(null)}>Listo</Boton>
             </div>
           </div>
         </Modal>

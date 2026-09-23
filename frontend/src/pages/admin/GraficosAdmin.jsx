@@ -1,46 +1,14 @@
-import { useState } from 'react';
 import {
   ResponsiveContainer, LineChart, Line, BarChart, Bar,
   XAxis, YAxis, Tooltip, Legend,
 } from 'recharts';
-import Tabla from '../../components/Tabla.jsx';
-import { fmtBs, ejeTick, tooltipStyle, grid } from './graficosEstilos.jsx';
+import PanelGrafico from '../../components/PanelGrafico.jsx';
+import { fmtBs, ejeTick, tooltipStyle, grid } from '../../utils/graficos.jsx';
 
 const fmtDiaCorto = (d) => {
   const [, m, day] = String(d).split('-');
   return `${day}/${m}`;
 };
-
-/** Marco: título + toggle Gráfico/Tabla. `tabla` = { columnas, datos, renderFila }. */
-export function PanelGrafico({ titulo, vacio, tabla, children }) {
-  const [modo, setModo] = useState('grafico');
-  const sinDatos = !tabla.datos || tabla.datos.length === 0;
-  return (
-    <div className="pi-adg-grafico">
-      <div className="pi-adg-grafico-cab">
-        <h4>{titulo}</h4>
-        {!sinDatos && (
-          <button
-            type="button"
-            className="pi-adg-grafico-toggle"
-            onClick={() => setModo((m) => (m === 'grafico' ? 'tabla' : 'grafico'))}
-          >
-            {modo === 'grafico' ? 'Ver tabla' : 'Ver gráfico'}
-          </button>
-        )}
-      </div>
-      {sinDatos ? (
-        <p className="pi-adg-nota-rango">{vacio}</p>
-      ) : modo === 'tabla' ? (
-        <div className="pi-adg-tabla-scroll">
-          <Tabla columnas={tabla.columnas} datos={tabla.datos} renderFila={tabla.renderFila} porPagina={0} />
-        </div>
-      ) : (
-        <div className="pi-adg-grafico-body">{children}</div>
-      )}
-    </div>
-  );
-}
 
 // W1 — recaudación por entradas por día (+ comparación con el periodo anterior)
 export function GraficoRecaudacionDiaria({ data }) {

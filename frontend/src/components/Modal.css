@@ -78,3 +78,8 @@
 /* Si no hay header, el body recupera el padding superior. */
 .qp-modal__header + .qp-modal__body { padding-top: 0; }
 .qp-modal > .qp-modal__body:first-child { padding-top: var(--space-5); }
+
+@media (prefers-reduced-motion: reduce) {
+  .qp-modal,
+  .qp-modal-overlay { animation: none; }
+}

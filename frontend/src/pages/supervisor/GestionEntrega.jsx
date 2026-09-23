@@ -1,21 +1,27 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import { useModal } from '../../utils/useModal.js';
 import Modal from '../../components/Modal.jsx';
 import StatCard from '../../components/StatCard.jsx';
 import Buscador from '../../components/Buscador.jsx';
-import Filtros from '../../components/Filtros.jsx';
+import Pestanas from '../../components/Pestanas.jsx';
 import FiltroJornada from '../../components/FiltroJornada.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import HistorialManillas from '../../components/HistorialManillas.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import FichaParticipante from '../../components/FichaParticipante.jsx';
+import FotoZoom from '../../components/FotoZoom.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
+import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import {
-  FaArrowLeft, FaLink, FaCheckCircle, FaQrcode, FaTimes,
+  FaArrowLeft, FaLink, FaCheckCircle, FaQrcode,
   FaUsers, FaHourglassHalf, FaExclamationTriangle,
   FaIdCard, FaTicketAlt, FaCalendarAlt, FaHashtag, FaUserCircle,
-  FaMoon, FaEnvelope
+  FaMoon, FaEnvelope, FaHistory, FaCalendarTimes, FaSearch,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
@@ -24,15 +30,22 @@ import { MOTIVOS_CAMBIO_MANILLA, MOTIVO_OTRO } from '../../constants/manillas.js
 import EscanerQr from '../../components/EscanerQr.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useDetalleUrl } from '../../utils/useDetalleUrl.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
 import ManillaFalsaModal from '../../components/ManillaFalsaModal.jsx';
 import { esManillaFalsa } from '../../utils/duplicados.js';
 import './GestionEntrega.css';
 import './Supervisor.css';
 
+const ESTADO_INGRESO = {
+  ingresado: { tono: 'ok', texto: 'Adentro' },
+  salio: { tono: 'neutro', texto: 'Salió' },
+};
+
 export default function GestionEntrega() {
   useTituloPagina('Entrega de manillas');
   const sesion = leerSesion();
+  const avisos = useAvisos();
+  const [confirmar, DialogoConfirmar] = useConfirmar();
 
   // Carga primaria (eventos asignados) con estados cargando/error/reintentar (Manual 8.9).
   const cargarEventos = useCallback(
@@ -66,6 +79,9 @@ export default function GestionEntrega() {
   const [detalleMotivo, setDetalleMotivo] = useState('');
   const [errorCodigo, setErrorCodigo] = useState('');
   const [validando, setValidando] = useState(false);
+  // Guardando el vínculo: spinner y sin segundo toque.
+  const [vinculando, setVinculando] = useState(false);
+  const [intentoMotivo, setIntentoMotivo] = useState(false);
 
   // Verificación de manilla ya vinculada: escaneo de SOLO LECTURA. No cambia nada,
   // solo resuelve la entrada dueña de la manilla y la muestra para confirmar a
@@ -136,7 +152,7 @@ export default function GestionEntrega() {
   const columnasTabla = useMemo(() => [
     'Participante',
     ...(multiJornada ? ['Jornada'] : []),
-    'Tipo de Entrada',
+    'Tipo de entrada',
     'Documento',
     'Vínculo QR',
     { texto: 'Acciones', srOnly: true },
@@ -146,22 +162,23 @@ export default function GestionEntrega() {
   const motivoListo = motivoCambio !== ''
     && (motivoCambio !== MOTIVO_OTRO || detalleMotivo.trim() !== '');
 
-  const abrirVincular = (participante) => {
-    setParticipanteVinculando(participante);
+  const limpiarVinculo = () => {
     setCodigoValidado(null);
     setErrorCodigo('');
     setEscaneando(false);
     setMotivoCambio('');
     setDetalleMotivo('');
+    setIntentoMotivo(false);
+  };
+
+  const abrirVincular = (participante) => {
+    setParticipanteVinculando(participante);
+    limpiarVinculo();
   };
 
   const cerrarVincular = () => {
     setParticipanteVinculando(null);
-    setCodigoValidado(null);
-    setErrorCodigo('');
-    setEscaneando(false);
-    setMotivoCambio('');
-    setDetalleMotivo('');
+    limpiarVinculo();
   };
 
   // Al detectar un código con la cámara, primero se le pregunta a la base si existe, si es de
@@ -188,17 +205,49 @@ export default function GestionEntrega() {
     }
   };
 
+  const errorMotivo = intentoMotivo && esReemplazo && !motivoListo
+    ? (motivoCambio === MOTIVO_OTRO ? 'Contá qué pasó con la manilla anterior.' : 'Elegí por qué se cambia la manilla.')
+    : null;
+
   const confirmarVinculo = async () => {
-    if (!codigoValidado || !participanteVinculando) return;
-    if (esReemplazo && !motivoListo) return;
+    if (vinculando || !codigoValidado || !participanteVinculando) return;
+    setIntentoMotivo(true);
+    if (esReemplazo && !motivoListo) {
+      return document.getElementById(motivoCambio === MOTIVO_OTRO ? 'motivo-detalle' : 'motivo-cambio')?.focus();
+    }
+
+    // Reemplazar ANULA la manilla anterior: se confirma (PLAN §2.4).
+    if (esReemplazo) {
+      const ok = await confirmar({
+        titulo: '¿Reemplazar la manilla?',
+        mensaje: `La manilla ${participanteVinculando.codigoQrVinculado.codigo} de ${participanteVinculando.nombre} queda ANULADA y deja de funcionar. Desde ahora su entrada funciona con la nueva (${codigoValidado.codigo}).`,
+        textoConfirmar: 'Sí, reemplazar',
+        peligroso: true,
+      });
+      if (!ok) return;
+    }
+
     // El motivo viaja SOLO en un reemplazo: en la primera entrega no hay
     // manilla anterior que anular, asi que no hay nada que justificar.
     const motivo = esReemplazo
       ? (motivoCambio === MOTIVO_OTRO ? detalleMotivo.trim() : motivoCambio)
       : undefined;
-    await api.entradas.vincularQr(participanteVinculando.id, codigoValidado.id, motivo);
-    refrescarEvento(eventoIdDetalle);
-    cerrarVincular();
+    setVinculando(true);
+    setErrorCodigo('');
+    try {
+      await api.entradas.vincularQr(participanteVinculando.id, codigoValidado.id, motivo);
+      refrescarEvento(eventoIdDetalle);
+      avisos.exito(
+        `${participanteVinculando.nombre} ya tiene la manilla ${codigoValidado.codigo}.`,
+        { titulo: esReemplazo ? 'Manilla reemplazada' : 'Manilla entregada' },
+      );
+      cerrarVincular();
+    } catch (err) {
+      // Antes este error no se atrapaba: el modal quedaba igual y nadie se enteraba.
+      setErrorCodigo(err.message);
+    } finally {
+      setVinculando(false);
+    }
   };
 
   const handleManillaVerificada = async (codigo) => {
@@ -222,211 +271,146 @@ export default function GestionEntrega() {
     setVerificando(false);
   };
 
-  // Foco + ESC + scroll-lock del resultado de verificación (look propio).
-  const refVerif = useModal(!!entradaVerificada, cerrarVerificacion);
-
   // Contenido del modal de detalle del participante: todos sus datos + el flujo
   // de escaneo/vínculo de la manilla en la misma ventana.
   const renderPanelVinculo = (p) => (
-    <div className="pi-entrega-panel">
-      <div className="pi-entrega-panel-persona">
-        {(p.foto || p.usuario?.foto)
-          ? <img width="52" height="52" src={p.foto || p.usuario.foto} alt={p.nombre} className="pi-entrega-preview-avatar" />
-          : <div className="pi-entrega-preview-avatar pi-entrega-preview-avatar-ph"><FaUserCircle size={32} /></div>}
-        <div>
-          <span className="pi-entrega-preview-nombre">{p.nombre}</span>
-          <span className="pi-entrega-preview-sub">{p.correo}</span>
-        </div>
-      </div>
+    <div className="pi-entrega-panel-cols">
+      <FichaParticipante
+        foto={p.foto || p.usuario?.foto}
+        nombre={p.nombre}
+        datos={[
+          mostrarJornada(p.diaEvento) && { icono: FaMoon, etiqueta: 'Jornada', valor: nombreJornada(p.diaEvento) },
+          { icono: FaTicketAlt, etiqueta: 'Tipo de entrada', valor: p.categoriaTicket?.nombre || '—' },
+          { icono: FaHashtag, etiqueta: 'N.º de entrada', valor: p.numero != null ? `#${p.numero}` : '—' },
+          { icono: FaIdCard, etiqueta: 'Documento', valor: ciDeEntrada(p) || '—' },
+          { icono: FaEnvelope, etiqueta: 'Correo', valor: p.correo },
+          { icono: FaCalendarAlt, etiqueta: 'Evento', valor: eventoDetalle.nombre },
+          { icono: FaUsers, etiqueta: 'Estado de ingreso', valor: ESTADO_INGRESO[p.estadoIngreso]?.texto || 'Sin ingresar' },
+          { icono: FaQrcode, etiqueta: 'Manilla actual', valor: p.codigoQrVinculado?.codigo || 'Sin vincular', destacado: true },
+        ]}
+      />
 
-      <div className="pi-entrega-panel-cols">
-        <div className="pi-entrega-preview-datos">
-          {mostrarJornada(p.diaEvento) && (
-            <div className="pi-entrega-preview-fila">
-              <span><FaMoon /> Jornada</span>
-              <strong>{nombreJornada(p.diaEvento)}</strong>
-            </div>
-          )}
-          <div className="pi-entrega-preview-fila">
-            <span><FaTicketAlt /> Tipo de entrada</span>
-            <strong>{p.categoriaTicket?.nombre || '—'}</strong>
-          </div>
-          <div className="pi-entrega-preview-fila">
-            <span><FaHashtag /> N.º de entrada</span>
-            <strong>{p.numero != null ? `#${p.numero}` : '—'}</strong>
-          </div>
-          <div className="pi-entrega-preview-fila">
-            <span><FaIdCard /> Documento</span>
-            <strong>{ciDeEntrada(p) || '—'}</strong>
-          </div>
-          <div className="pi-entrega-preview-fila">
-            <span><FaEnvelope /> Correo</span>
-            <strong>{p.correo}</strong>
-          </div>
-          <div className="pi-entrega-preview-fila">
-            <span><FaCalendarAlt /> Evento</span>
-            <strong>{eventoDetalle.nombre}</strong>
-          </div>
-          <div className="pi-entrega-preview-fila">
-            <span><FaUsers /> Estado de ingreso</span>
-            <strong>
-              {p.estadoIngreso === 'ingresado' ? 'Adentro'
-                : p.estadoIngreso === 'salio' ? 'Salió'
-                : 'Sin ingresar'}
-            </strong>
-          </div>
-          <div className="pi-entrega-preview-fila">
-            <span><FaQrcode /> Manilla actual</span>
-            <strong>{p.codigoQrVinculado?.codigo || 'Sin vincular'}</strong>
-          </div>
-        </div>
+      <div className="pi-entrega-panel-scan">
+        {escaneando ? (
+          <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
+        ) : validando ? (
+          <EstadoCarga filas={2} etiqueta="Verificando código…" />
+        ) : codigoValidado ? (
+          <AvisoFijo tono="exito" titulo="Manilla lista para vincular">
+            <strong>{codigoValidado.codigo}</strong>
+            {p.codigoQrVinculado && <> · reemplaza a {p.codigoQrVinculado.codigo}</>}
+          </AvisoFijo>
+        ) : (
+          <EstadoVacio compacto icono={FaQrcode} titulo="Escaneá el QR de la manilla a entregar" />
+        )}
 
-        <div className="pi-entrega-panel-scan">
-          {escaneando ? (
-            <EscanerQr onDetectado={handleCodigoDetectado} onCancelar={() => setEscaneando(false)} />
-          ) : validando ? (
-            <div className="pi-entrega-camara-simulada">
-              <FaQrcode size={48} />
-              <span>Verificando código…</span>
-            </div>
-          ) : codigoValidado ? (
-            <div className="pi-entrega-codigo-ok">
-              <FaCheckCircle color="var(--verde-recarga-texto)" size={26} />
-              <div>
-                <span className="pi-entrega-codigo-ok-label">Manilla lista para vincular</span>
-                <strong>{codigoValidado.codigo}</strong>
-                {p.codigoQrVinculado && (
-                  <span className="pi-entrega-preview-reemplazo">
-                    <FaExclamationTriangle /> Reemplaza a {p.codigoQrVinculado.codigo}
-                  </span>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className="pi-entrega-camara-simulada">
-              <FaQrcode size={48} />
-              <span>Escaneá el QR de la manilla a entregar</span>
-            </div>
-          )}
+        {errorCodigo && <AvisoFijo tono="error">{errorCodigo}</AvisoFijo>}
 
-          {errorCodigo && (
-            <p className="pi-entrega-aviso pi-entrega-aviso-error">
-              <FaExclamationTriangle /> {errorCodigo}
-            </p>
-          )}
+        {!escaneando && !codigoValidado && (
+          <Boton
+            icono={FaQrcode}
+            onClick={() => { setErrorCodigo(''); setEscaneando(true); }}
+            disabled={validando}
+          >
+            {errorCodigo ? 'Escanear otro código' : 'Escanear código QR'}
+          </Boton>
+        )}
 
-          {!escaneando && !codigoValidado && (
-            <button
-              className="pi-entrega-btn-escanear"
-              onClick={() => { setErrorCodigo(''); setEscaneando(true); }}
-              disabled={validando}
-            >
-              <FaQrcode /> {errorCodigo ? 'Escanear otro código' : 'Escanear código QR'}
-            </button>
-          )}
+        {/* El motivo solo se pide cuando hay una manilla anterior que anular.
+            En la primera entrega no hay nada que justificar. */}
+        {esReemplazo && codigoValidado && (
+          <div className="formulario">
+            <Campo id="motivo-cambio" etiqueta="¿Por qué se cambia la manilla?" error={motivoCambio !== MOTIVO_OTRO ? errorMotivo : null}>
+              <select
+                id="motivo-cambio"
+                value={motivoCambio}
+                onChange={(e) => setMotivoCambio(e.target.value)}
+                aria-invalid={!!(motivoCambio !== MOTIVO_OTRO && errorMotivo)}
+              >
+                <option value="">Elegí un motivo…</option>
+                {MOTIVOS_CAMBIO_MANILLA.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            </Campo>
 
-          {/* El motivo solo se pide cuando hay una manilla anterior que anular.
-              En la primera entrega no hay nada que justificar. */}
-          {esReemplazo && codigoValidado && (
-            <div className="pi-entrega-motivo formulario">
-              <div className="input-group">
-                <label htmlFor="motivo-cambio">¿Por qué se cambia la manilla?</label>
-                <select
-                  id="motivo-cambio"
-                  value={motivoCambio}
-                  onChange={(e) => setMotivoCambio(e.target.value)}
-                >
-                  <option value="">Elegí un motivo…</option>
-                  {MOTIVOS_CAMBIO_MANILLA.map((m) => (
-                    <option key={m} value={m}>{m}</option>
-                  ))}
-                </select>
-              </div>
-
-              {motivoCambio === MOTIVO_OTRO && (
-                <div className="input-group">
-                  <label htmlFor="motivo-detalle">Contanos qué pasó</label>
-                  <input
-                    id="motivo-detalle"
-                    type="text"
-                    value={detalleMotivo}
-                    onChange={(e) => setDetalleMotivo(e.target.value)}
-                    placeholder="Ej.: se le soltó el broche"
-                    maxLength={120}
-                  />
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="pi-entrega-modal-acciones">
-            <button className="pi-entrega-btn-cancelar" onClick={cerrarVincular}>Cancelar</button>
-            <button
-              className="pi-entrega-btn-confirmar"
-              onClick={confirmarVinculo}
-              disabled={!codigoValidado || (esReemplazo && !motivoListo)}
-            >
-              <FaLink /> {p.codigoQrVinculado ? 'Reemplazar manilla' : 'Vincular manilla'}
-            </button>
+            {motivoCambio === MOTIVO_OTRO && (
+              <Campo
+                id="motivo-detalle" etiqueta="Contanos qué pasó" placeholder="Ej.: se le soltó el broche" maxLength={120}
+                value={detalleMotivo} onChange={(e) => setDetalleMotivo(e.target.value)}
+                error={errorMotivo}
+              />
+            )}
           </div>
+        )}
+
+        <div className="modal-actions">
+          <Boton variante="secundario" onClick={cerrarVincular} disabled={vinculando}>Cancelar</Boton>
+          <Boton
+            variante={p.codigoQrVinculado ? 'peligro' : 'primario'}
+            icono={FaLink}
+            onClick={confirmarVinculo}
+            cargando={vinculando}
+            disabled={!codigoValidado}
+          >
+            {p.codigoQrVinculado ? 'Reemplazar manilla' : 'Vincular manilla'}
+          </Boton>
         </div>
       </div>
     </div>
   );
+
+  const esDeEsteEvento = entradaVerificada?.eventoId === eventoIdDetalle;
 
   return (
     <div className="pi-entrega-container">
 
       {eventoDetalle ? (
         <>
-          <button className="pi-entrega-btn-volver" onClick={volverALista}>
-            <FaArrowLeft /> Volver a Gestión de Entrega
-          </button>
-
-          <div className="pi-entrega-header-fila">
-            <div className="pi-entrega-header">
-              <h1>{eventoDetalle.nombre}</h1>
-              <p>Busca a un participante y vincula su código QR de entrega.</p>
-            </div>
-            <button
-              type="button"
-              className="pi-entrega-btn-verificar"
-              onClick={() => { setErrorVerificacion(''); setVerificando(true); }}
-              disabled={buscandoVerificacion}
-            >
-              <FaQrcode /> {buscandoVerificacion ? 'Buscando...' : 'Verificar manilla'}
-            </button>
+          <div className="qp-nav">
+            <Boton variante="fantasma" tamano="sm" icono={FaArrowLeft} onClick={volverALista}>Volver a Gestión de entrega</Boton>
           </div>
+
+          <EncabezadoPagina
+            titulo={eventoDetalle.nombre}
+            subtitulo="Buscá a un participante y vinculá su código QR de entrega."
+            icono={FaLink}
+            acciones={(
+              <Boton
+                variante="secundario"
+                icono={FaQrcode}
+                onClick={() => { setErrorVerificacion(''); setVerificando(true); }}
+                cargando={buscandoVerificacion}
+              >
+                {buscandoVerificacion ? 'Buscando…' : 'Verificar manilla'}
+              </Boton>
+            )}
+          />
 
           {eventoDetalle.tipoManilla === 'digital' && (
-            <p className="pi-entrega-aviso pi-entrega-aviso-info">
-              <FaQrcode /> Este evento es de <strong>manilla digital</strong>: el código QR de cada
-              asistente se asigna solo al aprobarse su compra — no hace falta imprimir ni entregar
-              nada acá. Igual podés vincular o reemplazar una manilla a mano si hace falta.
-            </p>
+            <AvisoFijo tono="info" icono={FaQrcode} titulo="Evento de manilla digital">
+              El código QR de cada asistente se asigna solo al aprobarse su compra — no hace falta imprimir ni
+              entregar nada acá. Igual podés vincular o reemplazar una manilla a mano si hace falta.
+            </AvisoFijo>
           )}
 
-          {errorVerificacion && (
-            <p className="pi-entrega-aviso pi-entrega-aviso-error">
-              <FaExclamationTriangle /> {errorVerificacion}
-            </p>
-          )}
+          {errorVerificacion && <AvisoFijo tono="error">{errorVerificacion}</AvisoFijo>}
 
-          <div className="pi-entrega-stats-grid">
-            <StatCard icon={<FaUsers />} tono="total" valor={stats.total} label="Total Participantes" />
-            <StatCard icon={<FaCheckCircle />} tono="ok" valor={stats.entregados} label="Ya se Entregó" />
-            <StatCard icon={<FaHourglassHalf />} tono="warn" valor={stats.faltan} label="Falta Entregar" />
+          <div className="qp-stats">
+            <StatCard icon={<FaUsers />} tono="total" valor={stats.total} label="Total de participantes" />
+            <StatCard icon={<FaCheckCircle />} tono="ok" valor={stats.entregados} label="Ya se entregó" />
+            <StatCard icon={<FaHourglassHalf />} tono="warn" valor={stats.faltan} label="Falta entregar" />
           </div>
 
-          <Filtros
-            opciones={[
-              { valor: 'participantes', texto: 'Participantes', conteo: stats.total },
-              { valor: 'historial', texto: 'Historial de manillas' },
-            ]}
+          <Pestanas
+            className="pi-entrega-vistas"
+            etiqueta="Ver participantes o historial de manillas"
             activo={vista}
             onCambio={setVista}
-            etiqueta="Ver participantes o historial de manillas"
-            className="pi-entrega-vistas"
+            items={[
+              { id: 'participantes', etiqueta: `Participantes (${stats.total})`, icono: FaUsers },
+              { id: 'historial', etiqueta: 'Historial de manillas', icono: FaHistory },
+            ]}
           />
 
           {vista === 'participantes' && (<>
@@ -464,34 +448,34 @@ export default function GestionEntrega() {
             renderFila={p => (
               <tr key={p.id}>
                 <td>
-                  <div className="pi-entrega-fila-persona">
+                  <div className="item-info">
                     {p.foto
-                      ? <img width="32" height="32" src={p.foto} alt={p.nombre} className="pi-entrega-mini-avatar" />
-                      : <div className="pi-entrega-mini-avatar pi-entrega-mini-avatar--ph"><FaUserCircle size={20} /></div>}
-                    <div className="pi-entrega-fila-persona-txt">
-                      <span className="pi-entrega-fila-nombre">{p.nombre}</span>
-                      <span className="pi-entrega-fila-correo"><FaEnvelope aria-hidden="true" /> {p.correo}</span>
+                      ? <img width="40" height="40" src={p.foto} alt="" className="item-img item-img--avatar" />
+                      : <div className="item-no-img item-img--avatar"><FaUserCircle aria-hidden="true" /></div>}
+                    <div>
+                      <div className="fila-nombre">{p.nombre}</div>
+                      <div className="celda-secundaria"><FaEnvelope aria-hidden="true" /> {p.correo}</div>
                     </div>
                   </div>
                 </td>
                 {multiJornada && (
                   <td>
                     {mostrarJornada(p.diaEvento)
-                      ? <span className="pi-entrega-badge-jornada"><FaMoon aria-hidden="true" /> {nombreJornada(p.diaEvento)}</span>
+                      ? <Insignia tono="info" icono={FaMoon}>{nombreJornada(p.diaEvento)}</Insignia>
                       : '—'}
                   </td>
                 )}
                 <td>{p.categoriaTicket?.nombre || '—'}</td>
-                <td>{ciDeEntrada(p) || <span className="pi-entrega-dato-falta">Sin documento</span>}</td>
+                <td>{ciDeEntrada(p) || <Insignia tono="warn">Sin documento</Insignia>}</td>
                 <td>
                   {p.codigoQrVinculado
-                    ? <span className="pi-entrega-badge pi-entrega-badge-ok"><FaCheckCircle /> {p.codigoQrVinculado.codigo}</span>
-                    : <span className="pi-entrega-badge pi-entrega-badge-pend">Sin vincular</span>}
+                    ? <Insignia tono="ok" icono={FaCheckCircle}>{p.codigoQrVinculado.codigo}</Insignia>
+                    : <Insignia tono="warn" punto>Sin vincular</Insignia>}
                 </td>
                 <td>
-                  <button className="pi-entrega-btn-vincular" onClick={() => abrirVincular(p)}>
-                    <FaLink /> {p.codigoQrVinculado ? 'Cambiar' : 'Vincular'}
-                  </button>
+                  <Boton variante={p.codigoQrVinculado ? 'secundario' : 'primario'} tamano="sm" icono={FaLink} onClick={() => abrirVincular(p)}>
+                    {p.codigoQrVinculado ? 'Cambiar' : 'Vincular'}
+                  </Boton>
                 </td>
               </tr>
             )}
@@ -504,17 +488,22 @@ export default function GestionEntrega() {
         </>
       ) : (
         <>
-          <div className="pi-entrega-header">
-            <h1>Gestión de entrega</h1>
-            <p>Selecciona un evento para buscar participantes y vincular sus códigos QR.</p>
-          </div>
+          <EncabezadoPagina
+            titulo="Gestión de entrega"
+            subtitulo="Seleccioná un evento para buscar participantes y vincular sus códigos QR."
+            icono={FaLink}
+          />
 
           {errorEventos ? (
             <EstadoError onReintentar={recargarEventos} />
           ) : cargandoEventos ? (
             <EstadoCarga filas={3} />
           ) : eventos.length === 0 ? (
-            <p className="pi-entrega-sin-eventos">Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.</p>
+            <EstadoVacio
+              icono={FaCalendarTimes}
+              titulo="Todavía no tenés ningún evento asignado"
+              mensaje="Pedile a Admin que te asigne uno para empezar a entregar manillas."
+            />
           ) : (
           <>
             <Buscador
@@ -527,7 +516,10 @@ export default function GestionEntrega() {
               onFiltro={setFiltroEvento}
               etiquetaFiltros="Filtrar eventos por estado"
             />
-            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+            <GrillaEventos
+              eventos={eventosFiltrados}
+              vacio={<EstadoVacio compacto icono={FaSearch} titulo="Ningún evento coincide con la búsqueda" />}
+            >
               {ev => (
                 <EventoCard
                   key={ev.id}
@@ -546,8 +538,9 @@ export default function GestionEntrega() {
       {/* MODAL: DETALLE DEL PARTICIPANTE + VINCULAR MANILLA */}
       {participanteVinculando && (
         <Modal
-          titulo={<><FaLink color="var(--indigo-profundo)" /> {participanteVinculando.codigoQrVinculado ? 'Cambiar manilla' : 'Vincular manilla'}</>}
+          titulo={<><FaLink aria-hidden="true" /> {participanteVinculando.codigoQrVinculado ? 'Cambiar manilla' : 'Vincular manilla'}</>}
           onCerrar={cerrarVincular}
+          cerrarEnBackdrop={!vinculando}
           tamano="lg"
         >
           {renderPanelVinculo(participanteVinculando)}
@@ -565,127 +558,49 @@ export default function GestionEntrega() {
         </Modal>
       )}
 
-      {/* MODAL: RESULTADO DE LA VERIFICACIÓN (solo lectura) */}
-      {entradaVerificada && (() => {
-        const esDeEsteEvento = entradaVerificada.eventoId === eventoIdDetalle;
-        // Portal al <body>, igual que <Modal>: adentro de .pi-layout-content esta
-        // capa quedaba por debajo del header del panel (isolation: isolate).
-        return createPortal(
-          <div className="pi-sup-modal-overlay" onClick={cerrarVerificacion}>
-            <div
-              ref={refVerif}
-              tabIndex={-1}
-              className="pi-sup-modal-tarjeta"
-              onClick={(e) => e.stopPropagation()}
-              role="dialog"
-              aria-modal="true"
-              aria-label={`Verificación de ${entradaVerificada.nombre}`}
-            >
-              <button type="button" className="pi-sup-btn-cerrar" onClick={cerrarVerificacion} aria-label="Cerrar">
-                <FaTimes aria-hidden="true" />
-              </button>
+      {/* MODAL: RESULTADO DE LA VERIFICACIÓN (solo lectura, <Modal> global) */}
+      {entradaVerificada && (
+        <Modal titulo="Verificación de manilla" onCerrar={cerrarVerificacion} className="pi-sup-modal-tarjeta">
+          <div className="pi-entrega-verif-fotos">
+            {[
+              { src: entradaVerificada.usuario?.foto, etiqueta: 'Foto de perfil' },
+              { src: entradaVerificada.foto, etiqueta: 'Foto en puerta' },
+            ].map(({ src, etiqueta }) => (
+              <figure key={etiqueta} className="pi-entrega-verif-foto">
+                {src
+                  ? <FotoZoom width={110} height={110} src={src} alt={etiqueta} />
+                  : <span className="pi-entrega-verif-sinfoto"><FaUserCircle aria-hidden="true" /></span>}
+                <figcaption>{etiqueta}</figcaption>
+              </figure>
+            ))}
+          </div>
 
-              <div
-                className="pi-sup-tarjeta-estado"
-                style={esDeEsteEvento ? undefined : { backgroundColor: 'var(--ambar-aviso-suave)' }}
-              >
-                <div
-                  className="estado-badge"
-                  style={esDeEsteEvento ? undefined : { color: 'var(--ambar-aviso-texto)' }}
-                >
-                  {esDeEsteEvento
-                    ? <><FaCheckCircle /> Vínculo verificado</>
-                    : <><FaExclamationTriangle /> Manilla de otro evento</>}
-                </div>
-              </div>
+          <FichaParticipante
+            estado={esDeEsteEvento
+              ? <Insignia tono="ok" icono={FaCheckCircle} solida>Vínculo verificado</Insignia>
+              : <Insignia tono="warn" icono={FaExclamationTriangle} solida>Manilla de otro evento</Insignia>}
+            nombre={entradaVerificada.nombre}
+            datos={[
+              { icono: FaCalendarAlt, etiqueta: 'Evento', valor: entradaVerificada.evento?.nombre || eventoDetalle?.nombre },
+              mostrarJornada(entradaVerificada.diaEvento) && { icono: FaMoon, etiqueta: 'Jornada', valor: nombreJornada(entradaVerificada.diaEvento) },
+              { icono: FaHashtag, etiqueta: 'N.º de entrada', valor: entradaVerificada.numero ? `#${entradaVerificada.numero}` : '—' },
+              { icono: FaIdCard, etiqueta: 'Documento', valor: ciDeEntrada(entradaVerificada) || '—' },
+              { icono: FaTicketAlt, etiqueta: 'Tipo de entrada', valor: entradaVerificada.categoriaTicket?.nombre || '—' },
+              { icono: FaQrcode, etiqueta: 'Manilla vinculada', valor: entradaVerificada.codigoQrVinculado?.codigo || '—', destacado: true },
+            ]}
+          />
 
-              <div className="pi-sup-fotos-comparacion">
-                <div className="foto-box">
-                  {entradaVerificada.usuario?.foto ? (
-                    <img width="110" height="110" src={entradaVerificada.usuario.foto} alt="Foto de perfil" className="foto-img" />
-                  ) : (
-                    <div className="foto-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <FaUserCircle size={48} color="var(--texto-secundario)" />
-                    </div>
-                  )}
-                  <span className="foto-label text-gray">Foto de perfil</span>
-                </div>
-                <div className="foto-box">
-                  {entradaVerificada.foto ? (
-                    <img width="110" height="110" src={entradaVerificada.foto} alt="Foto registrada en puerta" className="foto-img border-cyan" />
-                  ) : (
-                    <div className="foto-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <FaUserCircle size={48} color="var(--texto-secundario)" />
-                    </div>
-                  )}
-                  <span className="foto-label text-cyan">Foto en puerta</span>
-                </div>
-              </div>
-
-              <h2 className="pi-sup-tarjeta-nombre">{entradaVerificada.nombre}</h2>
-
-              <div className="pi-sup-info-card">
-                <div className="info-row">
-                  <FaCalendarAlt className="info-icon" />
-                  <div>
-                    <span className="info-label">Evento</span>
-                    <span className="info-valor">{entradaVerificada.evento?.nombre || eventoDetalle.nombre}</span>
-                  </div>
-                </div>
-                {mostrarJornada(entradaVerificada.diaEvento) && (
-                  <div className="info-row">
-                    <FaMoon className="info-icon" />
-                    <div>
-                      <span className="info-label">Jornada</span>
-                      <span className="info-valor">{nombreJornada(entradaVerificada.diaEvento)}</span>
-                    </div>
-                  </div>
-                )}
-                <div className="info-row">
-                  <FaHashtag className="info-icon" />
-                  <div>
-                    <span className="info-label">N.º de entrada</span>
-                    <span className="info-valor">{entradaVerificada.numero ? `#${entradaVerificada.numero}` : '—'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaIdCard className="info-icon" />
-                  <div>
-                    <span className="info-label">Documento</span>
-                    <span className="info-valor">{ciDeEntrada(entradaVerificada) || '—'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaTicketAlt className="info-icon" />
-                  <div>
-                    <span className="info-label">Tipo de entrada</span>
-                    <span className="info-valor">{entradaVerificada.categoriaTicket?.nombre || '—'}</span>
-                  </div>
-                </div>
-                <div className="info-row">
-                  <FaQrcode className="info-icon" />
-                  <div>
-                    <span className="info-label">Manilla vinculada</span>
-                    <span className="info-valor">{entradaVerificada.codigoQrVinculado?.codigo || '—'}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="pi-sup-modal-footer" style={{ alignItems: 'center' }}>
-                <button type="button" className="pi-entrega-btn-cancelar" onClick={cerrarVerificacion}>
-                  Cerrar
-                </button>
-              </div>
-            </div>
-          </div>,
-          document.body,
-        );
-      })()}
+          <div className="modal-actions">
+            <Boton variante="secundario" onClick={cerrarVerificacion}>Cerrar</Boton>
+          </div>
+        </Modal>
+      )}
 
       {manillaFalsa && (
         <ManillaFalsaModal detalle={manillaFalsa} onCerrar={() => setManillaFalsa(null)} />
       )}
 
+      {DialogoConfirmar}
     </div>
   );
 }

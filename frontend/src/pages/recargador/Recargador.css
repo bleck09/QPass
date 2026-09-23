@@ -1,51 +1,13 @@
-/* Prefix único: pi-rec- */
+/* =========================================================================
+   RECARGADOR — layout propio (prefijo pi-rec-). Encabezado, pestañas,
+   números, botones, campos, montos rápidos (Filtros), insignias, avisos,
+   ficha del participante (FichaParticipante) y modales son los GLOBALES.
+   ========================================================================= */
+
 .pi-rec-container {
   display: flex;
   flex-direction: column;
   gap: 24px;
-}
-
-.pi-rec-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.pi-rec-header h1,
-.pi-rec-header h2 {
-  color: var(--text-primary);
-  font-size: var(--text-xl);
-}
-
-.pi-rec-tabs {
-  display: flex;
-  gap: 8px;
-  background-color: var(--bg-page);
-  padding: 4px;
-  border-radius: var(--radius-md);
-}
-
-.pi-rec-tabs button {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: none;
-  background: none;
-  padding: 8px 16px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pi-rec-tabs button.activo {
-  background-color: var(--bg-surface);
-  color: var(--indigo-profundo);
-  box-shadow: 0 1px 4px rgba(10, 14, 39, 0.1);
 }
 
 /* --- PANEL DE ESCANEO --- */
@@ -75,63 +37,11 @@
   margin-bottom: 8px;
 }
 
-.pi-rec-btn-escanear {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--cian-digital);
-  color: var(--texto-sobre-vivo);
-  border: none;
-  padding: 16px 24px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-base);
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 4px 12px rgba(0, 180, 216, 0.35);
-  transition: background 0.2s;
-}
-
-.pi-rec-btn-escanear:hover:not(:disabled) {
-  background-color: var(--cian-digital-hover);
-}
-
-.pi-rec-btn-escanear:disabled {
-  opacity: 0.7;
-  cursor: default;
-}
-
 /* --- HISTORIAL --- */
 .pi-rec-historial {
   display: flex;
   flex-direction: column;
   gap: 20px;
-}
-
-.pi-rec-historial-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-}
-
-.pi-rec-historial-stat {
-  background: var(--bg-surface);
-  border-radius: var(--radius-lg);
-  padding: 16px 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
-}
-
-.pi-rec-historial-stat .numero {
-  font-size: var(--text-xl);
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.pi-rec-historial-stat .label {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
 }
 
 .pi-rec-fila-persona {
@@ -154,224 +64,16 @@
   color: var(--verde-recarga-texto);
 }
 
-/* --- MODAL / TARJETA GRANDE AL ESCANEAR --- */
-.pi-rec-modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(10, 14, 39, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: var(--z-modal);
-  animation: pi-rec-fadeIn 0.15s ease-out;
-}
-
-@keyframes pi-rec-fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.pi-rec-modal-tarjeta {
-  background: var(--bg-surface);
-  width: 100%;
-  max-width: 420px;
-  border-radius: var(--radius-xl);
-  padding: 32px 28px 24px;
-  position: relative;
-  text-align: center;
-  box-shadow: 0 20px 50px rgba(10, 14, 39, 0.25);
-  animation: pi-rec-slideUp 0.2s ease-out;
-}
-
-@keyframes pi-rec-slideUp {
-  from { opacity: 0; transform: translateY(20px) scale(0.98); }
-  to { opacity: 1; transform: translateY(0) scale(1); }
-}
-
-.pi-rec-btn-cerrar {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  border: none;
-  background-color: var(--bg-page);
-  color: var(--text-secondary);
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.pi-rec-tarjeta-estado {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  padding: 8px 16px;
-  border-radius: var(--radius-xl);
-  margin-bottom: 20px;
-  background-color: var(--verde-recarga-suave);
-  color: var(--verde-recarga-texto);
-}
-
-.pi-rec-tarjeta-estado.aviso {
-  background-color: var(--ambar-aviso-suave);
-  color: var(--ambar-aviso-texto);
-}
-
-.pi-rec-tarjeta-foto {
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 5px solid var(--cian-digital-suave);
-  box-shadow: 0 6px 18px rgba(26, 43, 107, 0.2);
-}
-
-.pi-rec-tarjeta-nombre {
-  margin-top: 16px;
-  font-size: var(--text-xl);
-  color: var(--text-primary);
-}
-
-.pi-rec-tarjeta-datos {
-  margin-top: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  text-align: left;
-  background-color: var(--bg-page);
-  border-radius: var(--radius-lg);
-  padding: 16px 16px;
-}
-
-.pi-rec-tarjeta-dato {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: var(--indigo-profundo);
-  font-size: var(--text-lg);
-}
-
-.pi-rec-tarjeta-dato > div {
-  display: flex;
-  flex-direction: column;
-}
-
-.pi-rec-tarjeta-dato .label {
-  font-size: var(--text-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-}
-
-.pi-rec-tarjeta-dato .valor {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
 /* --- FORMULARIO DE MONTO --- */
 .pi-rec-form-monto {
   margin-top: 20px;
   text-align: left;
 }
 
-.pi-rec-form-monto label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
-
-.pi-rec-form-monto input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: var(--text-lg);
-  font-weight: 700;
-  color: var(--text-primary);
-  outline: none;
-  transition: border-color 0.2s;
-}
-
-.pi-rec-form-monto input:focus {
-  border-color: var(--cian-digital);
-}
-
 .pi-rec-montos-rapidos {
   display: flex;
   gap: 8px;
   margin-top: 8px;
-}
-
-.pi-rec-montos-rapidos button {
-  flex: 1;
-  padding: 8px;
-  border: 1px solid var(--border);
-  background-color: var(--bg-page);
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--indigo-profundo);
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.pi-rec-montos-rapidos button:hover {
-  background-color: var(--cian-digital-suave);
-  border-color: var(--cian-digital);
-}
-
-.pi-rec-tarjeta-acciones {
-  display: flex;
-  gap: 8px;
-  margin-top: 24px;
-}
-
-.pi-rec-tarjeta-acciones button {
-  flex: 1;
-  padding: 12px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  border: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.pi-rec-btn-cancelar {
-  background-color: var(--bg-page);
-  color: var(--text-primary);
-}
-
-.pi-rec-btn-cancelar:hover {
-  background-color: var(--border);
-}
-
-/* Botón de acción principal (confirmar pago / recarga) */
-.pi-rec-btn-confirmar {
-  background-color: var(--coral-compra);
-  color: var(--texto-sobre-vivo);
-}
-
-.pi-rec-btn-confirmar:hover:not(:disabled) {
-  background-color: var(--coral-compra-hover);
-}
-
-.pi-rec-btn-confirmar:disabled {
-  opacity: 0.5;
-  cursor: default;
 }
 
 /* --- ESTADO DE ÉXITO --- */
@@ -405,223 +107,20 @@
   margin: 8px 0 16px;
 }
 
-.pi-rec-exito .pi-rec-btn-confirmar,
-.pi-rec-btn-bloque {
-  width: 100%;
-  padding: 12px 20px;
-  min-height: 48px;
-  border: none;
-  border-radius: var(--radius-md);
-  font-size: var(--text-base);
-  font-weight: 700;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-.pi-rec-btn-bloque { margin-top: 12px; }
-
 /* --- INCIDENCIAS DE RECARGA INCOMPLETA --- */
-.pi-rec-incidencias-nota {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  max-width: 640px;
-}
-
-.pi-rec-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  padding: 4px 8px;
-  border-radius: var(--radius-xl);
-}
-
-.pi-rec-badge-pend {
-  background-color: var(--ambar-aviso-suave);
-  color: var(--ambar-aviso-texto);
-}
-
-.pi-rec-badge-ok {
-  background-color: var(--verde-recarga-suave);
-  color: var(--verde-recarga-texto);
-}
 
 .pi-rec-form-incidencia {
   margin-top: 16px;
   text-align: left;
 }
 
-.pi-rec-form-incidencia label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 8px;
-}
+/* ---------- Tarjeta de recarga dentro del <Modal> ---------- */
+.pi-rec-modal-tarjeta .qp-modal__body { display: flex; flex-direction: column; gap: var(--space-4); }
+.pi-rec-escanear-ic { font-size: 4.4rem; color: var(--accent); }
+.pi-rec-exito-ic { font-size: 3.75rem; color: var(--ok); animation: qp-pop 500ms var(--ease-rebote); }
+.pi-rec-campo-monto input { font-size: var(--text-xl); font-weight: var(--weight-bold); }
+.pi-rec-montos-rapidos { justify-content: center; }
 
-.pi-rec-form-incidencia input {
-  width: 100%;
-  padding: 8px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  outline: none;
-  transition: border-color 0.2s;
+@media (prefers-reduced-motion: reduce) {
+  .pi-rec-exito-ic { animation: none; }
 }
-
-.pi-rec-form-incidencia input:focus {
-  border-color: var(--ambar-aviso);
-}
-
-.pi-rec-alerta-incidencia {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  background-color: var(--ambar-aviso-suave);
-  color: var(--ambar-aviso-texto);
-  padding: 8px 12px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  margin-top: 8px;
-  text-align: left;
-}
-
-.pi-rec-alerta-incidencia-exito {
-  width: 100%;
-  margin: 0 0 8px;
-}
-
-/* Aviso "manilla de otro evento" */
-.pi-rec-aviso-evento {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  width: 100%;
-  padding: 12px 14px;
-  border-radius: var(--radius-md);
-  background: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  text-align: left;
-}
-.pi-rec-aviso-evento svg {
-  flex-shrink: 0;
-  margin-top: 3px;
-}
-
-.pi-rec-nota-incidencia {
-  width: 100%;
-  margin-top: 8px;
-  padding: 8px 12px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-family: inherit;
-  color: var(--text-primary);
-  outline: none;
-  resize: vertical;
-  transition: border-color 0.2s;
-}
-
-.pi-rec-nota-incidencia:focus {
-  border-color: var(--ambar-aviso);
-}
-
-.pi-rec-label-opcional {
-  display: block;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-top: 12px;
-  margin-bottom: 8px;
-}
-
-.pi-rec-form-incidencia-post {
-  width: 100%;
-  margin-top: 4px;
-  margin-bottom: 8px;
-}
-
-.pi-rec-incidencia-linea {
-  font-size: var(--text-sm);
-  color: var(--text-primary);
-  margin: 0 0 12px;
-  text-align: left;
-}
-
-/* Preview de la diferencia al escribir "cuánto pagó" */
-.pi-rec-diff {
-  font-size: var(--text-xs);
-  line-height: 1.5;
-  margin: 8px 0 0;
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
-  text-align: left;
-}
-.pi-rec-diff--menos {
-  background: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-}
-.pi-rec-diff--mas {
-  background: var(--verde-recarga-suave, #e1f9f1);
-  color: var(--verde-recarga-texto, #1b7a4b);
-}
-
-.pi-rec-alerta-info {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  margin-top: 8px;
-  text-align: left;
-}
-
-.pi-rec-btn-reportar {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  width: 100%;
-  background: none;
-  border: 1px dashed var(--ambar-aviso);
-  color: var(--ambar-aviso-texto);
-  padding: 8px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-  margin-bottom: 8px;
-  transition: background 0.2s;
-}
-
-.pi-rec-btn-reportar:hover {
-  background-color: var(--ambar-aviso-suave);
-}
-
-.pi-rec-btn-reportar-fila {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--ambar-aviso);
-  background: none;
-  color: var(--ambar-aviso-texto);
-  padding: 8px 8px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background 0.2s;
-}
-
-.pi-rec-btn-reportar-fila:hover {
-  background-color: var(--ambar-aviso-suave);
-}
-
-/* Aviso "sin caja abierta" (§5.2) -> componente <AvisoSinCaja> (components/) */

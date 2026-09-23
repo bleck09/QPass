@@ -34,11 +34,11 @@ export default function PiePagina({ onContactar, hayPasados = true }) {
   });
 
   return (
-    <footer className="qp-pie glass-morphism">
+    <footer className="qp-pie pi-home-glass-morphism">
       <div className="qp-pie__grid">
         <div className="qp-pie__marca">
-          <div className="qpass-home-logo">
-            <div className="logo-icon-bg"><FaQrcode /></div>
+          <div className="pi-home-qpass-home-logo">
+            <div className="pi-home-logo-icon-bg"><FaQrcode /></div>
             <span>QPass</span>
           </div>
           <p>

@@ -47,7 +47,7 @@
 }
 
 .qp-paginador__total {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   font-weight: 400;
 }
 

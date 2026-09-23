@@ -1,3 +1,21 @@
+/* =========================================================================
+   MIS AYUDANTES — layout propio (prefijos pi-ayudante- y pi-ma-). Todo lo
+   demás son los globales (EncabezadoPagina, StatCard, Insignia, Boton,
+   Tabla, Campo, SubirImagen, AvisoFijo).
+   ========================================================================= */
+
+.pi-ayudante-container { width: 100%; box-sizing: border-box; }
+.pi-ayudante-container *, .pi-ayudante-container *::before, .pi-ayudante-container *::after { box-sizing: inherit; }
+
+.pi-ayudante-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
 /* Selector de puestos por evento (acordeón) en los modales de "Mis ayudantes":
    toda la sección colapsada -> se abre -> grupos por evento colapsados -> se abren. */
 .pi-ma-selector {

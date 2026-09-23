@@ -40,24 +40,5 @@
   gap: 8px;
 }
 
-.pi-captura-foto-btn-cancelar,
-.pi-captura-foto-btn-tomar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  border-radius: var(--radius-md);
-  padding: 8px 16px;
-  font-weight: 600;
-  cursor: pointer;
-}
+/* Los botones son <Boton> (styles/buttons.css). */
 
-.pi-captura-foto-btn-cancelar {
-  background: none;
-  border: 1px solid var(--borde-suave, #ddd);
-}
-
-.pi-captura-foto-btn-tomar {
-  background: var(--indigo-profundo, #1a2b6b);
-  color: var(--text-on-accent);
-  border: none;
-}

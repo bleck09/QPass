@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { FaCamera, FaTimes } from 'react-icons/fa';
+import Boton from './Boton.jsx';
 import './CapturarFoto.css';
 
 // Ancho máximo de la foto capturada: la cámara suele capturar a varios megapíxeles, muy pesado
@@ -129,14 +130,8 @@ export default function CapturarFoto({ onCapturada, onCancelar }) {
         <p className="pi-captura-foto-error" role="alert">La cámara todavía no está lista. Espera un segundo y volvé a intentar.</p>
       )}
       <div className="pi-captura-foto-acciones">
-        <button type="button" className="pi-captura-foto-btn-cancelar" onClick={onCancelar}>
-          <FaTimes aria-hidden="true" /> Cancelar
-        </button>
-        {!error && (
-          <button type="button" className="pi-captura-foto-btn-tomar" onClick={capturar}>
-            <FaCamera aria-hidden="true" /> Capturar
-          </button>
-        )}
+        <Boton variante="secundario" icono={FaTimes} onClick={onCancelar}>Cancelar</Boton>
+        {!error && <Boton icono={FaCamera} onClick={capturar}>Capturar</Boton>}
       </div>
     </div>
   );

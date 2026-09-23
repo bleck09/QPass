@@ -1,102 +1,15 @@
 /* =======================================================
-   REGISTRO — estilos propios de la página.
-   El shell (split screen, panel, foto, campos) vive en auth.css.
-   Todo con tokens: funciona en claro y oscuro.
+   REGISTRO / COMPLETAR PERFIL — solo el layout propio.
+   El shell vive en auth.css; campos, botones, avisos y el código de 6
+   dígitos son globales (Campo/.input-group, Boton, AvisoFijo, InputCodigo).
 ======================================================= */
 
 /* Animación de cambio de paso: .animate-fade global (styles/index.css). */
 
-/* --- Grid de campos: 2 columnas cuando hay lugar, 1 si no --- */
+/* Grid de campos: 2 columnas cuando hay lugar, 1 si no. */
 .pi-register-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  align-items: start;
   gap: var(--space-4) var(--space-5);
-}
-.full-width { grid-column: 1 / -1; }
-
-/* --- Separador "Datos opcionales" --- */
-.pi-register-divider {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin: var(--space-2) 0;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-.pi-register-divider::before,
-.pi-register-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid var(--border);
-}
-
-/* --- Campo de teléfono con prefijo de país --- */
-.pi-register-phone-wrapper {
-  display: flex;
-  align-items: stretch;
-  overflow: hidden;
-  /* el panel va siempre sobre papel blanco (tema claro y oscuro) */
-  background: #fff;
-  border: 1px solid #d3d7e3;
-  border-radius: var(--radius-full);
-  transition:
-    border-color var(--duration-fast) var(--ease-out),
-    box-shadow var(--duration-fast) var(--ease-out);
-}
-.pi-register-phone-wrapper:focus-within {
-  border-color: var(--focus-ring);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 28%, transparent);
-}
-.phone-country-dropdown {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0 14px;
-  background: #f1f2f6;
-  border-right: 1px solid #d3d7e3;
-  color: #3a3f5a;
-}
-.phone-country-dropdown .flag { font-size: var(--text-base); }
-.phone-country-dropdown .chevron { color: var(--text-muted); }
-.phone-country-dropdown .code { font-weight: var(--weight-bold); font-size: var(--text-sm); }
-.pi-register-phone-wrapper input {
-  flex: 1;
-  min-width: 0;
-  border: 0;
-  background: none;
-  padding: 12px 16px;
-  font: inherit;
-  font-size: var(--text-sm);
-  color: #1b1f36;
-  outline: none;
-}
-.pi-register-phone-wrapper input::placeholder { color: #8b8fa3; }
-
-/* =======================================================
-   PASO 2 — verificación OTP  (inputs y "reenviar" -> auth.css)
-======================================================= */
-.otp-step-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-}
-.otp-icon-wrapper {
-  width: 76px;
-  height: 76px;
-  margin-bottom: var(--space-4);
-  border-radius: var(--radius-full);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--info-bg);
-  color: var(--accent);
-}
-.otp-form {
-  width: 100%;
-  max-width: 380px;
-  margin: 0 auto;
 }

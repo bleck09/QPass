@@ -32,3 +32,20 @@ export const aplicarTema = (tema) => {
     /* modo privado: el tema se pierde al cerrar, sin romper nada */
   }
 };
+
+/*
+  El tema oscuro es SOLO para el panel (lo de adentro). La página pública, la
+  del evento y las pantallas de cuenta (login, registro, recuperar, completar
+  perfil) tienen su propio diseño y se ven SIEMPRE en claro, aunque la persona
+  tenga el sistema en oscuro o haya elegido oscuro dentro de la app.
+  Para eso se fuerza data-theme="light": el bloque @media del tema oscuro está
+  escrito como :root:not([data-theme="light"]), así que queda desactivado.
+*/
+export const forzarTemaClaro = () => {
+  document.documentElement.setAttribute('data-theme', 'light');
+};
+
+/** Vuelve al tema que la persona eligió (al entrar al panel). */
+export const restaurarTema = () => {
+  document.documentElement.setAttribute('data-theme', leerTema());
+};

@@ -1,5 +1,14 @@
 .qp-grilla-eventos {
-  margin-top: 20px;
+  margin-top: var(--space-5);
+}
+
+/* Grilla por defecto (antes .pi-entrega-eventos-grid, escondida en
+   supervisor/GestionEntrega.css y usada por 9 pantallas). */
+.qp-grilla-eventos__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(18.75rem, 21.25rem));
+  justify-content: start;
+  gap: var(--space-5);
 }
 
 .qp-grilla-eventos__vacio {

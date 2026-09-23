@@ -1,8 +1,8 @@
 import { CartesianGrid } from 'recharts';
 
-/* Estilos/formatos compartidos entre los dashboards con gráficos (GraficosAdmin.jsx
- * = dashboard general, GraficosEvento.jsx = dashboard de un evento). En su propio
- * archivo (sin componentes) para no romper el Fast Refresh de los otros dos. */
+/* Estilos/formatos de gráficos (recharts) ÚNICOS para todos los dashboards:
+ * general y por evento (Admin) y el del organizador (Cliente). Antes Cliente
+ * tenía su propia copia. Sin componentes: no rompe el Fast Refresh. */
 
 export const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })}`;
 

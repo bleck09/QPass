@@ -11,9 +11,15 @@
     <meta name="color-scheme" content="light dark" />
     <title>QPass </title>
     <script>
-      /* Aplica el tema guardado ANTES de pintar, para no ver un flash claro. */
+      /* Aplica el tema guardado ANTES de pintar, para no ver un flash.
+         El tema oscuro es SOLO del panel: la página pública, la del evento y
+         las pantallas de cuenta van siempre en claro (ver utils/tema.js). */
       try {
-        var t = localStorage.getItem('qpass-tema');
+        var ruta = location.pathname.toLowerCase();
+        var esPublica = ruta === '/' || ruta.indexOf('/evento/') === 0
+          || ruta === '/login' || ruta === '/registrar'
+          || ruta === '/recuperar' || ruta === '/completar-perfil';
+        var t = esPublica ? 'light' : localStorage.getItem('qpass-tema');
         if (t === 'light' || t === 'dark') {
           document.documentElement.setAttribute('data-theme', t);
         }

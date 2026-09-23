@@ -1,82 +1,34 @@
 /* =========================================================================
    PESTAÑA EVENTOS (Usuario Normal) — eventos pasados.
-   Botones, insignias y estados vienen de los componentes base; acá solo el
-   layout propio. Animaciones: keyframes compartidos (animaciones.css).
+   Tarjetas = EventoCard + GrillaEventos, panel = Card; acá solo la grilla. Animaciones: keyframes compartidos (animaciones.css).
    ========================================================================= */
 
 .pi-evp-titulo { display: flex; align-items: center; gap: var(--space-2); }
 
 .pi-evp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
   gap: var(--space-4);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.pi-evp-card {
-  overflow: hidden;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--border);
-  background: var(--bg-page);
-  animation: qp-aparecer 450ms var(--ease-out) backwards;
-  animation-delay: calc(var(--i, 0) * 70ms);
-  transition: transform var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal), border-color var(--duration-normal);
-}
-
-.pi-evp-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--border-strong);
-  box-shadow: var(--shadow-md);
-}
-
-.pi-evp-img { position: relative; overflow: hidden; }
-
-/* Foto apagada (ya pasó); recupera el color al pasar el mouse. */
-.pi-evp-img img {
-  display: block;
-  width: 100%;
-  height: 8.5rem;
-  object-fit: cover;
-  filter: grayscale(0.7);
-  transition: filter var(--duration-normal), transform 600ms var(--ease-out);
-}
-
-.pi-evp-card:hover .pi-evp-img img { filter: none; transform: scale(1.05); }
-
-.pi-evp-estado { position: absolute; top: var(--space-2); left: var(--space-2); }
-
-.pi-evp-info { display: flex; flex-direction: column; gap: var(--space-1); padding: var(--space-3) var(--space-4) var(--space-4); }
-.pi-evp-info strong { font-size: var(--text-sm); color: var(--text-primary); overflow-wrap: anywhere; }
-
-.pi-evp-info > span {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-}
-
-.pi-evp-saldo {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  padding-top: var(--space-2);
-  border-top: 1px dashed var(--border-strong);
-}
-
 @media (max-width: 36rem) {
-  .pi-evp-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-  .pi-evp-img img { height: auto; aspect-ratio: 4 / 3; }
-  .pi-evp-info { padding: var(--space-2) var(--space-3) var(--space-3); }
-  .pi-evp-card:hover { transform: none; }
+  .pi-evp-grid { grid-template-columns: 1fr; gap: var(--space-3); }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .pi-evp-card { animation: none; transition: none; }
-  .pi-evp-card:hover, .pi-evp-card:hover .pi-evp-img img { transform: none; }
+/* Contenedor de la pestaña y panel oscuro de la cartelera. */
+.pi-usr-eventos { display: flex; flex-direction: column; gap: var(--space-5); }
+
+.pi-usr-eventos-panel {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  padding: var(--space-10) var(--space-5);
+  border-radius: var(--radius-xl);
+  background: var(--azul-noche);
+  color: var(--texto-sobre-oscuro);
 }

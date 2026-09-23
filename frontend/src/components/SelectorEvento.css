@@ -1,0 +1,8 @@
+/* Selector de evento (components/SelectorEvento.jsx). El campo es el
+   .input-group global: acá solo se le pone un ancho mínimo para que el
+   nombre del evento no quede cortado en la cabecera. Reemplaza a
+   .pi-adqr-selector-evento, .pi-adtick-selector-evento,
+   .pi-cfg-selector-evento y .pi-mapa-selector-evento (eran la misma regla
+   copiada 4 veces). */
+
+.qp-selector-evento { min-width: 13.75rem; }

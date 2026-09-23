@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   FaDollarSign, FaShoppingCart, FaReceipt, FaWallet,
-  FaStore, FaClock, FaTrophy, FaUsers, FaBan, FaBoxes, FaUserFriends,
+  FaStore, FaClock, FaTrophy, FaUsers, FaBan, FaBoxes, FaUserFriends, FaChartLine, FaCalendarTimes,
 } from 'react-icons/fa';
 import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
 import Migas from '../../components/Migas.jsx';
@@ -20,10 +20,14 @@ import Modal from '../../components/Modal.jsx';
 import SelectorRango from '../../components/SelectorRango.jsx';
 import AvisosStockPanel from '../../components/AvisosStockPanel.jsx';
 import { rangoDe } from '../../utils/rangoFechas.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
+import Boton from '../../components/Boton.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import Campo from '../../components/Campo.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import { generarDataUrlQr } from '../../utils/qrPdf';
 import './UsuNegoDasboar.css';
-import '../supervisor/GestionEntrega.css';
 
 const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })}`;
 const fmtHoraNum = (h) => `${String(h).padStart(2, '0')}:00`;
@@ -41,9 +45,8 @@ function ChipVar({ par }) {
   const plano = Math.abs(pct) < 0.05;
   return (
     <span
-      className="pi-ngd-nota"
+      className={`pi-ngd-nota pi-ngd-variacion ${plano ? 'plano' : pct >= 0 ? 'sube' : 'baja'}`}
       title="vs. periodo anterior"
-      style={{ color: plano ? 'var(--text-muted)' : pct >= 0 ? 'var(--ok)' : 'var(--danger)' }}
     >
       {plano ? '=' : pct >= 0 ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
     </span>
@@ -128,12 +131,17 @@ export default function UsuNegoDasboar() {
   const [motivoAnular, setMotivoAnular] = useState('');
   const [anulando, setAnulando] = useState(false);
   const [errAnular, setErrAnular] = useState('');
-  const confirmarAnular = async () => {
-    if (motivoAnular.trim().length < 3) return;
+  const [intentoAnular, setIntentoAnular] = useState(false);
+  const avisos = useAvisos();
+  const confirmarAnular = async (e) => {
+    e?.preventDefault();
+    setIntentoAnular(true);
+    if (motivoAnular.trim().length < 3) return document.getElementById('ngd-motivo')?.focus();
     setAnulando(true);
     setErrAnular('');
     try {
       await api.ventas.anular(ventaAnular.id, motivoAnular.trim());
+      avisos.exito('El saldo volvió al comprador y se descontó de tu billetera.', { titulo: 'Venta anulada' });
       setVentaAnular(null);
       setMotivoAnular('');
       await recargar();
@@ -148,18 +156,21 @@ export default function UsuNegoDasboar() {
   if (!eventoSeleccionado) {
     return (
       <div className="pi-ngd-container">
-        <div className="pi-ngd-header">
-          <h1>Dashboard de negocio</h1>
-          <p>Elige el evento del que quieres ver el resumen.</p>
-        </div>
+        <EncabezadoPagina
+          titulo="Dashboard de negocio"
+          subtitulo="Elegí el evento del que querés ver el resumen."
+          icono={FaChartLine}
+        />
         {errorEventos ? (
           <EstadoError onReintentar={recargarEventos} />
         ) : cargandoEventos ? (
           <EstadoCarga filas={3} />
         ) : eventos.length === 0 ? (
-          <p className="pi-entrega-sin-eventos">
-            Todavía no tienes ningún evento asignado. Pídele a Admin que te asigne uno.
-          </p>
+          <EstadoVacio
+            icono={FaCalendarTimes}
+            titulo="Todavía no tenés ningún evento asignado"
+            mensaje="Pedile a Admin que te asigne uno para ver tus ventas."
+          />
         ) : (
           <>
             <Buscador
@@ -172,7 +183,7 @@ export default function UsuNegoDasboar() {
               onFiltro={setFiltroEvento}
               etiquetaFiltros="Filtrar eventos por estado"
             />
-            <GrillaEventos eventos={eventosFiltrados} gridClassName="pi-entrega-eventos-grid">
+            <GrillaEventos eventos={eventosFiltrados}>
               {(ev) => (
                 <EventoCard
                   key={ev.id}
@@ -200,20 +211,19 @@ export default function UsuNegoDasboar() {
           ]}
         />
       </div>
-      <div className="pi-ngd-header">
-        <h1>{eventoSeleccionado.nombre}</h1>
-        <p>Resumen de tus puestos y ventas en este evento.</p>
-        <div className="pi-ngd-rango">
-          <SelectorRango valor={rango} onCambio={setRango} />
-        </div>
-      </div>
+      <EncabezadoPagina
+        titulo={eventoSeleccionado.nombre}
+        subtitulo="Resumen de tus puestos y ventas en este evento."
+        icono={FaChartLine}
+        acciones={<SelectorRango valor={rango} onCambio={setRango} />}
+      />
 
       {error ? (
         <EstadoError onReintentar={recargar} />
       ) : cargando || !data ? (
         <EstadoCarga filas={8} />
       ) : data.resumen.puestos === 0 ? (
-        <p className="pi-entrega-sin-eventos">No tienes puestos en este evento.</p>
+        <EstadoVacio icono={FaStore} titulo="No tenés puestos en este evento" mensaje="Activá uno desde Mis puestos para ver sus ventas acá." />
       ) : (
         <>
           <AvisosStockPanel />
@@ -324,7 +334,7 @@ export default function UsuNegoDasboar() {
                       </div>
                       <span className="pi-ngd-bar-txt">{p.unidades} u.</span>
                     </td>
-                    <td style={{ textAlign: 'center' }}>{((p.pctUnidades ?? 0) * 100).toFixed(1)}%</td>
+                    <td className="td-centro">{((p.pctUnidades ?? 0) * 100).toFixed(1)}%</td>
                     <td>{fmtBs(p.ingresos)}</td>
                   </tr>
                 );
@@ -344,7 +354,7 @@ export default function UsuNegoDasboar() {
                 renderFila={(c) => (
                   <tr key={c.categoria}>
                     <td>{c.categoria}</td>
-                    <td style={{ textAlign: 'center' }}>{c.unidades}</td>
+                    <td className="td-centro">{c.unidades}</td>
                     <td>{fmtBs(c.ingresos)}</td>
                   </tr>
                 )}
@@ -363,8 +373,8 @@ export default function UsuNegoDasboar() {
                 renderFila={(p) => (
                   <tr key={p.id}>
                     <td>{p.nombre}</td>
-                    <td style={{ textAlign: 'center' }}>{p.ventas}</td>
-                    <td style={{ textAlign: 'center' }}>{p.unidades ?? 0}</td>
+                    <td className="td-centro">{p.ventas}</td>
+                    <td className="td-centro">{p.unidades ?? 0}</td>
                     <td>{p.productoTop ? `${p.productoTop} (${p.productoTopUnidades} u.)` : '—'}</td>
                     <td>{fmtBs(p.ingresos)}</td>
                   </tr>
@@ -384,8 +394,8 @@ export default function UsuNegoDasboar() {
                 <tr key={a.id}>
                   <td><span className={`pi-ngd-rank${i < 3 ? ` pi-ngd-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
                   <td><strong>{a.nombre}</strong></td>
-                  <td style={{ textAlign: 'center' }}>{a.ventas}</td>
-                  <td style={{ textAlign: 'center' }}>{a.unidades ?? 0}</td>
+                  <td className="td-centro">{a.ventas}</td>
+                  <td className="td-centro">{a.unidades ?? 0}</td>
                   <td>{a.productoTop ? `${a.productoTop} (${a.productoTopUnidades} u.)` : '—'}</td>
                   <td>{fmtBs(a.ingresos)}</td>
                   <td>{fmtBs(a.ticketPromedio)}</td>
@@ -405,9 +415,9 @@ export default function UsuNegoDasboar() {
                 <tr key={c.id}>
                   <td><span className={`pi-ngd-rank${i < 3 ? ` pi-ngd-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
                   <td>{c.nombre}</td>
-                  <td style={{ textAlign: 'center' }}>{c.numero ?? '—'}</td>
-                  <td style={{ textAlign: 'center' }}>{c.compras}</td>
-                  <td style={{ textAlign: 'center' }}>{c.unidades}</td>
+                  <td className="td-centro">{c.numero ?? '—'}</td>
+                  <td className="td-centro">{c.compras}</td>
+                  <td className="td-centro">{c.unidades}</td>
                   <td>{fmtBs(c.gastado)}</td>
                 </tr>
               )}
@@ -426,7 +436,7 @@ export default function UsuNegoDasboar() {
                   <td>{fmtHora(v.createdAt)}</td>
                   <td>{v.puesto}</td>
                   <td>{v.ayudante}</td>
-                  <td style={{ textAlign: 'center' }}>{v.entradaNumero ?? '—'}</td>
+                  <td className="td-centro">{v.entradaNumero ?? '—'}</td>
                   <td>
                     <ul className="pi-ngd-items-lista">
                       {(v.detalle ?? []).map((it, idx) => (
@@ -435,17 +445,17 @@ export default function UsuNegoDasboar() {
                     </ul>
                   </td>
                   <td>{fmtBs(v.monto)}</td>
-                  <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
-                    <button type="button" className="btn-secundario-sm" onClick={() => setVentaDetalle(v)}>
-                      Ver detalle
-                    </button>{' '}
-                    {v.anulada
-                      ? <span className="pi-ngd-badge-anulada">Anulada</span>
-                      : (
-                        <button type="button" className="pi-ngd-btn-anular" onClick={() => { setVentaAnular(v); setMotivoAnular(''); setErrAnular(''); }}>
-                          <FaBan aria-hidden="true" /> Anular
-                        </button>
-                      )}
+                  <td className="td-derecha" onClick={(e) => e.stopPropagation()}>
+                    <div className="btn-acciones">
+                      <Boton variante="secundario" tamano="sm" onClick={() => setVentaDetalle(v)}>Ver detalle</Boton>
+                      {v.anulada
+                        ? <Insignia tono="danger" icono={FaBan}>Anulada</Insignia>
+                        : (
+                          <Boton variante="peligro-suave" tamano="sm" icono={FaBan} onClick={() => { setVentaAnular(v); setMotivoAnular(''); setErrAnular(''); setIntentoAnular(false); }}>
+                            Anular
+                          </Boton>
+                        )}
+                    </div>
                   </td>
                 </tr>
               )}
@@ -470,46 +480,45 @@ export default function UsuNegoDasboar() {
           }}
           onCerrar={() => setVentaDetalle(null)}
           acciones={!ventaDetalle.anulada && (
-            <button
-              type="button"
-              className="pi-ngd-btn-anular"
-              onClick={() => { setVentaAnular(ventaDetalle); setVentaDetalle(null); setMotivoAnular(''); setErrAnular(''); }}
+            <Boton
+              variante="peligro-suave"
+              icono={FaBan}
+              onClick={() => { setVentaAnular(ventaDetalle); setVentaDetalle(null); setMotivoAnular(''); setErrAnular(''); setIntentoAnular(false); }}
             >
-              <FaBan aria-hidden="true" /> Anular venta
-            </button>
+              Anular venta
+            </Boton>
           )}
         />
       )}
 
       {ventaAnular && (
         <Modal titulo="Anular venta" onCerrar={() => setVentaAnular(null)} tamano="sm">
-          <div className="pi-ngd-form-anular">
-            <p>
+          <form className="formulario" onSubmit={confirmarAnular} noValidate>
+            <p className="texto-ayuda">
               Vas a anular una venta de <strong>{fmtBs(ventaAnular.monto)}</strong> ({ventaAnular.puesto},
               ayudante {ventaAnular.ayudante}). El saldo vuelve al comprador y se le descuenta a tu billetera.
             </p>
-            <label htmlFor="ngd-motivo">Motivo</label>
-            <textarea
-              id="ngd-motivo"
-              rows={2}
-              placeholder="Ej: cobró 50 en vez de 5"
-              value={motivoAnular}
-              onChange={(e) => setMotivoAnular(e.target.value)}
-              autoFocus
-            />
-            {errAnular && <p className="pi-ngd-err">{errAnular}</p>}
-            <div className="pi-ngd-form-acciones">
-              <button type="button" className="pi-ngd-btn-sec" onClick={() => setVentaAnular(null)} disabled={anulando}>Cancelar</button>
-              <button
-                type="button"
-                className="pi-ngd-btn-anular pi-ngd-btn-anular--fuerte"
-                onClick={confirmarAnular}
-                disabled={anulando || motivoAnular.trim().length < 3}
-              >
-                <FaBan aria-hidden="true" /> Anular venta
-              </button>
+            <Campo
+              id="ngd-motivo" etiqueta="Motivo"
+              error={intentoAnular && motivoAnular.trim().length < 3 ? 'Contá brevemente por qué (al menos 3 letras).' : null}
+            >
+              <textarea
+                id="ngd-motivo"
+                rows={2}
+                placeholder="Ej: cobró 50 en vez de 5"
+                value={motivoAnular}
+                onChange={(e) => setMotivoAnular(e.target.value)}
+                aria-invalid={intentoAnular && motivoAnular.trim().length < 3}
+                aria-describedby={intentoAnular && motivoAnular.trim().length < 3 ? 'ngd-motivo-error' : undefined}
+                autoFocus
+              />
+            </Campo>
+            {errAnular && <AvisoFijo tono="error">{errAnular}</AvisoFijo>}
+            <div className="modal-actions">
+              <Boton variante="secundario" onClick={() => setVentaAnular(null)} disabled={anulando}>Cancelar</Boton>
+              <Boton type="submit" variante="peligro" icono={FaBan} cargando={anulando}>Anular venta</Boton>
             </div>
-          </div>
+          </form>
         </Modal>
       )}
     </div>

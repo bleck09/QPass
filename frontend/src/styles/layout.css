@@ -3,7 +3,6 @@
    Reemplazan estilos inline repetidos (style={{ display:'flex', gap:8 }}, etc.).
    Solo tokens de index.css.
    ========================================================================= */
-
 /* Bloque "volver + migas" agrupado, sin el gap grande del contenedor de página */
 .qp-nav {
   display: flex;
@@ -16,18 +15,10 @@
 .qp-nav .pi-migas {
   margin-bottom: 0;
 }
-
 /* Fila de botones (barras de acción, footers) */
-.qp-btn-group {
-  display: flex;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-
 /* Celdas de tabla alineadas (para renderFila propios de <Tabla>) */
 .td-centro { text-align: center; }
 .td-derecha { text-align: right; }
-
 /* ============================================================================
    REVELADO AL ENTRAR EN PANTALLA — se usa con el hook utils/useRevelar.js.
    Mismo gesto que la tarjeta destacada del hero: aparece subiendo y
@@ -56,7 +47,6 @@
     transition: none;
   }
 }
-
 /* Variante escalonada: los HIJOS entran de a uno. Cada hijo lleva su orden
    en style={{ '--i': n }}. Se usa animation con fill "backwards" (no
    transition) para que el retardo no quede vivo después: con transition el
@@ -76,39 +66,6 @@
   .qp-escalonado[data-revelar="armado"]:not(.es-visible) > * { opacity: 1; }
   .qp-escalonado.es-visible > * { animation: none; }
 }
-
-/* ============================================================================
-   PESTAÑAS DE LOS PANELES DE ROL EN MÓVIL
-   Recargador, Devolución, Ayudante, Usuario Normal y Usuario Negocio repiten el
-   mismo diseño de pestañas en fila; en celular no entraban y se salían por la
-   derecha. Acá, una sola vez para todas: grilla de 2 columnas a todo el ancho.
-   (Prefijo .pi-layout-content para ganarle a los CSS de página, que cargan
-   después con la misma especificidad.)
-   ========================================================================= */
-@media (max-width: 600px) {
-  .pi-layout-content :is(.pi-rec-tabs, .pi-dev-tabs, .pi-ayu-tabs, .pi-usr-tabs, .pi-unegocio-tabs) {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-    box-sizing: border-box;
-    gap: var(--space-1);
-  }
-  .pi-layout-content :is(.pi-rec-tabs, .pi-dev-tabs, .pi-ayu-tabs, .pi-usr-tabs, .pi-unegocio-tabs) button {
-    justify-content: center;
-    min-width: 0;
-    padding: var(--space-2) var(--space-2);
-    text-align: center;
-    line-height: 1.25;
-  }
-  .pi-layout-content :is(.pi-rec-tabs, .pi-dev-tabs, .pi-ayu-tabs, .pi-usr-tabs, .pi-unegocio-tabs) button svg {
-    flex-shrink: 0;
-  }
-  /* cantidad impar: la última ocupa toda la fila */
-  .pi-layout-content :is(.pi-rec-tabs, .pi-dev-tabs, .pi-ayu-tabs, .pi-usr-tabs, .pi-unegocio-tabs) button:last-child:nth-child(odd) {
-    grid-column: 1 / -1;
-  }
-}
-
 /* ============================================================================
    GRILLAS DE INDICADORES (<StatCard>) EN MÓVIL
    Todos los paneles de rol repiten el mismo bloque de KPIs, cada uno con su
@@ -121,20 +78,16 @@
 @media (max-width: 560px) {
   .pi-layout-content :is(
     .pi-dash-stats-grid, .pi-dash-resumen-grid, .pi-dash-cliente-resumen,
-    .pi-adqr-kpi-grid, .pi-adtick-kpi-grid, .pi-adg-grid,
-    .pi-ayu-hist-resumen, .pi-cld-grid, .pi-dev-resumen,
-    .pi-rec-historial-stats, .pi-ngd-grid,
-    .pi-sup-stats-grid, .pi-entrega-stats-grid,
+    .pi-ayu-hist-resumen, .pi-ngd-grid,
     /* Mismo problema en las grillas de tarjetas chicas (roles, productos,
        códigos QR, resumen de billetera): una por fila en celular. */
     .pi-dash-roles-grid, .pi-ayu-productos-grid, .pi-mcat-prod-grid,
-    .pi-usr-bill-grid, .pi-adqr-grid
+    .pi-adqr-grid
   ) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-3);
   }
 }
-
 /* ============================================================================
    TARJETAS DE ESCANEO DE LOS PANELES DE ROL EN MÓVIL
    Recargador, Ayudante y Devolución repiten la misma tarjeta grande al escanear
@@ -144,25 +97,12 @@
    página que cargan después con la misma especificidad.)
    ========================================================================= */
 @media (max-width: 560px) {
-  body :is(.pi-rec-modal-overlay, .pi-ayu-modal-overlay, .pi-dev-modal-overlay, .pi-admin-modal-overlay) {
-    padding: 10px;
-  }
   body :is(.pi-rec-modal-tarjeta, .pi-ayu-modal-tarjeta, .pi-dev-modal-tarjeta) {
     padding: 20px 16px 16px;
     max-height: calc(100dvh - 20px);
     overflow-y: auto;
   }
-  body :is(.pi-rec-tarjeta-foto, .pi-dev-tarjeta-foto, .pi-ayu-tarjeta-foto) {
-    width: 96px;
-    height: 96px;
-    border-width: 3px;
-  }
-  body :is(.pi-rec-tarjeta-nombre, .pi-ayu-tarjeta-nombre, .pi-dev-tarjeta-nombre) {
-    margin-top: 10px;
-    font-size: var(--text-lg);
-  }
 }
-
 /* ============================================================================
    ACCIONES DE FILA Y TABLAS EN MÓVIL
    `.btn-acciones` (Mis Ayudantes, Gestión de Usuarios…) se apilaba en una
@@ -179,17 +119,6 @@
   }
   /* Solo ícono: el texto no entra en la celda y se salía del botón. Sigue ahí
      para lectores de pantalla (mismas reglas que .sr-only). */
-  .btn-acciones__texto {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-  }
   .btn-acciones .btn-secundario-sm {
     justify-content: center;
     gap: 0;

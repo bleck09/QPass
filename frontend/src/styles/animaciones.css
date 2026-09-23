@@ -59,12 +59,6 @@
 }
 
 /* ---------- Clases utilitarias ---------- */
-.qp-anim-aparecer { animation: qp-aparecer var(--duration-normal) var(--ease-out) backwards; }
-.qp-anim-pop { animation: qp-pop 450ms var(--ease-rebote) backwards; }
-.qp-anim-fundido { animation: qp-fundido var(--duration-normal) var(--ease-out) backwards; }
 
 @media (prefers-reduced-motion: reduce) {
-  .qp-anim-aparecer,
-  .qp-anim-pop,
-  .qp-anim-fundido { animation: none; }
 }

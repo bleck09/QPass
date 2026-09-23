@@ -3,12 +3,17 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { errorObligatorio, errorCorreo, errorContrasenaNueva, limpiarErrores, enfocarPrimero } from '../../utils/validacion.js';
 import {
-  FaStore, FaUserTie, FaPlus,
-  FaTrash, FaUsersCog, FaInfoCircle
+  FaStore, FaUserTie, FaPlus, FaTrash, FaUsersCog, FaUser, FaEnvelope, FaKey,
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
 import api from '../../api/index.js';
@@ -16,8 +21,26 @@ import './AdCreaUsuarioNegocio.css';
 
 const ROLES = ['Cliente', 'Recargador', 'Supervisor', 'Devolucion', 'UsuarioNormal', 'UsuarioNegocio'];
 
+// Tono de la Insignia global por rol (antes: badge-* propios, globales ocultos).
+const TONO_ROL = {
+  Supervisor: 'marca',
+  Recargador: 'ok',
+  UsuarioNegocio: 'info',
+  Devolucion: 'warn',
+};
+
+const FORM_VACIO = { nombre: '', email: '', password: '', rol: 'UsuarioNegocio' };
+const ORDEN_CAMPOS = ['adneg-nombre', 'adneg-email', 'adneg-password'];
+
+const validarUsuario = (f) => limpiarErrores({
+  'adneg-nombre': errorObligatorio(f.nombre, 'Escribí el nombre.'),
+  'adneg-email': errorCorreo(f.email),
+  'adneg-password': errorContrasenaNueva(f.password),
+});
+
 export default function AdCreaUsuarioNegocio() {
   useTituloPagina('Gestión de Usuarios');
+  const avisos = useAvisos();
 
   // Lista de usuarios con estados cargando/error/reintentar (Manual 8.9).
   const cargarUsuarios = useCallback(() => api.usuarios.listar(), []);
@@ -34,36 +57,59 @@ export default function AdCreaUsuarioNegocio() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroRol, setFiltroRol] = useState('Todos');
 
-  const [formData, setFormData] = useState({
-    nombre: '',
-    email: '',
-    password: '',
-    rol: 'UsuarioNegocio'
-  });
-
+  const [formData, setFormData] = useState(FORM_VACIO);
+  const [intento, setIntento] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const [errorGuardar, setErrorGuardar] = useState('');
+  const errores = intento ? validarUsuario(formData) : {};
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    await api.auth.registro(formData);
-    await recargarUsuarios();
-    setFormData({ nombre: '', email: '', password: '', rol: 'UsuarioNegocio' });
-    setShowModal(false);
+  const abrirModal = () => {
+    setFormData(FORM_VACIO);
+    setIntento(false);
+    setErrorGuardar('');
+    setShowModal(true);
   };
 
-  const eliminarUsuario = async (id) => {
+  // Crear cuenta = alta normal: sin confirmación (PLAN §2.4); validación en
+  // línea + cargando + aviso de éxito. Antes un error de la API se perdía.
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIntento(true);
+    const errs = validarUsuario(formData);
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ORDEN_CAMPOS);
+    setGuardando(true);
+    setErrorGuardar('');
+    try {
+      await api.auth.registro({ ...formData, nombre: formData.nombre.trim(), email: formData.email.trim() });
+      await recargarUsuarios();
+      avisos.exito(`La cuenta de ${formData.nombre.trim()} quedó creada.`);
+      setShowModal(false);
+    } catch (err) {
+      setErrorGuardar(err?.message || 'No se pudo crear la cuenta.');
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  const eliminarUsuario = async (user) => {
     const ok = await confirmar({
-      titulo: '¿Eliminar usuario?',
-      mensaje: 'Se eliminará a este usuario del sistema. Esta acción no se puede deshacer.',
+      titulo: `¿Eliminar a ${user.nombre}?`,
+      mensaje: `Se eliminará la cuenta ${user.email} del sistema. Esta acción no se puede deshacer.`,
       textoConfirmar: 'Eliminar usuario',
       peligroso: true,
     });
     if (!ok) return;
-    await api.usuarios.eliminar(id);
-    setUsuarios(prev => prev.filter(u => u.id !== id));
+    try {
+      await api.usuarios.eliminar(user.id);
+      setUsuarios(prev => prev.filter(u => u.id !== user.id));
+      avisos.exito(`La cuenta de ${user.nombre} se eliminó.`);
+    } catch (err) {
+      avisos.error(err?.message || 'No se pudo eliminar la cuenta.', { titulo: 'No se pudo eliminar' });
+    }
   };
 
   // Opciones del filtro por rol, con su conteo (para las pastillas del <Buscador>).
@@ -90,31 +136,13 @@ export default function AdCreaUsuarioNegocio() {
 
   const hayFiltro = searchTerm.trim() !== '' || filtroRol !== 'Todos';
 
-  const getBadgeColor = (rol) => {
-    switch(rol) {
-      case 'Supervisor': return 'badge-supervisor';
-      case 'Recargador': return 'badge-recargador';
-      case 'UsuarioNegocio': return 'badge-negocio';
-      case 'Devolucion': return 'badge-devolucion';
-      case 'Cliente': 
-      case 'UsuarioNormal': return 'badge-cliente';
-      default: return 'badge-default';
-    }
-  };
-
   return (
     <div className="pi-adnegocio-container">
-      
-      {/* Cabecera y KPI */}
-      <div className="pi-adnegocio-header-wrapper">
-        <div className="pi-adnegocio-header">
-          <h1>Gestión global de usuarios</h1>
-          <p>Administra, crea y filtra todas las cuentas operativas y clientes del sistema.</p>
-        </div>
-        
-        {/* KPI Estilo QPass */}
-
-      </div>
+      <EncabezadoPagina
+        titulo="Gestión global de usuarios"
+        subtitulo="Administra, crea y filtra todas las cuentas operativas y clientes del sistema."
+        icono={FaUsersCog}
+      />
 
       <Buscador
         valor={searchTerm}
@@ -125,29 +153,24 @@ export default function AdCreaUsuarioNegocio() {
         filtroActivo={filtroRol}
         onFiltro={setFiltroRol}
         etiquetaFiltros="Filtrar por rol"
-        acciones={
-          <button type="button" className="pi-adnegocio-btn-add" onClick={() => setShowModal(true)}>
-            <FaPlus /> Nuevo Usuario
-          </button>
-        }
+        acciones={<Boton icono={FaPlus} onClick={abrirModal}>Nuevo usuario</Boton>}
       />
 
       {hayFiltro && (
-        <p className="pi-adnegocio-resultados">
+        <p className="texto-ayuda">
           {usuariosFiltrados.length} usuario{usuariosFiltrados.length === 1 ? '' : 's'} encontrado{usuariosFiltrados.length === 1 ? '' : 's'}
           {filtroRol !== 'Todos' && ` · rol: ${ROLE_LABELS[filtroRol] || filtroRol}`}
         </p>
       )}
 
-      {/* Tabla Principal */}
       {errorUsuarios ? (
         <EstadoError onReintentar={recargarUsuarios} />
       ) : cargandoUsuarios ? (
         <EstadoCarga filas={5} />
       ) : (
-      <div className="pi-adnegocio-card pi-adnegocio-list-section">
         <Tabla
-          columnas={['Usuario', 'Contacto', 'Rol / Tipo', 'CI / Celular', { texto: 'Acción', align: 'center' }]}
+          card
+          columnas={['Usuario', 'Contacto', 'Rol / Tipo', 'CI / Celular', { texto: 'Acción', srOnly: true }]}
           datos={usuariosFiltrados}
           vacio="No se encontraron usuarios en esta categoría o búsqueda."
           renderFila={user => (
@@ -155,120 +178,58 @@ export default function AdCreaUsuarioNegocio() {
               <td>
                 <div className="pi-adnegocio-item-info">
                   {user.foto ? (
-                    <img width="40" height="40" src={user.foto} alt="Perfil" className="pi-adnegocio-img" />
+                    <img width="40" height="40" src={user.foto} alt="" className="pi-adnegocio-img" />
                   ) : (
-                    <div className="pi-adnegocio-no-img">
+                    <div className="pi-adnegocio-no-img" aria-hidden="true">
                       {user.rol === 'UsuarioNegocio' ? <FaStore /> : <FaUserTie />}
                     </div>
                   )}
-                  <span className="fila-nombre">
-                    {user.nombre}
-                  </span>
+                  <span className="fila-nombre">{user.nombre}</span>
                 </div>
               </td>
-              <td>
-                <span className="celda-normal">{user.email}</span>
-              </td>
-              <td>
-                <span className={`pi-adnegocio-badge ${getBadgeColor(user.rol)}`}>
-                  {user.rol}
-                </span>
-              </td>
-              <td>
-                <span className="celda-secundaria">
-                  {user.ci || user.celular || '-'}
-                </span>
-              </td>
-              <td style={{ textAlign: 'center' }}>
-                <button type="button"
-                  className="pi-adnegocio-btn-delete"
-                  onClick={() => eliminarUsuario(user.id)}
-                  title="Eliminar Cuenta"
+              <td><span className="celda-normal">{user.email}</span></td>
+              <td><Insignia tono={TONO_ROL[user.rol] || 'neutro'}>{ROLE_LABELS[user.rol] || user.rol}</Insignia></td>
+              <td><span className="celda-secundaria">{user.ci || user.celular || '—'}</span></td>
+              <td className="td-derecha">
+                <Boton
+                  variante="peligro-suave"
+                  tamano="sm"
+                  icono={FaTrash}
+                  onClick={() => eliminarUsuario(user)}
+                  aria-label={`Eliminar la cuenta de ${user.nombre}`}
                 >
-                  <FaTrash />
-                </button>
+                  Eliminar
+                </Boton>
               </td>
             </tr>
           )}
         />
-      </div>
       )}
 
-      {/* --- MODAL (VENTANA EMERGENTE) PARA CREAR --- */}
       {showModal && (
-        <Modal
-          titulo={<><FaUsersCog color="var(--indigo-profundo)" aria-hidden="true" /> Registrar Nuevo Usuario</>}
-          onCerrar={() => setShowModal(false)}
-          tamano="md"
-        >
-          <p className="info-text">
-            <FaInfoCircle /> Asigna el rol correcto. El sistema adaptará los accesos y paneles automáticamente.
-          </p>
-
-          <form onSubmit={handleSubmit} className="formulario">
-            <div className="input-group">
-              <label htmlFor="adneg-rol">Tipo de cuenta (rol)</label>
-              <select
-                id="adneg-rol"
-                name="rol"
-                value={formData.rol}
-                onChange={handleChange}
-              >
+        <Modal titulo="Registrar nuevo usuario" onCerrar={() => setShowModal(false)} tamano="md">
+          <form onSubmit={handleSubmit} className="formulario" noValidate>
+            <p className="texto-ayuda">Asigna el rol correcto. El sistema adapta los accesos y paneles automáticamente.</p>
+            <Campo id="adneg-rol" etiqueta="Tipo de cuenta (rol)">
+              <select id="adneg-rol" name="rol" value={formData.rol} onChange={handleChange}>
                 {ROLES.map(rol => (
                   <option key={rol} value={rol}>{ROLE_LABELS[rol] || rol}</option>
                 ))}
               </select>
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="adneg-nombre">Nombre completo / encargado</label>
-              <input
-                type="text"
-                id="adneg-nombre"
-                autoComplete="name"
-                name="nombre"
-                value={formData.nombre}
-                onChange={handleChange}
-                placeholder="Ej: Juan Pérez"
-                required
-              />
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="adneg-email">Correo electrónico</label>
-              <input
-                type="email"
-                id="adneg-email"
-                autoComplete="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="juan@correo.com"
-                required
-              />
-            </div>
-
-            <div className="input-group">
-              <label htmlFor="adneg-password">Contraseña temporal</label>
-              <input
-                type="text"
-                id="adneg-password"
-                autoComplete="new-password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="Ej: 123456"
-                required
-              />
-            </div>
-
+            </Campo>
+            <Campo id="adneg-nombre" etiqueta="Nombre completo / encargado" icono={FaUser} autoComplete="name"
+              name="nombre" value={formData.nombre} onChange={handleChange} placeholder="Ej: Juan Pérez"
+              error={errores['adneg-nombre']} />
+            <Campo id="adneg-email" etiqueta="Correo electrónico" icono={FaEnvelope} type="email" autoComplete="email"
+              name="email" value={formData.email} onChange={handleChange} placeholder="juan@correo.com"
+              error={errores['adneg-email']} />
+            <Campo id="adneg-password" etiqueta="Contraseña temporal" icono={FaKey} autoComplete="new-password"
+              name="password" value={formData.password} onChange={handleChange}
+              ayuda="Mínimo 6 caracteres. Pasásela a la persona por un medio seguro." error={errores['adneg-password']} />
+            {errorGuardar && <AvisoFijo tono="error">{errorGuardar}</AvisoFijo>}
             <div className="modal-actions">
-              <button type="button" className="btn-cancelar" onClick={() => setShowModal(false)}>
-                Cancelar
-              </button>
-              <button type="submit" className="btn-primario">
-                Crear Cuenta
-              </button>
+              <Boton variante="secundario" onClick={() => setShowModal(false)} disabled={guardando}>Cancelar</Boton>
+              <Boton type="submit" cargando={guardando}>Crear cuenta</Boton>
             </div>
           </form>
         </Modal>

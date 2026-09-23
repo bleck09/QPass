@@ -112,7 +112,7 @@ export default function ContactoSection({ motivo = MOTIVOS[0] }) {
       </div>
 
       {/* --- Formulario --- */}
-      <form className="qp-contacto__form formulario glass-morphism" onSubmit={enviar}>
+      <form className="qp-contacto__form formulario pi-home-glass-morphism" onSubmit={enviar}>
         <div className="input-group">
           <label htmlFor="contacto-nombre">Tu nombre</label>
           <input

@@ -1,3 +1,4 @@
+import { useContador } from '../utils/useContador.js';
 import './StatCard.css';
 
 /*
@@ -23,6 +24,11 @@ import './StatCard.css';
     extra   nodo          nodo opcional alineado a la derecha (badge de %, etc.).
     onClick fn            si se pasa, el tile se renderiza como <button>.
     className string       clase extra para casos puntuales.
+    unidad  string        sufijo del número ("pts", "Bs"...), más chico.
+
+  Si `valor` es un número entero, cuenta hasta él (count-up) y al cambiar
+  anima desde el valor anterior. Otros valores (texto, decimales) se
+  muestran tal cual. Grilla de varias: <div className="qp-stats">.
 */
 export default function StatCard({
   icon,
@@ -32,9 +38,12 @@ export default function StatCard({
   extra,
   nota,
   onClick,
+  unidad,
   className = '',
 }) {
   const Tag = onClick ? 'button' : 'div';
+  const animable = Number.isInteger(valor);
+  const contado = useContador(animable ? valor : 0, animable, 900);
   return (
     <Tag
       type={onClick ? 'button' : undefined}
@@ -47,7 +56,10 @@ export default function StatCard({
         </span>
       )}
       <span className="qp-stat__body">
-        <span className="qp-stat__valor">{valor}</span>
+        <span className="qp-stat__valor">
+          {animable ? contado.toLocaleString('es-BO') : valor}
+          {unidad && <small className="qp-stat__unidad"> {unidad}</small>}
+        </span>
         <span className="qp-stat__label">{label}</span>
         {nota != null && <span className="qp-stat__nota">{nota}</span>}
       </span>

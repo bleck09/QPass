@@ -14,7 +14,10 @@ import Tabla from '../../components/Tabla.jsx';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import SelectorRango from '../../components/SelectorRango.jsx';
 import { rangoDe } from '../../utils/rangoFechas.js';
-import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
+import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosAsync.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import Boton from '../../components/Boton.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
 import {
   GraficoRecaudacionDiaria, GraficoPorEvento,
   GraficoComprasDiarias, GraficoIncidenciasRecargador,
@@ -56,12 +59,10 @@ function ChipVariacion({ variacion, anteriorTexto, invertirColor = false }) {
   const sube = pct >= 0;
   const bueno = invertirColor ? !sube : sube;
   return (
-    <span
-      className="pi-adg-antiguedad"
-      title={`vs. periodo anterior${anteriorTexto ? ` — ${anteriorTexto}` : ''}`}
-      style={{ color: plano ? 'var(--text-muted)' : bueno ? 'var(--ok)' : 'var(--danger)' }}
-    >
-      {plano ? '=' : sube ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
+    <span title={`vs. periodo anterior${anteriorTexto ? ` — ${anteriorTexto}` : ''}`}>
+      <Insignia tono={plano ? 'neutro' : bueno ? 'ok' : 'danger'}>
+        {plano ? '=' : sube ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
+      </Insignia>
     </span>
   );
 }
@@ -117,10 +118,7 @@ export default function AdminGeneral() {
 
   return (
     <div className="pi-adg-container">
-      <div className="pi-adg-header">
-        <h1>Dashboard general</h1>
-        <p>Todo el sistema, todos los eventos.</p>
-      </div>
+      <EncabezadoPagina titulo="Dashboard general" subtitulo="Todo el sistema, todos los eventos." icono={FaLayerGroup} />
 
       {vivo?.activo && vivo.eventos.map((ev) => <OperacionVivo key={ev.id} ev={ev} />)}
 
@@ -133,7 +131,7 @@ export default function AdminGeneral() {
           {/* --- BANDEJA DE TRABAJO (spec 1.1) --- */}
           <section className="pi-adg-seccion">
             <h3 className="pi-adg-seccion-titulo">Bandeja de trabajo</h3>
-            <div className="pi-adg-grid">
+            <div className="qp-stats">
               {[
                 {
                   clave: 'comprobantes',
@@ -170,7 +168,7 @@ export default function AdminGeneral() {
                     label={label}
                     extra={
                       caso.total > 0 && caso.masAntiguo ? (
-                        <span className="pi-adg-antiguedad">{antiguedad(caso.masAntiguo)}</span>
+                        <Insignia tono={tonoAntiguedad(caso.masAntiguo, caso.total) === 'danger' ? 'danger' : 'warn'}>{antiguedad(caso.masAntiguo)}</Insignia>
                       ) : null
                     }
                     onClick={ir}
@@ -183,25 +181,35 @@ export default function AdminGeneral() {
           {/* --- ALERTAS (spec W7) --- */}
           <section className="pi-adg-seccion">
             <h3 className="pi-adg-seccion-titulo">
-              Alertas {data.alertas.length > 0 && <span className="pi-adg-alertas-conteo">{data.alertas.length}</span>}
+              Alertas {data.alertas.length > 0 && <Insignia tono="danger" solida>{data.alertas.length}</Insignia>}
             </h3>
             {data.alertas.length === 0 ? (
-              <p className="pi-adg-sin-alertas">
-                <FaCheckCircle aria-hidden="true" /> Sin alertas. Todo en orden.
-              </p>
+              <EstadoVacio compacto icono={FaCheckCircle} titulo="Sin alertas. Todo en orden." />
             ) : (
               <ul className="pi-adg-alertas">
                 {data.alertas.map((a, i) => {
                   const clickable = !!a.eventoId;
-                  return (
-                    <li
-                      key={`${a.tipo}-${a.eventoId || i}`}
-                      className={`pi-adg-alerta pi-adg-alerta--${a.nivel} ${clickable ? 'pi-adg-alerta--click' : ''}`}
-                      onClick={clickable ? () => navigate('/admin', { state: { eventoId: a.eventoId } }) : undefined}
-                    >
+                  const contenido = (
+                    <>
                       <FaExclamationCircle className="pi-adg-alerta-icono" aria-hidden="true" />
                       <span className="pi-adg-alerta-msg">{a.mensaje}</span>
                       {clickable && <FaChevronRight className="pi-adg-alerta-flecha" aria-hidden="true" />}
+                    </>
+                  );
+                  // Clicable = <button> (antes <li onClick>: no se podía abrir con el teclado).
+                  return (
+                    <li key={`${a.tipo}-${a.eventoId || i}`}>
+                      {clickable ? (
+                        <button
+                          type="button"
+                          className={`pi-adg-alerta pi-adg-alerta--${a.nivel} pi-adg-alerta--click`}
+                          onClick={() => navigate('/admin', { state: { eventoId: a.eventoId } })}
+                        >
+                          {contenido}
+                        </button>
+                      ) : (
+                        <div className={`pi-adg-alerta pi-adg-alerta--${a.nivel}`}>{contenido}</div>
+                      )}
                     </li>
                   );
                 })}
@@ -220,7 +228,7 @@ export default function AdminGeneral() {
                 Recaudado y tasa de rechazo del {fmtFecha(data.kpis.rango.desde)} al {fmtFecha(data.kpis.rango.hasta)}.
               </p>
             )}
-            <div className="pi-adg-grid">
+            <div className="qp-stats">
               <StatCard
                 icon={<FaCoins />}
                 tono="ok"
@@ -240,11 +248,7 @@ export default function AdminGeneral() {
                 tono="total"
                 valor={data.kpis.eventos.total}
                 label="Eventos en el sistema"
-                extra={
-                  <span className="pi-adg-antiguedad">
-                    {data.kpis.eventos.publicados} pub · {data.kpis.eventos.borradores} borr
-                  </span>
-                }
+                extra={<Insignia tono="neutro">{data.kpis.eventos.publicados} pub · {data.kpis.eventos.borradores} borr</Insignia>}
               />
               <StatCard
                 icon={<FaWallet />}
@@ -271,9 +275,7 @@ export default function AdminGeneral() {
                 label="Rechazo de comprobantes"
                 extra={
                   <span className="pi-adg-extra">
-                    <span className="pi-adg-antiguedad">
-                      {data.kpis.comprobantes.confirmadas} ok · {data.kpis.comprobantes.rechazadas} rech
-                    </span>
+                    <Insignia tono="neutro">{data.kpis.comprobantes.confirmadas} ok · {data.kpis.comprobantes.rechazadas} rech</Insignia>
                     {data.kpis.comparativa && (
                       <ChipVariacion
                         variacion={
@@ -296,7 +298,7 @@ export default function AdminGeneral() {
                 label="Tiempo mediano de aprobación de comprobante"
                 extra={
                   data.kpis.tiempoAprobacion?.p90Segundos != null
-                    ? <span className="pi-adg-antiguedad">p90: {fmtDuracion(data.kpis.tiempoAprobacion.p90Segundos)}</span>
+                    ? <Insignia tono="neutro">p90: {fmtDuracion(data.kpis.tiempoAprobacion.p90Segundos)}</Insignia>
                     : null
                 }
               />
@@ -333,8 +335,16 @@ export default function AdminGeneral() {
                   onClick={() => navigate('/admin', { state: { eventoId: ev.id } })}
                 >
                   <td>
-                    <span className="pi-adg-ev-nombre">{ev.nombre}</span>
-                    {!ev.publicado && <span className="pi-adg-borrador">Borrador</span>}
+                    {/* El nombre es el botón (teclado); la fila entera sigue respondiendo al mouse. */}
+                    <Boton
+                      variante="fantasma"
+                      tamano="sm"
+                      className="pi-adg-ev-nombre"
+                      onClick={(e) => { e.stopPropagation(); navigate('/admin', { state: { eventoId: ev.id } }); }}
+                    >
+                      {ev.nombre}
+                    </Boton>
+                    {!ev.publicado && <Insignia tono="warn">Borrador</Insignia>}
                   </td>
                   <td>{fmtFecha(ev.fecha)}</td>
                   <td>
@@ -354,8 +364,8 @@ export default function AdminGeneral() {
                   <td>{fmtPts(ev.saldoRemanente)}</td>
                   <td>
                     {ev.pendientes > 0
-                      ? <span className="pi-adg-pend">{ev.pendientes}</span>
-                      : <span className="pi-adg-ok">0</span>}
+                      ? <Insignia tono="warn" solida>{ev.pendientes}</Insignia>
+                      : <Insignia tono="ok">0</Insignia>}
                   </td>
                 </tr>
               )}
@@ -378,10 +388,10 @@ export default function AdminGeneral() {
             <h3 className="pi-adg-seccion-titulo">
               Arqueo de caja
               {data.cortesCaja.resumen.conDescuadre > 0 && (
-                <span className="pi-adg-alertas-conteo">{data.cortesCaja.resumen.conDescuadre}</span>
+                <Insignia tono="danger" solida>{data.cortesCaja.resumen.conDescuadre}</Insignia>
               )}
             </h3>
-            <div className="pi-adg-grid">
+            <div className="qp-stats">
               <StatCard icon={<FaCashRegister />} valor={data.cortesCaja.resumen.abiertas} label="Cajas abiertas ahora" />
               <StatCard
                 icon={<FaExclamationTriangle />}
@@ -401,15 +411,15 @@ export default function AdminGeneral() {
                   <td>{c.evento}</td>
                   <td>{c.operador}</td>
                   <td>{c.rol}</td>
-                  <td>{c.estado === 'cerrada' ? 'Cerrada' : <span className="pi-adg-vivo-dot-txt">Abierta</span>}</td>
+                  <td>{c.estado === 'cerrada' ? <Insignia tono="neutro">Cerrada</Insignia> : <Insignia tono="ok" punto latido>Abierta</Insignia>}</td>
                   <td>{c.montoSistema == null ? '—' : fmtBs(c.montoSistema)}</td>
                   <td>{c.montoEsperado == null ? '—' : fmtBs(c.montoEsperado)}</td>
                   <td>{c.montoDeclarado == null ? '—' : fmtBs(c.montoDeclarado)}</td>
                   <td>
                     {c.diferencia == null ? '—' : (
-                      <span className={c.diferencia === 0 ? 'pi-adg-ok' : 'pi-adg-pend'}>
+                      <Insignia tono={c.diferencia === 0 ? 'ok' : 'danger'}>
                         {c.diferencia > 0 ? '+' : ''}{fmtBs(c.diferencia)}
-                      </span>
+                      </Insignia>
                     )}
                   </td>
                 </tr>
@@ -475,7 +485,7 @@ function OperacionVivo({ ev }) {
         <FaCircle className="pi-adg-vivo-dot" aria-hidden="true" /> En vivo · {ev.nombre}
       </h3>
 
-      <div className="pi-adg-grid">
+      <div className="qp-stats">
         <StatCard icon={<FaUsers />} tono="info" valor={ev.personasDentro} label="Personas dentro ahora" />
         <StatCard icon={<FaSignInAlt />} tono="ok" valor={ingresos60} label="Ingresos últimos 60 min" />
         <StatCard icon={<FaSignOutAlt />} tono="warn" valor={salidas60} label="Salidas últimos 60 min" />
@@ -511,7 +521,7 @@ function OperacionVivo({ ev }) {
         <div>
           <h4 className="pi-adg-vivo-sub"><FaBan aria-hidden="true" /> Últimos QR anulados</h4>
           {ev.ultimosQrAnulados.length === 0 ? (
-            <p className="pi-adg-ok">Ninguno.</p>
+            <EstadoVacio compacto icono={FaCheckCircle} titulo="Ninguno" />
           ) : (
             <ul className="pi-adg-vivo-qr">
               {ev.ultimosQrAnulados.map((q, i) => (

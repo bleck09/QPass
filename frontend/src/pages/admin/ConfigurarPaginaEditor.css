@@ -156,18 +156,6 @@
 .pi-cfg-contraste b { font-variant-numeric: tabular-nums; }
 .pi-cfg-contraste em { font-style: normal; font-weight: var(--weight-semibold); color: var(--text-secondary); }
 
-.pi-cfg-aviso {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-  font-size: var(--text-xs);
-  line-height: var(--leading-normal);
-  color: var(--warn-text);
-}
-
-.pi-cfg-aviso svg { flex-shrink: 0; margin-top: 0.2em; }
-
 /* ---------- Textos e imagen ---------- */
 .pi-cfg-contador { align-self: flex-end; font-size: var(--text-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .pi-cfg-contador.largo { color: var(--warn-text); font-weight: var(--weight-semibold); }
@@ -367,31 +355,7 @@
 .pi-cfg-preview-nota { margin: 0; font-size: var(--text-xs); color: var(--text-secondary); text-align: center; }
 
 /* ---------- Vista completa (modal) ---------- */
-.pi-cfg-modal {
-  display: flex;
-  flex-direction: column;
-  width: min(72rem, 94vw);
-  max-height: 92vh;
-  border-radius: var(--radius-xl);
-  background: var(--n-950);
-  box-shadow: var(--shadow-lg);
-  overflow: hidden;
-  outline: none;
-}
 
-.pi-cfg-modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  border-bottom: 1px solid color-mix(in srgb, var(--n-0) 12%, transparent);
-}
-
-.pi-cfg-modal-header h3 { margin: 0; font-size: var(--text-base); color: var(--n-0); }
-
-.pi-cfg-modal-body { overflow-y: auto; }
-.pi-cfg-modal-body .pi-prev { border-radius: 0; font-size: 0.95rem; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 75rem) {
@@ -415,3 +379,7 @@
   .pi-cfg-paleta:hover, .pi-cfg-icono-btn:hover { transform: none; }
   .pi-cfg-marco { transition: none; }
 }
+
+/* La vista completa vive dentro del Modal GLOBAL (tamaño xl): la preview
+   ocupa todo el cuerpo, sin bordes redondeados propios. */
+.pi-cfg-modal-preview .pi-prev { border-radius: 0; font-size: 0.95rem; }

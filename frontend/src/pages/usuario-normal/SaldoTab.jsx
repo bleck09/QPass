@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   FaTicketAlt, FaWallet, FaQrcode, FaHistory, FaStore, FaCoins,
-  FaExclamationTriangle, FaChevronDown
+  FaChevronDown, FaSearch, FaExclamationTriangle, FaClock,
 } from 'react-icons/fa';
 import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
 import HistorialManillas from '../../components/HistorialManillas.jsx';
@@ -10,23 +10,44 @@ import Tabla from '../../components/Tabla.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Paginador from '../../components/Paginador.jsx';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
+import Card from '../../components/Card.jsx';
+import StatCard from '../../components/StatCard.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import { AvisoFijo } from '../../components/Avisos.jsx';
+import { EstadoVacio } from '../../components/EstadosAsync.jsx';
 import { usePaginacion } from '../../utils/usePaginacion.js';
 import { estadoEvento } from '../../utils/eventos.js';
 import Boton from '../../components/Boton.jsx';
 import ModalQr from '../../components/ModalQr.jsx';
+import './SaldoTab.css';
 
 // Estado del plazo de retiro de una billetera de evento (§T&C).
+// tono: el de <AvisoFijo>/<Insignia>; corto: texto de la insignia de la fila.
 function plazoRetiro(expiraEn) {
-  if (!expiraEn) return { tono: 'neutro', texto: 'El plazo de retiro se fija cuando termina el evento' };
+  if (!expiraEn) return { tono: 'info', texto: 'El plazo de retiro se fija cuando termina el evento' };
   const fin = new Date(expiraEn);
   const dias = Math.ceil((fin - new Date()) / 86400000);
-  if (dias < 0) return { tono: 'vencido', texto: `Plazo de retiro vencido (${fin.toLocaleDateString('es-BO')})` };
-  if (dias === 0) return { tono: 'porVencer', texto: 'Hoy es el último día para retirar tu saldo' };
+  if (dias < 0) return { tono: 'error', corto: 'Vencido', texto: `Plazo de retiro vencido (${fin.toLocaleDateString('es-BO')})` };
+  if (dias === 0) return { tono: 'aviso', corto: 'Último día', texto: 'Hoy es el último día para retirar tu saldo' };
   return {
-    tono: dias <= 7 ? 'porVencer' : 'ok',
+    tono: dias <= 7 ? 'aviso' : 'info',
+    corto: dias <= 7 ? `${dias} día${dias === 1 ? '' : 's'}` : null,
     texto: `Te quedan ${dias} día${dias === 1 ? '' : 's'} para retirar el saldo (hasta el ${fin.toLocaleDateString('es-BO')})`,
   };
 }
+
+// Tono de <AvisoFijo> -> tono de <Insignia>.
+const TONO_INSIGNIA = { error: 'danger', aviso: 'warn', info: 'info', exito: 'ok' };
+
+// Cómo se ve cada tipo de movimiento del historial.
+const TIPO_MOVIMIENTO = {
+  recarga: { icono: FaCoins, texto: 'Recarga de saldo', tono: 'ok' },
+  consumo: { icono: FaStore, texto: 'Consumo en puesto', tono: 'marca' },
+  devolucion: { icono: FaTicketAlt, texto: 'Devolución', tono: 'warn' },
+  ajuste: { icono: FaCoins, texto: 'Ajuste', tono: 'neutro' },
+  ajuste_manual: { icono: FaCoins, texto: 'Reposición de saldo', tono: 'ok' },
+  reverso_consumo: { icono: FaCoins, texto: 'Reintegro por venta anulada', tono: 'ok' },
+};
 
 // Tarjeta expandible: saldo de un evento + desglose recargado/gastado/devuelto.
 // `enCurso`: es el mismo evento que ya se destacó grande arriba — se marca acá
@@ -37,6 +58,7 @@ function BilleteraAcordeon({ b, enCurso = false, qrCodigo }) {
   const plazo = plazoRetiro(b.expiraEn);
   const bloqueado = Number(b.bloqueado ?? 0);
   const disponible = Number(b.disponible ?? b.saldo);
+  const idCuerpo = `bill-${b.eventoId}`;
   // Solo tiene sentido "retirar" (y por lo tanto mostrar el QR) en un evento
   // que ya terminó, con saldo pendiente de cobrar y ANTES de que venza el
   // plazo de retiro — pasada la fecha límite, ya no sirve mostrar el QR.
@@ -44,40 +66,43 @@ function BilleteraAcordeon({ b, enCurso = false, qrCodigo }) {
     ['finalizado', 'archivado'].includes(estadoEvento(b)) &&
     disponible > 0 &&
     qrCodigo &&
-    plazo.tono !== 'vencido';
+    plazo.tono !== 'error';
   return (
-    <div className={`pi-usr-bill ${abierto ? 'abierto' : ''}${enCurso ? ' pi-usr-bill--en-curso' : ''}`}>
-      <button type="button" className="pi-usr-bill-cab" onClick={() => setAbierto(o => !o)} aria-expanded={abierto}>
-        <span className="pi-usr-bill-titulo">
+    <div className={`pi-sal-bill${abierto ? ' abierto' : ''}${enCurso ? ' en-curso' : ''}`}>
+      <button type="button" className="pi-sal-bill-cab" onClick={() => setAbierto(o => !o)} aria-expanded={abierto} aria-controls={idCuerpo}>
+        <span className="pi-sal-bill-titulo">
           <strong>{b.eventoNombre}</strong>
-          <span className="pi-usr-bill-fecha">
+          <span className="pi-sal-bill-fecha">
             {new Date(b.fecha).toLocaleDateString('es-BO')}
-            {enCurso && <span className="pi-usr-bill-badge-curso">En curso</span>}
+            {enCurso && <Insignia tono="ok" punto latido>En curso</Insignia>}
           </span>
         </span>
-        <span className={`pi-usr-bill-plazo tono-${plazo.tono}`}>{plazo.tono === 'vencido' ? 'Vencido' : plazo.tono === 'porVencer' ? '¡Retirá pronto!' : ''}</span>
-        <span className="pi-usr-bill-saldo">{disponible} pts</span>
-        <FaChevronDown className="pi-usr-bill-flecha" aria-hidden="true" />
+        {plazo.corto && (
+          <Insignia tono={TONO_INSIGNIA[plazo.tono]} icono={FaClock}>{plazo.corto}</Insignia>
+        )}
+        <span className="pi-sal-bill-saldo">{disponible} <small>pts</small></span>
+        <FaChevronDown className="pi-sal-bill-flecha" aria-hidden="true" />
       </button>
-      {abierto && (
-        <div className="pi-usr-bill-cuerpo">
-          <div className="pi-usr-bill-grid">
-            <div><span>{Number(b.recargado)} pts</span><small>Recargado</small></div>
-            <div><span>{Number(b.gastado)} pts</span><small>Gastado en puestos</small></div>
-            <div><span>{Number(b.devuelto)} pts</span><small>Devuelto</small></div>
-            <div className="destacado"><span>{disponible} pts</span><small>Saldo disponible</small></div>
-          </div>
+      {/* Siempre montado: se abre/cierra con animación de alto (grid 0fr -> 1fr). */}
+      <div id={idCuerpo} className="pi-sal-bill-cuerpo" inert={!abierto}>
+        <div className="pi-sal-bill-interior">
+          <dl className="pi-sal-bill-grid">
+            <div><dt>Recargado</dt><dd>{Number(b.recargado)} pts</dd></div>
+            <div><dt>Gastado en puestos</dt><dd>{Number(b.gastado)} pts</dd></div>
+            <div><dt>Devuelto</dt><dd>{Number(b.devuelto)} pts</dd></div>
+            <div className="destacado"><dt>Saldo disponible</dt><dd>{disponible} pts</dd></div>
+          </dl>
           {bloqueado > 0 && (
-            <p className="pi-usr-bill-disputa">
-              <FaExclamationTriangle aria-hidden="true" /> {bloqueado} pts retenidos por una incidencia de recarga en revisión — no los podés usar ni retirar hasta que se resuelva.
-            </p>
+            <AvisoFijo tono="aviso" titulo={`${bloqueado} pts retenidos`}>
+              Hay una incidencia de recarga en revisión: no los podés usar ni retirar hasta que se resuelva.
+            </AvisoFijo>
           )}
-          <p className={`pi-usr-bill-plazo-detalle tono-${plazo.tono}`}>{plazo.texto}</p>
+          <AvisoFijo tono={plazo.tono} icono={FaClock}>{plazo.texto}</AvisoFijo>
           {puedeRetirar && (
             <Boton icono={FaQrcode} onClick={() => setVerQr(true)}>Ver mi QR para retirar</Boton>
           )}
         </div>
-      )}
+      </div>
       {verQr && (
         <ModalQr
           codigo={qrCodigo}
@@ -171,204 +196,176 @@ export default function SaldoTab({ billeteras, historial, qrPorEvento }) {
   }, [historial, busquedaHist, filtroHist]);
 
   return (
-    <>
-      {/* =========================================================
-          PESTAÑA: MI SALDO
-      ========================================================= */}
-        <div className="pi-usr-saldo">
-          <div className="pi-usr-saldo-stats">
-            <div className="pi-usr-saldo-card">
-              <FaWallet size={30} color="var(--indigo-profundo)" />
-              <span className="pi-usr-saldo-numero">{saldoTotal} pts</span>
-              <span className="pi-usr-saldo-label">Saldo total (todos los eventos)</span>
-            </div>
+    <div className="pi-sal">
+      <div className="qp-stats">
+        <StatCard icon={<FaWallet />} tono="total" valor={saldoTotal} unidad="pts" label="Saldo total (todos los eventos)" />
+        <StatCard icon={<FaCoins />} tono="ok" valor={totalRecargado} unidad="pts" label="Total recargado" />
+        <StatCard icon={<FaStore />} tono="danger" valor={totalGastado} unidad="pts" label="Total gastado" />
+      </div>
 
-            <div className="pi-usr-saldo-card saldo-card-recargado">
-              <FaCoins size={30} color="var(--verde-recarga-texto)" />
-              <span className="pi-usr-saldo-numero">{totalRecargado} pts</span>
-              <span className="pi-usr-saldo-label">Total recargado</span>
-            </div>
-
-            <div className="pi-usr-saldo-card saldo-card-gastado">
-              <FaStore size={30} color="var(--rojo-error-texto)" />
-              <span className="pi-usr-saldo-numero">{totalGastado} pts</span>
-              <span className="pi-usr-saldo-label">Total gastado</span>
-            </div>
+      {billeteraEnCurso && (
+        <Card className="pi-sal-destacada">
+          <div className="pi-sal-destacada-info">
+            <BadgeEstadoEvento evento={billeteraEnCurso} />
+            <strong>{billeteraEnCurso.eventoNombre}</strong>
+            <span>{Number(billeteraEnCurso.disponible ?? billeteraEnCurso.saldo)} pts disponibles</span>
           </div>
+          <Boton icono={FaQrcode} onClick={() => navigate('/usuarionormal')}>Ver mi manilla</Boton>
+        </Card>
+      )}
 
-          {billeteraEnCurso && (
-            <div className="pi-usr-bill-destacada">
-              <div className="pi-usr-bill-destacada-info">
-                <BadgeEstadoEvento evento={billeteraEnCurso} className="pi-usr-bill-destacada-badge" />
-                <strong className="pi-usr-bill-destacada-nombre">{billeteraEnCurso.eventoNombre}</strong>
-                <span className="pi-usr-bill-destacada-saldo">
-                  {Number(billeteraEnCurso.disponible ?? billeteraEnCurso.saldo)} pts disponibles
-                </span>
-              </div>
-              <Boton icono={FaQrcode} onClick={() => navigate('/usuarionormal')}>Ver mi manilla</Boton>
-            </div>
-          )}
-
-          <div className="pi-usr-card mt-20">
-            <h3><FaWallet color="var(--indigo-profundo)" /> Saldo por evento</h3>
-            <p className="texto-ayuda">
-              El saldo que recargás en un evento solo se puede usar en ese evento.
-              Tocá un evento para ver el detalle.
-            </p>
-            {billeteras.length === 0 ? (
-              <p className="texto-ayuda">Todavía no recargaste saldo en ningún evento.</p>
+      <Card as="section">
+        <h3 className="pi-sal-titulo"><FaWallet aria-hidden="true" /> Saldo por evento</h3>
+        <p className="texto-ayuda">
+          El saldo que recargás en un evento solo se puede usar en ese evento.
+          Tocá un evento para ver el detalle.
+        </p>
+        {billeteras.length === 0 ? (
+          <EstadoVacio
+            compacto
+            icono={FaWallet}
+            titulo="Todavía no recargaste saldo"
+            mensaje="Cuando recargues en un evento, vas a ver acá cuánto te queda."
+          />
+        ) : (
+          <>
+            {billeteras.length > 3 && (
+              <Buscador
+                valor={busquedaBilleteras}
+                onCambio={setBusquedaBilleteras}
+                placeholder="Buscar evento…"
+                etiqueta="Buscar en saldo por evento"
+              />
+            )}
+            {billeterasFiltradas.length === 0 ? (
+              <EstadoVacio compacto icono={FaSearch} titulo="Ningún evento coincide con la búsqueda" />
             ) : (
               <>
-                {billeteras.length > 3 && (
-                  <Buscador
-                    valor={busquedaBilleteras}
-                    onCambio={setBusquedaBilleteras}
-                    placeholder="Buscar evento…"
-                    etiqueta="Buscar en saldo por evento"
-                  />
-                )}
-                {billeterasFiltradas.length === 0 ? (
-                  <p className="texto-ayuda">Ningún evento coincide con la búsqueda.</p>
-                ) : (
-                  <>
-                    <div className="pi-usr-bill-lista">
-                      {pagBilleteras.slice.map(b => (
-                        <BilleteraAcordeon
-                          key={b.eventoId}
-                          b={b}
-                          enCurso={b.eventoId === billeteraEnCurso?.eventoId}
-                          qrCodigo={qrPorEvento.get(b.eventoId)}
-                        />
-                      ))}
-                    </div>
-                    <Paginador
-                      pagina={pagBilleteras.paginaActual}
-                      totalPaginas={pagBilleteras.totalPaginas}
-                      onCambio={pagBilleteras.setPagina}
-                      total={pagBilleteras.total}
-                      unidad="eventos"
+                <div className="pi-sal-bill-lista qp-escalonado">
+                  {pagBilleteras.slice.map(b => (
+                    <BilleteraAcordeon
+                      key={b.eventoId}
+                      b={b}
+                      enCurso={b.eventoId === billeteraEnCurso?.eventoId}
+                      qrCodigo={qrPorEvento.get(b.eventoId)}
                     />
-                  </>
-                )}
+                  ))}
+                </div>
+                <Paginador
+                  pagina={pagBilleteras.paginaActual}
+                  totalPaginas={pagBilleteras.totalPaginas}
+                  onCambio={pagBilleteras.setPagina}
+                  total={pagBilleteras.total}
+                  unidad="eventos"
+                />
               </>
             )}
-          </div>
+          </>
+        )}
+      </Card>
 
-          <div className="pi-usr-card mt-20">
-            <h3><FaHistory color="var(--indigo-profundo)" /> Mis Transacciones (Compras y Recargas)</h3>
+      <Card as="section">
+        <h3 className="pi-sal-titulo"><FaHistory aria-hidden="true" /> Mis movimientos (compras y recargas)</h3>
 
-            <div className="pi-usr-hist-buscador">
-              <Buscador
-                valor={busquedaHist}
-                onCambio={setBusquedaHist}
-                placeholder="Buscar por evento, puesto o producto…"
-                filtros={filtrosHist}
-                filtroActivo={filtroHist}
-                onFiltro={setFiltroHist}
-                etiquetaFiltros="Filtrar movimientos por tipo"
-              />
-            </div>
-
-            <Tabla
-              columnas={['Movimiento', 'Evento', 'Lugar / Detalle', 'Monto', 'Fecha / Hora']}
-              datos={historialFiltrado}
-              vacio={
-                historial.length === 0
-                  ? 'Aún no tienes movimientos registrados.'
-                  : 'Ningún movimiento coincide con la búsqueda.'
-              }
-              renderFila={item => {
-                const esVenta = ['consumo', 'reverso_consumo'].includes(item.tipo) && item.venta;
-                let detalle;
-                if (esVenta) {
-                  const items = item.venta.items || [];
-                  const unidades = items.reduce((total, i) => total + Number(i.cantidad), 0);
-                  detalle = (
-                    <span className="pi-usr-detalle-consumo">
-                      <strong>{item.venta.puesto?.nombre || 'Puesto'}</strong>
-                      <span className="pi-usr-detalle-items">
-                        {items.length > 0
-                          ? `${unidades} ${unidades === 1 ? 'producto' : 'productos'}`
-                          : 'Compra sin detalle de productos'}
-                      </span>
-                      <Boton
-                        variante="secundario"
-                        tamano="sm"
-                        onClick={() => setVentaDetalle({
-                          fecha: item.createdAt,
-                          puesto: item.venta.puesto?.nombre,
-                          anulada: item.tipo === 'reverso_consumo' || !!item.venta.anuladaEn,
-                          motivoAnulacion: item.venta.motivoAnulacion,
-                          monto: item.venta.montoTotal ?? item.monto,
-                          items,
-                        })}
-                      >
-                        Ver detalle
-                      </Boton>
-                    </span>
-                  );
-                } else if (item.tipo === 'recarga') {
-                  detalle = item.operador?.nombre
-                    ? <span className="pi-usr-detalle-consumo">Recargado por {item.operador.nombre}</span>
-                    : (item.nota || '—');
-                } else if (item.tipo === 'devolucion') {
-                  detalle = (
-                    <span className="pi-usr-detalle-consumo">
-                      {item.nota || 'Retiro de saldo'}
-                      {item.operador?.nombre ? ` · ${item.operador.nombre}` : ''}
-                    </span>
-                  );
-                } else {
-                  detalle = item.nota || '—';
-                }
-                return (
-                  <tr key={item.id}>
-                    <td>
-                      <span className="pi-usr-tipo-celda">
-                        {item.tipo === 'recarga' && <><FaCoins color="var(--verde-recarga-texto)" /> Recarga de Saldo</>}
-                        {item.tipo === 'consumo' && <><FaStore color="var(--indigo-profundo)" /> Consumo en Puesto</>}
-                        {item.tipo === 'devolucion' && <><FaTicketAlt color="var(--coral-compra)" /> Devolución</>}
-                        {item.tipo === 'ajuste' && <><FaCoins color="var(--verde-recarga-texto)" /> Ajuste</>}
-                        {item.tipo === 'ajuste_manual' && <><FaCoins color="var(--verde-recarga-texto)" /> Reposición de saldo</>}
-                        {item.tipo === 'reverso_consumo' && <><FaCoins color="var(--verde-recarga-texto)" /> Reintegro por venta anulada</>}
-                      </span>
-                    </td>
-                    <td style={{ fontSize: '13px' }}>{item.evento?.nombre || '—'}</td>
-                    <td>{detalle}</td>
-                    {(() => {
-                      const monto = Number(item.monto);
-                      // El "ajuste" es el único tipo cuyo monto viene con signo propio
-                      // (puede ser una corrección negativa); los demás siempre guardan
-                      // una magnitud positiva y el signo lo da el tipo de movimiento.
-                      const positivo = item.tipo === 'ajuste'
-                        ? monto >= 0
-                        : ['recarga', 'reverso_consumo', 'ajuste_manual'].includes(item.tipo);
-                      return (
-                        <td className={positivo ? 'pi-usr-monto-positivo' : 'pi-usr-monto-negativo'}>
-                          {positivo ? '+' : '-'}{Math.abs(monto)} pts
-                        </td>
-                      );
-                    })()}
-                    <td style={{color: 'var(--texto-secundario)', fontSize: '13px'}}>{new Date(item.createdAt).toLocaleString('es-BO')}</td>
-                  </tr>
-                );
-              }}
-            />
-            {ventaDetalle && (
-              <DetalleVentaModal venta={ventaDetalle} onCerrar={() => setVentaDetalle(null)} />
-            )}
-          </div>
-
-          {/* Cambios de manilla de sus entradas: si le cambiaron la manilla (perdida,
-              dañada o duplicada), acá ve cuándo y por qué. */}
-          <div className="pi-usr-card mt-20">
-            <HistorialManillas
-              mias
-              titulo="Mis manillas"
-              descripcion="Cada manilla que te entregaron y cada cambio, con el motivo."
-            />
-          </div>
+        <div className="pi-sal-hist-buscador">
+          <Buscador
+            valor={busquedaHist}
+            onCambio={setBusquedaHist}
+            placeholder="Buscar por evento, puesto o producto…"
+            filtros={filtrosHist}
+            filtroActivo={filtroHist}
+            onFiltro={setFiltroHist}
+            etiquetaFiltros="Filtrar movimientos por tipo"
+          />
         </div>
-    </>
+
+        <Tabla
+          columnas={['Movimiento', 'Evento', 'Lugar / Detalle', 'Monto', 'Fecha / Hora']}
+          datos={historialFiltrado}
+          vacio={
+            historial.length === 0
+              ? 'Aún no tienes movimientos registrados.'
+              : 'Ningún movimiento coincide con la búsqueda.'
+          }
+          renderFila={item => {
+            const esVenta = ['consumo', 'reverso_consumo'].includes(item.tipo) && item.venta;
+            let detalle;
+            if (esVenta) {
+              const items = item.venta.items || [];
+              const unidades = items.reduce((total, i) => total + Number(i.cantidad), 0);
+              detalle = (
+                <span className="pi-sal-detalle">
+                  <strong>{item.venta.puesto?.nombre || 'Puesto'}</strong>
+                  <span>
+                    {items.length > 0
+                      ? `${unidades} ${unidades === 1 ? 'producto' : 'productos'}`
+                      : 'Compra sin detalle de productos'}
+                  </span>
+                  <Boton
+                    variante="secundario"
+                    tamano="sm"
+                    onClick={() => setVentaDetalle({
+                      fecha: item.createdAt,
+                      puesto: item.venta.puesto?.nombre,
+                      anulada: item.tipo === 'reverso_consumo' || !!item.venta.anuladaEn,
+                      motivoAnulacion: item.venta.motivoAnulacion,
+                      monto: item.venta.montoTotal ?? item.monto,
+                      items,
+                    })}
+                  >
+                    Ver detalle
+                  </Boton>
+                </span>
+              );
+            } else if (item.tipo === 'recarga') {
+              detalle = item.operador?.nombre
+                ? <span className="pi-sal-detalle">Recargado por {item.operador.nombre}</span>
+                : (item.nota || '—');
+            } else if (item.tipo === 'devolucion') {
+              detalle = (
+                <span className="pi-sal-detalle">
+                  {item.nota || 'Retiro de saldo'}
+                  {item.operador?.nombre ? ` · ${item.operador.nombre}` : ''}
+                </span>
+              );
+            } else {
+              detalle = item.nota || '—';
+            }
+            const tipo = TIPO_MOVIMIENTO[item.tipo] ?? { icono: FaExclamationTriangle, texto: item.tipo, tono: 'neutro' };
+            const monto = Number(item.monto);
+            // El "ajuste" es el único tipo cuyo monto viene con signo propio
+            // (puede ser una corrección negativa); los demás siempre guardan
+            // una magnitud positiva y el signo lo da el tipo de movimiento.
+            const positivo = item.tipo === 'ajuste'
+              ? monto >= 0
+              : ['recarga', 'reverso_consumo', 'ajuste_manual'].includes(item.tipo);
+            return (
+              <tr key={item.id}>
+                <td><Insignia tono={tipo.tono} icono={tipo.icono}>{tipo.texto}</Insignia></td>
+                <td className="pi-sal-celda-sec">{item.evento?.nombre || '—'}</td>
+                <td>{detalle}</td>
+                <td className={`pi-sal-monto ${positivo ? 'positivo' : 'negativo'}`}>
+                  {positivo ? '+' : '-'}{Math.abs(monto)} pts
+                </td>
+                <td className="pi-sal-celda-sec">{new Date(item.createdAt).toLocaleString('es-BO')}</td>
+              </tr>
+            );
+          }}
+        />
+        {ventaDetalle && (
+          <DetalleVentaModal venta={ventaDetalle} onCerrar={() => setVentaDetalle(null)} />
+        )}
+      </Card>
+
+      {/* Cambios de manilla de sus entradas: si le cambiaron la manilla (perdida,
+          dañada o duplicada), acá ve cuándo y por qué. */}
+      <Card>
+        <HistorialManillas
+          mias
+          titulo="Mis manillas"
+          descripcion="Cada manilla que te entregaron y cada cambio, con el motivo."
+        />
+      </Card>
+    </div>
   );
 }

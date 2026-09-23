@@ -1,0 +1,170 @@
+/* =========================================================================
+   PESTAÑA MI SALDO (Usuario Normal).
+   Números = StatCard (.qp-stats), paneles = Card, estados = Insignia /
+   AvisoFijo / EstadoVacio, botones = Boton. Acá solo el layout propio y el
+   acordeón de billeteras (no existe uno global). Solo tokens.
+   ========================================================================= */
+
+.pi-sal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pi-sal-titulo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-2);
+}
+
+.pi-sal-titulo svg { color: var(--action); }
+
+/* ---------- Evento en curso destacado ---------- */
+.pi-sal-destacada {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
+  background: linear-gradient(120deg, var(--ok-bg), var(--bg-surface) 70%);
+}
+
+.pi-sal-destacada-info { display: flex; flex-direction: column; align-items: flex-start; gap: var(--space-1); }
+.pi-sal-destacada-info strong { font-size: var(--text-xl); color: var(--text-primary); }
+.pi-sal-destacada-info span:last-child { font-size: var(--text-base); font-weight: var(--weight-bold); color: var(--ok-text); }
+
+/* ---------- Acordeón de billeteras ---------- */
+.pi-sal-bill-lista {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.pi-sal-bill {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  transition: border-color var(--duration-fast) var(--ease-out), box-shadow var(--duration-fast) var(--ease-out);
+}
+
+.pi-sal-bill:hover { border-color: var(--border-strong); }
+.pi-sal-bill.abierto { border-color: var(--action); box-shadow: var(--shadow-sm); }
+.pi-sal-bill.en-curso { border-left: 4px solid var(--ok); }
+
+.pi-sal-bill-cab {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 3.5rem;
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: inherit;
+}
+
+.pi-sal-bill-cab:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.pi-sal-bill-titulo { display: flex; flex-direction: column; gap: var(--space-1); flex: 1; min-width: 0; }
+.pi-sal-bill-titulo strong { font-size: var(--text-sm); overflow-wrap: anywhere; }
+.pi-sal-bill-fecha { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-xs); color: var(--text-secondary); }
+
+.pi-sal-bill-saldo {
+  font-size: var(--text-base);
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--action);
+  white-space: nowrap;
+}
+
+.pi-sal-bill-saldo small { font-size: var(--text-xs); color: var(--text-secondary); }
+
+.pi-sal-bill-flecha {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.pi-sal-bill.abierto .pi-sal-bill-flecha { transform: rotate(180deg); }
+
+/* Abre y cierra animando el alto (grid 0fr -> 1fr), sin medir en JS. */
+.pi-sal-bill-cuerpo {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--duration-normal) var(--ease-out);
+}
+
+.pi-sal-bill.abierto .pi-sal-bill-cuerpo { grid-template-rows: 1fr; }
+
+.pi-sal-bill-interior {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: 0 var(--space-4);
+  transition: padding var(--duration-normal) var(--ease-out);
+}
+
+.pi-sal-bill.abierto .pi-sal-bill-interior { padding-bottom: var(--space-4); }
+.pi-sal-bill-interior > .qp-aviso { align-self: stretch; }
+
+.pi-sal-bill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--space-2);
+  width: 100%;
+  margin: 0;
+}
+
+.pi-sal-bill-grid > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-sunken);
+}
+
+.pi-sal-bill-grid > div.destacado { background: color-mix(in srgb, var(--action) 10%, var(--bg-surface)); }
+.pi-sal-bill-grid dd { margin: 0; font-size: var(--text-base); font-weight: var(--weight-bold); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.pi-sal-bill-grid dt { font-size: var(--text-xs); color: var(--text-secondary); }
+
+/* ---------- Historial ---------- */
+.pi-sal-hist-buscador { margin: var(--space-1) 0 var(--space-5); }
+
+.pi-sal-detalle {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+.pi-sal-detalle strong { color: var(--text-primary); }
+.pi-sal-celda-sec { font-size: var(--text-xs); color: var(--text-secondary); }
+
+.pi-sal-monto { font-weight: var(--weight-bold); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pi-sal-monto.positivo { color: var(--ok-text); }
+.pi-sal-monto.negativo { color: var(--danger-text); }
+
+@media (max-width: 36rem) {
+  .pi-sal { gap: var(--space-4); }
+  .pi-sal-bill-cab { flex-wrap: wrap; }
+  .pi-sal-destacada > .qp-btn { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pi-sal-bill,
+  .pi-sal-bill-flecha,
+  .pi-sal-bill-cuerpo,
+  .pi-sal-bill-interior { transition: none; }
+}

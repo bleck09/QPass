@@ -2,6 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
+import SelectorEvento from '../../components/SelectorEvento.jsx';
+import Card from '../../components/Card.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import Pestanas from '../../components/Pestanas.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
+import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
+import { limpiarErrores, enfocarPrimero } from '../../utils/validacion.js';
 import ContornoRecinto from '../../components/ContornoRecinto.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
@@ -13,19 +22,35 @@ import { TIPOS_ELEMENTO_MAPA, tipoElementoInfo } from '../../utils/elementosMapa
 import {
   FaStore, FaMap, FaListUl, FaDrawPolygon,
   FaSave, FaEdit, FaEyeSlash, FaCheck, FaLock, FaUnlock,
-  FaInfoCircle, FaArrowsAltH, FaArrowsAltV, FaPlus, FaTrash,
-  FaCalendarAlt
+  FaInfoCircle, FaArrowsAltH, FaArrowsAltV, FaPlus, FaTrash
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import './Mapa.css';
 
 const FORM_ZONA_VACIO = { tipo: 'entrada', nombre: 'Entrada', nombreTocado: false };
 
+const VISTAS = [
+  { id: 'contorno', etiqueta: 'Contorno', icono: FaDrawPolygon },
+  { id: 'plano', etiqueta: 'Plano visual', icono: FaMap },
+  { id: 'tabla', etiqueta: 'Lista de elementos', icono: FaListUl },
+];
+
+// Los cuadros del plano se miden en px y no tiene sentido que sean invisibles:
+// el motor de arrastre tampoco deja bajar de 50.
+const MIN_LADO = 50;
+const errorLado = (valor) => {
+  const n = Number(valor);
+  return String(valor).trim() && Number.isFinite(n) && n >= MIN_LADO
+    ? null
+    : `Tiene que ser ${MIN_LADO} o más.`;
+};
+
 export default function Mapa({ eventoId: eventoIdProp = null, embebido = false } = {}) {
   useTituloPagina('Diseñador del recinto', !embebido);
   const location = useLocation();
   const navigate = useNavigate();
   const [confirmar, DialogoConfirmar] = useConfirmar();
+  const avisos = useAvisos();
   const [eventosDisponibles, setEventosDisponibles] = useState([]);
   const [eventoId, setEventoId] = useState(eventoIdProp || location.state?.eventoId || '');
 
@@ -71,7 +96,10 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
 
   const [vistaActiva, setVistaActiva] = useState('plano');
   const [modoDiseno, setModoDiseno] = useState(false);
-  const [mensaje, setMensaje] = useState({ texto: '', tipo: '' });
+  // Guardados en curso: sin esto el doble clic mandaba dos veces la misma
+  // tanda de PUTs (el plano son N puestos + N zonas en paralelo).
+  const [guardando, setGuardando] = useState(null); // 'tamano'|'plano'|'zona'|'contorno'|null
+  const [errorModal, setErrorModal] = useState('');
 
   const [mostrarModal, setMostrarModal] = useState(false);
   const [mostrarModalZona, setMostrarModalZona] = useState(false);
@@ -80,6 +108,10 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
   // Los puestos los crea el Usuario Negocio (activa uno de su catálogo). Acá el
   // Admin solo los ubica y escala en el plano: el modal edita tamaño, nada más.
   const [form, setForm] = useState({ id: '', nombre: '', ancho: 100, alto: 100 });
+  const [intentoTamano, setIntentoTamano] = useState(false);
+  const erroresTamano = intentoTamano
+    ? limpiarErrores({ 'mapa-ancho': errorLado(form.ancho), 'mapa-alto': errorLado(form.alto) })
+    : {};
 
   // Contorno del recinto: copia editable en el mapa real (modo Contorno). Se
   // resetea a lo guardado cada vez que cambia de evento — ajuste de estado
@@ -197,23 +229,29 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
   };
   // =========================================================
 
-  const mostrarAlerta = (texto, tipo = 'exito') => {
-    setMensaje({ texto, tipo });
-    setTimeout(() => setMensaje({ texto: '', tipo: '' }), 3000);
-  };
-
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
   const guardarElemento = async (e) => {
     e.preventDefault();
-    const actualizado = await api.puestos.actualizar(form.id, {
-      ancho: Number(form.ancho), alto: Number(form.alto),
-    });
-    setPuestos(prev => prev.map(p => p.id === actualizado.id ? { ...p, ...actualizado } : p));
-    mostrarAlerta("Tamaño actualizado correctamente.");
-    cerrarModal();
+    setIntentoTamano(true);
+    const errs = limpiarErrores({ 'mapa-ancho': errorLado(form.ancho), 'mapa-alto': errorLado(form.alto) });
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ['mapa-ancho', 'mapa-alto']);
+    setGuardando('tamano');
+    setErrorModal('');
+    try {
+      const actualizado = await api.puestos.actualizar(form.id, {
+        ancho: Number(form.ancho), alto: Number(form.alto),
+      });
+      setPuestos(prev => prev.map(p => p.id === actualizado.id ? { ...p, ...actualizado } : p));
+      avisos.exito('El tamaño quedó guardado.');
+      cerrarModal();
+    } catch (err) {
+      setErrorModal(err?.message || 'No se pudo guardar el tamaño.');
+    } finally {
+      setGuardando(null);
+    }
   };
 
   const editarPuesto = (puesto) => {
@@ -226,22 +264,41 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
 
   const cerrarModal = () => {
     setForm({ id: '', nombre: '', ancho: 100, alto: 100 });
+    setIntentoTamano(false);
+    setErrorModal('');
     setMostrarModal(false);
   };
 
-  const toggleEstadoPuesto = async (id) => {
-    const puesto = puestos.find(p => p.id === id);
-    const actualizado = await api.puestos.actualizar(id, { estadoActivo: !puesto.estadoActivo });
-    setPuestos(prev => prev.map(p => p.id === id ? { ...p, ...actualizado } : p));
+  // Mostrar/ocultar un puesto del plano: reversible, no confirma (PLAN §2.4).
+  const toggleEstadoPuesto = async (puesto) => {
+    try {
+      const actualizado = await api.puestos.actualizar(puesto.id, { estadoActivo: !puesto.estadoActivo });
+      setPuestos(prev => prev.map(p => p.id === puesto.id ? { ...p, ...actualizado } : p));
+      avisos.exito(actualizado.estadoActivo
+        ? `"${puesto.nombre}" vuelve a verse en el plano.`
+        : `"${puesto.nombre}" ya no se ve en el plano.`);
+    } catch (err) {
+      avisos.error(err?.message || 'No se pudo cambiar el estado.', { titulo: 'No se pudo guardar' });
+    }
   };
 
+  // Guardado en tanda de TODO el plano (N puestos + N zonas). Si algo falla el
+  // modo diseño NO se cierra: antes la promesa se rompía sin decir nada y el
+  // plano quedaba bloqueado como si se hubiera guardado bien.
   const guardarDiseñoPlano = async () => {
-    await Promise.all([
-      ...puestos.map(p => api.puestos.actualizar(p.id, { x: p.x, y: p.y, ancho: p.ancho, alto: p.alto })),
-      ...elementos.map(el => api.elementosMapa.actualizar(el.id, { x: el.x, y: el.y, ancho: el.ancho, alto: el.alto })),
-    ]);
-    setModoDiseno(false);
-    mostrarAlerta("Distribución guardada y bloqueada.");
+    setGuardando('plano');
+    try {
+      await Promise.all([
+        ...puestos.map(p => api.puestos.actualizar(p.id, { x: p.x, y: p.y, ancho: p.ancho, alto: p.alto })),
+        ...elementos.map(el => api.elementosMapa.actualizar(el.id, { x: el.x, y: el.y, ancho: el.ancho, alto: el.alto })),
+      ]);
+      setModoDiseno(false);
+      avisos.exito('La distribución quedó guardada y bloqueada.');
+    } catch (err) {
+      avisos.error(err?.message || 'No se pudo guardar la distribución.', { titulo: 'No se pudo guardar' });
+    } finally {
+      setGuardando(null);
+    }
   };
 
   // --- Zonas manuales (ElementoMapa): catálogo fijo, el Admin las crea directo. ---
@@ -255,11 +312,20 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
 
   const crearElementoZona = async (e) => {
     e.preventDefault();
-    const nuevo = await api.elementosMapa.crear({ eventoId, tipo: formZona.tipo, nombre: formZona.nombre });
-    setElementos(prev => [...prev, nuevo]);
-    setMostrarModalZona(false);
-    setFormZona(FORM_ZONA_VACIO);
-    mostrarAlerta('Zona agregada: arrástrala a su lugar en el plano.');
+    if (!formZona.nombre.trim()) return;
+    setGuardando('zona');
+    setErrorModal('');
+    try {
+      const nuevo = await api.elementosMapa.crear({ eventoId, tipo: formZona.tipo, nombre: formZona.nombre.trim() });
+      setElementos(prev => [...prev, nuevo]);
+      setMostrarModalZona(false);
+      setFormZona(FORM_ZONA_VACIO);
+      avisos.exito('Zona agregada: arrastrala a su lugar en el plano.');
+    } catch (err) {
+      setErrorModal(err?.message || 'No se pudo agregar la zona.');
+    } finally {
+      setGuardando(null);
+    }
   };
 
   const eliminarElemento = async (elemento) => {
@@ -270,22 +336,44 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
       peligroso: true,
     });
     if (!ok) return;
-    await api.elementosMapa.eliminar(elemento.id);
-    setElementos(prev => prev.filter(el => el.id !== elemento.id));
-    mostrarAlerta('Zona eliminada.');
+    try {
+      await api.elementosMapa.eliminar(elemento.id);
+      setElementos(prev => prev.filter(el => el.id !== elemento.id));
+      avisos.exito(`La zona "${elemento.nombre}" se eliminó.`);
+    } catch (err) {
+      avisos.error(err?.message || 'No se pudo eliminar la zona.', { titulo: 'No se pudo eliminar' });
+    }
   };
 
   // --- Contorno del recinto (modo Contorno) ---
   const guardarContorno = async () => {
     if (contornoBorrador.length > 0 && contornoBorrador.length < 3) {
-      mostrarAlerta('El contorno necesita al menos 3 vértices.', 'error');
+      avisos.error('El contorno necesita al menos 3 vértices.');
       return;
     }
-    const actualizado = await api.eventos.actualizarContorno(eventoId, contornoBorrador);
-    setEventoActual(actualizado);
-    mostrarAlerta('Contorno guardado.');
+    setGuardando('contorno');
+    try {
+      const actualizado = await api.eventos.actualizarContorno(eventoId, contornoBorrador);
+      setEventoActual(actualizado);
+      avisos.exito('El contorno quedó guardado.');
+    } catch (err) {
+      avisos.error(err?.message || 'No se pudo guardar el contorno.', { titulo: 'No se pudo guardar' });
+    } finally {
+      setGuardando(null);
+    }
   };
-  const descartarContorno = () => setContornoBorrador(contornoGuardado);
+
+  // Descartar = perder lo dibujado sin guardar -> confirma (PLAN §2.4).
+  const descartarContorno = async () => {
+    const ok = await confirmar({
+      titulo: '¿Descartar los cambios del contorno?',
+      mensaje: 'El contorno vuelve a como estaba guardado; lo que dibujaste ahora se pierde.',
+      textoConfirmar: 'Descartar cambios',
+      peligroso: true,
+    });
+    if (!ok) return;
+    setContornoBorrador(contornoGuardado);
+  };
 
   const centroMapa = eventoActual?.latitud != null && eventoActual?.longitud != null
     ? [eventoActual.latitud, eventoActual.longitud]
@@ -305,47 +393,25 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
         </BotonVolver>
       )}
 
-      {/* CABECERA */}
-      <div className="pi-mapa-header-flex">
-        {!embebido && (
-          <div>
-            <h1><FaMap color="var(--cian-digital)" aria-hidden="true" /> Diseñador del recinto</h1>
-            <p>Dibuja el contorno del recinto y ubica negocios y zonas dentro de él.</p>
-          </div>
-        )}
+      {!embebido && (
+        <EncabezadoPagina
+          titulo="Diseñador del recinto"
+          subtitulo="Dibuja el contorno del recinto y ubica negocios y zonas dentro de él."
+          icono={FaMap}
+          acciones={
+            <SelectorEvento
+              id="mapa-evento"
+              eventos={eventosDisponibles}
+              valor={eventoId}
+              onCambio={cambiarEvento}
+              bloqueado={eventoBloqueado}
+              nombre={eventosDisponibles.find(ev => ev.id === eventoId)?.nombre}
+            />
+          }
+        />
+      )}
 
-        {!embebido && (
-          <div className="pi-mapa-selector-evento">
-            <FaCalendarAlt />
-            {eventoBloqueado ? (
-              <strong>{eventosDisponibles.find(ev => ev.id === eventoId)?.nombre || 'Evento'}</strong>
-            ) : (
-              <select value={eventoId} onChange={(e) => cambiarEvento(e.target.value)}>
-                {eventosDisponibles.map(ev => (
-                  <option key={ev.id} value={ev.id}>{ev.nombre}</option>
-                ))}
-              </select>
-            )}
-          </div>
-        )}
-
-        <div className="pi-mapa-tabs-container">
-          <div className="pi-mapa-tabs">
-            <button type="button" className={vistaActiva === 'contorno' ? 'active' : ''} onClick={() => setVistaActiva('contorno')}>
-              <FaDrawPolygon /> Contorno
-            </button>
-            <button type="button" className={vistaActiva === 'plano' ? 'active' : ''} onClick={() => setVistaActiva('plano')}>
-              <FaMap /> Plano Visual
-            </button>
-            <button type="button" className={vistaActiva === 'tabla' ? 'active' : ''} onClick={() => setVistaActiva('tabla')}>
-              <FaListUl /> Lista de Elementos
-            </button>
-          </div>
-
-        </div>
-      </div>
-
-      {mensaje.texto && <div className={mensaje.tipo === 'error' ? 'alerta-error' : 'alerta-exito'}>{mensaje.texto}</div>}
+      <Pestanas items={VISTAS} activo={vistaActiva} onCambio={setVistaActiva} etiqueta="Vistas del recinto" />
 
       {/* Estados de la carga de puestos (Manual 8.9) antes de cualquiera de las vistas */}
       {errorPuestos && <EstadoError onReintentar={recargarPuestos} />}
@@ -356,39 +422,39 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
       ======================================================= */}
       {!errorPuestos && !cargandoPuestos && vistaActiva === 'contorno' && (
         <div className="pi-mapa-contorno-vista">
-          <div className="pi-mapa-card">
-            <p className="info-text">
-              <FaInfoCircle aria-hidden="true" /> Hacé clic sobre el mapa para marcar cada esquina del
-              recinto, en orden. Arrastrá un vértice para moverlo, o abrí su punto para eliminarlo
-              (mínimo 3). El plano (pestaña "Plano Visual") se ajusta a esta forma una vez guardada.
-            </p>
+          <Card className="pi-mapa-contorno-card">
+            <AvisoFijo tono="info">
+              Hacé clic sobre el mapa para marcar cada esquina del recinto, en orden. Arrastrá un
+              vértice para moverlo, o abrí su punto para eliminarlo (mínimo 3). El plano (pestaña
+              "Plano visual") se ajusta a esta forma una vez guardada.
+            </AvisoFijo>
 
             {!cargandoEvento && eventoActual && eventoActual.latitud == null && (
-              <p className="info-text" style={{ color: 'var(--rojo-error-texto)' }}>
-                <FaInfoCircle aria-hidden="true" /> Este evento no tiene ubicación configurada — anda a
-                Gestión de Eventos y marcala primero para centrar el mapa acá.
-              </p>
+              <AvisoFijo tono="aviso">
+                Este evento no tiene ubicación configurada — anda a Gestión de Eventos y marcala
+                primero para centrar el mapa acá.
+              </AvisoFijo>
             )}
 
             <ContornoRecinto centro={centroMapa} value={contornoBorrador} onChange={setContornoBorrador} />
 
             <div className="pi-mapa-contorno-acciones">
-              <span className="info-text">
+              <span className="texto-ayuda">
                 {contornoBorrador.length === 0 && 'Sin contorno todavía.'}
                 {contornoBorrador.length > 0 && contornoBorrador.length < 3 &&
                   `${contornoBorrador.length} vértice(s) — faltan al menos ${3 - contornoBorrador.length} más.`}
                 {contornoBorrador.length >= 3 && `${contornoBorrador.length} vértices.`}
               </span>
-              <div className="toolbar-actions">
-                <button type="button" className="btn-secundario" onClick={descartarContorno} disabled={!contornoSucio}>
+              <div className="btn-acciones">
+                <Boton variante="secundario" onClick={descartarContorno} disabled={!contornoSucio || guardando === 'contorno'}>
                   Descartar cambios
-                </button>
-                <button type="button" className="btn-primario" onClick={guardarContorno} disabled={!contornoSucio}>
-                  <FaSave /> Guardar contorno
-                </button>
+                </Boton>
+                <Boton icono={FaSave} onClick={guardarContorno} disabled={!contornoSucio} cargando={guardando === 'contorno'}>
+                  Guardar contorno
+                </Boton>
               </div>
             </div>
-          </div>
+          </Card>
         </div>
       )}
 
@@ -397,53 +463,65 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
       ======================================================= */}
       {!errorPuestos && !cargandoPuestos && vistaActiva === 'tabla' && (
         <div className="pi-mapa-tabla-vista">
-          <div className="pi-mapa-card no-margin">
-            <Tabla
-              columnas={['Elemento', 'Categoría', 'Tamaño (AnxAl)', 'Estado', { texto: 'Acciones', align: 'center' }]}
+          <Tabla
+              card
+              columnas={['Elemento', 'Categoría', 'Tamaño (AnxAl)', 'Estado', { texto: 'Acciones', srOnly: true }]}
               datos={filasTabla}
               vacio="No hay elementos registrados."
               renderFila={item => item._tipo === 'elemento' ? (
                 <tr key={`el-${item.id}`}>
                   <td>
-                    <div className="item-info-mapa">
-                      <div className="no-img-miniatura">{(() => { const I = tipoElementoInfo(item.tipo).Icono; return <I />; })()}</div>
+                    <div className="pi-mapa-item-info">
+                      <div className="pi-mapa-miniatura" aria-hidden="true">{(() => { const I = tipoElementoInfo(item.tipo).Icono; return <I />; })()}</div>
                       <span className="fila-nombre">{item.nombre}</span>
                     </div>
                   </td>
                   <td>{tipoElementoInfo(item.tipo).etiqueta}</td>
-                  <td style={{ color: 'var(--texto-secundario)' }}>{Math.round(item.ancho)}px × {Math.round(item.alto)}px</td>
-                  <td><span className="badge-zona">Zona</span></td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button type="button" className="btn-icon-ocultar" onClick={() => eliminarElemento(item)}><FaTrash title="Eliminar" /></button>
+                  <td><span className="celda-secundaria">{Math.round(item.ancho)}px × {Math.round(item.alto)}px</span></td>
+                  <td><Insignia tono="info">Zona</Insignia></td>
+                  <td className="td-derecha">
+                    <Boton
+                      variante="peligro-suave" tamano="sm" icono={FaTrash}
+                      onClick={() => eliminarElemento(item)}
+                      aria-label={`Eliminar la zona ${item.nombre}`}
+                    />
                   </td>
                 </tr>
               ) : (
-                <tr key={item.id} style={{ opacity: item.estadoActivo ? 1 : 0.5 }}>
+                <tr key={item.id} className={item.estadoActivo ? undefined : 'pi-mapa-fila--oculta'}>
                   <td>
-                    <div className="item-info-mapa">
+                    <div className="pi-mapa-item-info">
                       {item.logo ? (
-                        <img width="40" height="40" src={item.logo} alt="img" className="img-miniatura" />
+                        <img width="40" height="40" src={item.logo} alt="" className="pi-mapa-miniatura" />
                       ) : (
-                        <div className="no-img-miniatura"><FaStore /></div>
+                        <div className="pi-mapa-miniatura" aria-hidden="true"><FaStore /></div>
                       )}
                       <span className="fila-nombre">{item.nombre}</span>
                     </div>
                   </td>
                   <td>{item.categoria}</td>
-                  <td style={{ color: 'var(--texto-secundario)' }}>{Math.round(item.ancho)}px × {Math.round(item.alto)}px</td>
+                  <td><span className="celda-secundaria">{Math.round(item.ancho)}px × {Math.round(item.alto)}px</span></td>
                   <td>
-                    {item.estadoActivo ? <span className="badge-visible">Visible</span> : <span className="badge-oculto">Oculto</span>}
+                    {item.estadoActivo ? <Insignia tono="ok">Visible</Insignia> : <Insignia tono="neutro">Oculto</Insignia>}
                   </td>
-                  <td style={{ textAlign: 'center' }}>
-                    <button type="button" className="btn-icon-editar" onClick={() => editarPuesto(item)}><FaEdit /></button>
-                    <button type="button" className={item.estadoActivo ? 'btn-icon-ocultar' : 'btn-icon-visible'} onClick={() => toggleEstadoPuesto(item.id)}>
-                      {item.estadoActivo ? <FaEyeSlash title="Ocultar" /> : <FaCheck title="Mostrar" />}
-                    </button>
+                  <td className="td-derecha">
+                    <div className="btn-acciones">
+                      <Boton
+                        variante="secundario" tamano="sm" icono={FaEdit}
+                        onClick={() => editarPuesto(item)}
+                        aria-label={`Cambiar el tamaño de ${item.nombre}`}
+                      />
+                      <Boton
+                        variante={item.estadoActivo ? 'peligro-suave' : 'secundario'} tamano="sm"
+                        icono={item.estadoActivo ? FaEyeSlash : FaCheck}
+                        onClick={() => toggleEstadoPuesto(item)}
+                        aria-label={item.estadoActivo ? `Ocultar ${item.nombre} del plano` : `Mostrar ${item.nombre} en el plano`}
+                      />
+                    </div>
                   </td>
                 </tr>
               )}
-            />
-          </div>
+          />
         </div>
       )}
 
@@ -453,29 +531,32 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
       {!errorPuestos && !cargandoPuestos && vistaActiva === 'plano' && (
         <div className="pi-mapa-plano-vista">
 
-          <div className={`plano-toolbar ${modoDiseno ? 'diseno-activo' : ''}`}>
+          <div className={`pi-mapa-toolbar ${modoDiseno ? 'pi-mapa-toolbar--diseno' : ''}`}>
             {!modoDiseno ? (
               <>
-                <span className="info-text"><FaLock /> El plano está bloqueado.</span>
-                <button type="button" className="btn-primario" onClick={() => setModoDiseno(true)}><FaUnlock /> Editar Distribución</button>
+                <span className="texto-ayuda"><FaLock aria-hidden="true" /> El plano está bloqueado.</span>
+                <Boton icono={FaUnlock} onClick={() => setModoDiseno(true)}>Editar distribución</Boton>
               </>
             ) : (
               <>
-                <div className="toolbar-actions">
-                  <span className="info-text-verde"><FaInfoCircle /> Arrastra del centro para mover, o de la esquina para crecer.</span>
-                  <button type="button" className="btn-secundario" onClick={() => setMostrarModalZona(true)}><FaPlus /> Agregar zona</button>
+                <div className="btn-acciones">
+                  <span className="texto-ayuda"><FaInfoCircle aria-hidden="true" /> Arrastrá del centro para mover, o de la esquina para agrandar.</span>
+                  <Boton variante="secundario" icono={FaPlus} onClick={() => setMostrarModalZona(true)}>Agregar zona</Boton>
                 </div>
-                <button type="button" className="btn-guardar-plano" onClick={guardarDiseñoPlano}><FaSave /> Guardar y Bloquear</button>
+                <Boton variante="exito" icono={FaSave} onClick={guardarDiseñoPlano} cargando={guardando === 'plano'}>
+                  Guardar y bloquear
+                </Boton>
               </>
             )}
           </div>
 
           {!proyeccion && (
-            <p className="info-text">
-              <FaInfoCircle aria-hidden="true" /> Sin contorno del recinto todavía: el plano usa un tamaño
-              por defecto.{' '}
-              <button type="button" className="pi-mapa-link" onClick={() => setVistaActiva('contorno')}>Dibujalo en la pestaña Contorno</button>.
-            </p>
+            <AvisoFijo tono="info">
+              Sin contorno del recinto todavía: el plano usa un tamaño por defecto.{' '}
+              <Boton variante="fantasma" tamano="sm" onClick={() => setVistaActiva('contorno')}>
+                Dibujalo en la pestaña Contorno
+              </Boton>
+            </AvisoFijo>
           )}
 
           {/* Con contorno, el lienzo pasa a medir lo que mida el recinto real
@@ -484,14 +565,14 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
               desalinearía las cajas, que están en px "reales" del proyectado). */}
           <div className="pi-mapa-plano-scroll">
           <div
-            className={`canvas-plano ${modoDiseno ? 'canvas-activo' : ''}`}
+            className={`pi-mapa-canvas ${modoDiseno ? 'pi-mapa-canvas--activo' : ''}`}
             style={proyeccion ? { width: `${proyeccion.ancho}px`, height: `${proyeccion.alto}px` } : undefined}
             onPointerMove={moverAccion}
             onPointerUp={soltarAccion}
             onPointerLeave={soltarAccion}
           >
             {proyeccion && (
-              <svg className="contorno-svg-fondo" viewBox={`0 0 ${proyeccion.ancho} ${proyeccion.alto}`} preserveAspectRatio="none" aria-hidden="true">
+              <svg className="pi-mapa-contorno-svg" viewBox={`0 0 ${proyeccion.ancho} ${proyeccion.alto}`} preserveAspectRatio="none" aria-hidden="true">
                 <polygon points={proyeccion.puntos.map(([x, y]) => `${x},${y}`).join(' ')} />
               </svg>
             )}
@@ -500,7 +581,7 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
               <div
                 key={puesto.id}
                 onPointerDown={(e) => iniciarArrastre(e, 'puesto', puesto)}
-                className={`puesto-box-dinamico ${modoDiseno ? 'arrastrable' : ''} ${(itemArrastrado?.tipo === 'puesto' && itemArrastrado.id === puesto.id) || (itemRedimensionando?.tipo === 'puesto' && itemRedimensionando.id === puesto.id) ? 'activo-top' : ''}`}
+                className={`pi-mapa-box ${modoDiseno ? 'pi-mapa-box--arrastrable' : ''} ${(itemArrastrado?.tipo === 'puesto' && itemArrastrado.id === puesto.id) || (itemRedimensionando?.tipo === 'puesto' && itemRedimensionando.id === puesto.id) ? 'pi-mapa-box--activo' : ''}`}
                 style={{
                   left: `${puesto.x}px`, top: `${puesto.y}px`,
                   width: `${puesto.ancho}px`, height: `${puesto.alto}px`
@@ -508,14 +589,14 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
               >
                 {/* Contenido (Imagen o Icono) */}
                 {puesto.logo ? (
-                  <div className="box-fondo-img" style={{ backgroundImage: `url(${puesto.logo})` }}>
-                    <div className="box-overlay-texto">
+                  <div className="pi-mapa-box-img" style={{ backgroundImage: `url(${puesto.logo})` }}>
+                    <div className="pi-mapa-box-overlay">
                       <strong>{puesto.nombre}</strong>
                     </div>
                   </div>
                 ) : (
-                  <div className="box-fondo-color">
-                    <FaStore className="puesto-icon-dinamico" />
+                  <div className="pi-mapa-box-color">
+                    <FaStore className="pi-mapa-box-icono" />
                     <strong>{puesto.nombre}</strong>
                     <span>{puesto.categoria}</span>
                   </div>
@@ -524,7 +605,7 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
                 {/* --- BOTÓN DE REDIMENSIONAR (Solo visible en modo diseño) --- */}
                 {modoDiseno && (
                   <div
-                    className="resize-handle"
+                    className="pi-mapa-resize"
                     onPointerDown={(e) => iniciarRedimension(e, 'puesto', puesto)}
                   />
                 )}
@@ -539,21 +620,21 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
                 <div
                   key={elemento.id}
                   onPointerDown={(e) => iniciarArrastre(e, 'elemento', elemento)}
-                  className={`puesto-box-dinamico elemento-zona ${modoDiseno ? 'arrastrable' : ''} ${(itemArrastrado?.tipo === 'elemento' && itemArrastrado.id === elemento.id) || (itemRedimensionando?.tipo === 'elemento' && itemRedimensionando.id === elemento.id) ? 'activo-top' : ''}`}
+                  className={`pi-mapa-box pi-mapa-box--zona ${modoDiseno ? 'pi-mapa-box--arrastrable' : ''} ${(itemArrastrado?.tipo === 'elemento' && itemArrastrado.id === elemento.id) || (itemRedimensionando?.tipo === 'elemento' && itemRedimensionando.id === elemento.id) ? 'pi-mapa-box--activo' : ''}`}
                   style={{
                     left: `${elemento.x}px`, top: `${elemento.y}px`,
                     width: `${elemento.ancho}px`, height: `${elemento.alto}px`
                   }}
                 >
-                  <div className="box-fondo-color">
-                    <Icono className="puesto-icon-dinamico" />
+                  <div className="pi-mapa-box-color">
+                    <Icono className="pi-mapa-box-icono" />
                     <strong>{elemento.nombre}</strong>
                     <span>{info.etiqueta}</span>
                   </div>
 
                   {modoDiseno && (
                     <div
-                      className="resize-handle"
+                      className="pi-mapa-resize"
                       onPointerDown={(e) => iniciarRedimension(e, 'elemento', elemento)}
                     />
                   )}
@@ -569,30 +650,32 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
           MODAL: TAMAÑO DE PUESTO
       ======================================================= */}
       {mostrarModal && (
-        <Modal
-          titulo={<><FaMap color="var(--indigo-profundo)" aria-hidden="true" /> Tamaño de {form.nombre || 'elemento'}</>}
-          onCerrar={cerrarModal}
-        >
-          <form onSubmit={guardarElemento} className="formulario">
+        <Modal titulo={`Tamaño de ${form.nombre || 'elemento'}`} onCerrar={cerrarModal}>
+          <form onSubmit={guardarElemento} className="formulario" noValidate>
+            <AvisoFijo tono="info">
+              El nombre y el logo se editan desde el catálogo del negocio. Acá solo se ajusta el
+              tamaño en el plano.
+            </AvisoFijo>
 
-                <p className="info-text"><FaInfoCircle aria-hidden="true" /> El nombre y el logo se editan desde el catálogo del negocio. Acá solo se ajusta el tamaño en el plano.</p>
+            <div className="form-inline">
+              <Campo
+                id="mapa-ancho" etiqueta="Ancho (px)" icono={FaArrowsAltH} className="flex-1"
+                type="number" min={MIN_LADO} name="ancho" value={form.ancho} onChange={handleChange}
+                error={erroresTamano['mapa-ancho']}
+              />
+              <Campo
+                id="mapa-alto" etiqueta="Alto (px)" icono={FaArrowsAltV} className="flex-1"
+                type="number" min={MIN_LADO} name="alto" value={form.alto} onChange={handleChange}
+                error={erroresTamano['mapa-alto']}
+              />
+            </div>
 
-                <div className="form-inline">
-                  <div className="input-group flex-1">
-                    <label htmlFor="mapa-ancho"><FaArrowsAltH aria-hidden="true" /> Ancho (px)</label>
-                    <input id="mapa-ancho" type="number" min="50" name="ancho" value={form.ancho} onChange={handleChange} required />
-                  </div>
-                  <div className="input-group flex-1">
-                    <label htmlFor="mapa-alto"><FaArrowsAltV aria-hidden="true" /> Alto (px)</label>
-                    <input id="mapa-alto" type="number" min="50" name="alto" value={form.alto} onChange={handleChange} required />
-                  </div>
-                </div>
+            {errorModal && <AvisoFijo tono="error">{errorModal}</AvisoFijo>}
 
-                <div className="modal-actions">
-                  <button type="button" className="btn-cancelar" onClick={cerrarModal}>Cancelar</button>
-                  <button type="submit" className="btn-primario"><FaSave /> Guardar tamaño</button>
-                </div>
-
+            <div className="modal-actions">
+              <Boton variante="secundario" onClick={cerrarModal} disabled={guardando === 'tamano'}>Cancelar</Boton>
+              <Boton type="submit" icono={FaSave} cargando={guardando === 'tamano'}>Guardar tamaño</Boton>
+            </div>
           </form>
         </Modal>
       )}
@@ -601,37 +684,31 @@ export default function Mapa({ eventoId: eventoIdProp = null, embebido = false }
           MODAL: AGREGAR ZONA (elemento que no es un negocio)
       ======================================================= */}
       {mostrarModalZona && (
-        <Modal
-          titulo={<><FaPlus color="var(--indigo-profundo)" aria-hidden="true" /> Agregar zona al plano</>}
-          onCerrar={() => setMostrarModalZona(false)}
-        >
-          <form onSubmit={crearElementoZona} className="formulario">
-            <p className="info-text"><FaInfoCircle aria-hidden="true" /> Se agrega centrada en el plano; después la arrastrás a su lugar.</p>
+        <Modal titulo="Agregar zona al plano" onCerrar={() => setMostrarModalZona(false)}>
+          <form onSubmit={crearElementoZona} className="formulario" noValidate>
+            <AvisoFijo tono="info">
+              Se agrega centrada en el plano; después la arrastrás a su lugar.
+            </AvisoFijo>
 
-            <div className="input-group">
-              <label htmlFor="zona-tipo">Tipo</label>
-              <select
-                id="zona-tipo" className="pi-select-rol" value={formZona.tipo}
-                onChange={(e) => cambiarTipoZona(e.target.value)}
-              >
+            <Campo id="zona-tipo" etiqueta="Tipo">
+              <select id="zona-tipo" value={formZona.tipo} onChange={(e) => cambiarTipoZona(e.target.value)}>
                 {TIPOS_ELEMENTO_MAPA.map(t => (
                   <option key={t.valor} value={t.valor}>{t.etiqueta}</option>
                 ))}
               </select>
-            </div>
+            </Campo>
 
-            <div className="input-group">
-              <label htmlFor="zona-nombre">Nombre</label>
-              <input
-                id="zona-nombre" type="text" value={formZona.nombre}
-                onChange={(e) => setFormZona(f => ({ ...f, nombre: e.target.value, nombreTocado: true }))}
-                placeholder="Ej: Entrada Norte" required
-              />
-            </div>
+            <Campo
+              id="zona-nombre" etiqueta="Nombre" value={formZona.nombre} placeholder="Ej: Entrada Norte"
+              onChange={(e) => setFormZona(f => ({ ...f, nombre: e.target.value, nombreTocado: true }))}
+              error={formZona.nombre.trim() ? null : 'Poné un nombre para la zona.'}
+            />
+
+            {errorModal && <AvisoFijo tono="error">{errorModal}</AvisoFijo>}
 
             <div className="modal-actions">
-              <button type="button" className="btn-cancelar" onClick={() => setMostrarModalZona(false)}>Cancelar</button>
-              <button type="submit" className="btn-primario"><FaSave /> Agregar</button>
+              <Boton variante="secundario" onClick={() => setMostrarModalZona(false)} disabled={guardando === 'zona'}>Cancelar</Boton>
+              <Boton type="submit" icono={FaSave} cargando={guardando === 'zona'}>Agregar</Boton>
             </div>
           </form>
         </Modal>

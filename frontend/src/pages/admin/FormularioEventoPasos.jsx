@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import {
   FaInfoCircle, FaCalendarAlt, FaMapMarkerAlt, FaQrcode, FaCheckCircle, FaRegCircle,
-  FaArrowLeft, FaArrowRight, FaImage, FaUpload, FaTimes, FaExclamationTriangle,
-  FaTicketAlt, FaMobileAlt, FaPen, FaRocket, FaUserTie, FaUndoAlt,
+  FaArrowLeft, FaArrowRight, FaImage, FaTicketAlt, FaMobileAlt, FaPen, FaRocket, FaUserTie, FaUndoAlt,
 } from 'react-icons/fa';
 import CalendarioEventos from '../../components/CalendarioEventos.jsx';
 import MapaSelector from '../../components/MapaSelector.jsx';
 import Boton from '../../components/Boton.jsx';
+import SubirImagen from '../../components/SubirImagen.jsx';
+import { AvisoFijo } from '../../components/Avisos.jsx';
 import Filtros from '../../components/Filtros.jsx';
 import './FormularioEventoPasos.css';
+import Pasos from '../../components/Pasos.jsx';
 
 // 'YYYY-MM-DD' -> "domingo 13 de septiembre" (sin depender de formatearFecha,
 // que espera un ISO con hora).
@@ -61,11 +63,11 @@ const pasoCompleto = (f, i) => {
  */
 export default function FormularioEventoPasos({
   formEvento, setFormEvento, onChange, editando,
-  onImagen, onQuitarImagen, errorImagen, previewFallo, setPreviewFallo,
   errorGuardar, faltaUbicacion, setFaltaUbicacion,
   eventosOtros, clientes, onGuardar, onCancelar,
 }) {
   const [paso, setPaso] = useState(0);
+  const [imagenRota, setImagenRota] = useState(false);
   const [errorPaso, setErrorPaso] = useState('');
   const esUltimo = paso === PASOS.length - 1;
 
@@ -121,30 +123,17 @@ export default function FormularioEventoPasos({
 
   return (
     <div className="pi-fev">
-      {/* ---------- Stepper ---------- */}
-      <ol className="pi-fev__stepper" style={{ '--avance': paso / (PASOS.length - 1) }}>
-        {PASOS.map(({ id, titulo, detalle, icono: Icono }, i) => {
-          const estado = i === paso ? 'actual' : pasoCompleto(formEvento, i) && i < 4 ? 'listo' : i < paso ? 'visto' : '';
-          return (
-            <li key={id}>
-              <button
-                type="button"
-                className={`pi-fev__paso ${estado}`}
-                onClick={() => irA(i)}
-                aria-current={i === paso ? 'step' : undefined}
-              >
-                <span className="pi-fev__paso-ic" aria-hidden="true">
-                  {estado === 'listo' && i !== paso ? <FaCheckCircle /> : <Icono />}
-                </span>
-                <span className="pi-fev__paso-txt">
-                  <strong>{titulo}</strong>
-                  <small>{detalle}</small>
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ol>
+      {/* ---------- Pasos (componente global) ---------- */}
+      <Pasos
+        variante="riel"
+        etiqueta="Pasos para crear el evento"
+        actual={paso}
+        onIr={(i) => irA(i)}
+        pasos={PASOS.map(({ id, titulo, detalle, icono }, i) => ({
+          id, titulo, detalle, icono,
+          estado: (pasoCompleto(formEvento, i) && i < 4) || i < paso ? 'listo' : 'pendiente',
+        }))}
+      />
 
       <div className="pi-fev__cuerpo">
         <form className="pi-fev__form" onSubmit={enviar} noValidate={false}>
@@ -170,32 +159,18 @@ export default function FormularioEventoPasos({
                     placeholder="Ej: Campo Ferial, Cbba" required
                   />
                 </div>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-imagen"><FaImage aria-hidden="true" /> Imagen del evento (opcional)</label>
-                  {!formEvento.imagen ? (
-                    <div className="upload-zone">
-                      <FaUpload className="upload-icon" aria-hidden="true" />
-                      <span className="upload-text">Hacé clic o arrastrá una foto</span>
-                      <span className="upload-subtext">PNG, JPG hasta 3MB · se ve en la cartelera</span>
-                      <input id="ev-imagen" type="file" accept="image/*" onChange={onImagen} className="upload-input-hidden" />
-                    </div>
-                  ) : previewFallo ? (
-                    <p className="pi-ges-error-imagen">No se puede mostrar esta imagen. Probá con otra en formato JPG o PNG.</p>
-                  ) : (
-                    <div className="preview-zone">
-                      <img
-                        width="320" height="100" src={formEvento.imagen} alt="Vista previa"
-                        className="pi-ges-imagen-preview"
-                        onError={() => setPreviewFallo(true)}
-                        onLoad={() => setPreviewFallo(false)}
-                      />
-                      <button type="button" className="btn-quitar-imagen" onClick={onQuitarImagen}>
-                        <FaTimes aria-hidden="true" /> Quitar imagen
-                      </button>
-                    </div>
-                  )}
-                  {errorImagen && <p className="pi-ges-error-imagen">{errorImagen}</p>}
-                </div>
+                <SubirImagen
+                  id="ev-imagen"
+                  etiqueta="Imagen del evento (opcional)"
+                  carpeta="eventos"
+                  valor={formEvento.imagen}
+                  onCambio={(url) => setFormEvento(f => ({ ...f, imagen: url }))}
+                  texto="Hacé clic o arrastrá una foto"
+                  subtexto="PNG o JPG hasta 3 MB · se ve en la cartelera"
+                  maxBytes={3 * 1024 * 1024}
+                  anchoVista={320}
+                  altoVista={100}
+                />
               </>
             )}
 
@@ -271,7 +246,7 @@ export default function FormularioEventoPasos({
                   <p className="pi-fev__elegido"><FaCheckCircle aria-hidden="true" /> Ubicación marcada ({formEvento.coordenadas})</p>
                 )}
                 {faltaUbicacion && (
-                  <p className="pi-ges-error-fechas"><FaExclamationTriangle aria-hidden="true" /> Marcá el lugar en el mapa: es obligatorio.</p>
+                  <AvisoFijo tono="error">Marcá el lugar en el mapa: es obligatorio.</AvisoFijo>
                 )}
               </div>
             )}
@@ -365,10 +340,10 @@ export default function FormularioEventoPasos({
             )}
 
             {errorPaso && (
-              <p className="pi-ges-error-fechas"><FaExclamationTriangle aria-hidden="true" /> {errorPaso}</p>
+              <AvisoFijo tono="error">{errorPaso}</AvisoFijo>
             )}
             {errorGuardar && (
-              <p className="pi-ges-error-fechas"><FaExclamationTriangle aria-hidden="true" /> {errorGuardar}</p>
+              <AvisoFijo tono="error">{errorGuardar}</AvisoFijo>
             )}
           </div>
 
@@ -398,8 +373,8 @@ export default function FormularioEventoPasos({
           <span className="pi-fev__preview-tag">Vista previa</span>
           <div className="pi-fev__tarjeta">
             <div className="pi-fev__tarjeta-img">
-              {formEvento.imagen && !previewFallo
-                ? <img src={formEvento.imagen} alt="" width="320" height="180" />
+              {formEvento.imagen && !imagenRota
+                ? <img src={formEvento.imagen} alt="" width="320" height="180" onError={() => setImagenRota(true)} />
                 : <span><FaImage aria-hidden="true" /> Sin imagen</span>}
               <em className={digital ? 'digital' : ''}>
                 {digital ? <><FaMobileAlt aria-hidden="true" /> Digital</> : <><FaTicketAlt aria-hidden="true" /> Física</>}

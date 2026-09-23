@@ -4,119 +4,25 @@
   width: 100%;
 }
 
-.pi-admin-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  flex-wrap: wrap;
-  gap: 16px;
-}
-
-.pi-admin-header h1,
-.pi-admin-header h2 {
-  color: var(--text-primary);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  margin: 0;
-}
-
-.pi-admin-header-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.pi-admin-selector-evento {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 8px 16px;
-  color: var(--indigo-profundo);
-  font-weight: 600;
-}
-
-.pi-admin-selector-evento select {
-  border: none;
-  outline: none;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-  background: none;
-}
-
-/* Alertas */
-.pi-admin-alert {
-  padding: 12px 16px;
-  border-radius: var(--radius-md);
-  margin-bottom: 24px;
-  font-size: var(--text-sm);
-  font-weight: 600;
-  background-color: var(--verde-recarga-suave);
-  color: var(--verde-recarga-texto);
-  border: 1px solid rgba(0, 196, 140, 0.2);
-}
-
-.pi-admin-alert-aviso {
-  background-color: var(--ambar-aviso-suave);
-  color: var(--ambar-aviso-texto);
-  border-color: rgba(255, 176, 32, 0.2);
-}
-
-/* Grilla a dos columnas para desktop.
-   minmax(0, 1fr) y min-width en los hijos: con el `1fr` a secas, el mínimo
-   automático de una columna es el ancho de su contenido, así que un campo o un
-   texto largo la estiraba y la página entera se iba de ancho (se recortaba en
-   celular). */
-.pi-admin-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
-}
-
-.pi-admin-grid > * { min-width: 0; }
-
-@media (max-width: 900px) {
-  .pi-admin-grid { grid-template-columns: minmax(0, 1fr); }
-}
-
-/* Tarjetas */
-.pi-admin-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-6);
-}
-
-.pi-admin-card h3 {
+/* La caja la pone <Card> (components/Card.css): acá solo lo de adentro. */
+.pi-cfg-seccion h3 {
   margin: 0 0 20px 0;
   color: var(--text-primary);
   font-size: var(--text-base);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
-.pi-admin-card-header {
+.pi-cfg-seccion-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
 }
 
-.pi-admin-card-header h3 { margin: 0; }
-
-.texto-ayuda {
-  font-size: var(--text-xs);
-  color: var(--text-secondary);
-  margin-bottom: 16px;
-}
+.pi-cfg-seccion-header h3 { margin: 0; }
 
 /* --- COLORES ---
    Cinco colores en una columna dejaban la tarjeta larguísima. Van de a dos por
@@ -124,10 +30,10 @@
 .pi-admin-colors-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
-.pi-admin-colors-grid .pi-admin-form-group { min-width: 0; gap: 4px; }
+.pi-admin-colors-grid .pi-admin-form-group { min-width: 0; gap: var(--space-1); }
 
 .pi-admin-colors-grid label {
   font-size: var(--text-xs);
@@ -136,7 +42,7 @@
 .pi-admin-color-picker {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 /* Cuadrado grande clickeable — el <input type="color"> real va invisible
@@ -176,7 +82,7 @@
   outline: none;
   font-family: monospace;
   font-size: var(--text-sm);
-  font-weight: 700;
+  font-weight: var(--weight-bold);
   text-transform: uppercase;
   color: var(--text-primary);
   background-color: var(--bg-surface);
@@ -188,12 +94,12 @@
 .pi-admin-form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
   margin-bottom: 20px;
 }
 .pi-admin-form-group:last-child { margin-bottom: 0; }
 
-.pi-admin-form-group label { font-size: var(--text-sm); font-weight: 600; color: var(--text-primary); }
+.pi-admin-form-group label { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--text-primary); }
 
 .pi-admin-form-group input[type="text"],
 .pi-admin-form-group textarea {
@@ -202,11 +108,6 @@
 }
 
 .pi-admin-form-group input:focus, .pi-admin-form-group textarea:focus { border-color: var(--cian-digital); }
-
-/* --- IMAGEN (el upload en sí usa .upload-zone/.preview-zone globales, ver forms.css) --- */
-.pi-admin-preview-img {
-  width: 100%; max-height: 200px; object-fit: cover; border-radius: var(--radius-md); margin-bottom: 8px; border: 1px solid var(--border);
-}
 
 /* El nombre del evento no se edita acá (viene de Gestión de Eventos) — se
    muestra como texto fijo, no un input, para que no parezca editable. */
@@ -218,30 +119,11 @@
   background-color: var(--bg-page);
   color: var(--text-primary);
   font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-/* --- LISTAS DINÁMICAS --- */
-.pi-admin-dynamic-row {
-  display: flex; align-items: center; gap: 8px; background-color: var(--bg-page);
-  padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border); margin-bottom: 12px;
-}
-
-/* Selector de Íconos */
-.icon-selector-wrapper {
-  display: flex; align-items: center; gap: 8px; background: var(--bg-surface); border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm); padding-left: 8px; overflow: hidden;
-}
-
-.icon-preview { font-size: var(--text-base); display: flex; align-items: center; }
-
-.pi-admin-select-icon {
-  border: none; outline: none; padding: 8px 8px; background: transparent; font-size: var(--text-xs); color: var(--text-primary);
-  cursor: pointer;
+  font-weight: var(--weight-semibold);
 }
 
 .pi-admin-dynamic-inputs {
-  flex: 1; display: flex; flex-direction: column; gap: 8px;
+  flex: 1; display: flex; flex-direction: column; gap: var(--space-2);
 }
 
 .pi-admin-dynamic-inputs input, .pi-admin-time-input {
@@ -249,98 +131,16 @@
 }
 .pi-admin-dynamic-inputs input:focus { border-color: var(--cian-digital); }
 
-.pi-admin-time-input { width: 110px; }
+.pi-admin-time-input { width: 7rem; }
 
-/* --- BOTONES --- */
-
-.pi-admin-btn-delete { background-color: var(--rojo-error-suave); color: var(--rojo-error-texto); border: none; width: 36px; height: 36px; border-radius: var(--radius-sm); cursor: pointer; display: inline-flex; justify-content: center; align-items: center; transition: background 0.2s; }
-.pi-admin-btn-delete:hover { background-color: var(--rojo-error); color: var(--text-on-accent); }
-
-/* --- MODAL VISTA PREVIA COMPLETA DARK/GLASS --- */
-.pi-admin-modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(10, 14, 39, 0.85); display: flex; justify-content: center; align-items: center; z-index: var(--z-modal); padding: 20px; backdrop-filter: blur(5px);
-}
-
-.dark-glass-preview {
-  background: var(--bg-surface); width: 100%; max-width: 900px; border-radius: var(--radius-xl); overflow: hidden;
-  box-shadow: 0 30px 60px -15px rgba(10, 14, 39, 0.6); animation: slideDown 0.3s ease-out; border: 1px solid rgba(255,255,255,0.1);
-  display: flex; flex-direction: column; max-height: 90vh; /* Controla que no se salga de la pantalla */
-}
-
-@keyframes slideDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
-
-.dark-header {
-  background: #0f172a; padding: 16px 24px; border-bottom: 1px solid rgba(255,255,255,0.1); display: flex; justify-content: space-between; align-items: center;
-}
-
-/* Contenedor escrolleable */
-.modal-scrollable {
-  padding: 40px;
-  overflow-y: auto;
-}
-
-.pi-admin-modal-content-flex { display: flex; gap: 40px; align-items: center; }
-.pi-admin-modal-text { flex: 1; }
-.pi-admin-modal-image { flex: 1; text-align: right; }
-.pi-admin-modal-image img { max-width: 100%; border-radius: var(--radius-lg); }
-
-.no-img { width: 100%; height: 250px; background-color: rgba(255,255,255,0.05); border: 2px dashed rgba(255,255,255,0.1); border-radius: var(--radius-lg); display: flex; justify-content: center; align-items: center; color: rgba(255,255,255,0.4); font-weight: 600; }
-
-/* SECCIONES EXTRA DEL PREVIEW (Actividades y Cronograma) */
-.preview-divider {
-  width: 100%; height: 1px; background-color: rgba(255,255,255,0.05); margin: 40px 0;
-}
-
-.preview-grid-actividades {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;
-}
-
-.preview-glass-card {
-  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-top: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 20px; border-radius: var(--radius-xl); text-align: center;
-}
-
-.preview-icon-box {
-  font-size: var(--text-2xl); margin-bottom: 8px;
-}
-
-.preview-cronograma-box {
-  background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: var(--radius-lg); overflow: hidden;
-}
-
-.preview-cronograma-item {
-  display: flex; align-items: center; gap: 16px; padding: 16px 20px; border-bottom: 1px solid rgba(255,255,255,0.05);
-}
-
-.preview-cronograma-item:last-child { border-bottom: none; }
-
-.preview-badge-hora {
-  background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 8px 12px; border-radius: var(--radius-xl); font-weight: 700; font-size: var(--text-xs); display: inline-flex; align-items: center; gap: 8px;
-}
-
-@media (max-width: 768px) {
-  .pi-admin-modal-content-flex { flex-direction: column; text-align: center; }
-  .pi-admin-modal-image { text-align: center; }
-  .modal-scrollable { padding: 20px; }
-}
 /* ============================================================================
    MÓVIL: tarjetas y barra de acciones más compactas.
    ========================================================================= */
 @media (max-width: 560px) {
-  .pi-admin-card { padding: var(--space-4); }
-  .pi-admin-header { align-items: stretch; margin-bottom: 16px; }
-  .pi-admin-header-actions {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-    gap: 8px;
-  }
-  .pi-admin-header-actions > button {
-    width: 100%;
-    justify-content: center;
-    padding: 10px 8px;
-  }
+  .pi-cfg-seccion { padding: var(--space-4); }
   /* La hora y el texto del cronograma, uno debajo del otro (no entran al lado). */
   .pi-admin-time-input { width: 100%; }
 }
+
+/* .texto-ayuda es global (forms.css); acá solo su separación en cada sección. */
+.pi-cfg-seccion .texto-ayuda { margin-bottom: var(--space-4); }

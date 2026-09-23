@@ -1,11 +1,15 @@
 import { useCallback, useState } from 'react';
-import { FaHistory, FaChevronLeft, FaChevronRight, FaEye } from 'react-icons/fa';
+import { FaHistory, FaEye } from 'react-icons/fa';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useApi } from '../../utils/useApi.js';
 import api from '../../api/index.js';
 import Tabla from '../../components/Tabla.jsx';
 import Filtros from '../../components/Filtros.jsx';
 import Modal from '../../components/Modal.jsx';
+import Boton from '../../components/Boton.jsx';
+import Insignia from '../../components/Insignia.jsx';
+import Paginador from '../../components/Paginador.jsx';
+import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import './AdminAuditoria.css';
 
@@ -155,10 +159,7 @@ export default function AdminAuditoria() {
 
   return (
     <div className="pi-aud-container">
-      <div className="pi-aud-header">
-        <h1><FaHistory aria-hidden="true" /> Auditoría</h1>
-        <p>Quién hizo qué en las operaciones sensibles, con el antes y el después.</p>
-      </div>
+      <EncabezadoPagina titulo="Auditoría" subtitulo="Quién hizo qué en las operaciones sensibles, con el antes y el después." icono={FaHistory} />
 
       <Filtros
         opciones={ENTIDADES}
@@ -185,26 +186,17 @@ export default function AdminAuditoria() {
                 <td>{r.actor?.nombre ?? `#${r.actorId}`}</td>
                 <td>{ENT_LABEL[r.entidad] ?? r.entidad}</td>
                 <td>
-                  <span className="pi-aud-accion">{ACCION_LABEL[r.accion] ?? r.accion.replace(/_/g, ' ')}</span>
+                  <Insignia tono="marca">{ACCION_LABEL[r.accion] ?? r.accion.replace(/_/g, ' ')}</Insignia>
                 </td>
-                <td style={{ textAlign: 'right' }}>
-                  <button type="button" className="pi-aud-btn-ver" onClick={() => setDetalle(r)}>
-                    <FaEye aria-hidden="true" /> Ver
-                  </button>
+                <td className="td-derecha">
+                  <Boton variante="secundario" tamano="sm" icono={FaEye} onClick={() => setDetalle(r)}>Ver</Boton>
                 </td>
               </tr>
             )}
           />
 
-          <div className="pi-aud-paginador">
-            <button type="button" disabled={pagina === 0} onClick={() => setPagina((p) => p - 1)}>
-              <FaChevronLeft aria-hidden="true" /> Anteriores
-            </button>
-            <span>Página {pagina + 1} de {totalPaginas} · {data.total} registros</span>
-            <button type="button" disabled={pagina + 1 >= totalPaginas} onClick={() => setPagina((p) => p + 1)}>
-              Siguientes <FaChevronRight aria-hidden="true" />
-            </button>
-          </div>
+          {/* Paginado del servidor: mismo Paginador global que usa Tabla. */}
+          <Paginador pagina={pagina} totalPaginas={totalPaginas} onCambio={setPagina} total={data.total} />
         </>
       )}
 
@@ -225,9 +217,7 @@ export default function AdminAuditoria() {
               const cambios = filasCambios(detalle.antes, detalle.despues);
               if (cambios.length === 0) {
                 return (
-                  <p className="pi-aud-sin-cambios">
-                    No quedaron datos comparables para esta operación.
-                  </p>
+                  <p className="texto-ayuda">No quedaron datos comparables para esta operación.</p>
                 );
               }
               return (

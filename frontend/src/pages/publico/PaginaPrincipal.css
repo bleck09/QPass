@@ -2,7 +2,7 @@
    PÁGINA PRINCIPAL - QPASS LANDING (Glassmorphism & 3D)
 ============================================================ */
 
-.qpass-home-container {
+.pi-home-qpass-home-container {
   /* Esta página es SIEMPRE oscura (hero azul noche), pase lo que pase con el
      tema de la app: por eso re-apunta acá los tokens de texto/superficie a los
      valores del modo oscuro. Sin esto, en tema claro los textos secundarios
@@ -15,14 +15,14 @@
   width: 100%;
   min-height: 100vh;
   background-color: var(--azul-noche);
-  color: var(--text-on-accent);
+  color: var(--texto-sobre-oscuro);
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   overflow-x: hidden;
   position: relative;
 }
 
 /* Luces Neón de Fondo */
-.qpass-home-glow {
+.pi-home-qpass-home-glow {
   position: absolute;
   width: 600px; height: 600px;
   filter: blur(150px);
@@ -31,11 +31,11 @@
   z-index: 0;
   pointer-events: none;
 }
-.glow-1 { top: -100px; left: -200px; background-color: var(--cian-digital); }
-.glow-2 { top: 50%; right: -200px; background-color: var(--indigo-profundo); }
+.pi-home-glow-1 { top: -100px; left: -200px; background-color: var(--cian-digital); }
+.pi-home-glow-2 { top: 50%; right: -200px; background-color: var(--indigo-profundo); }
 
 /* Utilidad Glassmorphism (El efecto cristal que pediste) */
-.glass-morphism {
+.pi-home-glass-morphism {
   background: rgba(10, 14, 39, 0.45);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
@@ -46,7 +46,7 @@
 /* =======================================================
    NAVBAR FLOTANTE (ESTILO "DESCARGAR.JFIF")
 ======================================================= */
-.qpass-floating-navbar {
+.pi-home-qpass-floating-navbar {
   position: fixed;
   top: 25px; left: 50%;
   transform: translateX(-50%);
@@ -54,45 +54,36 @@
   height: 70px;
   border-radius: var(--radius-xl);
   display: flex; justify-content: space-between; align-items: center;
-  padding: 0 20px 0 8px;
+  padding: 0 var(--space-5) 0 var(--space-2);
   z-index: var(--z-dropdown);
 }
 
-.qpass-home-logo {
-  display: flex; align-items: center; gap: 12px;
-  font-size: var(--text-xl); font-weight: 800; color: var(--text-on-accent);
-  margin-left: 8px;
+.pi-home-qpass-home-logo {
+  display: flex; align-items: center; gap: var(--space-3);
+  font-size: var(--text-xl); font-weight: 800; color: var(--texto-sobre-oscuro);
+  margin-left: var(--space-2);
 }
-.logo-icon-bg {
+.pi-home-logo-icon-bg {
   background: var(--cian-digital); width: 40px; height: 40px; border-radius: 50%;
   display: flex; justify-content: center; align-items: center; color: var(--azul-noche);
   font-size: var(--text-lg);
 }
 
-.qpass-home-nav-links { display: flex; gap: 32px; list-style: none; margin: 0; padding: 0; }
-.qpass-home-nav-links a { color: var(--text-on-accent); text-decoration: none; font-weight: 600; font-size: var(--text-sm); transition: color 0.2s; }
-.qpass-home-nav-links a:hover { color: var(--cian-digital); }
-
-/* La landing es SIEMPRE oscura (hero azul noche), no sigue el tema de la app:
-   por eso este botón usa los primitivos fijos (blanco + azul noche) y no
-   --bg-surface, que en modo oscuro se volvía casi del color del texto. */
-.qpass-home-nav-actions .btn-solid {
-  background-color: var(--n-0); color: var(--azul-noche); border: none; padding: 12px 24px; border-radius: var(--radius-xl);
-  font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: all 0.3s;
-}
-.qpass-home-nav-actions .btn-solid:hover { background-color: var(--cian-digital); color: var(--azul-noche); transform: scale(1.05); }
+.pi-home-qpass-home-nav-links { display: flex; gap: var(--space-8); list-style: none; margin: 0; padding: 0; }
+.pi-home-qpass-home-nav-links a { color: var(--texto-sobre-oscuro); text-decoration: none; font-weight: 600; font-size: var(--text-sm); transition: color 0.2s; }
+.pi-home-qpass-home-nav-links a:hover { color: var(--cian-digital); }
 
 /* =======================================================
    SECCIONES GLOBALES
 ======================================================= */
-.qpass-home-section { position: relative; z-index: 10; padding: 80px 5%; max-width: 1200px; margin: 0 auto; }
-.section-header.center { text-align: center; margin-bottom: 48px; }
-.section-header h2 { font-size: var(--text-3xl); margin: 0 0 8px 0; font-weight: 800; }
-.section-header p { font-size: var(--text-lg); color: var(--text-secondary); margin: 0; }
+.pi-home-qpass-home-section { position: relative; z-index: 10; padding: 80px 5%; max-width: 1200px; margin: 0 auto; }
+.pi-home-section-header.center { text-align: center; margin-bottom: var(--space-12); }
+.pi-home-section-header h2 { font-size: var(--text-3xl); margin: 0 0 var(--space-2) 0; font-weight: 800; }
+.pi-home-section-header p { font-size: var(--text-lg); color: var(--text-secondary); margin: 0; }
 
 /* Ícono redondo con tinte cian: lo usan las secciones informativas
    (servicios de Organizadores, etc.). */
-.icon-circle { width: 45px; height: 45px; background: rgba(0, 180, 216, 0.2); color: var(--cian-digital); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: var(--text-lg); margin-bottom: 4px; }
+.pi-home-icon-circle { width: 45px; height: 45px; background: rgba(0, 180, 216, 0.2); color: var(--cian-digital); border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: var(--text-lg); margin-bottom: var(--space-1); }
 
 /* =======================================================
    EVENTOS PASADOS
@@ -101,7 +92,7 @@
 
 /* min() y no 350px fijo: en un telefono de 360px el ancho util es ~324px,
    asi que un minmax(350px) hacia desbordar la pagina en horizontal. */
-.past-events-grid {
+.pi-home-past-events-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(21.875rem, 100%), 1fr));
   gap: var(--space-6);
@@ -110,31 +101,31 @@
   list-style: none;
 }
 
-.past-card {
+.pi-home-past-card {
   height: 100%;
   border-radius: var(--radius-xl);
   display: flex;
   align-items: center;
-  gap: 20px;
-  padding: 16px;
+  gap: var(--space-5);
+  padding: var(--space-4);
   color: inherit;
   text-decoration: none;
   transition: transform var(--duration-normal) var(--ease-out), border-color var(--duration-normal) var(--ease-out);
 }
-.past-card:hover { transform: translateY(-5px); border-color: var(--cian-digital); }
-.past-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.pi-home-past-card:hover { transform: translateY(-5px); border-color: var(--cian-digital); }
+.pi-home-past-card:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
 
-.past-card-img { position: relative; flex-shrink: 0; overflow: hidden; border-radius: var(--radius-xl); }
-.past-card img { display: block; width: 100px; height: 100px; object-fit: cover; filter: grayscale(80%); transition: filter 0.3s, transform 0.5s var(--ease-out); }
-.past-card:hover img { filter: grayscale(0%); transform: scale(1.08); }
+.pi-home-past-card-img { position: relative; flex-shrink: 0; overflow: hidden; border-radius: var(--radius-xl); }
+.pi-home-past-card img { display: block; width: 100px; height: 100px; object-fit: cover; filter: grayscale(80%); transition: filter 0.3s, transform 0.5s var(--ease-out); }
+.pi-home-past-card:hover img { filter: grayscale(0%); transform: scale(1.08); }
 
-.past-card-badge {
+.pi-home-past-card-badge {
   position: absolute;
   left: 50%;
   bottom: var(--space-1);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-1);
   padding: 1px var(--space-2);
   border-radius: var(--radius-full);
   transform: translateX(-50%);
@@ -145,44 +136,44 @@
   white-space: nowrap;
 }
 
-.past-card-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.past-card-info h3 { margin: 0; font-size: var(--text-lg); }
-.past-card-info > span { font-size: var(--text-xs); color: var(--text-secondary); display: flex; align-items: center; gap: 8px; }
+.pi-home-past-card-info { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
+.pi-home-past-card-info h3 { margin: 0; font-size: var(--text-lg); }
+.pi-home-past-card-info > span { font-size: var(--text-xs); color: var(--text-secondary); display: flex; align-items: center; gap: var(--space-2); }
 
 /* Móvil: 2 columnas de tarjetas compactas (imagen arriba, datos abajo) en vez
    de una fila alta por evento. */
 @media (max-width: 36rem) {
-  .past-events-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
-  .past-card {
+  .pi-home-past-events-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+  .pi-home-past-card {
     flex-direction: column;
     align-items: stretch;
     gap: var(--space-2);
     padding: var(--space-2);
     border-radius: var(--radius-lg);
   }
-  .past-card:hover { transform: none; }
-  .past-card-img { border-radius: var(--radius-md); }
-  .past-card img {
+  .pi-home-past-card:hover { transform: none; }
+  .pi-home-past-card-img { border-radius: var(--radius-md); }
+  .pi-home-past-card img {
     width: 100%;
     height: auto;
     aspect-ratio: 4 / 3;
   }
-  .past-card-info { gap: 4px; padding: 0 var(--space-1) var(--space-1); }
-  .past-card-info h3 {
+  .pi-home-past-card-info { gap: var(--space-1); padding: 0 var(--space-1) var(--space-1); }
+  .pi-home-past-card-info h3 {
     font-size: var(--text-sm);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .past-card-info > span { align-items: flex-start; gap: 4px; line-height: 1.35; }
-  .past-card-info > span svg { flex-shrink: 0; margin-top: 2px; }
+  .pi-home-past-card-info > span { align-items: flex-start; gap: var(--space-1); line-height: 1.35; }
+  .pi-home-past-card-info > span svg { flex-shrink: 0; margin-top: 2px; }
 }
 
 /* =======================================================
    RESPONSIVE
 ======================================================= */
 @media (max-width: 900px) {
-  .qpass-floating-navbar { width: 95%; padding: 0 16px; }
+  .pi-home-qpass-floating-navbar { width: 95%; padding: 0 var(--space-4); }
 }
 
 /* =========================================================================
@@ -191,7 +182,7 @@
    ocultaban y no quedaba ninguna forma de navegar; ahora se despliegan en
    un panel bajo la barra con el botón hamburguesa.
    ========================================================================= */
-.qpass-home-nav-toggle {
+.pi-home-qpass-home-nav-toggle {
   display: none;
   place-items: center;
   width: 2.75rem;
@@ -204,19 +195,19 @@
   cursor: pointer;
 }
 
-.qpass-home-nav-toggle:focus-visible,
-.qpass-home-nav-links a:focus-visible {
+.pi-home-qpass-home-nav-toggle:focus-visible,
+.pi-home-qpass-home-nav-links a:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
   border-radius: var(--radius-sm);
 }
 
 @media (max-width: 62rem) {
-  .qpass-home-nav-toggle { display: grid; }
+  .pi-home-qpass-home-nav-toggle { display: grid; }
   .qpass-home-nav-actions { gap: var(--space-2); display: flex; align-items: center; }
 
   /* El panel cuelga de la barra, que ya es glass y fixed. */
-  .qpass-home-nav-links {
+  .pi-home-qpass-home-nav-links {
     display: none;
     position: absolute;
     top: calc(100% + var(--space-2));
@@ -233,12 +224,12 @@
     box-shadow: var(--shadow-lg);
   }
 
-  .qpass-home-nav-links.esta-abierto { display: flex; }
+  .pi-home-qpass-home-nav-links.esta-abierto { display: flex; }
 
-  .qpass-home-nav-links li { width: 100%; }
+  .pi-home-qpass-home-nav-links li { width: 100%; }
 
   /* 44px de alto mínimo: objetivo táctil cómodo. */
-  .qpass-home-nav-links a {
+  .pi-home-qpass-home-nav-links a {
     display: flex;
     align-items: center;
     min-height: 2.75rem;
@@ -246,22 +237,23 @@
     border-radius: var(--radius-md);
   }
 
-  .qpass-home-nav-links a:hover { background: color-mix(in srgb, var(--blanco) 8%, transparent); }
+  .pi-home-qpass-home-nav-links a:hover { background: color-mix(in srgb, var(--blanco) 8%, transparent); }
 }
 
 /* En pantallas chicas el botón de sesión deja solo el ícono: el texto
    empujaba la barra y descolocaba el logo. */
 @media (max-width: 30rem) {
-  .qpass-home-nav-actions .btn-solid { padding: var(--space-3); }
-  .qpass-home-nav-actions .btn-solid span { display: none; }
-  .qpass-home-logo { font-size: var(--text-lg); }
-  .qpass-home-section { padding: var(--space-12) var(--space-4); }
+  /* <Boton> de sesión: solo el ícono (el texto queda para lectores). */
+  .qpass-home-sesion { padding: 0; aspect-ratio: 1; }
+  .qpass-home-sesion .qp-btn-txt { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .pi-home-qpass-home-logo { font-size: var(--text-lg); }
+  .pi-home-qpass-home-section { padding: var(--space-12) var(--space-4); }
 }
 
 /* Mismo motivo que en la página del evento: la navbar flotante es fixed, así
    que los saltos de ancla (Cartelera, Contáctanos, "Ver cartelera" del hero)
    tienen que reservar su alto o el título queda tapado. */
-.qpass-home-section,
+.pi-home-qpass-home-section,
 .qp-dest {
   scroll-margin-top: calc(var(--space-20) + var(--space-6));
 }
@@ -269,7 +261,7 @@
 /* =========================================================================
    NAVBAR: ESTADO AL BAJAR + SECCIÓN ACTIVA
    ========================================================================= */
-.qpass-floating-navbar {
+.pi-home-qpass-floating-navbar {
   transition: top var(--duration-normal) var(--ease-out),
               height var(--duration-normal) var(--ease-out),
               background-color var(--duration-normal) var(--ease-out),
@@ -278,7 +270,7 @@
 
 /* Al bajar se pega más arriba, se achica y se vuelve más opaca: deja de
    competir con el contenido que pasa por detrás. */
-.qpass-floating-navbar.esta-scrolleada {
+.pi-home-qpass-floating-navbar.esta-scrolleada {
   top: 12px;
   height: 60px;
   background: color-mix(in srgb, var(--azul-noche) 82%, transparent);
@@ -286,15 +278,15 @@
 }
 
 /* El logo ahora es un link (vuelve arriba). */
-a.qpass-home-logo { text-decoration: none; border-radius: var(--radius-md); }
-a.qpass-home-logo:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
-a.qpass-home-logo .logo-icon-bg { transition: transform var(--duration-normal) var(--ease-out); }
-a.qpass-home-logo:hover .logo-icon-bg { transform: rotate(-12deg) scale(1.08); }
+a.pi-home-qpass-home-logo { text-decoration: none; border-radius: var(--radius-md); }
+a.pi-home-qpass-home-logo:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+a.pi-home-qpass-home-logo .pi-home-logo-icon-bg { transition: transform var(--duration-normal) var(--ease-out); }
+a.pi-home-qpass-home-logo:hover .pi-home-logo-icon-bg { transform: rotate(-12deg) scale(1.08); }
 
-.qpass-home-nav-links a { position: relative; }
+.pi-home-qpass-home-nav-links a { position: relative; }
 
 /* Subrayado del link activo (escritorio). */
-.qpass-home-nav-links a::after {
+.pi-home-qpass-home-nav-links a::after {
   content: '';
   position: absolute;
   left: 0;
@@ -307,14 +299,14 @@ a.qpass-home-logo:hover .logo-icon-bg { transform: rotate(-12deg) scale(1.08); }
   transition: transform var(--duration-normal) var(--ease-out);
 }
 
-.qpass-home-nav-links a.es-activo { color: var(--cian-digital); }
-.qpass-home-nav-links a.es-activo::after,
-.qpass-home-nav-links a:hover::after { transform: scaleX(1); }
+.pi-home-qpass-home-nav-links a.es-activo { color: var(--cian-digital); }
+.pi-home-qpass-home-nav-links a.es-activo::after,
+.pi-home-qpass-home-nav-links a:hover::after { transform: scaleX(1); }
 
 @media (max-width: 62rem) {
   /* En el panel desplegable el subrayado no se lee: se marca con fondo. */
-  .qpass-home-nav-links a::after { display: none; }
-  .qpass-home-nav-links a.es-activo { background: color-mix(in srgb, var(--cian-digital) 14%, transparent); }
+  .pi-home-qpass-home-nav-links a::after { display: none; }
+  .pi-home-qpass-home-nav-links a.es-activo { background: color-mix(in srgb, var(--cian-digital) 14%, transparent); }
 }
 
 /* =========================================================================
@@ -394,10 +386,10 @@ a.qpass-home-logo:hover .logo-icon-bg { transform: rotate(-12deg) scale(1.08); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .qpass-floating-navbar,
+  .pi-home-qpass-floating-navbar,
   .qp-home-whatsapp,
-  .qpass-home-nav-links a::after,
-  a.qpass-home-logo .logo-icon-bg { transition: none; }
+  .pi-home-qpass-home-nav-links a::after,
+  a.pi-home-qpass-home-logo .pi-home-logo-icon-bg { transition: none; }
   .qp-home-whatsapp.es-visible::before { animation: none; }
-  a.qpass-home-logo:hover .logo-icon-bg { transform: none; }
+  a.pi-home-qpass-home-logo:hover .pi-home-logo-icon-bg { transform: none; }
 }

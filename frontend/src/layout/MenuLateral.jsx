@@ -10,7 +10,7 @@ import { MdAccountBalance, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'rea
 import { ROLES, ROLE_LABELS } from '../constants/roles.js';
 import { leerSesion, guardarSesion, cerrarSesion } from '../api/client.js';
 import api from '../api/index.js';
-import { leerTema, aplicarTema } from '../utils/tema.js';
+import { leerTema, aplicarTema, restaurarTema } from '../utils/tema.js';
 import { revisarBloqueoScroll } from '../utils/bloqueoScroll.js';
 import AlertasDuplicados from '../components/AlertasDuplicados.jsx';
 import { ROLES_SEGURIDAD } from '../utils/duplicados.js';
@@ -88,6 +88,9 @@ export default function MenuLateral({ children }) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [tema, setTema] = useState(leerTema);
+  // Al entrar al panel vuelve el tema elegido: las pantallas públicas lo
+  // fuerzan a claro mientras están abiertas (utils/tema.js).
+  useEffect(() => { restaurarTema(); }, []);
   // Las URLs de /uploads vienen firmadas con 30 min de vencimiento (ver
   // firma-uploads.ts): la foto guardada en localStorage nunca se refresca sola,
   // así que pasado ese rato el <img> tira 403. Guarda qué URL ya falló para no
@@ -182,11 +185,11 @@ export default function MenuLateral({ children }) {
         
         <div className="pi-layout-logo-section">
           <div className="pi-layout-logo">
-            <div className="logo-icon-wrapper">
+            <div className="pi-layout-logo-icon-wrapper">
               <MdAccountBalance size={24} color="var(--cian-digital)" />
             </div>
             {!isCollapsed && (
-              <div className="logo-text">
+              <div className="pi-layout-logo-text">
                 <h2>QPass</h2>
                 <p>{rolLabel}</p>
               </div>
@@ -220,8 +223,8 @@ export default function MenuLateral({ children }) {
                 title={isCollapsed ? item.titulo : ''}
               >
                 {/* Elementos fijos para la curva invertida */}
-                <span className="curve-top" aria-hidden="true"></span>
-                <span className="curve-bottom" aria-hidden="true"></span>
+                <span className="pi-layout-curve-top" aria-hidden="true"></span>
+                <span className="pi-layout-curve-bottom" aria-hidden="true"></span>
 
                 <span className="pi-layout-nav-content">
                   <span className="pi-layout-nav-icon" aria-hidden="true">{item.icono}</span>
@@ -258,7 +261,7 @@ export default function MenuLateral({ children }) {
         <div className="pi-layout-logout-section">
           <button
             type="button"
-            className="pi-layout-nav-item logout-btn"
+            className="pi-layout-nav-item pi-layout-logout-btn"
             onClick={handleCerrarSesion}
             title={isCollapsed ? 'Cerrar Sesión' : ''}
           >

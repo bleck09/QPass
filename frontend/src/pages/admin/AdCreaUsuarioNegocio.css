@@ -1,287 +1,31 @@
-/* Prefix único: pi-adnegocio- aplicando la Guía de Tipografía QPass */
+/* Gestión global de usuarios — solo layout propio (prefijo pi-adnegocio-).
+   Encabezado, buscador, tabla (celdas fila-nombre / celda-*), insignias de rol,
+   botones, campos y modal son los GLOBALES. Antes este archivo redefinía a nivel
+   global .fila-nombre, .celda-*, .badge-*, .kpi-*, .micro-etiqueta… (PLAN §2.0.6). */
 
 .pi-adnegocio-container {
-  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 20px;
-}
-
-.pi-adnegocio-header-wrapper {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  flex-wrap: wrap;
-  gap: 20px;
-}
-
-/* 2. Encabezados: Título de página (h2) 22px bold */
-.pi-adnegocio-header h1,
-.pi-adnegocio-header h2 {
-  color: var(--text-primary);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  margin: 0 0 4px 0;
-}
-
-.pi-adnegocio-header p {
-  color: var(--text-secondary);
-  font-size: var(--text-base);
-  font-weight: 400;
-  margin: 0;
-}
-
-/* 7. Números Grandes (KPI) */
-.pi-adnegocio-kpi {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 16px 24px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 2px 4px rgba(10, 14, 39,0.02);
-}
-
-/* 6. Micro-etiqueta */
-.micro-etiqueta {
-  font-size: var(--text-xs);
-  font-weight: 400;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
-  margin-bottom: 4px;
-}
-
-.kpi-valor {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--text-primary);
-}
-
-.kpi-icon {
-  font-size: var(--text-lg);
-  color: var(--verde-recarga);
-}
-
-.numero-grande {
-  font-size: var(--text-xl);
-  font-weight: 700;
-}
-
-/* Buscador destacado */
-.pi-adnegocio-buscador-destacado {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: var(--bg-surface);
-  border: 2px solid var(--indigo-profundo);
-  border-radius: var(--radius-lg);
-  padding: 14px 18px;
-  box-shadow: 0 4px 18px rgba(26, 43, 107, 0.14);
-  margin-bottom: 16px;
-}
-
-.pi-adnegocio-buscador-destacado .bd-icon {
-  color: var(--indigo-profundo);
-  font-size: var(--text-lg);
-  flex-shrink: 0;
-}
-
-.pi-adnegocio-buscador-destacado input {
-  flex: 1;
-  min-width: 0;
-  border: none;
-  outline: none;
-  background: none;
-  font-size: var(--text-base);
-  font-family: inherit;
-  color: var(--text-primary);
-}
-
-.pi-adnegocio-buscador-destacado input::placeholder {
-  color: var(--text-secondary);
-  font-size: var(--text-base);
-}
-
-.pi-adnegocio-buscador-destacado .bd-clear {
-  border: none;
-  background: var(--bg-page);
-  color: var(--text-secondary);
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition: color 0.15s;
-}
-
-.pi-adnegocio-buscador-destacado .bd-clear:hover {
-  color: var(--rojo-error);
-}
-
-.pi-adnegocio-resultados {
-  margin: 0;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
-/* Barra de Búsqueda (legacy) */
-.pi-adnegocio-search {
-  position: relative;
+  gap: var(--space-5);
   width: 100%;
-  margin-bottom: 24px;
 }
 
-.search-icon {
-  position: absolute;
-  left: 15px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-secondary);
+.pi-adnegocio-item-info { display: flex; align-items: center; gap: var(--space-3); }
+
+.pi-adnegocio-img,
+.pi-adnegocio-no-img {
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: var(--radius-full);
 }
 
-/* 4. Inputs normales y placeholders */
-.pi-adnegocio-search input {
-  width: 100%;
-  padding: 12px 16px 12px 40px;
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-md);
-  outline: none;
-  font-size: var(--text-sm);
-  font-weight: 400;
-  background-color: var(--bg-surface);
-  color: var(--text-primary);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.pi-adnegocio-search input::placeholder,
-.input-wrapper input::placeholder {
-  font-size: var(--text-xs);
-  font-weight: 400;
-  color: var(--text-secondary);
-}
-
-.pi-adnegocio-search input:focus {
-  border-color: var(--cian-digital);
-  box-shadow: 0 0 0 3px var(--cian-digital-suave);
-}
-
-/* 5. Botones */
-.pi-adnegocio-btn-add {
-  background-color: var(--indigo-profundo);
-  color: var(--text-on-accent);
-  border: none;
-  padding: 8px 20px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  transition: background 0.2s;
-}
-
-.pi-adnegocio-btn-add:hover {
-  background-color: var(--indigo-profundo-hover);
-}
-
-/* Tarjeta Principal y Tabla */
-.pi-adnegocio-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
-  padding: var(--space-6);
-}
-
-.pi-adnegocio-item-info {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.pi-adnegocio-img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid var(--border);
-}
+.pi-adnegocio-img { object-fit: cover; border: 1px solid var(--border); }
 
 .pi-adnegocio-no-img {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background-color: var(--bg-page);
+  display: grid;
+  place-items: center;
+  background: var(--bg-page);
   color: var(--text-secondary);
-  display: flex;
-  justify-content: center;
-  align-items: center;
   font-size: var(--text-base);
 }
-
-/* Nombre de fila (persona/participante) */
-.fila-nombre {
-  font-size: var(--text-sm);
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.celda-normal {
-  font-size: var(--text-sm);
-  font-weight: 400;
-  color: var(--text-primary);
-}
-
-.celda-secundaria {
-  font-size: var(--text-sm);
-  font-weight: 400;
-  color: var(--text-secondary);
-}
-
-/* 6. Badges (Etiquetas de estado) */
-.pi-adnegocio-badge {
-  padding: 4px 12px;
-  border-radius: var(--radius-xl);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  display: inline-block;
-}
-
-.badge-supervisor { background: var(--indigo-profundo-suave); color: var(--indigo-profundo); } 
-.badge-recargador { background: var(--verde-recarga-suave); color: var(--verde-recarga-texto); } 
-.badge-negocio { background: var(--cian-digital-suave); color: var(--cian-digital-texto); } 
-.badge-devolucion { background: var(--ambar-aviso-suave); color: var(--ambar-aviso-texto); } 
-.badge-cliente { background: var(--bg-page); color: var(--text-secondary); } 
-.badge-default { background: var(--border); color: var(--text-primary); }
-
-/* Botones de acción tabla */
-.pi-adnegocio-btn-delete {
-  background-color: var(--rojo-error-suave);
-  color: var(--rojo-error-texto);
-  border: none;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  display: inline-flex;
-  justify-content: center;
-  align-items: center;
-  transition: all 0.2s;
-}
-
-.pi-adnegocio-btn-delete:hover {
-  background-color: var(--rojo-error);
-  color: var(--text-on-accent);
-}
-
-
-/* El modal "Registrar Nuevo Usuario" usa el componente <Modal> compartido y
- * las clases globales .formulario/.input-group/.modal-actions/.btn-cancelar/
- * .btn-primario (forms.css / buttons.css) — no necesita CSS propio. */

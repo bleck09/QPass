@@ -6,29 +6,6 @@
   gap: var(--space-4);
 }
 
-.qp-duplicados__header h1 {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin: 0 0 var(--space-2);
-}
-
-.qp-duplicados__header p {
-  margin: 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-.qp-duplicados__vacio {
-  color: var(--text-secondary);
-}
-
-.qp-duplicados__ok {
-  margin: 0;
-  color: var(--ok-text);
-  font-weight: var(--weight-semibold);
-}
-
 .qp-duplicados__grilla {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -137,9 +114,6 @@
 ======================================================= */
 @media (max-width: 560px) {
   .qp-duplicados { gap: var(--space-3); }
-  .qp-duplicados__header h1 { font-size: var(--text-xl); }
-  .qp-duplicados__header h1 svg { flex-shrink: 0; font-size: var(--text-lg); }
-  .qp-duplicados__header p { font-size: var(--text-xs); }
   .qp-duplicados__grilla { grid-template-columns: 1fr; gap: var(--space-3); }
   .qp-duplicados__caso { gap: var(--space-3); }
   /* Las medidas vienen del atributo width/height de <FotoZoom>; acá se achican. */

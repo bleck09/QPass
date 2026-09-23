@@ -218,6 +218,7 @@
   --z-sticky: 1100;
   --z-overlay: 1200;
   --z-modal: 1300;
+  --z-confirmar: 1400; /* confirmación abierta DESDE un modal: siempre encima */
   --z-toast: 1500;
 
   /* Movimiento (Manual 7.3 / 13.1) */
@@ -265,8 +266,14 @@
     --viz-serie-1:   #3987e5;
     --viz-serie-2:   #d95926;
 
-    --action:       #4A5FA8;
-    --action-hover: #5A6FB8;
+    /* Cian y no el índigo #4A5FA8: sobre el fondo oscuro ese índigo daba 2.77:1,
+       por debajo del mínimo hasta para íconos (3:1). El cian da 6.77:1. */
+    --action:       #00B4D8;
+    --action-hover: #38C7E6;
+    /* Sobre el cian, el blanco solo da 2.46:1: el texto del botón primario
+       pasa a azul noche (7.71:1), que es la regla del sistema para fondos
+       vivos (--text-on-vivid). */
+    --text-on-accent: var(--azul-noche);
     --accent:       #38C7E6;
     --accent-hover: #5AD3EC;
 
@@ -316,8 +323,14 @@
   --viz-serie-1:   #3987e5;
   --viz-serie-2:   #d95926;
 
-  --action:       #4A5FA8;
-  --action-hover: #5A6FB8;
+  /* Cian y no el índigo #4A5FA8: sobre el fondo oscuro ese índigo daba 2.77:1,
+     por debajo del mínimo hasta para íconos (3:1). El cian da 6.77:1. */
+  --action:       #00B4D8;
+  --action-hover: #38C7E6;
+  /* Sobre el cian, el blanco solo da 2.46:1: el texto del botón primario
+     pasa a azul noche (7.71:1), que es la regla del sistema para fondos
+     vivos (--text-on-vivid). */
+  --text-on-accent: var(--azul-noche);
   --accent:       #38C7E6;
   --accent-hover: #5AD3EC;
 
@@ -372,9 +385,6 @@ body {
 
 /* Utilidad opcional para bloques de texto corrido (Manual 5.1: 45-75 caracteres).
    Se aplica donde haga falta, no globalmente, para no encajonar textos de UI. */
-.texto-lectura {
-  max-width: 68ch;
-}
 
 a {
   color: var(--cian-digital-texto);

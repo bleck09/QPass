@@ -3,16 +3,6 @@
    compartidos), igual que el listado de eventos. */
 
 /* Etiqueta "Archivado" sobre la tarjeta de evento */
-.pi-mcat-tag-archivado {
-  display: inline-flex;
-  align-items: center;
-  font-size: var(--text-xs);
-  font-weight: 700;
-  background: rgba(10, 14, 39, 0.72);
-  color: #fff;
-  padding: 3px 10px;
-  border-radius: var(--radius-full);
-}
 
 .pi-mcat-card__chips {
   display: flex;
@@ -21,18 +11,6 @@
   margin-top: 4px;
 }
 .pi-mcat-card__chips--mt { margin-top: var(--space-2); }
-.pi-mcat-card__chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--bg-page);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 2px 9px;
-}
 
 /* ---- Página de detalle de un puesto base ---- */
 .pi-mcat-detalle-head {
@@ -68,17 +46,6 @@
   font-size: var(--text-base);
   margin: 0;
 }
-.pi-mcat-detalle-acciones {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-/* Botón secundario en tono peligro (Archivar / Quitar) */
-.pi-mcat-danger:hover {
-  color: var(--rojo-error-texto);
-  border-color: var(--rojo-error-texto);
-}
 
 /* ---- Barra de acciones sobre la lista de productos ---- */
 .pi-mcat-prod-bar {
@@ -100,32 +67,6 @@
    para que no quede pegado a las tarjetas / tabla de abajo. */
 .pi-mcat-prod-buscador {
   margin-bottom: var(--space-4);
-}
-
-/* Conmutador tarjetas / tabla */
-.pi-mcat-vista-toggle {
-  display: inline-flex;
-  gap: 4px;
-  background: var(--bg-page);
-  padding: 4px;
-  border-radius: var(--radius-md);
-}
-.pi-mcat-vista-toggle button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 30px;
-  border: none;
-  background: none;
-  border-radius: var(--radius-sm);
-  color: var(--text-secondary);
-  cursor: pointer;
-}
-.pi-mcat-vista-toggle button.activo {
-  background: var(--bg-surface);
-  color: var(--indigo-profundo);
-  box-shadow: var(--shadow-sm);
 }
 
 /* ---- Grilla de tarjetas pequeñas de producto ---- */
@@ -183,20 +124,3 @@
   padding: 8px 10px 10px;
   border-top: 1px solid var(--border);
 }
-.pi-mcat-prod-card__acciones button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  flex: 1;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: 6px 8px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-.pi-mcat-prod-card__acciones button:hover { color: var(--text-primary); border-color: var(--text-secondary); }

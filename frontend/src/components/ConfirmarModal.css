@@ -4,7 +4,7 @@
 .confirmar-overlay {
   position: fixed;
   inset: 0;
-  z-index: var(--z-modal);
+  z-index: var(--z-confirmar);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -94,47 +94,16 @@
   justify-content: center;
 }
 
-.confirmar-btn {
-  flex: 1;
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-md);
-  border: 1px solid transparent;
-  font: inherit;
-  font-weight: var(--weight-semibold);
-  cursor: pointer;
-  transition: background-color var(--duration-fast) var(--ease-out),
-              border-color var(--duration-fast) var(--ease-out);
-}
+/* Los botones son <Boton> (styles/buttons.css). Acá solo dos cosas propias
+   de este diálogo:
+   1. ocupan mitad y mitad del pie;
+   2. el de confirmar sigue siendo ÍNDIGO y no el cian de la app. Se hace con
+      las variables --btn-* del propio Boton, sin reescribir el botón. Si algún
+      día se quiere que sea cian como el resto, se borran estas 3 líneas. */
+.confirmar-acciones .qp-btn { flex: 1; }
 
-.confirmar-btn-cancelar {
-  background: var(--bg-surface);
-  border-color: var(--border-strong);
-  color: var(--text-primary);
-}
-
-.confirmar-btn-cancelar:hover {
-  background: var(--bg-page);
-}
-
-.confirmar-btn-ok {
-  background: var(--indigo-profundo);
-  color: var(--texto-sobre-oscuro);
-}
-
-.confirmar-btn-ok:hover {
-  background: var(--indigo-profundo-hover);
-}
-
-.confirmar-btn-ok.es-peligroso {
-  background: var(--rojo-error);
-  color: var(--texto-sobre-vivo);
-}
-
-.confirmar-btn-ok.es-peligroso:hover {
-  background: var(--rojo-error-hover);
-}
-
-.confirmar-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
+.confirmar-acciones .qp-btn--primario {
+  --btn-bg: var(--indigo-profundo);
+  --btn-bg-hover: var(--indigo-profundo-hover);
+  --btn-texto: var(--texto-sobre-oscuro);
 }

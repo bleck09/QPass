@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   FaTicketAlt, FaQrcode, FaWallet, FaStore, FaUsersCog, FaShieldAlt,
   FaChartLine, FaArrowRight, FaCashRegister, FaBoxOpen, FaUserFriends,
@@ -9,6 +9,7 @@ import { IMAGENES_LANDING } from '../../constants/imagenesLanding.js';
 import { useRevelar } from '../../utils/useRevelar.js';
 import './InfoSecciones.css';
 import Boton from '../../components/Boton.jsx';
+import Pestanas from '../../components/Pestanas.jsx';
 
 // Lo que QPass resuelve por el organizador. Cada ítem corresponde a un módulo
 // que ya existe en el sistema: no prometer acá nada que la app no haga.
@@ -76,8 +77,8 @@ function VistaOrganizador({ onContactar }) {
         onPointerMove={seguirPuntero}
       >
         {SERVICIOS.map(({ icono: Icono, titulo, texto }, i) => (
-          <li key={titulo} className="qp-info__servicio glass-morphism" style={{ '--i': i }}>
-            <span className="icon-circle" aria-hidden="true"><Icono /></span>
+          <li key={titulo} className="qp-info__servicio pi-home-glass-morphism" style={{ '--i': i }}>
+            <span className="pi-home-icon-circle" aria-hidden="true"><Icono /></span>
             <h4>{titulo}</h4>
             <p>{texto}</p>
           </li>
@@ -166,7 +167,7 @@ function VistaNegocio({ onContactar }) {
         className={`qp-info__beneficios qp-escalonado${benVisible ? ' es-visible' : ''}`}
       >
         {BENEFICIOS_NEGOCIO.map(({ icono: Icono, titulo, texto }, i) => (
-          <li key={titulo} className="glass-morphism" style={{ '--i': i }}>
+          <li key={titulo} className="pi-home-glass-morphism" style={{ '--i': i }}>
             <span className="qp-info__ic-alt" aria-hidden="true"><Icono /></span>
             <strong>{titulo}</strong>
             <span>{texto}</span>
@@ -199,20 +200,11 @@ function VistaNegocio({ onContactar }) {
  */
 export default function OrganizadoresSection({ onContactar }) {
   const [pestana, setPestana] = useState('organizador');
-  const tabsRef = useRef({});
-
-  const teclado = (e) => {
-    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
-    e.preventDefault();
-    const otra = pestana === 'organizador' ? 'negocio' : 'organizador';
-    setPestana(otra);
-    tabsRef.current[otra]?.focus();
-  };
 
   return (
     <>
       <div className="qp-info__intro qp-info__intro--invertido">
-        <div className="section-header qp-info__header">
+        <div className="pi-home-section-header qp-info__header">
           <span className="qp-info__eyebrow">Para organizadores y negocios</span>
           <h2>Vos ponés el show. <span className="qp-info__resalte">Nosotros, todo lo demás.</span></h2>
           <p>
@@ -232,29 +224,15 @@ export default function OrganizadoresSection({ onContactar }) {
         </div>
       </div>
 
-      <div className="qp-info__tabs" role="tablist" aria-label="¿Qué buscás?" onKeyDown={teclado}>
-        <span
-          className="qp-info__tabs-indicador"
-          style={{ transform: `translateX(${pestana === 'organizador' ? 0 : 100}%)` }}
-          aria-hidden="true"
-        />
-        {PESTANAS.map(({ id, etiqueta, icono: Icono }) => (
-          <button
-            key={id}
-            ref={(n) => { tabsRef.current[id] = n; }}
-            type="button"
-            role="tab"
-            id={`qp-org-tab-${id}`}
-            aria-selected={pestana === id}
-            aria-controls={`qp-org-panel-${id}`}
-            tabIndex={pestana === id ? 0 : -1}
-            className={`qp-info__tab${pestana === id ? ' es-activa' : ''}`}
-            onClick={() => setPestana(id)}
-          >
-            <Icono aria-hidden="true" /> {etiqueta}
-          </button>
-        ))}
-      </div>
+      <Pestanas
+        className="qp-info__pestanas"
+        items={PESTANAS}
+        activo={pestana}
+        onCambio={setPestana}
+        etiqueta="¿Qué buscás?"
+        idBase="qp-org"
+        anchoCompleto
+      />
 
       <div
         key={pestana}

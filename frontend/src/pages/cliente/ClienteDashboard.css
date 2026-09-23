@@ -6,40 +6,6 @@
   gap: 28px;
 }
 
-.pi-cld-header h1 {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  color: var(--text-primary);
-  font-size: var(--text-xl);
-  margin: 0;
-}
-
-.pi-cld-header p {
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-  margin: 4px 0 0;
-}
-
-.pi-cld-header .pi-entrega-btn-volver {
-  margin-bottom: 8px;
-}
-
-.pi-cld-badge {
-  font-size: var(--text-xs);
-}
-
-.pi-cld-congelado {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-muted);
-  margin: 4px 0 0;
-}
-
 .pi-cld-seccion {
   background: var(--bg-surface);
   border: 1px solid var(--border);
@@ -65,25 +31,6 @@
   flex-wrap: wrap;
 }
 
-.pi-cld-btn-export {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--border-strong);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-sm);
-  font-weight: 700;
-  padding: 8px 14px;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  transition: background-color 0.15s;
-}
-
-.pi-cld-btn-export:hover {
-  background: var(--bg-hover);
-}
-
 .pi-cld-subtitulo {
   display: flex;
   align-items: center;
@@ -92,67 +39,6 @@
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
-}
-
-.pi-cld-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.pi-cld-nota {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-.pi-cld-aviso {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background-color: var(--warn-bg);
-  color: var(--warn-text);
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-/* --- Checklist de preparación --- */
-.pi-cld-checklist {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 10px;
-}
-
-.pi-cld-checklist li {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-sm);
-  border: 1px solid var(--border);
-}
-
-.pi-cld-checklist li.ok {
-  color: var(--text-primary);
-}
-
-.pi-cld-checklist li.ok svg {
-  color: var(--ok-text);
-}
-
-.pi-cld-checklist li.falta {
-  color: var(--text-secondary);
-}
-
-.pi-cld-checklist li.falta svg {
-  color: var(--text-muted);
 }
 
 /* --- Barra de ocupación --- */
@@ -172,36 +58,6 @@
 }
 
 /* --- Bloque E: gráfico de aforo + proyección --- */
-.pi-cld-grafico {
-  margin-top: 18px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 16px;
-}
-.pi-cld-grafico-cab {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-.pi-cld-grafico-titulo {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-.pi-cld-grafico-toggle {
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--text-secondary);
-  border-radius: 8px;
-  padding: 4px 10px;
-  font-size: 12px;
-  cursor: pointer;
-}
-.pi-cld-grafico-body { width: 100%; height: 260px; }
 
 .pi-cld-proyeccion {
   margin-top: 14px;
@@ -219,15 +75,4 @@
   flex-wrap: wrap;
   gap: 8px;
   margin: 10px 0 4px;
-}
-.pi-cld-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--bg-muted, rgba(0, 0, 0, 0.05));
-  color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 600;
 }
