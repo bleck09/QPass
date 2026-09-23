@@ -1,0 +1,274 @@
+PLAN: INTEGRACIÓN PASARELA DE PAGOS (LIBÉLULA) + ENVÍO DE CORREO REAL
+=====================================================================
+Fecha: 2026-09-23
+Alcance: backend NestJS (backend/src). No toca frontend salvo lo mínimo
+indicado en la Fase 3.
+
+-------------------------------------------------------------------
+BITÁCORA / REGISTRO DE AVANCE
+-------------------------------------------------------------------
+2026-09-23 — Plan escrito. Se leyó "Libelula guia.pdf" (raíz del repo)
+y se exploró el código actual (módulo compras/, mail.service.ts) para
+armar este plan con datos reales, no supuestos.
+
+2026-09-23 — Fase 1 (correo real) IMPLEMENTADA:
+  - Se instaló `nodemailer` (+ `@types/nodemailer`) en backend/.
+  - `backend/src/mail/mail.service.ts`: reemplazado el stub (solo
+    logueaba) por un transporte SMTP real con nodemailer. Si
+    SMTP_HOST no está configurado, sigue cayendo al modo stub
+    automáticamente (no rompe entornos locales sin credenciales).
+    Un fallo de envío se loguea pero NO tira la operación de negocio
+    que lo disparó (aprobar/rechazar compra, etc.).
+  - `backend/src/config/env.validation.ts`: se agregaron SMTP_SECURE
+    (default "false") y SMTP_FROM (remitente visible) al esquema Zod.
+  - `backend/.env` y `backend/.env.example`: agregado el bloque SMTP
+    completo. En `.env` quedó configurado para la cuenta real
+    qpass.team@gmail.com — falta completar SMTP_PASS con la
+    "contraseña de aplicación" de Gmail (no la contraseña normal;
+    se genera en myaccount.google.com/apppasswords, requiere 2FA
+    activado en esa cuenta).
+  Pendiente para dejarlo 100% funcional:
+    1. Activar verificación en 2 pasos en qpass.team@gmail.com.
+    2. Generar la contraseña de aplicación (16 caracteres) y pegarla
+       en backend/.env -> SMTP_PASS.
+    3. Reiniciar el backend y probar aprobando/rechazando una compra
+       real para confirmar que el correo llega.
+  Nota de escalabilidad: Gmail tiene límite ~500 correos/día (y menos
+  por hora). Sirve para el volumen actual. Si el envío masivo se
+  vuelve cuello de botella, migrar a un proveedor dedicado (SendGrid,
+  Amazon SES) es solo cambiar el transporte dentro de mail.service.ts
+  — el resto del backend no cambia, porque todos llaman a
+  `mail.enviar(...)` sin saber el proveedor.
+
+Fase 2 (Libélula) — todavía NO implementada, solo planificada (ver
+secciones siguientes de este documento).
+
+-------------------------------------------------------------------
+0. ESTADO ACTUAL (línea base, verificado en código)
+-------------------------------------------------------------------
+- Compras (backend/src/modules/compras/):
+  - Hoy el pago es 100% manual: el comprador sube un comprobante
+    (comprobanteUrl/comprobanteNombreArchivo) al crear la Compra
+    (ComprasService.crear, compras.service.ts).
+  - Compra.montoTotal = suma de CategoriaTicket.precio de cada Entrada
+    del pedido (una fila por entrada/persona, no agrupada).
+  - Estados: EstadoSolicitud = pendiente | confirmado | rechazado
+    (prisma/schema.prisma).
+  - Un Admin aprueba (POST /compras/:id/aprobar) o rechaza
+    (POST /compras/:id/rechazar) a mano. Aprobar crea usuarios,
+    numera entradas, asigna QR y llama a mail.enviar(). Rechazar
+    libera cupo y llama a mail.enviar().
+- Correo (backend/src/mail/mail.service.ts):
+  - MailService.enviar() es un STUB: solo hace logger.log(), no manda
+    nada. Es @Global(), sin dependencias — se puede reemplazar el
+    contenido sin tocar el resto del backend (todos ya llaman a
+    mail.enviar(...)).
+  - Único consumidor real: compras.service.ts (aprobar/rechazar).
+  - No existe cola BullMQ real todavía (solo comentarios que la
+    mencionan como "paso siguiente"). REDIS_URL ya está en el
+    esquema de env pero es opcional y no se usa.
+- Config (backend/src/config/env.validation.ts, Zod):
+  - Ya existen (opcionales): SMTP_HOST, SMTP_PORT (default 587),
+    SMTP_USER, SMTP_PASS. Falta SMTP_FROM y SMTP_SECURE.
+  - No existe ninguna variable de Libélula todavía.
+- Seguridad de endpoints (backend/src/common/):
+  - Decorator @Publico() + JwtAuthGuard global ya soportan rutas sin
+    JWT (se usa en GETs de catálogo y en /auth). Es el mecanismo a
+    reusar para el webhook de Libélula, pero @Publico() NO es
+    autenticación del webhook — hay que añadir verificación propia.
+- No existe ningún controller de webhook/callback hoy: se arma desde
+  cero.
+
+-------------------------------------------------------------------
+1. DECISIÓN DE DISEÑO: qué canal de Libélula usar
+-------------------------------------------------------------------
+Libélula (grupo Todotix) expone el flujo "REGISTRAR DEUDA":
+  POST https://api.libelula.bo/rest/deuda/registrar
+que devuelve una url_pasarela_pagos a la que se redirige al cliente.
+Libélula soporta Cybersource (tarjetas), SimpleQR (BCP/BNB), Botón
+BCP, Tigo Money, BNBNet, Pago Express — todos por el mismo servicio,
+sin cambios de integración.
+
+Se mantiene el pago manual con comprobante como fallback/alternativa
+(pago en efectivo/transferencia con revisión de Admin), y se agrega
+Libélula como canal "pago en línea" nuevo. Esto evita reescribir todo
+el flujo de aprobación manual (útil para QR físico/eventos con caja).
+
+Flujo elegido (online, vía Libélula):
+  1. Usuario crea la Compra eligiendo "pagar en línea".
+  2. Backend llama a REGISTRAR DEUDA con appkey + email + identificador
+     de la Compra (compraId) + líneas_detalle_deuda (una línea por
+     categoría/entrada) + callback_url apuntando al webhook propio +
+     url_retorno apuntando al frontend (pantalla "gracias por tu
+     compra").
+  3. Se guarda id_transaccion (de Libélula) y url_pasarela_pagos en la
+     Compra, estado sigue "pendiente".
+  4. Se redirige/muestra al usuario la url_pasarela_pagos.
+  5. Libélula hace GET a nuestro webhook cuando el pago se confirma
+     (PAGO EXITOSO) — puede ser inmediato o en background según canal
+     (Tigo/BNB tardan más).
+  6. El webhook ejecuta la misma lógica que hoy hace
+     ComprasService.aprobar() (crear usuarios, numerar entradas, QR,
+     marcar confirmado, mandar correo) — sin intervención de Admin.
+  7. Cron de reconciliación diaria llama a CONSULTAR PAGOS (o
+     CONSULTAR DEUDAS POR FECHAS) para detectar pagos que el webhook
+     no haya confirmado (falla de red, etc.) y cerrarlos igual.
+
+-------------------------------------------------------------------
+2. CAMBIOS DE MODELO (Prisma)
+-------------------------------------------------------------------
+Agregar a Compra (prisma/schema.prisma), en vez de una tabla aparte
+(mantiene todo consultable desde la misma fila, igual patrón que
+comprobanteUrl):
+  - metodoPago         Enum: MANUAL | LIBELULA   (default MANUAL)
+  - libelulaIdTransaccion   String? (id_transaccion de Libélula)
+  - libelulaUrlPago        String? (url_pasarela_pagos)
+  - libelulaCodigoRecaudacion String? (codigo_recaudacion)
+  - libelulaFormaPago      String? (forma_pago devuelta al confirmar)
+  - libelulaConfirmadoEn   DateTime?
+
+Migración: `npx prisma migrate dev --name agrega_pago_libelula`.
+
+-------------------------------------------------------------------
+3. NUEVO MÓDULO: pagos (Libélula)
+-------------------------------------------------------------------
+backend/src/modules/pagos/
+  - libelula.service.ts
+      registrarDeuda(compra): POST /rest/deuda/registrar
+      consultarPagos(fechaInicial, fechaFinal): reconciliación
+      consultarDeudaPorIdentificador(compraId)
+      anularPago(...) / regenerarFactura(...)  [fase 2, opcional]
+      Usa HttpModule (@nestjs/axios) o fetch nativo; timeout + 1 retry.
+  - pagos.controller.ts
+      @Publico()
+      GET/POST /pagos/libelula/callback   ->  webhook "PAGO EXITOSO"
+        - Verifica transaction_id contra Compra.libelulaIdTransaccion.
+        - Idempotente: si la Compra ya está "confirmado", responde 200
+          sin repetir el trabajo (Libélula puede reintentar el callback).
+        - Delega en ComprasService (método extraído, ver sección 4).
+  - pagos.module.ts
+
+Seguridad del webhook (Libélula NO firma sus callbacks con HMAC según
+la guía, solo manda transaction_id por querystring):
+  - Mitigar spoofing verificando que transaction_id exista y coincida
+    con una Compra en estado "pendiente" con metodoPago=LIBELULA.
+  - Como confirmación fuerte, tras recibir el callback, el backend
+    SIEMPRE hace una llamada de vuelta a CONSULTAR DEUDAS POR
+    IDENTIFICADOR (server-to-server, con el appkey) para verificar
+    pagado=true antes de confirmar la Compra. Así un callback falso
+    no puede confirmar una compra no pagada.
+  - Rate-limit del endpoint público (ya existe throttler global, si
+    no, agregar uno específico).
+
+-------------------------------------------------------------------
+4. REFACTOR MÍNIMO EN ComprasService
+-------------------------------------------------------------------
+- Extraer de aprobar() la parte "crear usuarios + numerar entradas +
+  asignar QR + marcar confirmado + mandar correos" a un método privado
+  reutilizable, ej. `confirmarCompra(compra, resueltoPorId?: string)`.
+  - aprobar() (Admin) la llama con resueltoPorId = admin.id.
+  - El nuevo flujo de Libélula la llama con resueltoPorId = null
+    (o un id de "sistema"), marcando en auditoría que fue automático.
+- crear(): agregar branch por metodoPago:
+  - MANUAL: comportamiento actual (comprobante).
+  - LIBELULA: no exige comprobante; al final de la transacción llama a
+    LibelulaService.registrarDeuda(compra) y persiste los campos de
+    la sección 2. Si falla el registro de deuda en Libélula, la Compra
+    se crea igual en "pendiente" pero se informa el error al frontend
+    para reintentar (no bloquear el cupo ya reservado, o revertir el
+    cupo si se prefiere abortar — decidir con el usuario/negocio).
+
+-------------------------------------------------------------------
+5. CORREO REAL (reemplazar el stub)
+-------------------------------------------------------------------
+- Librería: nodemailer.
+- backend/src/mail/mail.service.ts: reemplazar el logger.log por un
+  transport SMTP real (nodemailer.createTransport) usando
+  SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM (agregar
+  SMTP_FROM y SMTP_SECURE al esquema Zod en env.validation.ts).
+- Mantener la firma enviar(correo: CorreoAEnviar) intacta — es el
+  único archivo que cambia, tal como ya dice el comentario del propio
+  código.
+- Manejo de errores: si SMTP falla, loguear el error pero NO tirar la
+  operación de negocio (aprobar/rechazar/confirmar-pago no deben
+  fallar por un correo caído) — try/catch interno en enviar().
+- Cola (opcional, fase 2): si el volumen de correos lo justifica,
+  instalar @nestjs/bullmq + bullmq, usar el REDIS_URL ya presente en
+  env.validation.ts (hoy opcional, pasaría a requerido si se activa
+  esto), crear MailQueueModule con un Processor que llama al mismo
+  transport. Esto evita que un SMTP lento bloquee la respuesta HTTP
+  de /compras/:id/aprobar. No es bloqueante para tener correo real
+  funcionando — se puede lanzar la Fase de correo sin cola primero.
+
+-------------------------------------------------------------------
+6. VARIABLES DE ENTORNO NUEVAS (env.validation.ts)
+-------------------------------------------------------------------
+LIBELULA_APPKEY          string, requerido cuando se habilite el canal
+LIBELULA_API_URL         string, default "https://api.libelula.bo"
+LIBELULA_CALLBACK_URL    string (URL pública del webhook propio,
+                         ej. https://api.qpass.bo/pagos/libelula/callback)
+LIBELULA_URL_RETORNO     string (URL del frontend post-pago)
+SMTP_FROM                string, ej. "QPass <no-responder@qpass.bo>"
+SMTP_SECURE              boolean, default false (true si puerto 465)
+
+Nota: para pruebas, Libélula indica apuntar a producción con la
+"llave de pruebas" que ellos asignen (no hay sandbox separado) — o
+sea LIBELULA_APPKEY de test y de prod son ambas contra
+api.libelula.bo, solo cambia el appkey.
+
+-------------------------------------------------------------------
+7. RECONCILIACIÓN (cron)
+-------------------------------------------------------------------
+- Nuevo cron en backend/src/modules/jobs/ (mismo patrón que los 5
+  crons existentes, ej. ReconciliacionSaldoCron):
+  ReconciliacionPagosLibelulaCron: cada X horas, llama a
+  CONSULTAR PAGOS (fecha_inicial = última corrida, fecha_final = ahora)
+  y para cada pago encontrado que corresponda a una Compra todavía
+  "pendiente", ejecuta confirmarCompra(...). Cubre caídas del webhook.
+
+-------------------------------------------------------------------
+8. FRONTEND (cambios mínimos, fuera del alcance principal)
+-------------------------------------------------------------------
+- Pantalla de checkout: opción "Pagar en línea" vs "Subir comprobante".
+- Si Libélula: tras crear la Compra, redirigir a
+  compra.libelulaUrlPago (o mostrar el QR si el canal lo permite).
+- Pantalla de retorno (url_retorno) mostrando estado de la compra
+  (polling corto a GET /compras/:id o al estado ya conocido).
+
+-------------------------------------------------------------------
+9. ORDEN DE IMPLEMENTACIÓN SUGERIDO
+-------------------------------------------------------------------
+Fase 1 — Correo real (independiente, bajo riesgo, ya hay cuenta):
+  1. Agregar SMTP_FROM/SMTP_SECURE a env.validation.ts.
+  2. Instalar nodemailer, reemplazar mail.service.ts.
+  3. Probar aprobar()/rechazar() de una Compra real y confirmar
+     llegada de correo.
+
+Fase 2 — Libélula, registro de deuda + webhook (canal nuevo, no
+rompe el flujo manual existente):
+  1. Migración Prisma (sección 2).
+  2. LibelulaService.registrarDeuda + pagos.controller webhook
+     (secciones 3 y 4), con la doble verificación (callback +
+     consulta server-to-server).
+  3. Refactor confirmarCompra() en ComprasService.
+  4. Variables LIBELULA_* (sección 6).
+  5. Probar end-to-end con el appkey de pruebas que asigne Libélula
+     contra api.libelula.bo.
+
+Fase 3 — Reconciliación + frontend (sección 7 y 8).
+
+Fase 4 (opcional) — Cola BullMQ para correo si el volumen lo pide.
+
+-------------------------------------------------------------------
+10. RIESGOS / DECISIONES PENDIENTES CON EL USUARIO
+-------------------------------------------------------------------
+- ¿Qué pasa con el cupo reservado si registrar_deuda falla en
+  Libélula justo al crear la Compra? (mantener pendiente vs liberar
+  cupo automáticamente tras N minutos sin pago — ya existe
+  CaducidadBilleteraCron como referencia de patrón de expiración).
+- ¿Se necesita emitir factura electrónica vía Libélula
+  (emite_factura=true, numero_documento/NIT/CI del comprador) o solo
+  se usa como pasarela de cobro sin facturación? Cambia qué campos
+  del comprador son obligatorios en el checkout.
+- ¿Conviven ambos métodos de pago (manual + Libélula) permanentemente,
+  o Libélula reemplaza al comprobante manual una vez validado?

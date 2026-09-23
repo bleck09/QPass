@@ -21,8 +21,11 @@ const esquemaEnv = z.object({
 
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().int().positive().default(587),
+  SMTP_SECURE: z.enum(['true', 'false']).default('false'),
   SMTP_USER: z.string().optional(),
   SMTP_PASS: z.string().optional(),
+  // Remitente que ve el usuario, ej. "QPass <qpass.team@gmail.com>".
+  SMTP_FROM: z.string().optional(),
 
   PORT: z.coerce.number().int().positive().default(4000),
   // Vacío o "*" => todos los orígenes (como el backend Express anterior).

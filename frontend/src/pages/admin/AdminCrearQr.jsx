@@ -16,11 +16,12 @@ import { EstadoCarga, EstadoError, EstadoVacio } from '../../components/EstadosA
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FaQrcode, FaBoxes, FaPlus, FaTrash, FaFileDownload, FaFont, FaArrowsAltH, FaArrowsAltV,
-  FaEye, FaLink, FaBan,
+  FaEye, FaLink, FaBan, FaCut,
 } from 'react-icons/fa';
 import BotonVolver from '../../components/BotonVolver.jsx';
 import api from '../../api/index.js';
 import { generarDataUrlQr, construirPdfQr } from '../../utils/qrPdf';
+import { descargarSvgsQr } from '../../utils/qrLightburn';
 import './AdminCrearQr.css';
 
 // Referencia para convertir cm -> px (96px = 1 pulgada, el estándar de pantalla/CSS).
@@ -112,6 +113,7 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
   const [vaciando, setVaciando] = useState(false);
   const [confirmar, DialogoConfirmar] = useConfirmar();
   const [generandoPdf, setGenerandoPdf] = useState(null); // { actual, total } | null
+  const [generandoSvg, setGenerandoSvg] = useState(null); // { actual, total } | null
 
   useEffect(() => {
     if (embebido) return;
@@ -233,6 +235,21 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
     }
   };
 
+  // Arma los SVG (uno por hoja) con el troquel y el QR ya vectoriales -listos
+  // para abrir directo en LightBurn, sin trazar ninguna imagen ni tipear el
+  // código a mano en Tools > Create QR Code- y los descarga.
+  const descargarSvg = async (lista) => {
+    if (lista.length === 0 || generandoSvg) return;
+    setGenerandoSvg({ actual: 0, total: lista.length });
+    try {
+      await descargarSvgsQr(lista, (actual, total) => setGenerandoSvg({ actual, total }), eventoActual);
+    } catch (err) {
+      avisos.error(err?.message || 'No se pudo armar el SVG.', { titulo: 'No se pudo descargar' });
+    } finally {
+      setGenerandoSvg(null);
+    }
+  };
+
   return (
     <div className="pi-adqr-container">
 
@@ -351,6 +368,18 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
                 PDF (todo el evento)
               </Boton>
               <Boton
+                variante="secundario" icono={FaCut} disabled={!!generandoSvg}
+                onClick={() => descargarSvg(codigosPagina)}
+              >
+                SVG LightBurn (esta página)
+              </Boton>
+              <Boton
+                variante="secundario" icono={FaCut} disabled={!!generandoSvg}
+                onClick={() => descargarSvg(codigos)}
+              >
+                SVG LightBurn (todo el evento)
+              </Boton>
+              <Boton
                 variante="peligro-suave" icono={FaTrash} onClick={handleVaciar}
                 cargando={vaciando} disabled={stats.libres === 0}
               >
@@ -368,6 +397,17 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
               max={generandoPdf.total}
             />
             <span>Generando PDF… {generandoPdf.actual} / {generandoPdf.total}</span>
+          </div>
+        )}
+
+        {generandoSvg && (
+          <div className="pi-adqr-progreso">
+            <progress
+              className="pi-adqr-progreso-barra"
+              value={generandoSvg.actual}
+              max={generandoSvg.total}
+            />
+            <span>Generando SVG para LightBurn… {generandoSvg.actual} / {generandoSvg.total}</span>
           </div>
         )}
 

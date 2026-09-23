@@ -152,4 +152,4 @@ export const construirPdfQr = async (codigos, onProgreso, evento) => {
   doc.save(`qr-${aNombreArchivo(evento?.nombre)}-${fecha}.pdf`);
 };
 
-export { PX_POR_CM };
+export { PX_POR_CM, aNombreArchivo };
