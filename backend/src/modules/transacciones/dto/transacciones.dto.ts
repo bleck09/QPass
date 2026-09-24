@@ -6,9 +6,15 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 import { MotivoDevolucion } from '@prisma/client';
+import {
+  MAX_URL,
+  MAX_NOTA,
+  mensajeMaxLength,
+} from '../../../common/dto/validacion.constantes';
 
 export class RecargaDto {
   @IsString()
@@ -41,12 +47,14 @@ export class DevolucionDto {
   eventoId: string;
 
   @IsString({ message: 'La foto del carnet de quien retira es obligatoria' })
+  @MaxLength(MAX_URL, { message: mensajeMaxLength(MAX_URL) })
   fotoCarnetUrl: string;
 
   // Foto de la cara de quien cobra. El frontend la exige en el retiro de un
   // negocio (por si le roban el QR).
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_URL, { message: mensajeMaxLength(MAX_URL) })
   fotoRostroUrl?: string;
 
   @Type(() => Number)
@@ -71,6 +79,7 @@ export class DevolucionDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_NOTA, { message: mensajeMaxLength(MAX_NOTA) })
   nota?: string;
 }
 
@@ -89,6 +98,7 @@ export class AjusteManualDto {
 
   @IsString()
   @MinLength(5, { message: 'Explicá el motivo del ajuste' })
+  @MaxLength(MAX_NOTA, { message: mensajeMaxLength(MAX_NOTA) })
   nota: string;
 
   @IsOptional()

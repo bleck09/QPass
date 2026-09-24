@@ -28,10 +28,10 @@ import {
   VerificarCodigoDto,
 } from './dto/recuperar-password.dto';
 import { CodigosQrService } from '../codigos-qr/codigos-qr.service';
+import { MailService } from '../../mail/mail.service';
 
 const MINUTOS_VALIDEZ_CODIGO = 15;
-const generarCodigo6Digitos = () =>
-  String(randomInt(0, 1_000_000)).padStart(6, '0');
+const generarCodigo6Digitos = () => String(randomInt(0, 1_000_000)).padStart(6, '0');
 
 @Injectable()
 export class AuthService {
@@ -40,11 +40,69 @@ export class AuthService {
     private readonly jwt: JwtService,
     private readonly config: ConfigService<VariablesEntorno, true>,
     private readonly codigosQr: CodigosQrService,
+    private readonly mail: MailService,
   ) {}
 
+  /** Chequeo temprano para el paso 2 de Registrar.jsx — ver auth.controller.ts. */
+  async emailDisponible(email: string) {
+    const correo = email.trim().toLowerCase();
+    if (!correo) return { disponible: false };
+    const existente = await this.prisma.usuario.findUnique({
+      where: { email: correo },
+      select: { id: true },
+    });
+    return { disponible: !existente };
+  }
+
   /**
-   * Registro de una cuenta. `creador` es el usuario del JWT si vino uno (Admin o
-   * Usuario Negocio creando cuentas), para auditar quién la creó.
+   * Paso 2 -> 3 de Registrar.jsx: manda el código de verificación al correo
+   * ANTES de crear la cuenta (todavía no existe el Usuario en este punto, por
+   * eso el código se guarda por email y no por usuarioId — ver
+   * CodigoVerificacionEmail). Solo aplica al autorregistro (sin `creador`);
+   * cuando un Admin/UsuarioNegocio crea una cuenta desde su panel, no hace
+   * falta verificar nada.
+   */
+  async enviarCodigoRegistro(email: string) {
+    const correo = email.trim().toLowerCase();
+    const existente = await this.prisma.usuario.findUnique({
+      where: { email: correo },
+      select: { id: true },
+    });
+    if (existente) {
+      throw new ConflictException('El email ya está registrado');
+    }
+
+    const codigo = generarCodigo6Digitos();
+    await this.prisma.$transaction([
+      // Solo el último código emitido para ese correo es válido.
+      this.prisma.codigoVerificacionEmail.updateMany({
+        where: { email: correo, usado: false },
+        data: { usado: true },
+      }),
+      this.prisma.codigoVerificacionEmail.create({
+        data: {
+          email: correo,
+          codigo,
+          expiraEn: new Date(Date.now() + MINUTOS_VALIDEZ_CODIGO * 60 * 1000),
+        },
+      }),
+    ]);
+
+    const enviado = await this.mail.enviar({
+      para: correo,
+      asunto: 'Código de verificación — QPass',
+      cuerpo:
+        `Tu código para verificar tu correo es: <strong>${codigo}</strong>. ` +
+        `Vence en ${MINUTOS_VALIDEZ_CODIGO} minutos. Si no fuiste vos, ignora este correo.`,
+    });
+
+    return enviado ? {} : { codigoDemo: codigo };
+  }
+
+  /**
+   * Registro de una cuenta. `creador` es el usuario del JWT si vino uno (Admin
+   * o Usuario Negocio creando cuentas), para auditar quién la creó — y para
+   * saber si hay que exigir el código de verificación (ver más abajo).
    */
   async registro(dto: RegistroDto, creador: UsuarioJwt | null) {
     const existente = await this.prisma.usuario.findUnique({
@@ -52,6 +110,29 @@ export class AuthService {
     });
     if (existente) {
       throw new ConflictException('El email ya está registrado');
+    }
+
+    // El autorregistro (sin `creador` — nadie hizo login antes de llamar a
+    // este endpoint) exige haber pasado por enviarCodigoRegistro() antes; una
+    // cuenta creada por un Admin/UsuarioNegocio desde su panel (con `creador`)
+    // no pasa por esta verificación.
+    if (!creador) {
+      const codigoValido = await this.prisma.codigoVerificacionEmail.findFirst({
+        where: {
+          email: dto.email.trim().toLowerCase(),
+          codigo: dto.codigoVerificacion,
+          usado: false,
+          expiraEn: { gt: new Date() },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (!codigoValido) {
+        throw new BadRequestException('Código de verificación incorrecto o vencido');
+      }
+      await this.prisma.codigoVerificacionEmail.update({
+        where: { id: codigoValido.id },
+        data: { usado: true },
+      });
     }
 
     const rolNuevo: Rol = dto.rol ?? 'UsuarioNormal';
@@ -69,9 +150,12 @@ export class AuthService {
         apellidoMaterno: dto.apellidoMaterno,
         email: dto.email,
         passwordHash,
+        tipoDocumento: dto.ci ? dto.tipoDocumento : undefined,
         ci: dto.ci,
         celular: dto.celular,
         fechaNacimiento: aFecha(dto.fechaNacimiento),
+        sexo: dto.sexo,
+        pais: dto.pais,
         rol: rolNuevo,
         creadoPorId: creador?.id,
         negocioAsignadoId,
@@ -157,7 +241,9 @@ export class AuthService {
   }
 
   // --- RECUPERAR CONTRASEÑA (código de 6 dígitos) ---
-  // No hay servicio de correo: el código se devuelve en la respuesta para probarlo.
+  // Se manda por correo real (MailService). Si el envío falla (o no hay SMTP
+  // configurado, ej. desarrollo local sin credenciales), se devuelve el
+  // código en la respuesta como respaldo para poder seguir probando.
 
   async recuperarSolicitar(dto: SolicitarRecuperacionDto) {
     const usuario = await this.prisma.usuario.findUnique({
@@ -183,7 +269,18 @@ export class AuthService {
       }),
     ]);
 
-    return { codigoDemo: codigo }; // no hay envío de correo real
+    const enviado = await this.mail.enviar({
+      para: usuario.email,
+      asunto: 'Código para recuperar tu contraseña — QPass',
+      cuerpo:
+        `Tu código para recuperar la contraseña es: <strong>${codigo}</strong>. ` +
+        `Vence en ${MINUTOS_VALIDEZ_CODIGO} minutos. Si no lo solicitaste, ignora este correo.`,
+    });
+
+    // Solo se expone el código en la respuesta si el correo NO salió de
+    // verdad (sin SMTP configurado, o falló) — si ya se mandó, no hace
+    // falta mostrarlo en pantalla.
+    return enviado ? {} : { codigoDemo: codigo };
   }
 
   async recuperarVerificar(dto: VerificarCodigoDto) {
@@ -219,9 +316,7 @@ export class AuthService {
 
   /** Decodifica un Bearer token si vino y es válido; si no, null. Usado por registro. */
   decodificarOpcional(authorization?: string): UsuarioJwt | null {
-    const token = authorization?.startsWith('Bearer ')
-      ? authorization.slice(7)
-      : null;
+    const token = authorization?.startsWith('Bearer ') ? authorization.slice(7) : null;
     if (!token) return null;
     try {
       const payload = this.jwt.verify<{
@@ -235,11 +330,7 @@ export class AuthService {
     }
   }
 
-  private firmarToken(usuario: {
-    id: number;
-    rol: Rol;
-    email: string;
-  }): string {
+  private firmarToken(usuario: { id: number; rol: Rol; email: string }): string {
     return this.jwt.sign(
       { id: usuario.id, rol: usuario.rol, email: usuario.email },
       { expiresIn: this.config.get('JWT_EXPIRA_EN', { infer: true }) },

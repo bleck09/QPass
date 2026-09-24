@@ -7,9 +7,7 @@ import { z } from 'zod';
  * ----------------------------------------------------------------------- */
 
 const esquemaEnv = z.object({
-  NODE_ENV: z
-    .enum(['development', 'test', 'production'])
-    .default('development'),
+  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
   DATABASE_URL: z.string().url(),
 
@@ -31,6 +29,17 @@ const esquemaEnv = z.object({
   // Vacío o "*" => todos los orígenes (como el backend Express anterior).
   CORS_ORIGEN: z.string().default('*'),
 
+  // Pasarela de pagos Libélula (grupo Todotix). Opcional: sin LIBELULA_APPKEY
+  // el módulo pagos simplemente no ofrece el canal "pagar en línea" (el pago
+  // manual con comprobante sigue funcionando igual).
+  LIBELULA_APPKEY: z.string().optional(),
+  LIBELULA_API_URL: z.string().url().default('https://api.libelula.bo'),
+  // URL pública de nuestro webhook (pagos.controller.ts) que Libélula llama
+  // cuando el pago se confirma. Debe ser accesible desde internet en prod.
+  LIBELULA_CALLBACK_URL: z.string().url().optional(),
+  // A dónde redirige Libélula al comprador ~5s después de pagar.
+  LIBELULA_URL_RETORNO: z.string().url().optional(),
+
   // Almacenamiento de imágenes (S3 compatible: MinIO en prod, ver
   // docker-compose.yml). Requeridas: sin esto la subida/servido de fotos no
   // funciona, así que la app no debe levantar a medias.
@@ -40,9 +49,7 @@ const esquemaEnv = z.object({
   S3_SECRET_KEY: z.string().min(1),
   S3_REGION: z.string().default('us-east-1'),
   // MinIO exige path-style; se deja activado salvo que se ponga "false".
-  S3_FORCE_PATH_STYLE: z
-    .enum(['true', 'false'])
-    .default('true'),
+  S3_FORCE_PATH_STYLE: z.enum(['true', 'false']).default('true'),
 });
 
 export type VariablesEntorno = z.infer<typeof esquemaEnv>;

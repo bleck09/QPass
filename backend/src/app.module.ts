@@ -31,6 +31,7 @@ import { BilleterasEventoModule } from './modules/billeteras-evento/billeteras-e
 import { CodigosRetiroNegocioModule } from './modules/codigos-retiro-negocio/codigos-retiro-negocio.module';
 import { CategoriasTicketModule } from './modules/categorias-ticket/categorias-ticket.module';
 import { ComprasModule } from './modules/compras/compras.module';
+import { PagosModule } from './modules/pagos/pagos.module';
 import { EntradasModule } from './modules/entradas/entradas.module';
 import { CodigosQrModule } from './modules/codigos-qr/codigos-qr.module';
 import { TransaccionesModule } from './modules/transacciones/transacciones.module';
@@ -68,6 +69,7 @@ import { CasosDuplicadoModule } from './modules/casos-duplicado/casos-duplicado.
     CodigosRetiroNegocioModule,
     CategoriasTicketModule,
     ComprasModule,
+    PagosModule,
     EntradasModule,
     CodigosQrModule,
     TransaccionesModule,

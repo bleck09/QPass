@@ -1,5 +1,9 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, MaxLength, Min } from 'class-validator';
+import {
+  MAX_PREFIJO_QR,
+  mensajeMaxLength,
+} from '../../../common/dto/validacion.constantes';
 
 export class GenerarCodigosQrDto {
   @IsString()
@@ -16,5 +20,6 @@ export class GenerarCodigosQrDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_PREFIJO_QR, { message: mensajeMaxLength(MAX_PREFIJO_QR) })
   prefijo?: string;
 }

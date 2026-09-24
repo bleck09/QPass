@@ -1,0 +1,106 @@
+QUÉ FALTA PARA QUE PAGOS (LIBÉLULA) Y CORREO FUNCIONEN DE VERDAD
+==================================================================
+Fecha: 2026-09-24
+Contexto: el código de las dos fases ya está escrito e implementado
+(ver PLAN_PAGOS_LIBELULA_CORREO.txt para el detalle técnico completo).
+Todavía NO se hizo ninguna prueba real — esto es la lista de lo que
+falta antes de poder probar de punta a punta.
+
+-------------------------------------------------------------------
+1. CORREO (Gmail) — falta solo esto
+-------------------------------------------------------------------
+[ ] Activar verificación en 2 pasos en la cuenta qpass.team@gmail.com.
+[ ] Generar la "contraseña de aplicación" (16 caracteres) en
+    myaccount.google.com/apppasswords.
+[ ] Pegarla en backend/.env -> SMTP_PASS (hoy tiene un placeholder:
+    "PONER-AQUI-LA-APP-PASSWORD-DE-16-CARACTERES").
+[ ] Reiniciar el backend y probar aprobando o rechazando una Compra
+    real (flujo manual, el que ya existe) para confirmar que el correo
+    llega. Si algo falla, el log del backend va a decir exactamente
+    "Fallo al enviar correo -> ..." con el motivo.
+
+-------------------------------------------------------------------
+2. LIBÉLULA — falta la cuenta/credenciales de ellos
+-------------------------------------------------------------------
+[ ] Conseguir de Libélula (grupo Todotix) el "appkey" de la empresa.
+    Según su guía, para pruebas apuntan directo a producción
+    (https://api.libelula.bo) usando una "llave de pruebas" que ellos
+    asignan — no hay un sandbox separado.
+[ ] Poner ese appkey en backend/.env -> LIBELULA_APPKEY (hoy vacío).
+    Mientras esté vacío, el canal "pagar en línea" queda deshabilitado
+    solo (LibelulaService.habilitado = false) y el pago manual con
+    comprobante sigue funcionando exactamente igual que siempre — no
+    hay riesgo de romper nada por no tener la key todavía.
+[ ] Confirmar con Libélula qué canales de pago tiene habilitados esta
+    cuenta específica (tarjeta, QR Simple, Tigo Money, etc.) — eso lo
+    configuran ellos de su lado, no es algo que se controle desde el
+    código.
+
+-------------------------------------------------------------------
+3. URLS PÚBLICAS (solo importa para producción, no para probar local)
+-------------------------------------------------------------------
+[ ] LIBELULA_CALLBACK_URL debe ser una URL alcanzable desde internet
+    (no localhost) apuntando a
+    https://TU-DOMINIO/pagos/libelula/callback — Libélula necesita
+    poder golpear esa URL para avisar que alguien pagó.
+[ ] LIBELULA_URL_RETORNO debe ser la URL del frontend en producción a
+    donde Libélula manda de vuelta al comprador ~5 segundos después
+    de pagar (hoy en .env apunta a localhost:5173/mis-compras, sirve
+    solo para desarrollo local).
+[ ] Si se prueba en la máquina local antes de tener dominio público,
+    se puede usar un túnel (ngrok, cloudflared) para exponer
+    temporalmente el puerto 4000 y así poder recibir el callback real
+    de Libélula durante la prueba.
+
+-------------------------------------------------------------------
+4. FRONTEND — todavía no se tocó nada acá
+-------------------------------------------------------------------
+El backend ya soporta mandar "metodoPago": "libelula" en el
+POST /compras, pero el frontend actual no tiene la opción de elegir
+"pagar en línea" ni sabe qué hacer con la respuesta
+(libelulaUrlPago). Falta:
+[ ] Botón/opción en el checkout: "Pagar en línea" vs "Subir
+    comprobante".
+[ ] Si se elige Libélula: al crear la Compra, tomar
+    compra.libelulaUrlPago de la respuesta y redirigir al usuario ahí
+    (o mostrarlo como link/botón "Pagar ahora").
+[ ] Manejar el caso en que libelulaUrlPago venga vacío (Libélula
+    falló al registrar la deuda) — mostrar botón "Reintentar pago"
+    que llame a POST /compras/:id/reintentar-pago (ya existe en el
+    backend).
+[ ] Pantalla de retorno (a la que Libélula redirige después de
+    pagar) mostrando el estado de la compra.
+
+-------------------------------------------------------------------
+5. PRUEBA END-TO-END SUGERIDA (una vez con el appkey)
+-------------------------------------------------------------------
+[ ] Crear una Compra de prueba con metodoPago=libelula (por Postman/
+    Insomnia si el frontend todavía no tiene el botón) y confirmar que
+    devuelve libelulaUrlPago.
+[ ] Abrir esa URL y completar un pago de prueba con el canal que
+    Libélula tenga habilitado para la cuenta.
+[ ] Confirmar que llega el callback a
+    GET /pagos/libelula/callback?transaction_id=... y que la Compra
+    pasa a estado "confirmado" sola (sin que un Admin la apruebe a
+    mano) — revisar el log del backend, ahí queda registrado cada
+    paso (callback recibido, verificación server-to-server, resultado).
+[ ] Confirmar que llega el correo de "Entrada aprobada" al comprador
+    (esto ya depende de que el punto 1 de este archivo esté resuelto).
+[ ] Probar el caso de fallo: cancelar el pago en la pasarela y
+    verificar que la Compra se queda en "pendiente" (no se confirma
+    sola con datos falsos — la verificación server-to-server es la
+    que lo protege).
+
+-------------------------------------------------------------------
+6. LO QUE QUEDÓ FUERA DE ESTA IMPLEMENTACIÓN (fases 3/4 del plan)
+-------------------------------------------------------------------
+- Cron de reconciliación (CONSULTAR PAGOS periódico) para pescar
+  pagos cuyo webhook nunca llegó — no implementado todavía, no es
+  necesario para la primera prueba.
+- Cola BullMQ para correo (evitar que un SMTP lento bloquee la
+  respuesta HTTP) — no implementado, no es necesario para el volumen
+  actual.
+- Emisión de factura electrónica vía Libélula (emite_factura) — no
+  implementado; hoy la deuda se registra sin pedir factura. Si se
+  necesita, hay que agregar nit/razón social del comprador al armar
+  la deuda.

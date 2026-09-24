@@ -6,16 +6,18 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpStatus,
   Post,
+  Query,
   Req,
 } from '@nestjs/common';
 import { Request } from 'express';
 import { Publico } from '../../common/decorators/publico.decorator';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
-import { RegistroDto } from './dto/registro.dto';
+import { EnviarCodigoRegistroDto, RegistroDto } from './dto/registro.dto';
 import {
   RestablecerPasswordDto,
   SolicitarRecuperacionDto,
@@ -26,6 +28,22 @@ import {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  /**
+   * Chequeo temprano antes de completar todo el flujo de registro (que
+   * incluye verificar código de correo) — evita que el usuario se entere de
+   * que el correo ya tiene cuenta solo al final de los 3 pasos.
+   */
+  @Get('email-disponible')
+  emailDisponible(@Query('email') email?: string) {
+    return this.authService.emailDisponible(email ?? '');
+  }
+
+  /** Paso 2 -> 3 de Registrar.jsx: manda el código de verificación al correo. */
+  @Post('registro/enviar-codigo')
+  enviarCodigoRegistro(@Body() dto: EnviarCodigoRegistroDto) {
+    return this.authService.enviarCodigoRegistro(dto.email);
+  }
 
   @Post('registro')
   registro(@Body() dto: RegistroDto, @Req() req: Request) {

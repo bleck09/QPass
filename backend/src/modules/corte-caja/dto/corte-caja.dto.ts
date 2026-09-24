@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { MAX_NOTA, mensajeMaxLength } from '../../../common/dto/validacion.constantes';
 
 export class AbrirCajaDto {
   @IsString()
@@ -20,5 +21,6 @@ export class CerrarCajaDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_NOTA, { message: mensajeMaxLength(MAX_NOTA) })
   observacion?: string;
 }

@@ -6,7 +6,9 @@ import {
   IsOptional,
   IsPositive,
   IsString,
+  MaxLength,
 } from 'class-validator';
+import { MAX_NOMBRE, mensajeMaxLength } from '../../../common/dto/validacion.constantes';
 
 export class CrearDiaEventoDto {
   @IsString()
@@ -14,6 +16,7 @@ export class CrearDiaEventoDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_NOMBRE, { message: mensajeMaxLength(MAX_NOMBRE) })
   nombre?: string;
 
   @IsDateString()

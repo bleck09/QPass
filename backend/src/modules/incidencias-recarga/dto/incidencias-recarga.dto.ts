@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsString, Min } from 'class-validator';
+import { IsNumber, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { MAX_NOTA, mensajeMaxLength } from '../../../common/dto/validacion.constantes';
 
 export class CrearIncidenciaRecargaDto {
   @IsString()
@@ -19,6 +20,7 @@ export class CrearIncidenciaRecargaDto {
   montoSolicitado?: number;
 
   @IsString()
+  @MaxLength(MAX_NOTA, { message: mensajeMaxLength(MAX_NOTA) })
   nota: string;
 }
 

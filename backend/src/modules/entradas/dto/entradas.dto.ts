@@ -1,4 +1,9 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
+import {
+  MAX_NOTA,
+  MAX_URL,
+  mensajeMaxLength,
+} from '../../../common/dto/validacion.constantes';
 
 export class VincularQrDto {
   @IsString()
@@ -9,18 +14,21 @@ export class VincularQrDto {
   // Opcional porque en la primera entrega no hay nada que anular.
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_NOTA, { message: mensajeMaxLength(MAX_NOTA) })
   motivo?: string;
 }
 
 export class AnularQrDto {
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_NOTA, { message: mensajeMaxLength(MAX_NOTA) })
   motivo?: string;
 }
 
 export class MovimientoDto {
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_URL, { message: mensajeMaxLength(MAX_URL) })
   foto?: string;
 
   // Evento del control desde el que se escanea. Si viene y no coincide con el

@@ -114,20 +114,11 @@
   color: var(--blanco);
 }
 
-/* Degradés de marca: cian (escaneo) y coral (compra). */
-.qp-hero__destacado {
-  background: linear-gradient(135deg, var(--cian-digital) 0%, var(--verde-recarga) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
-}
-
+/* Color de marca único para el texto resaltado del título (antes eran dos
+   degradés distintos: cian/verde y coral/ámbar). */
+.qp-hero__destacado,
 .qp-hero__destacado--comercio {
-  background: linear-gradient(135deg, var(--coral-compra) 0%, var(--ambar-aviso) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--cian-digital);
 }
 
 .qp-hero__bajada {

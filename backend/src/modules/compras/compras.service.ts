@@ -12,6 +12,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
@@ -22,11 +23,9 @@ import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { MailService } from '../../mail/mail.service';
 import { AuditoriaService } from '../auditoria/auditoria.service';
 import { CodigosQrService } from '../codigos-qr/codigos-qr.service';
+import { LibelulaService } from '../pagos/libelula.service';
 import { SinCupoDisponibleException } from '../../common/excepciones/dominio.excepciones';
-import {
-  CorregirEntradasDto,
-  CrearCompraDto,
-} from './dto/compras.dto';
+import { CorregirEntradasDto, CrearCompraDto } from './dto/compras.dto';
 
 const generarPassword = () => randomBytes(6).toString('base64url');
 
@@ -35,12 +34,15 @@ const MAX_ENTRADAS_POR_COMPRA = 6;
 
 @Injectable()
 export class ComprasService {
+  private readonly logger = new Logger('ComprasService');
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly eventoPolicy: EventoPolicy,
     private readonly mail: MailService,
     private readonly auditoria: AuditoriaService,
     private readonly codigosQr: CodigosQrService,
+    private readonly libelula: LibelulaService,
   ) {}
 
   async crear(dto: CrearCompraDto, compradorId: number) {
@@ -116,8 +118,10 @@ export class ComprasService {
     }
     for (const correosDia of correosPorJornada.values()) {
       if (new Set(correosDia).size !== correosDia.length) {
+        // Mismo texto que utils/entradas.js (MSG_CORREO_DUPLICADO_JORNADA) en
+        // el frontend — una sola fuente de verdad para este mensaje.
         throw new BadRequestException(
-          'Cada entrada de una misma jornada necesita un correo distinto',
+          'Este correo ya está en otra entrada de la misma jornada.',
         );
       }
     }
@@ -202,7 +206,9 @@ export class ComprasService {
       ),
     );
 
-    return this.prisma.$transaction(async (tx) => {
+    const metodoPago = dto.metodoPago === 'libelula' ? 'libelula' : 'manual';
+
+    const compra = await this.prisma.$transaction(async (tx) => {
       for (const [categoriaTicketId, cantidad] of cantidadPorCategoria) {
         // UPDATE atómico condicional: reserva cupo solo si todavía alcanza.
         const filasActualizadas = await tx.$executeRaw`
@@ -224,6 +230,7 @@ export class ComprasService {
           eventoId: dto.eventoId,
           compradorId,
           montoTotal,
+          metodoPago,
           comprobanteUrl: dto.comprobanteUrl,
           comprobanteNombreArchivo: dto.comprobanteNombreArchivo,
           terminosAceptadosEn: new Date(),
@@ -243,6 +250,110 @@ export class ComprasService {
         },
         include: { entradas: true },
       });
+    });
+
+    if (metodoPago === 'libelula') {
+      // El cupo ya quedó reservado arriba; si Libélula falla acá, la Compra
+      // igual existe en "pendiente" sin link de pago — se puede reintentar
+      // con POST /compras/:id/reintentar-pago sin perder el cupo.
+      await this.registrarDeudaLibelula(compra.id, compradorId, categorias, dto);
+    }
+
+    return compra;
+  }
+
+  /** Genera (o regenera) el link de pago de Libélula para una Compra pendiente. */
+  async reintentarPagoLibelula(id: string, compradorId: number) {
+    const compra = await this.prisma.compra.findUnique({ where: { id } });
+    if (!compra) throw new NotFoundException('Compra no encontrada');
+    if (compra.compradorId !== compradorId) {
+      throw new ForbiddenException('No autorizado');
+    }
+    if (compra.metodoPago !== 'libelula') {
+      throw new BadRequestException('Esta compra no usa pago en línea');
+    }
+    if (compra.estado !== 'pendiente') {
+      throw new ConflictException('Esta compra ya fue resuelta');
+    }
+
+    const entradas = await this.prisma.entrada.findMany({
+      where: { compraId: id },
+      include: { categoriaTicket: true },
+    });
+    const categorias = entradas
+      .map((e) => e.categoriaTicket)
+      .filter((c): c is NonNullable<typeof c> => !!c);
+
+    await this.registrarDeudaLibelula(id, compradorId, categorias, undefined);
+    return this.prisma.compra.findUnique({ where: { id } });
+  }
+
+  private async registrarDeudaLibelula(
+    compraId: string,
+    compradorId: number,
+    categorias: Array<{ id: string; nombre: string; precio: Prisma.Decimal | number }>,
+    dtoEntradas: CrearCompraDto | undefined,
+  ): Promise<void> {
+    if (!this.libelula.habilitado) {
+      this.logger.warn(
+        `LIBELULA_APPKEY no configurado: Compra ${compraId} queda pendiente sin link de pago`,
+      );
+      return;
+    }
+
+    const comprador = await this.prisma.usuario.findUnique({
+      where: { id: compradorId },
+    });
+    if (!comprador) return;
+
+    // Cantidad por categoría, para armar una línea de detalle por categoría
+    // (no una por entrada) — más legible en la pasarela.
+    const entradasParaLineas =
+      dtoEntradas?.entradas ??
+      (await this.prisma.entrada.findMany({ where: { compraId } }));
+    const cantidadPorCategoria = new Map<string, number>();
+    entradasParaLineas.forEach((e) =>
+      cantidadPorCategoria.set(
+        e.categoriaTicketId!,
+        (cantidadPorCategoria.get(e.categoriaTicketId!) || 0) + 1,
+      ),
+    );
+
+    const lineas = [...cantidadPorCategoria.entries()].map(
+      ([categoriaTicketId, cantidad]) => {
+        const cat = categorias.find((c) => c.id === categoriaTicketId);
+        return {
+          concepto: cat?.nombre ?? 'Entrada',
+          cantidad,
+          costo_unitario: Number(cat?.precio ?? 0),
+        };
+      },
+    );
+
+    const respuesta = await this.libelula.registrarDeuda({
+      identificadorDeuda: compraId,
+      emailCliente: comprador.email,
+      descripcion: `Compra de entradas ${compraId}`,
+      nombreCliente: comprador.nombre,
+      apellidoCliente: comprador.apellidoPaterno ?? undefined,
+      ci: comprador.ci ?? undefined,
+      lineas,
+    });
+
+    if (respuesta.error) {
+      this.logger.warn(
+        `Libélula no pudo registrar la deuda de Compra ${compraId}: ${respuesta.mensaje}`,
+      );
+      return;
+    }
+
+    await this.prisma.compra.update({
+      where: { id: compraId },
+      data: {
+        libelulaIdTransaccion: respuesta.idTransaccion,
+        libelulaUrlPago: respuesta.urlPasarelaPagos,
+        libelulaCodigoRecaudacion: respuesta.codigoRecaudacion,
+      },
     });
   }
 
@@ -305,9 +416,7 @@ export class ComprasService {
       throw new ForbiddenException('No autorizado');
     }
     if (compra.estado !== 'pendiente') {
-      throw new ConflictException(
-        'La compra ya fue resuelta; usa un reporte de datos',
-      );
+      throw new ConflictException('La compra ya fue resuelta; usa un reporte de datos');
     }
 
     await this.prisma.$transaction(
@@ -328,23 +437,23 @@ export class ComprasService {
   /**
    * Crea (o vincula, si el correo ya tiene cuenta) un Usuario por cada entrada
    * sin cuenta y le asigna su número correlativo de entrada dentro del evento.
-   * Avisa por correo a cada persona (MailService; hoy es stub) y además devuelve
-   * las contraseñas generadas en esta respuesta para relevo manual.
+   * Avisa por correo a cada persona (MailService) y además devuelve las
+   * contraseñas generadas en esta respuesta para relevo manual.
+   *
+   * Compartido por dos caminos: aprobación manual de un Admin (aprobar) y
+   * confirmación automática por webhook de Libélula (confirmarPagoLibelula).
    */
-  async aprobar(id: string, adminId: number) {
-    const compra = await this.prisma.compra.findUnique({
-      where: { id },
-      include: {
-        entradas: true,
-        evento: { select: { tipoManilla: true } },
-      },
-    });
-    if (!compra) throw new NotFoundException('Compra no encontrada');
-    await this.eventoPolicy.porEvento(compra.eventoId);
-    if (compra.estado !== 'pendiente') {
-      throw new ConflictException('Esta compra ya fue resuelta');
-    }
-
+  private async confirmarCompra(
+    compra: Prisma.CompraGetPayload<{
+      include: { entradas: true; evento: { select: { tipoManilla: true } } };
+    }>,
+    actorId: number,
+    accion: 'aprobar' | 'confirmar_pago_libelula',
+    datosLibelula?: {
+      formaPago?: string;
+      codigoRecaudacion?: string;
+    },
+  ) {
     // bcrypt.hash es lento (~100ms): se calcula ANTES de abrir la transacción,
     // una credencial por cada entrada de invitado (las que todavía no tienen cuenta).
     const credencialPorEntrada = new Map<
@@ -418,7 +527,7 @@ export class ComprasService {
             eventoId: compra.eventoId,
             entradaId: entrada.id,
             diaEventoId: entrada.diaEventoId,
-            actorId: adminId,
+            actorId,
           });
         }
       }
@@ -427,16 +536,21 @@ export class ComprasService {
         where: { id: compra.id },
         data: {
           estado: 'confirmado',
-          resueltoPorId: adminId,
+          resueltoPorId: actorId,
           resueltoEn: new Date(),
+          ...(datosLibelula && {
+            libelulaConfirmadoEn: new Date(),
+            libelulaFormaPago: datosLibelula.formaPago,
+            libelulaCodigoRecaudacion: datosLibelula.codigoRecaudacion ?? undefined,
+          }),
         },
       });
 
       await this.auditoria.registrar(tx, {
-        actorId: adminId,
+        actorId,
         entidad: 'compra',
         entidadId: compra.id,
-        accion: 'aprobar',
+        accion,
         antes: { estado: compra.estado, montoTotal: compra.montoTotal },
         despues: { estado: 'confirmado', entradas: compra.entradas.length },
       });
@@ -451,8 +565,7 @@ export class ComprasService {
       },
     });
 
-    // Aviso a cada persona de la compra (titular + invitados). Con MailService en
-    // modo stub esto solo se loguea; cuando haya SMTP real, se envía de verdad.
+    // Aviso a cada persona de la compra (titular + invitados).
     const nombreEvento = actualizada?.evento?.nombre ?? 'el evento';
     await Promise.allSettled(
       (actualizada?.entradas ?? []).map((entrada) => {
@@ -472,6 +585,51 @@ export class ComprasService {
     );
 
     return { ...actualizada, passwordsGeneradas };
+  }
+
+  async aprobar(id: string, adminId: number) {
+    const compra = await this.prisma.compra.findUnique({
+      where: { id },
+      include: {
+        entradas: true,
+        evento: { select: { tipoManilla: true } },
+      },
+    });
+    if (!compra) throw new NotFoundException('Compra no encontrada');
+    await this.eventoPolicy.porEvento(compra.eventoId);
+    if (compra.estado !== 'pendiente') {
+      throw new ConflictException('Esta compra ya fue resuelta');
+    }
+
+    return this.confirmarCompra(compra, adminId, 'aprobar');
+  }
+
+  /**
+   * Llamado por pagos.controller.ts (webhook de Libélula) SOLO después de
+   * verificar server-to-server (LibelulaService.consultarDeudaPorIdentificador)
+   * que la deuda quedó pagada — nunca a partir del callback por sí solo.
+   * Idempotente: si la Compra ya no está "pendiente", no hace nada.
+   */
+  async confirmarPagoLibelula(
+    compraId: string,
+    datosLibelula: { formaPago?: string; codigoRecaudacion?: string },
+  ) {
+    const compra = await this.prisma.compra.findUnique({
+      where: { id: compraId },
+      include: {
+        entradas: true,
+        evento: { select: { tipoManilla: true } },
+      },
+    });
+    if (!compra || compra.metodoPago !== 'libelula') return null;
+    if (compra.estado !== 'pendiente') return compra;
+
+    return this.confirmarCompra(
+      compra,
+      compra.compradorId,
+      'confirmar_pago_libelula',
+      datosLibelula,
+    );
   }
 
   /** Libera el cupo reservado de cada categoría. */

@@ -4,6 +4,8 @@
 
 export const FORMA_CORREO = /^\S+@\S+\.\S+$/;
 export const MIN_CONTRASENA = 6;
+// Letras (con acentos/Ñ), espacios, apóstrofes y guiones — sin dígitos ni símbolos.
+export const FORMA_NOMBRE = /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’-]+(\s[A-Za-zÁÉÍÓÚÜÑáéíóúüñ'’-]+)*$/;
 
 const texto = (v) => (v ?? '').trim();
 
@@ -16,6 +18,15 @@ export function errorCorreo(valor) {
 
 export function errorObligatorio(valor, mensaje = 'Este dato es obligatorio.') {
   return texto(valor) ? null : mensaje;
+}
+
+// Nombre/apellido de una persona: obligatorio (salvo que se indique lo
+// contrario) y sin dígitos ni símbolos.
+export function errorNombre(valor, { obligatorio = true, mensajeObligatorio = 'Escribí el nombre.' } = {}) {
+  const v = texto(valor);
+  if (!v) return obligatorio ? mensajeObligatorio : null;
+  if (!FORMA_NOMBRE.test(v)) return 'El nombre no puede tener números ni símbolos.';
+  return null;
 }
 
 export function errorContrasenaNueva(valor) {
@@ -35,6 +46,26 @@ export function errorCelular(valor, { obligatorio = false } = {}) {
   const v = texto(valor);
   if (!v) return obligatorio ? 'Escribí tu celular.' : null;
   if (!/^\d{8}$/.test(v)) return 'El celular tiene que tener 8 dígitos.';
+  return null;
+}
+
+// Edad mínima para registrarse (mismo criterio que EdadMinima en el backend,
+// ver common/decorators/edad-minima.decorator.ts). Opcional: si no viene
+// fecha, no hay error (el campo sigue siendo opcional).
+const EDAD_MAXIMA_RAZONABLE = 120;
+export function errorFechaNacimiento(valor, { minimoAnios = 13 } = {}) {
+  const v = texto(valor);
+  if (!v) return null;
+  const fecha = new Date(`${v}T00:00`);
+  if (Number.isNaN(fecha.getTime())) return 'Fecha inválida.';
+  const hoy = new Date();
+  if (fecha.getTime() > hoy.getTime()) return 'La fecha no puede ser futura.';
+  let edad = hoy.getFullYear() - fecha.getFullYear();
+  const noLlegoElCumple = hoy.getMonth() < fecha.getMonth() ||
+    (hoy.getMonth() === fecha.getMonth() && hoy.getDate() < fecha.getDate());
+  if (noLlegoElCumple) edad -= 1;
+  if (edad < minimoAnios) return `Tenés que tener al menos ${minimoAnios} años.`;
+  if (edad > EDAD_MAXIMA_RAZONABLE) return 'Revisá la fecha de nacimiento.';
   return null;
 }
 

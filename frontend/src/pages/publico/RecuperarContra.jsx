@@ -190,12 +190,12 @@ export default function RecuperarContra() {
 
               <form onSubmit={handleRestablecerContra} className="pi-auth__form" noValidate>
                 <Campo
-                  id="rec-password" etiqueta="Nueva contraseña" contrasena autoComplete="new-password"
+                  id="rec-password" etiqueta="Nueva contraseña" contrasena maxLength={72} autoComplete="new-password"
                   placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`} value={password}
                   onChange={(e) => setPassword(e.target.value)} error={erroresPaso3['rec-password']}
                 />
                 <Campo
-                  id="rec-password-2" etiqueta="Confirmar contraseña" contrasena autoComplete="new-password"
+                  id="rec-password-2" etiqueta="Confirmar contraseña" contrasena maxLength={72} autoComplete="new-password"
                   placeholder="Repetí la contraseña" value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)} error={erroresPaso3['rec-password-2']}
                 />

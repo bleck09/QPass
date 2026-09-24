@@ -71,6 +71,15 @@ enum EstadoSolicitud {
   rechazado
 }
 
+// Usado por Compra: cómo se paga la orden.
+//   manual   -> comprador sube comprobante, Admin aprueba/rechaza a mano.
+//   libelula -> pasarela de pagos Libélula (tarjeta, QR, Tigo Money, etc.),
+//               confirmada automáticamente vía webhook (ver módulo pagos/).
+enum MetodoPago {
+  manual
+  libelula
+}
+
 // Usado por SolicitudEvento: aprobación de la solicitud inicial de evento.
 enum EstadoSolicitudEvento {
   pendiente
@@ -131,14 +140,30 @@ enum TipoTransaccion {
 
 // Origen de un CambioPassword. Era String libre; en BD solo existen estos dos valores.
 enum OrigenCambioPassword {
-  self          // cambio normal, sabiendo la contraseña actual
-  recuperacion  // vía código de 6 dígitos
+  self // cambio normal, sabiendo la contraseña actual
+  recuperacion // vía código de 6 dígitos
 }
 
 // §5.4 — gravedad del AvisoStock que el Ayudante manda al negocio.
 enum TipoAvisoStock {
   sin_stock
   bajo
+}
+
+// Opcional en Usuario — nadie está obligado a declararlo.
+enum Sexo {
+  masculino
+  femenino
+  otro
+  prefiero_no_decir
+}
+
+// Opcional en Usuario. Antes solo existía "ci" (String) sin decir qué tipo de
+// documento era — no distinguía CI de pasaporte para extranjeros.
+enum TipoDocumento {
+  ci
+  pasaporte
+  otro
 }
 
 enum CampoReportado {
@@ -160,79 +185,84 @@ enum MotivoDevolucion {
 // Cuentas de roles operativos (Recargador, Supervisor, Devolucion) las crea Admin directamente
 // y la contraseña se manda al correo de la persona. creadoPorId audita quién creó la cuenta.
 model Usuario {
-  id               Int      @id @default(autoincrement())
-  nombre           String
-  apellidoPaterno  String?
-  apellidoMaterno  String?
-  email            String   @unique
-  passwordHash     String
-  rol              Rol
-  ci               String?  @unique
-  celular          String?
-  fechaNacimiento  DateTime?
-  ciudad           String?
-  biografia        String?
-  foto             String?
+  id                  Int            @id @default(autoincrement())
+  nombre              String
+  apellidoPaterno     String?
+  apellidoMaterno     String?
+  email               String         @unique
+  passwordHash        String
+  rol                 Rol
+  // Tipo de documento del número guardado en `ci` (CI boliviano, pasaporte u
+  // otro). Null en cuentas creadas antes de este campo: se asume CI.
+  tipoDocumento       TipoDocumento?
+  ci                  String?        @unique
+  celular             String?
+  fechaNacimiento     DateTime?
+  sexo                Sexo?
+  pais                String?        @default("Bolivia")
+  ciudad              String?
+  biografia           String?
+  foto                String?
   // true SOLO para la cuenta que se auto-crea al aprobar una Compra (el invitado
   // recibe una contraseña temporal por correo, ver ComprasService.aprobar). Obliga
   // a pasar por /completar-perfil antes de usar el resto de la app: ahí cambia esa
   // contraseña y completa su CI (obligatorio; el resto de los campos, opcional).
   // Se pone en false solo (UsuariosService.reevaluarCompletarPerfil) una vez que
   // YA tiene ci Y ya cambió la contraseña alguna vez (CambioPassword origen=self).
-  debeCompletarPerfil Boolean @default(false)
+  debeCompletarPerfil Boolean        @default(false)
   // El saldo cashless ya NO es global: vive en BilleteraEvento, una fila por
   // (usuario, evento). El que se recarga en un evento solo sirve en ese evento.
-  primerLoginEn    DateTime? // se setea en el primer login exitoso. Antes de esto, el correo
-                              // (=email de esta cuenta) todavía se puede corregir vía
-                              // ReporteEntrada; después queda bloqueado (ver ReporteEntrada).
-  negocioAsignadoId Int?     // solo para rol=Ayudante: el ÚNICO Usuario Negocio que lo creó.
-                              // Todos sus PuestoAyudante deben ser de puestos de este mismo
-                              // negocio (puede trabajar en varios Puesto, pero de un solo negocio).
-  creadoPorId      Int?
-  createdAt        DateTime @default(now())
+  primerLoginEn       DateTime? // se setea en el primer login exitoso. Antes de esto, el correo
+  // (=email de esta cuenta) todavía se puede corregir vía
+  // ReporteEntrada; después queda bloqueado (ver ReporteEntrada).
+  negocioAsignadoId   Int? // solo para rol=Ayudante: el ÚNICO Usuario Negocio que lo creó.
+  // Todos sus PuestoAyudante deben ser de puestos de este mismo
+  // negocio (puede trabajar en varios Puesto, pero de un solo negocio).
+  creadoPorId         Int?
+  createdAt           DateTime       @default(now())
 
-  creadoPor             Usuario?         @relation("CuentaCreadaPor", fields: [creadoPorId], references: [id])
-  cuentasCreadas        Usuario[]        @relation("CuentaCreadaPor")
-  negocioAsignado       Usuario?         @relation("AyudanteDeNegocio", fields: [negocioAsignadoId], references: [id])
-  ayudantesDelNegocio   Usuario[]        @relation("AyudanteDeNegocio")
-  asignaciones          Asignacion[]
-  compras               Compra[]              @relation("Comprador")
-  entradasPropias       Entrada[]              @relation("TitularCuenta")
-  puestos               Puesto[]               @relation("NegocioDueno")
-  puestosBase           PuestoBase[]           @relation("NegocioPuestoBase")
-  puestosComoAyudante   PuestoAyudante[]       @relation("AyudanteAsignado")
-  ayudantesCreados      PuestoAyudante[]       @relation("NegocioQueCreaAyudante")
-  ventasRealizadas      Venta[]                @relation("Vendedor")
-  transaccionesOperadas Transaccion[]          @relation("Operador")
-  transaccionesBilletera Transaccion[]         @relation("BilleteraUsuario") // como cliente o como negocio
-  incidenciasReportadas IncidenciaRecarga[]    @relation("RecargadorQueReporta")
-  incidenciasResueltas  IncidenciaRecarga[]    @relation("AdminQueResuelve")
-  reportesResueltos     ReporteEntrada[]       @relation("AdminQueCorrige")
-  qrAsignados           CodigoQr[]             @relation("SupervisorQueAsigna")
-  qrAnulados            CodigoQr[]             @relation("SupervisorQueAnula")
-  registrosIngresoHechos RegistroIngreso[]     @relation("SupervisorQueRegistraIngreso")
-  solicitudesEnviadas   SolicitudEvento[]      @relation("ClienteQueSolicita")
-  solicitudesResueltas  SolicitudEvento[]      @relation("AdminQueResuelveSolicitud")
-  eventosCreados        Evento[]               @relation("AdminQueCreaEvento")
-  eventosArchivados     Evento[]               @relation("AdminQueArchivaEvento")
-  eventosPublicados     Evento[]               @relation("AdminQuePublicaEvento")
-  eventosComoCliente    Evento[]               @relation("ClienteDeEvento")
-  codigosRecuperacion   CodigoRecuperacion[]
-  cambiosPassword       CambioPassword[]
-  cortesCajaComoOperador CorteCaja[]           @relation("CorteCajaOperador")
-  cortesCajaCerrados     CorteCaja[]           @relation("CorteCajaCerradoPor")
-  ventasAnuladas         Venta[]               @relation("VentaAnuladaPor")
-  auditorias             RegistroAuditoria[]   @relation("ActorAuditoria")
-  billeterasEvento       BilleteraEvento[]
-  codigosRetiroNegocio   CodigoRetiroNegocio[] @relation("CodigoRetiroNegocio")
-  avisosStockEnviados    AvisoStock[]          @relation("AyudanteQueAvisa")
-  avisosStockRecibidos   AvisoStock[]          @relation("NegocioAvisado")
-  casosDuplicadoAbiertos CasoDuplicado[]       @relation("SupervisorQueVerificaDuplicado")
-  casosDuplicadoCerrados CasoDuplicado[]       @relation("QuienRecuperaManilla")
-  alertasManillaEscaneadas AlertaManilla[]     @relation("OperadorQueEscaneaAlerta")
+  creadoPor                Usuario?              @relation("CuentaCreadaPor", fields: [creadoPorId], references: [id])
+  cuentasCreadas           Usuario[]             @relation("CuentaCreadaPor")
+  negocioAsignado          Usuario?              @relation("AyudanteDeNegocio", fields: [negocioAsignadoId], references: [id])
+  ayudantesDelNegocio      Usuario[]             @relation("AyudanteDeNegocio")
+  asignaciones             Asignacion[]
+  compras                  Compra[]              @relation("Comprador")
+  entradasPropias          Entrada[]             @relation("TitularCuenta")
+  puestos                  Puesto[]              @relation("NegocioDueno")
+  puestosBase              PuestoBase[]          @relation("NegocioPuestoBase")
+  puestosComoAyudante      PuestoAyudante[]      @relation("AyudanteAsignado")
+  ayudantesCreados         PuestoAyudante[]      @relation("NegocioQueCreaAyudante")
+  ventasRealizadas         Venta[]               @relation("Vendedor")
+  transaccionesOperadas    Transaccion[]         @relation("Operador")
+  transaccionesBilletera   Transaccion[]         @relation("BilleteraUsuario") // como cliente o como negocio
+  incidenciasReportadas    IncidenciaRecarga[]   @relation("RecargadorQueReporta")
+  incidenciasResueltas     IncidenciaRecarga[]   @relation("AdminQueResuelve")
+  reportesResueltos        ReporteEntrada[]      @relation("AdminQueCorrige")
+  qrAsignados              CodigoQr[]            @relation("SupervisorQueAsigna")
+  qrAnulados               CodigoQr[]            @relation("SupervisorQueAnula")
+  registrosIngresoHechos   RegistroIngreso[]     @relation("SupervisorQueRegistraIngreso")
+  solicitudesEnviadas      SolicitudEvento[]     @relation("ClienteQueSolicita")
+  solicitudesResueltas     SolicitudEvento[]     @relation("AdminQueResuelveSolicitud")
+  eventosCreados           Evento[]              @relation("AdminQueCreaEvento")
+  eventosArchivados        Evento[]              @relation("AdminQueArchivaEvento")
+  eventosPublicados        Evento[]              @relation("AdminQuePublicaEvento")
+  eventosComoCliente       Evento[]              @relation("ClienteDeEvento")
+  codigosRecuperacion      CodigoRecuperacion[]
+  cambiosPassword          CambioPassword[]
+  cortesCajaComoOperador   CorteCaja[]           @relation("CorteCajaOperador")
+  cortesCajaCerrados       CorteCaja[]           @relation("CorteCajaCerradoPor")
+  ventasAnuladas           Venta[]               @relation("VentaAnuladaPor")
+  auditorias               RegistroAuditoria[]   @relation("ActorAuditoria")
+  billeterasEvento         BilleteraEvento[]
+  codigosRetiroNegocio     CodigoRetiroNegocio[] @relation("CodigoRetiroNegocio")
+  avisosStockEnviados      AvisoStock[]          @relation("AyudanteQueAvisa")
+  avisosStockRecibidos     AvisoStock[]          @relation("NegocioAvisado")
+  casosDuplicadoAbiertos   CasoDuplicado[]       @relation("SupervisorQueVerificaDuplicado")
+  casosDuplicadoCerrados   CasoDuplicado[]       @relation("QuienRecuperaManilla")
+  alertasManillaEscaneadas AlertaManilla[]       @relation("OperadorQueEscaneaAlerta")
 
-  @@index([rol])                // listados del panel admin filtrados por rol
-  @@index([negocioAsignadoId])  // ayudantes de un negocio
+  @@index([rol]) // listados del panel admin filtrados por rol
+  @@index([negocioAsignadoId]) // ayudantes de un negocio
   @@map("usuarios")
 }
 
@@ -251,13 +281,29 @@ model CodigoRecuperacion {
   @@map("codigos_recuperacion")
 }
 
+// Código de 6 dígitos para verificar el correo al REGISTRARSE (antes de que
+// exista la cuenta, por eso va por `email` y no por usuarioId como
+// CodigoRecuperacion). Se invalidan los códigos previos sin usar de ese
+// correo al pedir uno nuevo — solo el último emitido es válido.
+model CodigoVerificacionEmail {
+  id        String   @id @default(cuid())
+  email     String
+  codigo    String // 6 dígitos numéricos
+  usado     Boolean  @default(false)
+  expiraEn  DateTime
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@map("codigos_verificacion_email")
+}
+
 // Auditoría de cada cambio de contraseña, para que el propio usuario (y Admin) puedan ver
 // si hubo un cambio que no reconocen.
 model CambioPassword {
-  id        String   @id @default(cuid())
+  id        String               @id @default(cuid())
   usuarioId Int
   origen    OrigenCambioPassword
-  createdAt DateTime @default(now())
+  createdAt DateTime             @default(now())
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
 
@@ -286,32 +332,32 @@ model SolicitudIdempotente {
 // recargas, ventas, devoluciones, ingreso/salida en puerta (validación en la app antes de
 // cada escritura, más allá del job — por si el job aún no corrió).
 model Evento {
-  id          String       @id @default(cuid())
-  nombre      String
-  lugar       String
+  id             String       @id @default(cuid())
+  nombre         String
+  lugar          String
   // Pin del recinto. `coordenadas` ("lat, lng") lo sigue produciendo el
   // MapaSelector del front y es la fuente del marcador. latitud/longitud (§5.11)
   // son la versión numérica derivada, para cálculos geográficos futuros; se
   // llenan en eventos.service parseando `coordenadas`.
-  coordenadas String?
-  latitud     Float?
-  longitud    Float?
+  coordenadas    String?
+  latitud        Float?
+  longitud       Float?
   // Contorno del recinto dibujado por Admin sobre un mapa real (Mapa.jsx,
   // modo Contorno): array de vértices [[lat,lng], ...] del polígono. `null` =
   // sin definir todavía. Es la referencia geográfica real; el lienzo donde se
   // ubican Puesto/ElementoMapa la proyecta a un plano 2D (ver Mapa.jsx), no
   // vive acá en coordenadas de pantalla.
-  contornoMapa Json?
+  contornoMapa   Json?
   // §5.5 — el aforo legal es POR JORNADA (una fiesta nocturna cruza medianoche y
   // un festival tiene varias noches). Ver DiaEvento.aforoMaximo. `fecha`/`fechaFin`
   // quedan como el sobre del evento y se resincronizan al min/max de las jornadas.
-  fecha       DateTime
-  fechaFin    DateTime
-  imagen      String?
-  estado      EstadoEvento @default(activo)
+  fecha          DateTime
+  fechaFin       DateTime
+  imagen         String?
+  estado         EstadoEvento @default(activo)
   // Física (Supervisor entrega y vincula la manilla) o digital (el QR se
   // asigna solo al aprobar la compra). Ver enum TipoManilla.
-  tipoManilla TipoManilla  @default(fisica)
+  tipoManilla    TipoManilla  @default(fisica)
   // Cierre DEFINITIVO: distinto de estado=finalizado (que aún permite devoluciones,
   // incidencias, reportes...). Un evento archivado queda de SOLO LECTURA — ninguna
   // escritura ligada a él pasa (ver EventoPolicy). Solo Admin archiva/desarchiva, y
@@ -326,43 +372,43 @@ model Evento {
   // para no ocultar de golpe nada que ya estuviera visible/vendiendo.
   publicadoEn    DateTime?
   publicadoPorId Int?
-  qrPrefijo   String?      // 3 letras que van al inicio de cada CodigoQr.codigo generado
-  qrAncho     Float?       // ancho de impresión de la manilla/QR (config del lote generado)
-  qrAlto      Float?       // alto de impresión de la manilla/QR
+  qrPrefijo      String? // 3 letras que van al inicio de cada CodigoQr.codigo generado
+  qrAncho        Float? // ancho de impresión de la manilla/QR (config del lote generado)
+  qrAlto         Float? // alto de impresión de la manilla/QR
   // Días tras fechaFin en que el asistente todavía puede retirar su saldo cashless
   // (BilleteraEvento). Pasado el plazo la Devolución lo bloquea; el saldo queda
   // como dato ("saldo caducado no reclamado" en el dashboard admin).
-  diasParaRetiro Int       @default(30)
-  creadoPorId Int
+  diasParaRetiro Int          @default(30)
+  creadoPorId    Int
   // Cliente organizador. Se llena al aprobar una SolicitudEvento (= SolicitudEvento.clienteId)
   // o a mano cuando Admin crea el evento directo. NULL en eventos directos sin cliente.
   // Denormaliza la Asignacion rol=Cliente que se crea en solicitudes-evento.service.aprobar.
-  clienteId   Int?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @default(now()) @updatedAt
+  clienteId      Int?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
 
-  creadoPor         Usuario      @relation("AdminQueCreaEvento", fields: [creadoPorId], references: [id])
-  archivadoPor      Usuario?     @relation("AdminQueArchivaEvento", fields: [archivadoPorId], references: [id])
-  publicadoPor      Usuario?     @relation("AdminQuePublicaEvento", fields: [publicadoPorId], references: [id])
-  cliente           Usuario?     @relation("ClienteDeEvento", fields: [clienteId], references: [id])
-  asignaciones      Asignacion[]
-  categoriasTicket  CategoriaTicket[]
-  compras           Compra[]
-  entradas          Entrada[]
-  codigosQr         CodigoQr[]
-  puestos           Puesto[]
-  elementosMapa     ElementoMapa[]
-  transacciones     Transaccion[]
-  incidenciasRecarga IncidenciaRecarga[]
-  reportesEntrada    ReporteEntrada[]
-  landingConfig     LandingConfig?
-  solicitudOrigen   SolicitudEvento?
-  resumen           ResumenEvento?
-  cortesCaja        CorteCaja[]
-  dias              DiaEvento[]
-  billeterasEvento  BilleteraEvento[]
+  creadoPor            Usuario               @relation("AdminQueCreaEvento", fields: [creadoPorId], references: [id])
+  archivadoPor         Usuario?              @relation("AdminQueArchivaEvento", fields: [archivadoPorId], references: [id])
+  publicadoPor         Usuario?              @relation("AdminQuePublicaEvento", fields: [publicadoPorId], references: [id])
+  cliente              Usuario?              @relation("ClienteDeEvento", fields: [clienteId], references: [id])
+  asignaciones         Asignacion[]
+  categoriasTicket     CategoriaTicket[]
+  compras              Compra[]
+  entradas             Entrada[]
+  codigosQr            CodigoQr[]
+  puestos              Puesto[]
+  elementosMapa        ElementoMapa[]
+  transacciones        Transaccion[]
+  incidenciasRecarga   IncidenciaRecarga[]
+  reportesEntrada      ReporteEntrada[]
+  landingConfig        LandingConfig?
+  solicitudOrigen      SolicitudEvento?
+  resumen              ResumenEvento?
+  cortesCaja           CorteCaja[]
+  dias                 DiaEvento[]
+  billeterasEvento     BilleteraEvento[]
   codigosRetiroNegocio CodigoRetiroNegocio[]
-  casosDuplicado    CasoDuplicado[]
+  casosDuplicado       CasoDuplicado[]
 
   @@index([clienteId])
   @@map("eventos")
@@ -393,17 +439,17 @@ model CodigoRetiroNegocio {
 // usuarioId + eventoId); esta fila es el saldo vivo, actualizado en la misma
 // transacción que cada movimiento (ver TransaccionesService).
 model BilleteraEvento {
-  id        String    @id @default(cuid())
-  usuarioId Int
-  eventoId  String
-  saldo     Decimal   @default(0) @db.Decimal(10, 2)
+  id             String    @id @default(cuid())
+  usuarioId      Int
+  eventoId       String
+  saldo          Decimal   @default(0) @db.Decimal(10, 2)
   // §5.10 — parte del saldo retenida por una IncidenciaRecarga pendiente: NO se
   // puede gastar/retirar (el débito guarda contra `saldo - saldoBloqueado`).
   // Se libera al resolver la incidencia.
-  saldoBloqueado Decimal @default(0) @db.Decimal(10, 2)
-  expiraEn  DateTime? // Fase 3: fin de la última jornada + Evento.diasParaRetiro
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  saldoBloqueado Decimal   @default(0) @db.Decimal(10, 2)
+  expiraEn       DateTime? // Fase 3: fin de la última jornada + Evento.diasParaRetiro
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   usuario Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
   evento  Evento  @relation(fields: [eventoId], references: [id], onDelete: Cascade)
@@ -421,11 +467,11 @@ model BilleteraEvento {
 model DiaEvento {
   id          String   @id @default(cuid())
   eventoId    String
-  nombre      String?  // "Noche de apertura" — opcional; la UI muestra "Día N" si es null
+  nombre      String? // "Noche de apertura" — opcional; la UI muestra "Día N" si es null
   inicio      DateTime
   fin         DateTime
   orden       Int
-  aforoMaximo Int?     // §5.5 — capacidad legal de ESTA jornada
+  aforoMaximo Int? // §5.5 — capacidad legal de ESTA jornada
   createdAt   DateTime @default(now())
 
   evento     Evento            @relation(fields: [eventoId], references: [id], onDelete: Cascade)
@@ -505,7 +551,7 @@ model Asignacion {
   @@unique([eventoId, usuarioId])
   @@index([eventoId, rol])
   @@index([usuarioId]) // "mis eventos" de un operador: el @@unique de arriba empieza por
-                       // eventoId, así que no sirve para filtrar solo por usuarioId
+  // eventoId, así que no sirve para filtrar solo por usuarioId
   @@map("asignaciones_eventos")
 }
 
@@ -514,31 +560,31 @@ model Asignacion {
 // LandingConfig (copiando estos datos) y el admin arma las CategoriaTicket + el pool de CodigoQr.
 // Si se rechaza, el cliente puede editar y reenviar esta misma solicitud, o crear otras nuevas.
 model SolicitudEvento {
-  id                String                @id @default(cuid())
-  clienteId         Int
-  nombreEvento      String
-  lugar             String
-  fecha             DateTime
-  fechaFin          DateTime
-  descripcion       String
-  aforoEstimado     Int?                  // §5.11 — asistentes que el cliente estima; al aprobar se copia a
-                                          // DiaEvento.aforoMaximo de la jornada creada (ver solicitudes-evento.service.aprobar).
-  colorPrimario     String
-  colorBoton        String
-  colorFondo        String
-  colorTextoTitulo  String
-  colorTextoP       String
-  imagenPortada     String?
-  mapaLugar         String?               // boceto/mapa del lugar, opcional
-  actividades       Json                  // [{ titulo, descripcion }]
-  cronograma        Json                  // [{ hora, actividad }] — describe qué se hará a esa hora
-  estado            EstadoSolicitudEvento @default(pendiente)
-  motivoRechazo     String?
-  eventoId          String?               @unique // se llena cuando admin aprueba y crea el Evento
-  resueltoPorId     Int?
-  resueltoEn        DateTime?
-  createdAt         DateTime              @default(now())
-  updatedAt         DateTime              @updatedAt
+  id               String                @id @default(cuid())
+  clienteId        Int
+  nombreEvento     String
+  lugar            String
+  fecha            DateTime
+  fechaFin         DateTime
+  descripcion      String
+  aforoEstimado    Int? // §5.11 — asistentes que el cliente estima; al aprobar se copia a
+  // DiaEvento.aforoMaximo de la jornada creada (ver solicitudes-evento.service.aprobar).
+  colorPrimario    String
+  colorBoton       String
+  colorFondo       String
+  colorTextoTitulo String
+  colorTextoP      String
+  imagenPortada    String?
+  mapaLugar        String? // boceto/mapa del lugar, opcional
+  actividades      Json // [{ titulo, descripcion }]
+  cronograma       Json // [{ hora, actividad }] — describe qué se hará a esa hora
+  estado           EstadoSolicitudEvento @default(pendiente)
+  motivoRechazo    String?
+  eventoId         String?               @unique // se llena cuando admin aprueba y crea el Evento
+  resueltoPorId    Int?
+  resueltoEn       DateTime?
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
 
   cliente     Usuario  @relation("ClienteQueSolicita", fields: [clienteId], references: [id])
   resueltoPor Usuario? @relation("AdminQueResuelveSolicitud", fields: [resueltoPorId], references: [id])
@@ -557,7 +603,7 @@ model SolicitudEvento {
 model CategoriaTicket {
   id              String   @id @default(cuid())
   eventoId        String
-  diaEventoId     String   // toda categoría pertenece a una jornada (ver DiaEvento)
+  diaEventoId     String // toda categoría pertenece a una jornada (ver DiaEvento)
   nombre          String
   // Lista de beneficios/features de esta categoría (una fila por línea, ej.
   // "Baño compartido", "Acceso a zona VIP") — se muestran como bullets en la
@@ -585,29 +631,37 @@ model CategoriaTicket {
 // esto reserva el cupo (ver CategoriaTicket.cantidadVendida). Admin revisa en un apartado y
 // confirma o rechaza (si rechaza, el cupo se libera).
 model Compra {
-  id                       String          @id @default(cuid())
-  eventoId                 String
-  compradorId              Int
-  montoTotal               Decimal         @db.Decimal(10, 2)
-  estado                   EstadoSolicitud @default(pendiente)
-  comprobanteUrl           String?
-  comprobanteNombreArchivo String?
-  motivoRechazo            String?
-  resueltoPorId            Int?
+  id                        String          @id @default(cuid())
+  eventoId                  String
+  compradorId               Int
+  montoTotal                Decimal         @db.Decimal(10, 2)
+  estado                    EstadoSolicitud @default(pendiente)
+  metodoPago                MetodoPago      @default(manual)
+  comprobanteUrl            String?
+  comprobanteNombreArchivo  String?
+  motivoRechazo             String?
+  resueltoPorId             Int?
   resueltoEn                DateTime?
+  // Pago vía pasarela Libélula (solo si metodoPago = libelula). Ver módulo pagos/.
+  libelulaIdTransaccion     String?
+  libelulaUrlPago           String?
+  libelulaCodigoRecaudacion String?
+  libelulaFormaPago         String?
+  libelulaConfirmadoEn      DateTime?
   // §T&C — el comprador aceptó los términos al crear la compra.
-  terminosAceptadosEn      DateTime?
-  versionTerminos          String?
-  createdAt                DateTime        @default(now())
-  updatedAt                DateTime        @default(now()) @updatedAt
+  terminosAceptadosEn       DateTime?
+  versionTerminos           String?
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @default(now()) @updatedAt
 
-  evento    Evento    @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  comprador Usuario   @relation("Comprador", fields: [compradorId], references: [id])
-  entradas  Entrada[]
+  evento          Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  comprador       Usuario          @relation("Comprador", fields: [compradorId], references: [id])
+  entradas        Entrada[]
   reportesEntrada ReporteEntrada[]
 
   @@index([eventoId, estado])
   @@index([compradorId])
+  @@index([libelulaIdTransaccion])
   @@map("compras")
 }
 
@@ -619,7 +673,7 @@ model Compra {
 // que recargue acá solo sirve acá, no se arrastra a otros eventos.
 // El QR de manilla es independiente por evento (no por categoría) y se vincula después.
 model Entrada {
-  id                String        @id @default(cuid())
+  id                String  @id @default(cuid())
   eventoId          String
   // Jornada de esta entrada (hereda de la categoría). OBLIGATORIO: el aforo legal se
   // cuenta por jornada (ver DiaEvento.aforoMaximo), así que una entrada sin jornada
@@ -627,14 +681,14 @@ model Entrada {
   diaEventoId       String
   compraId          String?
   categoriaTicketId String?
-  usuarioId         Int?          // el titular YA lo trae desde el inicio (=compradorId, ya tiene
-                                   // cuenta porque compró logueado); en invitados queda null hasta
-                                   // que se les crea su cuenta al aprobarse la Compra
+  usuarioId         Int? // el titular YA lo trae desde el inicio (=compradorId, ya tiene
+  // cuenta porque compró logueado); en invitados queda null hasta
+  // que se les crea su cuenta al aprobarse la Compra
 
   isTitular Boolean @default(false)
-  numero    Int?          // correlativo por evento, legible para el asistente ("entrada N.º 42").
-                           // Se asigna de forma atómica al APROBARSE la Compra (antes de eso la
-                           // Entrada solo reserva cupo y todavía no "cuenta" como asistente real).
+  numero    Int? // correlativo por evento, legible para el asistente ("entrada N.º 42").
+  // Se asigna de forma atómica al APROBARSE la Compra (antes de eso la
+  // Entrada solo reserva cupo y todavía no "cuenta" como asistente real).
   nombre    String
   correo    String
   celular   String?
@@ -653,19 +707,19 @@ model Entrada {
   categoriaTicket CategoriaTicket? @relation(fields: [categoriaTicketId], references: [id])
   usuario         Usuario?         @relation("TitularCuenta", fields: [usuarioId], references: [id])
 
-  codigosQr         CodigoQr[] // historial: anuladas (perdida/dañada) + la activa
-  transacciones     Transaccion[]
-  ventas            Venta[]
-  incidencias       IncidenciaRecarga[]
-  reportesDatos     ReporteEntrada[]
-  registrosIngreso  RegistroIngreso[] // historial completo de reingresos, cada uno con su foto
-  casosDuplicado    CasoDuplicado[]
+  codigosQr        CodigoQr[] // historial: anuladas (perdida/dañada) + la activa
+  transacciones    Transaccion[]
+  ventas           Venta[]
+  incidencias      IncidenciaRecarga[]
+  reportesDatos    ReporteEntrada[]
+  registrosIngreso RegistroIngreso[] // historial completo de reingresos, cada uno con su foto
+  casosDuplicado   CasoDuplicado[]
 
   @@unique([eventoId, numero])
   @@index([eventoId, estadoIngreso])
   @@index([diaEventoId, estadoIngreso]) // aforo por jornada
   @@index([usuarioId]) // "mis entradas" del invitado: se buscan por Entrada.usuarioId
-  @@index([compraId])  // las entradas de una compra (aprobación/rechazo recorre todas)
+  @@index([compraId]) // las entradas de una compra (aprobación/rechazo recorre todas)
   @@index([categoriaTicketId])
   @@map("entradas")
 }
@@ -675,21 +729,21 @@ model Entrada {
 // ve el historial completo, no solo el último movimiento. registradoPorId es el Supervisor
 // que hizo el escaneo.
 model RegistroIngreso {
-  id              String              @id @default(cuid())
-  entradaId       String
-  tipo            TipoRegistroIngreso
-  foto            String? // copia histórica de la foto tomada en ESTE movimiento puntual, para
-                           // el historial de auditoría. La foto de referencia vigente vive en
-                           // Entrada.foto (una sola por persona-evento, ver entradas.routes.js).
-  registradoPorId Int
+  id               String              @id @default(cuid())
+  entradaId        String
+  tipo             TipoRegistroIngreso
+  foto             String? // copia histórica de la foto tomada en ESTE movimiento puntual, para
+  // el historial de auditoría. La foto de referencia vigente vive en
+  // Entrada.foto (una sola por persona-evento, ver entradas.routes.js).
+  registradoPorId  Int
   // Solo en tipo=verificacion_duplicado: lo que el Supervisor comprobó del dueño real.
   ultimosDigitosCi String?
   mostroCarnet     Boolean?
   cuentaVerificada Boolean? // mostró su cuenta QPass abierta en el celular
-  createdAt       DateTime            @default(now())
+  createdAt        DateTime            @default(now())
 
-  entrada       Entrada @relation(fields: [entradaId], references: [id], onDelete: Cascade)
-  registradoPor Usuario @relation("SupervisorQueRegistraIngreso", fields: [registradoPorId], references: [id])
+  entrada       Entrada        @relation(fields: [entradaId], references: [id], onDelete: Cascade)
+  registradoPor Usuario        @relation("SupervisorQueRegistraIngreso", fields: [registradoPorId], references: [id])
   casoDuplicado CasoDuplicado?
 
   @@index([entradaId, createdAt])
@@ -709,34 +763,34 @@ model RegistroIngreso {
 model CodigoQr {
   id          String   @id @default(cuid())
   eventoId    String
-  diaEventoId String?  // jornada de la manilla. El pool se genera a nivel evento (sin
-                       // jornada) y la manilla la ADOPTA de la entrada al vincularse
-                       // (entradas.service.vincularQr). Null hasta entonces.
+  diaEventoId String? // jornada de la manilla. El pool se genera a nivel evento (sin
+  // jornada) y la manilla la ADOPTA de la entrada al vincularse
+  // (entradas.service.vincularQr). Null hasta entonces.
   numero      Int
   codigo      String   @unique
   generadoEn  DateTime @default(now())
 
-  entradaId        String?
-  asignadoPorId    Int?
-  asignadoEn       DateTime?
-  anulado          Boolean   @default(false)
+  entradaId       String?
+  asignadoPorId   Int?
+  asignadoEn      DateTime?
+  anulado         Boolean       @default(false)
   // Texto libre a propósito: lo escribe el Supervisor al anular, y el sistema pone
   // "Reemplazada al vincular una nueva" cuando el reemplazo es automático
   // (entradas.service.vincularQr). No es un enum cerrado.
-  motivoAnulacion  String?
-  anuladoPorId     Int?
-  anuladoEn        DateTime?
-  estado           EstadoManilla @default(activa)
-  updatedAt        DateTime  @default(now()) @updatedAt
+  motivoAnulacion String?
+  anuladoPorId    Int?
+  anuladoEn       DateTime?
+  estado          EstadoManilla @default(activa)
+  updatedAt       DateTime      @default(now()) @updatedAt
 
-  evento      Evento     @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  evento         Evento          @relation(fields: [eventoId], references: [id], onDelete: Cascade)
   // FK simple a propósito (no compuesta como en Entrada/CategoriaTicket): acá diaEventoId
   // es nullable por diseño (el pool nace sin jornada y la adopta al vincularse), y una FK
   // compuesta con eventoId no podría hacer SetNull porque eventoId es NOT NULL.
-  diaEvento   DiaEvento? @relation(fields: [diaEventoId], references: [id], onDelete: SetNull)
-  entrada     Entrada?   @relation(fields: [entradaId], references: [id])
-  asignadoPor Usuario?   @relation("SupervisorQueAsigna", fields: [asignadoPorId], references: [id])
-  anuladoPor  Usuario?   @relation("SupervisorQueAnula", fields: [anuladoPorId], references: [id])
+  diaEvento      DiaEvento?      @relation(fields: [diaEventoId], references: [id], onDelete: SetNull)
+  entrada        Entrada?        @relation(fields: [entradaId], references: [id])
+  asignadoPor    Usuario?        @relation("SupervisorQueAsigna", fields: [asignadoPorId], references: [id])
+  anuladoPor     Usuario?        @relation("SupervisorQueAnula", fields: [anuladoPorId], references: [id])
   casosComoCopia CasoDuplicado[] @relation("ManillaCopiada")
   casosComoNueva CasoDuplicado[] @relation("ManillaNuevaDelDueno")
   alertas        AlertaManilla[]
@@ -767,18 +821,18 @@ model Transaccion {
   monto           Decimal         @db.Decimal(10, 2)
   saldoResultante Decimal         @db.Decimal(10, 2) // saldo de usuarioId DESPUÉS de esta fila
 
-  usuarioId  Int     // dueño de la billetera afectada (cliente, invitado con cuenta, o negocio)
-  entradaId  String? // contexto opcional: manilla/entrada escaneada, si aplica
-  ventaId    String? // set en las dos filas (consumo + venta) que genera una Venta
-  operadorId Int     // quién la ejecutó: Recargador, Ayudante o Devolucion
+  usuarioId   Int // dueño de la billetera afectada (cliente, invitado con cuenta, o negocio)
+  entradaId   String? // contexto opcional: manilla/entrada escaneada, si aplica
+  ventaId     String? // set en las dos filas (consumo + venta) que genera una Venta
+  operadorId  Int // quién la ejecutó: Recargador, Ayudante o Devolucion
   // §5.2 — caja de efectivo a la que pertenece este movimiento. Se estampa en
   // recarga (Recargador) y devolucion (Devolucion): el arqueo cuadra sumando
   // por corteCajaId, no por ventana de tiempo. NULL en ventas/consumos/ajustes
   // y en recargas hechas por Admin (correcciones, fuera de turno).
   corteCajaId String?
 
-  fotoCarnetUrl    String?           // exigida en retiros (Devolucion): foto del carnet de quien cobra
-  fotoRostroUrl    String?           // foto de la cara de quien cobra — obligatoria en el retiro de un negocio
+  fotoCarnetUrl    String? // exigida en retiros (Devolucion): foto del carnet de quien cobra
+  fotoRostroUrl    String? // foto de la cara de quien cobra — obligatoria en el retiro de un negocio
   motivoDevolucion MotivoDevolucion? // §5.11 — solo en filas tipo=devolucion
   nota             String?
 
@@ -795,10 +849,10 @@ model Transaccion {
   @@index([operadorId, createdAt]) // historial completo de un operador (cuadre de recarga/devolución)
   @@index([eventoId, tipo])
   @@index([usuarioId, eventoId, createdAt]) // saldo/historial de una BilleteraEvento: toda
-                                            // consulta de saldo filtra usuario Y evento
+  // consulta de saldo filtra usuario Y evento
   @@index([usuarioId, createdAt])
   @@index([entradaId, createdAt])
-  @@index([ventaId])   // las 2 filas de una venta, al anularla
+  @@index([ventaId]) // las 2 filas de una venta, al anularla
   @@index([corteCajaId])
   @@map("transacciones")
 }
@@ -807,7 +861,7 @@ model Transaccion {
 // Solo Admin la resuelve.
 model IncidenciaRecarga {
   id              String     @id @default(cuid())
-  eventoId        String     // denormalizado desde entrada.eventoId, para dashboards por evento
+  eventoId        String // denormalizado desde entrada.eventoId, para dashboards por evento
   entradaId       String
   montoEntregado  Decimal    @db.Decimal(10, 2)
   montoSolicitado Decimal?   @db.Decimal(10, 2)
@@ -842,7 +896,7 @@ model IncidenciaRecarga {
 // que la persona ya inició sesión con ese correo, queda bloqueado y ya no se acepta este reporte.
 model ReporteEntrada {
   id             String         @id @default(cuid())
-  eventoId       String         // denormalizado desde entrada.eventoId, para dashboards por evento
+  eventoId       String // denormalizado desde entrada.eventoId, para dashboards por evento
   compraId       String
   entradaId      String
   campo          CampoReportado
@@ -962,13 +1016,13 @@ model ProductoBase {
   nombre       String
   precio       Decimal  @db.Decimal(10, 2) // precio por defecto; cada evento puede sobrescribirlo
   imagen       String?
-  categoria    String?  // §5.11 — "bebida" | "comida" | ... para agrupar ventas
-  archivado    Boolean  @default(false)    // no se borra si ya tiene VentaItem
+  categoria    String? // §5.11 — "bebida" | "comida" | ... para agrupar ventas
+  archivado    Boolean  @default(false) // no se borra si ya tiene VentaItem
   createdAt    DateTime @default(now())
 
-  puestoBase PuestoBase       @relation(fields: [puestoBaseId], references: [id], onDelete: Cascade)
-  estados    ProductoEstado[]
-  ventaItems VentaItem[]
+  puestoBase  PuestoBase       @relation(fields: [puestoBaseId], references: [id], onDelete: Cascade)
+  estados     ProductoEstado[]
+  ventaItems  VentaItem[]
   avisosStock AvisoStock[]
 
   @@index([puestoBaseId])
@@ -1002,7 +1056,7 @@ model ProductoEstado {
 // se quedó sin stock o está por agotarse (§5.4). Campos denormalizados para
 // mostrarlo sin joins. `visto` lo marca el negocio desde su panel.
 model AvisoStock {
-  id             String   @id @default(cuid())
+  id             String         @id @default(cuid())
   puestoId       String
   productoBaseId String
   productoNombre String
@@ -1013,8 +1067,8 @@ model AvisoStock {
   negocioId      Int
   tipo           TipoAvisoStock
   stockRestante  Int?
-  visto          Boolean  @default(false)
-  createdAt      DateTime @default(now())
+  visto          Boolean        @default(false)
+  createdAt      DateTime       @default(now())
 
   // Los campos *Nombre de arriba son snapshot a propósito (mostrar el aviso sin joins),
   // pero las FK abajo existen para que borrar el puesto/producto/evento se lleve el aviso
@@ -1156,7 +1210,7 @@ model VentaItem {
   id             String  @id @default(cuid())
   ventaId        String
   productoBaseId String
-  nombreProducto String  // snapshot: el nombre puede cambiar después
+  nombreProducto String // snapshot: el nombre puede cambiar después
   precioUnitario Decimal @db.Decimal(10, 2) // snapshot: incluye el override del evento
   cantidad       Int
 
@@ -1180,8 +1234,8 @@ model LandingConfig {
   colorFondo       String
   colorTextoTitulo String
   colorTextoP      String
-  actividades      Json     // [{ icono, titulo, descripcion }]
-  cronograma       Json     // [{ hora, actividad }]
+  actividades      Json // [{ icono, titulo, descripcion }]
+  cronograma       Json // [{ hora, actividad }]
   // Encuadre de la imagen del encabezado: { x, y (punto focal, 0-100 %), zoom
   // (100-200 %), oscurecer (0-80 %), desenfoque (0-8 px) }. null = sin ajustar.
   imagenAjuste     Json?
@@ -1191,6 +1245,7 @@ model LandingConfig {
 
   @@map("landing_config")
 }
+
 // Registro de auditoría de las escrituras sensibles (§5.8): quién hizo qué, con
 // el antes y el después. Se escribe fire-and-forget (nunca rompe la operación).
 // entidad/accion son String a propósito: la lista crece y no queremos migrar
@@ -1198,9 +1253,9 @@ model LandingConfig {
 model RegistroAuditoria {
   id        String   @id @default(cuid())
   actorId   Int
-  entidad   String   // 'compra' | 'incidencia_recarga' | 'reporte_entrada' | 'evento' | 'solicitud_evento' | 'venta' | 'corte_caja'
+  entidad   String // 'compra' | 'incidencia_recarga' | 'reporte_entrada' | 'evento' | 'solicitud_evento' | 'venta' | 'corte_caja'
   entidadId String
-  accion    String   // 'aprobar' | 'rechazar' | 'resolver' | 'corregir' | 'actualizar' | 'archivar' | 'desarchivar' | 'publicar' | 'despublicar' | 'cerrar' | 'anular'
+  accion    String // 'aprobar' | 'rechazar' | 'resolver' | 'corregir' | 'actualizar' | 'archivar' | 'desarchivar' | 'publicar' | 'despublicar' | 'cerrar' | 'anular' | 'confirmar_pago_libelula'
   antes     Json?
   despues   Json?
   createdAt DateTime @default(now())

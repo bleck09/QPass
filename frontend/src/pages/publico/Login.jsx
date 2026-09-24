@@ -74,7 +74,7 @@ export default function Login() {
               error={errores['login-email']}
             />
             <Campo
-              id="login-password" etiqueta="Contraseña" contrasena
+              id="login-password" etiqueta="Contraseña" contrasena maxLength={72}
               etiquetaExtra={<Link to="/recuperar" className="pi-auth__link">¿Olvidaste tu contraseña?</Link>}
               autoComplete="current-password" placeholder="••••••••"
               value={password} onChange={(e) => setPassword(e.target.value)}

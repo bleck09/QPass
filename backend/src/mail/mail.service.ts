@@ -46,12 +46,16 @@ export class MailService implements OnModuleInit {
     });
   }
 
-  async enviar(correo: CorreoAEnviar): Promise<void> {
+  /**
+   * Devuelve true solo si el correo salió de verdad por SMTP. Un fallo (o el
+   * modo stub sin SMTP_HOST) nunca tira excepción — se loguea y se devuelve
+   * false, para que el llamador decida (ej. auth.service usa esto para saber
+   * si todavía debe mostrar el código en pantalla como respaldo).
+   */
+  async enviar(correo: CorreoAEnviar): Promise<boolean> {
     if (!this.transporte) {
-      this.logger.log(
-        `[STUB] Correo NO enviado -> ${correo.para} | ${correo.asunto}`,
-      );
-      return;
+      this.logger.log(`[STUB] Correo NO enviado -> ${correo.para} | ${correo.asunto}`);
+      return false;
     }
 
     try {
@@ -62,6 +66,7 @@ export class MailService implements OnModuleInit {
         html: correo.cuerpo,
       });
       this.logger.log(`Correo enviado -> ${correo.para} | ${correo.asunto}`);
+      return true;
     } catch (error) {
       // Un correo caído no debe tumbar la operación de negocio que lo dispara
       // (aprobar/rechazar una compra, etc.) — solo se loguea el error.
@@ -69,6 +74,7 @@ export class MailService implements OnModuleInit {
         `Fallo al enviar correo -> ${correo.para} | ${correo.asunto}`,
         error instanceof Error ? error.stack : String(error),
       );
+      return false;
     }
   }
 }

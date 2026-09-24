@@ -51,12 +51,9 @@
   text-transform: uppercase;
 }
 
-/* Parte del título en degradé de marca. */
+/* Parte del título en el color de marca (antes degradé cian/verde). */
 .qp-info__resalte {
-  background: linear-gradient(90deg, var(--cian-digital), var(--verde-recarga));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  color: var(--cian-digital);
 }
 
 .qp-info__foto {

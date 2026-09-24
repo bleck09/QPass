@@ -1,4 +1,5 @@
-import { IsOptional, IsString } from 'class-validator';
+import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { MAX_NOTA, mensajeMaxLength } from '../../../common/dto/validacion.constantes';
 
 export class CrearAvisoStockDto {
   @IsString()
@@ -9,5 +10,6 @@ export class CrearAvisoStockDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_NOTA, { message: mensajeMaxLength(MAX_NOTA) })
   nota?: string;
 }

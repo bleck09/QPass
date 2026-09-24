@@ -1,0 +1,350 @@
+PLAN: UNIFICAR Y COMPLETAR VALIDACIONES DE FORMULARIOS
+========================================================
+Fecha: 2026-09-24
+Alcance: frontend/src (todos los formularios) + backend/src/modules/**/dto.
+Basado en un relevamiento completo de código (ver sección 0) — no es una
+suposición, cada gap está confirmado con archivo:línea.
+
+-------------------------------------------------------------------
+BITÁCORA / REGISTRO DE AVANCE
+-------------------------------------------------------------------
+2026-09-24 — Plan escrito tras relevamiento completo de todos los
+formularios del frontend y sus DTOs correspondientes en el backend.
+
+2026-09-24 — Fase 1 IMPLEMENTADA (los 4 puntos de la sección 4):
+  1. errorNombre() nueva en frontend/src/utils/validacion.js
+     (FORMA_NOMBRE: letras/acentos/Ñ/espacios/apóstrofe/guion, sin
+     dígitos ni símbolos). Aplicada en Registrar.jsx (nombre,
+     paterno, materno) y en utils/entradas.js (nombre de cada
+     entrada de compra). Espejada en el backend con @Matches en
+     registro.dto.ts (apellidoPaterno/apellidoMaterno — "nombre" NO
+     se restringió ahí porque ese mismo DTO se reusa para crear
+     cuentas de negocio, donde el "nombre" puede ser el de un local
+     con números) y en compras.dto.ts (EntradaCompraDto.nombre,
+     EntradaCorreccionDto.nombre — ahí sí, siempre es nombre de
+     persona). AdCreaUsuarioNegocio.jsx quedó SIN este regex a
+     propósito, mismo motivo (nombre de negocio, no de persona).
+  2. CI/pasaporte — Opción 2 aplicada SOLO en Registrar.jsx: el
+     campo quedó opcional, con ayuda "podés dejarlo vacío o poner tu
+     número de pasaporte", sin inputMode numérico (para permitir
+     pasaportes con letras). CompletarPerfil.jsx NO se tocó: ahí el
+     CI es una regla de negocio real (verificación física en la
+     puerta) y el backend solo apaga debeCompletarPerfil cuando ya
+     tiene CI — hacerlo opcional ahí dejaría a un usuario sin CI
+     atrapado en un loop sin salida. Ver memoria
+     project-completar-perfil-ci.
+  3. Mensaje de correo duplicado por jornada unificado: mismo texto
+     ("Este correo ya está en otra entrada de la misma jornada.")
+     en frontend (utils/entradas.js, constante
+     MSG_CORREO_DUPLICADO_JORNADA) y backend (compras.service.ts).
+  4. Nuevo endpoint GET /auth/email-disponible?email=... +
+     AuthService.emailDisponible() (backend) y api.auth.emailDisponible
+     (frontend). Registrar.jsx lo llama al intentar avanzar del paso
+     2 al paso 3: si el correo ya tiene cuenta, avisa ahí mismo (con
+     el mismo componente Campo/ErrorCampo) en vez de recién al final
+     de los 3 pasos. Si la llamada falla (red caída), no bloquea el
+     avance — el registro final lo va a rechazar igual si
+     corresponde.
+  `npx tsc --noEmit` + eslint en backend y frontend: limpio (solo
+  quedan los 2 errores preexistentes del test de supertest, sin
+  relación).
+
+  Pendiente de Fase 1: nada — los 4 puntos quedaron cerrados.
+
+2026-09-24 — Fase 2 revisada e implementada donde correspondía.
+  Al ir formulario por formulario apareció que el relevamiento
+  inicial (sección 0) sobreestimó el problema en 3 de los 6 casos:
+  - AdminCrearTickets.jsx y AdminJornadas.jsx: al leer el código
+    completo (no solo grep de "required"), YA usan Campo +
+    validarCategoria()/validarJornada() + error por campo — están
+    bien, no se tocaron.
+  - AdCreaUsuarioNegocio.jsx: también ya usa Campo + validarUsuario().
+    Es además el formulario real que crea cuentas de Recargador/
+    Supervisor/Devolución (el nombre del archivo es viejo/engañoso).
+  - VistaOperadores.jsx y VistaSupervisores.jsx (la sospecha original
+    de "categoría C"): son paneles de SOLO LECTURA (podio + tabla de
+    movimientos), sin ningún <form> ni <input> — no hay nada que
+    validar ahí, el gap no existía.
+  Se corrigió el único caso real: FormularioEventoPasos.jsx (paso
+  "Lo básico" del asistente de crear/editar evento) — nombre y lugar
+  pasaron de `<input required>` sin mensaje a Campo/ErrorCampo con
+  error por campo (errorObligatorio), igual que el resto de la app.
+  AdminConfigurarPagina.jsx (editor de contenido de la página
+  pública: colores, actividades, cronograma) se dejó SIN tocar a
+  propósito: el único campo que podría faltar (título) siempre se
+  completa solo con el nombre del evento, y el resto es contenido
+  libre/decorativo sin un formato "correcto" que validar.
+
+  Fase 3 (formatos numéricos/fecha en precio/cantidad/fechaNacimiento):
+  no se encontró nada más para agregar — precio y cantidad ya están
+  cubiertos por validarCategoria()/validarJornada() (Fase 2), y
+  fechaNacimiento ya tiene `max` al día de hoy en los 3 formularios
+  que lo piden. Se cierra sin cambios adicionales.
+
+2026-09-24 — Fase 4 (nueva, a pedido del usuario): límites de
+  longitud en TODOS los campos de texto libre del backend.
+  Motivo: ningún campo string tenía @MaxLength (salvo 1 excepción),
+  así que hoy se puede pegar un bloque de texto enorme en "nombre",
+  "descripción", "nota", etc. — la base de datos (Postgres TEXT) no
+  se rompe, pero no hay ningún tope real más allá del límite global
+  de 2MB por request (main.ts:25). Además se encontró un bug real:
+  el campo contraseña no tenía tope, y bcrypt trunca en silencio
+  todo lo que pasa de 72 bytes (dos contraseñas distintas que
+  compartan esos primeros 72 caracteres generarían el mismo hash).
+  Se agregó @MaxLength (y, en contraseñas, tope de 72) en TODOS los
+  DTOs del backend que tenían un @IsString sin límite: auth
+  (registro/login/recuperar), usuarios (perfil/cambiar-password),
+  compras/entradas, categorías de ticket, eventos/jornadas,
+  puestos-base, avisos-stock, corte-caja, incidencias-recarga,
+  landing-config, puesto-ayudantes, reportes-entrada,
+  solicitudes-evento, transacciones, ventas, elementos-mapa,
+  códigos-qr, casos-duplicado. Los topes van entre 20 (celular) y
+  5000 (el campo "informacion" de la landing pública, que es texto
+  largo legítimo).
+  En el frontend se agregó `maxLength` espejado en los campos más
+  expuestos (público, sin login): Registrar.jsx, CamposEntrada
+  (compra de entradas) y todos los campos de contraseña de la app
+  (Login, RecuperarContra, CompletarPerfil, Perfil) — así el usuario
+  ve el límite mientras escribe, en vez de enterarse recién con un
+  error 400. El resto de los formularios admin quedan protegidos
+  igual por el backend, aunque sin el maxLength visual en el input.
+
+2026-09-24 — Corrección a la Fase 4, a pedido del usuario: los
+  límites NO estaban centralizados (cada DTO tenía su propio número
+  suelto — @MaxLength(80) repetido en 6 archivos distintos — y hasta
+  la regex FORMA_NOMBRE estaba duplicada en 2 archivos). Se creó
+  `backend/src/common/dto/validacion.constantes.ts` como única fuente
+  de verdad (MAX_NOMBRE, MAX_EMAIL, MAX_URL, MAX_NOTA, MAX_PASSWORD,
+  FORMA_NOMBRE, etc. + el helper `mensajeMaxLength(max)`), y los ~26
+  DTOs tocados en la Fase 4 se reescribieron para importar de ahí en
+  vez de tener el número a mano. Cambiar un tope ahora es un solo
+  lugar. También se agregó mensaje en ESPAÑOL a cada @MaxLength que
+  no lo tenía (antes, al pasarse del límite, el error salía en
+  inglés por default de class-validator — "nombre must be shorter
+  than or equal to 80 characters" — inconsistente con el resto de la
+  app).
+  Confirmado además cómo llega el aviso al pasar el límite: el filtro
+  global de excepciones (`excepcion-http.filter.ts`) junta los
+  mensajes de class-validator y responde `{ error: "<mensaje>" }`;
+  el frontend (`api/client.js`) lo lee y lo muestra en el cartel de
+  error de cada pantalla (`<AvisoFijo tono="error">`) — SÍ avisa,
+  ahora en español.
+
+2026-09-24 — Fase 5 (nueva, a pedido del usuario): campos de perfil
+  que no existían — sexo, país y tipo de documento — más edad mínima
+  al registrarse. Decisiones tomadas con el usuario:
+  - Sexo: opcional, 4 opciones (masculino/femenino/otro/prefiero no
+    decir).
+  - País: selector con lista de países, Bolivia por defecto.
+  - Documento: selector de tipo (CI/pasaporte/otro) + un solo campo
+    de número (no dos campos separados).
+  - Edad mínima al registrarse: 13 años (menores entran como
+    invitados de otra cuenta, sin necesitar la suya).
+  - Fecha de evento en el pasado: SE PERMITE a propósito (puede
+    servir para cargar datos históricos) — no se tocó nada ahí.
+
+  Implementado:
+  - Migración Prisma `agrega_sexo_pais_tipo_documento`: nuevos enums
+    Sexo y TipoDocumento, campos `sexo`, `pais` (default "Bolivia") y
+    `tipoDocumento` en Usuario. `ci` sigue siendo el mismo campo de
+    siempre — tipoDocumento solo aclara qué tipo de número es.
+  - Nuevo `common/decorators/edad-minima.decorator.ts`: valida que
+    fechaNacimiento (si viene) no sea futura, corresponda a ≥13 años
+    y ≤120 (evita "nací ayer" o "nací en 1800"). Aplicado en
+    RegistroDto y ActualizarUsuarioDto — sigue siendo un campo
+    opcional, la regla solo corre si se manda un valor.
+  - Nueva `common/dto/paises.constantes.ts` (backend) y
+    `constants/paises.js` (frontend, mismo contenido) — única fuente
+    de la lista de países en cada lado; agregar un país exige tocar
+    los dos archivos.
+  - RegistroDto y ActualizarUsuarioDto: agregado tipoDocumento
+    (@IsIn), sexo (@IsIn) y pais (@IsIn contra la lista). auth.service.ts
+    y usuarios.service.ts actualizados para guardarlos — tipoDocumento
+    respeta la misma regla de "solo se carga una vez" que ya tenía ci.
+  - Frontend: Registrar.jsx (paso 1: selector de tipo de documento
+    junto al número; paso 2: selectores de sexo/país + validación de
+    edad mínima en fechaNacimiento), CompletarPerfil.jsx (mismo
+    selector de tipo de documento junto al CI obligatorio, más
+    sexo/país opcionales) y Perfil.jsx (sexo/país editables, y la
+    validación de fecha de nacimiento que antes era un chequeo suelto
+    ahora usa la misma función compartida `errorFechaNacimiento`).
+    Todo reusando el componente `Campo` y la grilla `.pi-register-grid`
+    que ya existían — nada de CSS ni componentes nuevos.
+  - Nueva función `errorFechaNacimiento()` en utils/validacion.js
+    (frontend), mismo criterio de edad que el backend.
+
+  Gap conocido que quedó SIN resolver: los campos `actividades` y
+  `cronograma` de landing-config/solicitudes-evento son JSON crudo
+  (@Allow(), sin decorators por campo) — technically un usuario
+  podría mandar un array con strings enormes ahí. Arreglarlo bien
+  requeriría convertirlos a DTOs anidados tipados (@ValidateNested +
+  @Type), que es un cambio más grande; se deja pendiente si en algún
+  momento se abusa de ese campo en particular.
+
+-------------------------------------------------------------------
+0. DIAGNÓSTICO: lo que ya existe
+-------------------------------------------------------------------
+Ya hay una base de validación reusable, pero se aplicó solo a una
+parte de la app:
+
+- `frontend/src/utils/validacion.js`: funciones puras
+  (errorCorreo, errorObligatorio, errorContrasenaNueva,
+  errorConfirmacion, errorCelular, soloDigitos, limpiarErrores,
+  enfocarPrimero).
+- `frontend/src/utils/entradas.js`: erroresEntradas() — valida
+  obligatorios, forma de correo y correos duplicados DENTRO de la
+  misma jornada de una compra.
+- `frontend/src/components/Campo.jsx` + `ErrorCampo.jsx`: componente
+  compuesto que muestra el mensaje de error bajo el input, con
+  aria-invalid/aria-describedby correctos. Es el patrón "bueno".
+- `AvisoFijo` (`components/Avisos.jsx`): cartel genérico para el
+  error que devuelve el backend al fallar un submit (no es por
+  campo, es un mensaje único arriba/abajo del formulario).
+
+PERO la cobertura es dispareja. Tres categorías de formularios:
+
+  A. Usan Campo+ErrorCampo+validacion.js (patrón bueno):
+     Registrar, Login, RecuperarContra, CompletarPerfil, Perfil,
+     AdCreaUsuarioNegocio, MiCatalogo, MiCatalogoPuesto,
+     CompraTab/CamposEntrada.
+
+  B. Solo `required` HTML nativo, sin mensaje por campo, sin JS:
+     FormularioEventoPasos (crear/editar evento), AdminCrearTickets
+     (categorías de ticket), AdminJornadas, AdminConfigurarPagina.
+     El único feedback es un AvisoFijo genérico de "paso incompleto"
+     o el error crudo del backend al guardar.
+
+  C. Tablas/listas admin con casi nada de control:
+     VistaOperadores, VistaSupervisores. Solo required HTML, sin
+     Campo/ErrorCampo, sin mensaje bajo el input.
+
+Conclusión: no existe una regla única para "cómo validar" ni "cómo
+mostrar el error" — hay un componente bueno (Campo/ErrorCampo) que
+simplemente no se usó en todos lados.
+
+-------------------------------------------------------------------
+1. LOS 3 GAPS QUE EL USUARIO SOSPECHABA — confirmados
+-------------------------------------------------------------------
+
+a) NOMBRES ACEPTAN NÚMEROS — confirmado, en todos lados.
+   Ningún DTO de persona (RegistroDto, EntradaCompraDto,
+   EntradaCorreccionDto, ActualizarUsuarioDto) tiene @Matches sobre
+   "nombre". En todo el backend solo hay 2 @Matches en total (CI de
+   CasoDuplicado y coordenadas de Evento) — ninguno es de nombre.
+   En frontend, validacion.js/entradas.js solo chequean "no vacío",
+   nunca "solo letras".
+
+b) CORREOS DUPLICADOS — parcialmente cubierto, con huecos:
+   - Dentro de una Compra, por jornada: SÍ está validado, en las DOS
+     capas (frontend utils/entradas.js Y backend
+     compras.service.ts) — pero con mensajes de texto distintos
+     entre una capa y la otra (no hay una sola fuente de verdad para
+     el mensaje).
+   - Registro de cuenta nueva: el email único se garantiza SOLO en
+     el backend (constraint de Prisma + ConflictException). El
+     frontend (Registrar.jsx) no avisa hasta que el usuario completa
+     TODO el flujo (3 pasos + código de verificación) y recibe el
+     409 al final — mala experiencia, se descubre demasiado tarde.
+
+c) CI vs PASAPORTE (extranjeros) — confirmado, no existe soporte:
+   El modelo Prisma ya tiene `ci String? @unique` (opcional a nivel
+   de dato), y no existe ningún campo tipoDocumento/pasaporte en
+   todo el repo (grep de "pasaporte|tipoDocumento|extranjer" da 0
+   resultados). El backend nunca obliga el CI (@IsOptional en los
+   DTOs). El problema es que el FRONTEND sí lo fuerza como
+   obligatorio en dos pantallas (Registrar.jsx y CompletarPerfil.jsx)
+   sin ofrecer ninguna alternativa para alguien sin CI boliviano.
+
+-------------------------------------------------------------------
+2. DECISIÓN PENDIENTE (necesito tu confirmación antes de tocar esto)
+-------------------------------------------------------------------
+Para el punto (c), hay que elegir un camino:
+
+  Opción 1 — Agregar "tipo de documento" real:
+    Nuevo campo tipoDocumento ('ci' | 'pasaporte') + el número, en
+    Usuario. Cambia el modelo (migración Prisma), los DTOs, y las
+    2 pantallas de frontend (Registrar, CompletarPerfil) para
+    mostrar un selector. Es el camino "correcto" pero es más
+    trabajo y ya toca control de acceso (en la puerta se compara CI
+    contra el documento presentado).
+
+  Opción 2 — Dejar el campo "ci" como está pero quitar la
+    obligatoriedad de la UI, aceptando cualquier texto (CI o número
+    de pasaporte) en el mismo campo, sin distinguir tipo:
+    Cambio chico, solo frontend (2 archivos) — no toca el modelo ni
+    el backend, que ya lo acepta opcional. Pierde poder filtrar/
+    validar formato según el tipo de documento.
+
+  Recomiendo la Opción 2 para esta ronda (rápida, no rompe nada de
+  control de acceso que ya asuma "ci" como el campo del documento) y
+  dejar la Opción 1 para más adelante si el negocio realmente
+  necesita distinguir CI de pasaporte en los reportes.
+
+-------------------------------------------------------------------
+3. PROPUESTA: una sola forma de validar y de mostrar el error
+-------------------------------------------------------------------
+No crear un sistema nuevo — extender el que ya existe (Campo +
+ErrorCampo + validacion.js), porque ya funciona bien donde se usa:
+
+- Agregar a validacion.js:
+    errorNombre(valor) -> obligatorio + @Matches de "solo letras,
+    espacios y acentos" (sin dígitos ni símbolos). Se usa en
+    Registrar, CamposEntrada (nombre de cada entrada), CompletarPerfil
+    si alguna vez se edita nombre, AdCreaUsuarioNegocio.
+- Espejar la misma regla en el backend (los DTOs correspondientes),
+  con el MISMO mensaje de error que usa el frontend, para que no
+  vuelvan a divergir como pasó con el duplicado por jornada.
+- Migrar los formularios de categoría B y C (FormularioEventoPasos,
+  AdminCrearTickets, AdminJornadas, AdminConfigurarPagina,
+  VistaOperadores, VistaSupervisores) a usar Campo/ErrorCampo en vez
+  de `required` HTML crudo — mismo componente, mismo look, ya
+  probado en el resto de la app.
+- Registro: antes de mandar el paso 2 (o al perder foco del campo
+  email), llamar a un endpoint liviano (nuevo, GET
+  /auth/email-disponible?email=...) para avisar "este correo ya
+  tiene cuenta" ANTES de completar todo el flujo de verificación.
+
+-------------------------------------------------------------------
+4. ORDEN DE IMPLEMENTACIÓN SUGERIDO
+-------------------------------------------------------------------
+Fase 1 — Los 3 gaps puntuales (bajo riesgo, alto impacto):
+  1. errorNombre() en validacion.js + @Matches espejado en los DTOs
+     de persona (RegistroDto, EntradaCompraDto, EntradaCorreccionDto,
+     ActualizarUsuarioDto si aplica) — aplicarlo en Registrar,
+     CamposEntrada, AdCreaUsuarioNegocio.
+  2. CI/pasaporte: aplicar la Opción 2 de la sección 2 (o la 1, según
+     tu respuesta) en Registrar.jsx y CompletarPerfil.jsx.
+  3. Unificar el mensaje de "correo duplicado por jornada" entre
+     utils/entradas.js y compras.service.ts (un solo texto).
+  4. Endpoint de email disponible + chequeo temprano en Registrar.jsx.
+
+Fase 2 — Migrar los formularios admin sin validación (categoría B/C)
+  a Campo/ErrorCampo: FormularioEventoPasos, AdminCrearTickets,
+  AdminJornadas, AdminConfigurarPagina, VistaOperadores,
+  VistaSupervisores. Se puede hacer de a uno, no es todo o nada.
+
+Fase 3 — Revisión pareja de "qué formatos tiene sentido validar" en
+  los campos numéricos/fecha que hoy solo tienen el `type` del input
+  (precio, cantidad, fechaNacimiento) — más chico, se puede sumar
+  a medida que se toca cada formulario de la Fase 2.
+
+-------------------------------------------------------------------
+5. LISTA DE ARCHIVOS QUE SE TOCARÍAN (Fase 1)
+-------------------------------------------------------------------
+Frontend:
+  - frontend/src/utils/validacion.js (nueva función errorNombre)
+  - frontend/src/pages/publico/Registrar.jsx
+  - frontend/src/pages/publico/CompletarPerfil.jsx
+  - frontend/src/pages/usuario-normal/CamposEntrada.jsx
+  - frontend/src/pages/admin/AdCreaUsuarioNegocio.jsx
+  - frontend/src/utils/entradas.js (mensaje de correo duplicado)
+
+Backend:
+  - backend/src/modules/auth/dto/registro.dto.ts
+  - backend/src/modules/compras/dto/compras.dto.ts (EntradaCompraDto,
+    EntradaCorreccionDto)
+  - backend/src/modules/compras/compras.service.ts (mensaje de
+    correo duplicado, para que coincida con el frontend)
+  - backend/src/modules/auth/auth.controller.ts +
+    auth.service.ts (nuevo endpoint email-disponible, si se aprueba
+    el punto 4 de la Fase 1)

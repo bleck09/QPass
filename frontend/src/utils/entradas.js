@@ -2,7 +2,11 @@
 // Única para "Comprar entradas" y "Revisar mi solicitud": mismas reglas y
 // mismos mensajes en los dos lados (PLAN_REDISENO §2.9).
 
-import { FORMA_CORREO } from './validacion.js';
+import { FORMA_CORREO, FORMA_NOMBRE } from './validacion.js';
+
+// Mismo texto en frontend y backend (ver compras.service.ts) — una sola
+// fuente de verdad para este mensaje.
+export const MSG_CORREO_DUPLICADO_JORNADA = 'Este correo ya está en otra entrada de la misma jornada.';
 
 const texto = (v) => (v ?? '').trim();
 
@@ -28,6 +32,7 @@ export function erroresEntradas(entradas, jornadaDe = () => null) {
   entradas.forEach((e) => {
     const correo = texto(e.correo).toLowerCase();
     if (!texto(e.nombre)) marcar(e.id, 'nombre', 'Escribe el nombre completo.');
+    else if (!FORMA_NOMBRE.test(texto(e.nombre))) marcar(e.id, 'nombre', 'El nombre no puede tener números ni símbolos.');
     if (!correo) marcar(e.id, 'correo', 'Escribe el correo electrónico.');
     else if (!FORMA_CORREO.test(correo)) marcar(e.id, 'correo', 'Revisa el correo: debe ser como nombre@correo.com');
     if (!e.isTitular && !texto(e.celular)) marcar(e.id, 'celular', 'Escribe el celular del invitado.');
@@ -39,7 +44,7 @@ export function erroresEntradas(entradas, jornadaDe = () => null) {
   });
 
   porJornada.forEach((ids) => {
-    if (ids.length > 1) ids.forEach((id) => marcar(id, 'correo', 'Este correo ya está en otra entrada de la misma jornada.'));
+    if (ids.length > 1) ids.forEach((id) => marcar(id, 'correo', MSG_CORREO_DUPLICADO_JORNADA));
   });
 
   return errores;
@@ -50,9 +55,9 @@ export const hayErrores = (errores) => Object.keys(errores).length > 0;
 // Campos de una entrada, en el orden de la pantalla. soloInvitado: en tu
 // propia entrada el nombre y el correo son los de tu cuenta (no se editan).
 export const CAMPOS_ENTRADA = [
-  { campo: 'nombre', etiqueta: 'Nombre completo', type: 'text', autoComplete: 'name', placeholder: 'Ej: Ana López', soloInvitado: true },
-  { campo: 'correo', etiqueta: 'Correo electrónico', type: 'email', autoComplete: 'email', placeholder: 'Para enviar su acceso', soloInvitado: true },
-  { campo: 'celular', etiqueta: 'Celular (WhatsApp)', type: 'tel', inputMode: 'numeric', autoComplete: 'tel-national', placeholder: 'Ej: 71234567' },
+  { campo: 'nombre', etiqueta: 'Nombre completo', type: 'text', autoComplete: 'name', placeholder: 'Ej: Ana López', maxLength: 80, soloInvitado: true },
+  { campo: 'correo', etiqueta: 'Correo electrónico', type: 'email', autoComplete: 'email', placeholder: 'Para enviar su acceso', maxLength: 180, soloInvitado: true },
+  { campo: 'celular', etiqueta: 'Celular (WhatsApp)', type: 'tel', inputMode: 'numeric', autoComplete: 'tel-national', placeholder: 'Ej: 71234567', maxLength: 20 },
 ];
 
 export const idCampoEntrada = (prefijo, campo, entradaId) => `${prefijo}-${campo}-${entradaId}`;

@@ -27,12 +27,15 @@ const SELECT_PUBLICO = {
   apellidoMaterno: true,
   email: true,
   rol: true,
+  tipoDocumento: true,
   ci: true,
   celular: true,
   foto: true,
   ciudad: true,
   biografia: true,
   fechaNacimiento: true,
+  sexo: true,
+  pais: true,
   createdAt: true,
   negocioAsignadoId: true,
   debeCompletarPerfil: true,
@@ -61,23 +64,28 @@ export class UsuariosService {
   async actualizar(id: number, dto: ActualizarUsuarioDto, actor: UsuarioJwt) {
     this.exigirPropioOAdmin(id, actor);
 
-    // El CI solo se puede CARGAR (una vez), nunca pisar uno que ya existe —
-    // evita que un update sin querer borre/cambie el CI de alguien.
+    // El CI (y su tipo de documento) solo se puede CARGAR una vez, nunca
+    // pisar uno que ya existe — evita que un update sin querer borre/cambie
+    // el documento de identidad de alguien.
     const actual = await this.prisma.usuario.findUnique({
       where: { id },
       select: { ci: true },
     });
     const ci = !actual?.ci && dto.ci ? dto.ci : undefined;
+    const tipoDocumento = !actual?.ci && dto.ci ? dto.tipoDocumento : undefined;
 
     await this.prisma.usuario.update({
       where: { id },
       data: {
         ci,
+        tipoDocumento,
         celular: dto.celular,
         ciudad: dto.ciudad,
         biografia: dto.biografia,
         foto: dto.foto,
         fechaNacimiento: aFecha(dto.fechaNacimiento),
+        sexo: dto.sexo,
+        pais: dto.pais,
       },
     });
     await this.reevaluarCompletarPerfil(id);

@@ -6,9 +6,11 @@ import {
 import CalendarioEventos from '../../components/CalendarioEventos.jsx';
 import MapaSelector from '../../components/MapaSelector.jsx';
 import Boton from '../../components/Boton.jsx';
+import Campo from '../../components/Campo.jsx';
 import SubirImagen from '../../components/SubirImagen.jsx';
 import { AvisoFijo } from '../../components/Avisos.jsx';
 import Filtros from '../../components/Filtros.jsx';
+import { errorObligatorio, limpiarErrores } from '../../utils/validacion.js';
 import './FormularioEventoPasos.css';
 import Pasos from '../../components/Pasos.jsx';
 
@@ -69,6 +71,13 @@ export default function FormularioEventoPasos({
   const [paso, setPaso] = useState(0);
   const [imagenRota, setImagenRota] = useState(false);
   const [errorPaso, setErrorPaso] = useState('');
+  // Paso 0 (nombre/lugar): errores por campo, igual que el resto de la app
+  // (Campo + validacion.js) en vez de solo un cartel genérico.
+  const [intentoBasico, setIntentoBasico] = useState(false);
+  const erroresBasico = intentoBasico ? limpiarErrores({
+    nombre: errorObligatorio(formEvento.nombre, 'Escribí el nombre del evento.'),
+    lugar: errorObligatorio(formEvento.lugar, 'Escribí el lugar del evento.'),
+  }) : {};
   const esUltimo = paso === PASOS.length - 1;
 
   const irA = (i) => {
@@ -88,7 +97,7 @@ export default function FormularioEventoPasos({
   const marcarError = (i) => {
     if (i === 1) setErrorPaso('Elegí al menos un día en el calendario.');
     else if (i === 2) { setErrorPaso(''); setFaltaUbicacion(true); }
-    else setErrorPaso('Completá el nombre y el lugar del evento.');
+    else setIntentoBasico(true);
   };
 
   const enviar = (e) => {
@@ -144,21 +153,17 @@ export default function FormularioEventoPasos({
             {/* ===== 1. LO BÁSICO ===== */}
             {paso === 0 && (
               <>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-nombre">Nombre del evento</label>
-                  <input
-                    id="ev-nombre" type="text" name="nombre" value={formEvento.nombre} onChange={onChange}
-                    placeholder="Ej: Festival de Verano 2027" required autoFocus
-                  />
-                  <p className="pi-ges-ayuda-campo">Es el título que se ve en la cartelera y en la página del evento.</p>
-                </div>
-                <div className="pi-ges-input-group">
-                  <label htmlFor="ev-lugar">Lugar</label>
-                  <input
-                    id="ev-lugar" type="text" name="lugar" value={formEvento.lugar} onChange={onChange}
-                    placeholder="Ej: Campo Ferial, Cbba" required
-                  />
-                </div>
+                <Campo
+                  id="ev-nombre" etiqueta="Nombre del evento" name="nombre" autoFocus
+                  ayuda="Es el título que se ve en la cartelera y en la página del evento."
+                  placeholder="Ej: Festival de Verano 2027" value={formEvento.nombre} onChange={onChange}
+                  error={erroresBasico.nombre}
+                />
+                <Campo
+                  id="ev-lugar" etiqueta="Lugar" name="lugar"
+                  placeholder="Ej: Campo Ferial, Cbba" value={formEvento.lugar} onChange={onChange}
+                  error={erroresBasico.lugar}
+                />
                 <SubirImagen
                   id="ev-imagen"
                   etiqueta="Imagen del evento (opcional)"

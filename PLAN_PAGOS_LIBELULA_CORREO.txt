@@ -40,8 +40,120 @@ armar este plan con datos reales, no supuestos.
   — el resto del backend no cambia, porque todos llaman a
   `mail.enviar(...)` sin saber el proveedor.
 
-Fase 2 (Libélula) — todavía NO implementada, solo planificada (ver
-secciones siguientes de este documento).
+2026-09-24 — Extra (a pedido del usuario, no era parte del plan
+original): verificación de correo al REGISTRARSE conectada a correo
+real. Antes, el paso 3 de Registrar.jsx (código de 6 dígitos) era
+pura simulación: el código correcto era siempre "123456", fijo en el
+frontend, sin ninguna llamada al backend.
+  - Nuevo modelo Prisma `CodigoVerificacionEmail` (migración
+    `agrega_codigo_verificacion_email`) — igual que
+    `CodigoRecuperacion` pero indexado por `email` en vez de
+    `usuarioId`, porque en este punto todavía no existe la cuenta.
+  - `AuthService.enviarCodigoRegistro(email)`: genera el código,
+    invalida los anteriores sin usar de ese correo, lo manda por
+    `mail.enviar()`. Nuevo endpoint `POST /auth/registro/enviar-codigo`.
+  - `AuthService.registro()`: si NO viene `creador` (autorregistro,
+    no alguien logueado creando una cuenta desde su panel), exige y
+    valida `dto.codigoVerificacion` contra ese código antes de crear
+    la cuenta, y lo marca usado. Cuando SÍ hay `creador` (Admin/
+    UsuarioNegocio creando cuentas operativas), no se exige nada —
+    mismo comportamiento de siempre.
+  - `RegistroDto`: nuevo campo opcional `codigoVerificacion` (6
+    dígitos) + nuevo `EnviarCodigoRegistroDto`.
+  - Frontend `Registrar.jsx`: al pasar del paso 2 al 3 ahora llama a
+    `enviarCodigoRegistro`, igual patrón que `RecuperarContra.jsx`
+    (si el correo no sale de verdad, muestra el código en pantalla
+    como respaldo). "Reenviar" ahora pega de nuevo al backend en vez
+    de solo mostrar un aviso. El envío final de `registro()` manda el
+    código ingresado; si el backend lo rechaza, el error aparece bajo
+    el campo del código.
+  Nota: hubo que reiniciar el backend del usuario a mitad de camino
+  porque tenía bloqueado el archivo del engine de Prisma
+  (`prisma generate` fallaba con EPERM) — la migración a la base ya
+  había entrado bien, solo faltaba regenerar el cliente TypeScript.
+
+2026-09-24 — Fase 2 (Libélula) IMPLEMENTADA (código listo, sin
+probar todavía — falta el appkey real de Libélula):
+  - Prisma: nuevo enum MetodoPago (manual|libelula) y campos en
+    Compra (metodoPago, libelulaIdTransaccion, libelulaUrlPago,
+    libelulaCodigoRecaudacion, libelulaFormaPago,
+    libelulaConfirmadoEn). Migración
+    20260924140258_agrega_pago_libelula aplicada.
+  - Nuevo módulo backend/src/modules/pagos/:
+    - libelula.service.ts: cliente HTTP (fetch nativo, sin nueva
+      dependencia) de REGISTRAR DEUDA, CONSULTAR DEUDAS POR
+      IDENTIFICADOR y CONSULTAR PAGOS. Si LIBELULA_APPKEY está
+      vacío, `habilitado` es false y no se llama a la API.
+    - libelula.module.ts: módulo aparte (evita dependencia circular
+      con ComprasModule, que también lo necesita).
+    - pagos.controller.ts: GET /pagos/libelula/callback (@Publico()).
+      SIEMPRE re-verifica server-to-server con
+      consultarDeudaPorIdentificador antes de confirmar — el
+      callback de Libélula no viene firmado, así que nunca se
+      confía en él solo.
+  - compras.service.ts refactorizado: la lógica de
+    "crear usuarios + numerar entradas + asignar QR + marcar
+    confirmado + mandar correo" que antes solo vivía en aprobar() se
+    extrajo a un método privado confirmarCompra(), reusado por:
+    - aprobar(id, adminId) — el camino manual de siempre, sin cambios
+      de comportamiento.
+    - confirmarPagoLibelula(compraId, datosLibelula) — nuevo, llamado
+      por el webhook. Idempotente (si la Compra ya no está
+      "pendiente", no hace nada). Usa compra.compradorId como actorId
+      de auditoría (no se creó un "usuario sistema" para esto).
+  - crear() ahora acepta dto.metodoPago ('manual' default | 'libelula').
+    Si es 'libelula', después de reservar el cupo (transacción de
+    siempre, sin tocar) llama a Libélula para registrar la deuda y
+    guarda idTransaccion/urlPago/codigoRecaudacion en la Compra. Si
+    Libélula falla en ese momento, la Compra queda igual creada en
+    "pendiente" sin link de pago — no se pierde el cupo reservado.
+  - Nuevo endpoint POST /compras/:id/reintentar-pago: regenera el
+    link de Libélula si el registro de deuda falló al crear la
+    Compra (cubre el punto pendiente que quedaba abierto en la
+    sección 10 de este plan).
+  - Variables de entorno agregadas a env.validation.ts, .env y
+    .env.example: LIBELULA_APPKEY, LIBELULA_API_URL (default
+    https://api.libelula.bo), LIBELULA_CALLBACK_URL,
+    LIBELULA_URL_RETORNO. Todas opcionales salvo que se quiera
+    habilitar el canal.
+  - `npx tsc --noEmit` y `eslint` sobre todos los archivos tocados:
+    limpio (solo quedan 2 errores preexistentes de un test de
+    supertest, sin relación con este cambio).
+
+  Pendiente antes de poder probar de verdad — ver
+  PENDIENTES_PAGOS_LIBELULA.txt (raíz) para el detalle completo:
+  conseguir el appkey real de Libélula, completar SMTP_PASS de
+  Gmail, y (para producción) exponer LIBELULA_CALLBACK_URL con un
+  dominio público real. El frontend todavía no tiene la opción
+  "pagar en línea" — eso también quedó anotado ahí.
+
+Fase 3 (reconciliación por cron) y Fase 4 (cola BullMQ) — todavía
+NO implementadas, quedan para después (no bloquean poder probar el
+flujo básico de Libélula una vez que haya appkey).
+
+2026-09-24 — Extra (no estaba en el alcance original, pedido durante
+la implementación de Fase 1): recuperación de contraseña conectada
+al correo real.
+  - `mail.service.ts`: `enviar()` ahora devuelve `Promise<boolean>`
+    (true si salió por SMTP de verdad, false si es modo stub o si
+    falló) en vez de `Promise<void>` — así el llamador puede
+    reaccionar al resultado sin que MailService deje de tragar el
+    error internamente (sigue sin tirar excepción nunca).
+  - `auth.service.ts` (`recuperarSolicitar`): antes devolvía el
+    código de 6 dígitos directo en la respuesta HTTP ("modo demo",
+    el frontend lo mostraba en pantalla). Ahora lo manda por correo
+    real con `mail.enviar()`; solo si el envío falla (sin SMTP
+    configurado, o error de Gmail) cae al comportamiento viejo de
+    devolver `codigoDemo` como respaldo para poder seguir probando
+    sin credenciales.
+  - Frontend (`RecuperarContra.jsx`) no necesitó cambios: ya
+    renderizaba el bloque del código solo si `codigoDemo` venía con
+    valor, así que ahora que el backend manda `{}` cuando el correo
+    sale bien, ese texto desaparece solo.
+  - Sigue pendiente (no se tocó): el registro de cuentas nuevas no
+    manda correo de bienvenida, y la verificación en el registro
+    (memoria: acepta "123456") sigue en modo test — no se pidió
+    tocar eso todavía.
 
 -------------------------------------------------------------------
 0. ESTADO ACTUAL (línea base, verificado en código)

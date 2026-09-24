@@ -7,10 +7,17 @@ import {
   IsOptional,
   IsString,
   Matches,
+  MaxLength,
   Min,
   MinLength,
 } from 'class-validator';
 import { TipoManilla } from '@prisma/client';
+import {
+  MAX_TITULO,
+  MAX_URL,
+  MAX_PREFIJO_QR,
+  mensajeMaxLength,
+} from '../../../common/dto/validacion.constantes';
 
 const TIPOS_MANILLA: TipoManilla[] = ['fisica', 'digital'];
 
@@ -21,10 +28,12 @@ const TIPOS_MANILLA: TipoManilla[] = ['fisica', 'digital'];
 export class CrearEventoDto {
   @IsString()
   @MinLength(1)
+  @MaxLength(MAX_TITULO, { message: mensajeMaxLength(MAX_TITULO) })
   nombre: string;
 
   @IsString()
   @MinLength(1)
+  @MaxLength(MAX_TITULO, { message: mensajeMaxLength(MAX_TITULO) })
   lugar: string;
 
   // Obligatorio: la landing pública del evento la necesita para mostrar
@@ -46,6 +55,7 @@ export class CrearEventoDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_URL, { message: mensajeMaxLength(MAX_URL) })
   imagen?: string;
 
   // Física (Supervisor entrega y vincula la manilla) o digital (QR automático
@@ -56,6 +66,7 @@ export class CrearEventoDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(MAX_PREFIJO_QR, { message: mensajeMaxLength(MAX_PREFIJO_QR) })
   qrPrefijo?: string;
 
   @IsOptional()

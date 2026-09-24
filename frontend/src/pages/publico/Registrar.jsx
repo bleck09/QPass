@@ -4,8 +4,11 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useNavigate } from 'react-router-dom';
 import {
   FaUser, FaIdCard, FaBirthdayCake, FaEnvelope, FaEnvelopeOpenText, FaArrowLeft, FaArrowRight, FaCheck,
+  FaGlobeAmericas, FaVenusMars,
 } from 'react-icons/fa';
 import { ROLES } from '../../constants/roles.js';
+import { PAISES } from '../../constants/paises.js';
+import { OPCIONES_SEXO, OPCIONES_TIPO_DOCUMENTO } from '../../constants/perfil.js';
 import api from '../../api/index.js';
 import Boton from '../../components/Boton.jsx';
 import Campo from '../../components/Campo.jsx';
@@ -13,8 +16,8 @@ import InputCodigo from '../../components/InputCodigo.jsx';
 import ErrorCampo from '../../components/ErrorCampo.jsx';
 import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import {
-  errorCorreo, errorObligatorio, errorContrasenaNueva, errorConfirmacion, errorCelular,
-  soloDigitos, limpiarErrores, enfocarPrimero, MIN_CONTRASENA,
+  errorCorreo, errorNombre, errorContrasenaNueva, errorConfirmacion, errorCelular,
+  errorFechaNacimiento, soloDigitos, limpiarErrores, enfocarPrimero, MIN_CONTRASENA,
 } from '../../utils/validacion.js';
 import './auth.css';
 import './Registrar.css';
@@ -25,14 +28,12 @@ const PASOS = [
   { id: 'acceso', titulo: 'Acceso' },
   { id: 'verificar', titulo: 'Verificación' },
 ];
-// SIMULACIÓN: sin servicio de correo todavía, el código correcto es siempre este.
-const CODIGO_DEMO = '123456';
-
 const validarPaso1 = (d) => limpiarErrores({
-  'reg-nombre': errorObligatorio(d.nombre, 'Escribí tu nombre.'),
-  'reg-paterno': errorObligatorio(d.paterno, 'Escribí tu apellido paterno.'),
-  'reg-materno': errorObligatorio(d.materno, 'Escribí tu apellido materno.'),
-  'reg-ci': errorObligatorio(d.ci, 'Escribí tu número de carnet.'),
+  'reg-nombre': errorNombre(d.nombre, { mensajeObligatorio: 'Escribí tu nombre.' }),
+  'reg-paterno': errorNombre(d.paterno, { mensajeObligatorio: 'Escribí tu apellido paterno.' }),
+  'reg-materno': errorNombre(d.materno, { mensajeObligatorio: 'Escribí tu apellido materno.' }),
+  // CI opcional: no todos los usuarios tienen CI boliviano (ej. extranjeros
+  // con pasaporte) — si lo dejan vacío, no bloquea el registro.
 });
 
 const validarPaso2 = (d) => limpiarErrores({
@@ -40,11 +41,12 @@ const validarPaso2 = (d) => limpiarErrores({
   'reg-password': errorContrasenaNueva(d.password),
   'reg-password-2': errorConfirmacion(d.confirmPassword, d.password),
   'reg-celular': errorCelular(d.celular),
+  'reg-nacimiento': errorFechaNacimiento(d.fechaNacimiento),
 });
 
 const ORDEN = {
   1: ['reg-nombre', 'reg-paterno', 'reg-materno', 'reg-ci'],
-  2: ['reg-email', 'reg-password', 'reg-password-2', 'reg-celular'],
+  2: ['reg-email', 'reg-password', 'reg-password-2', 'reg-celular', 'reg-nacimiento'],
 };
 
 export default function Registrar() {
@@ -60,10 +62,14 @@ export default function Registrar() {
   const [step, setStep] = useState(1);
 
   const [datos, setDatos] = useState({
-    nombre: '', paterno: '', materno: '', ci: '',
+    nombre: '', paterno: '', materno: '', tipoDocumento: 'ci', ci: '',
     email: '', password: '', confirmPassword: '', celular: '', fechaNacimiento: '',
+    sexo: '', pais: '',
   });
-  const cambiar = (campo) => (e) => setDatos((d) => ({ ...d, [campo]: e.target.value }));
+  const cambiar = (campo) => (e) => {
+    if (campo === 'email') setErrorEmailDuplicado('');
+    setDatos((d) => ({ ...d, [campo]: e.target.value }));
+  };
 
   const [codigo, setCodigo] = useState('');
   const [errorCodigo, setErrorCodigo] = useState('');
@@ -72,9 +78,19 @@ export default function Registrar() {
   // Error del servidor al crear la cuenta.
   const [error, setError] = useState('');
   const [enviando, setEnviando] = useState(false);
+  // Chequeo temprano (paso 2): avisa que el correo ya tiene cuenta ANTES de
+  // pasar por la verificación de código, no recién al final del registro.
+  const [errorEmailDuplicado, setErrorEmailDuplicado] = useState('');
+  const [verificandoEmail, setVerificandoEmail] = useState(false);
+  // Solo se completa si el correo NO se pudo mandar de verdad (sin SMTP
+  // configurado, o falló) — ver AuthService.enviarCodigoRegistro.
+  const [codigoDemo, setCodigoDemo] = useState('');
 
-  const errores = step === 1 && intentos[1] ? validarPaso1(datos)
+  const erroresBase = step === 1 && intentos[1] ? validarPaso1(datos)
     : step === 2 && intentos[2] ? validarPaso2(datos) : {};
+  const errores = errorEmailDuplicado && !erroresBase['reg-email']
+    ? { ...erroresBase, 'reg-email': errorEmailDuplicado }
+    : erroresBase;
 
   const fechaHoyStr = new Date().toISOString().split('T')[0];
 
@@ -84,25 +100,50 @@ export default function Registrar() {
     else setStep(step - 1);
   };
 
-  const avanzar = (paso, validar) => (e) => {
+  const avanzar = (paso, validar) => async (e) => {
     e.preventDefault();
     setIntentos((i) => ({ ...i, [paso]: true }));
     const errs = validar(datos);
     if (Object.keys(errs).length) return enfocarPrimero(errs, ORDEN[paso]);
+
+    if (paso === 2) {
+      setVerificandoEmail(true);
+      try {
+        const { disponible } = await api.auth.emailDisponible(datos.email.trim());
+        if (!disponible) {
+          setErrorEmailDuplicado('Ese correo ya tiene una cuenta registrada.');
+          document.getElementById('reg-email')?.focus();
+          return;
+        }
+        const { codigoDemo: c } = await api.auth.enviarCodigoRegistro(datos.email.trim());
+        setCodigoDemo(c || '');
+      } catch (err) {
+        setError(err.message);
+        return;
+      } finally {
+        setVerificandoEmail(false);
+      }
+    }
+
     setStep(paso + 1);
   };
 
-  const reenviar = () => {
+  const reenviar = async () => {
     setCodigo('');
     setErrorCodigo('');
-    avisos.info(`Te reenviamos el código a ${datos.email}.`);
+    try {
+      const { codigoDemo: c } = await api.auth.enviarCodigoRegistro(datos.email.trim());
+      setCodigoDemo(c || '');
+      avisos.info(`Te reenviamos el código a ${datos.email}.`);
+    } catch (err) {
+      avisos.error(err.message, { titulo: 'No se pudo reenviar' });
+    }
   };
 
   const handleVerifyAndRegister = async (e) => {
     e.preventDefault();
     setError('');
     if (codigo.length < 6) return setErrorCodigo('Escribí los 6 dígitos del código.');
-    if (codigo !== CODIGO_DEMO) return setErrorCodigo(`Código incorrecto. Para esta prueba usá: ${CODIGO_DEMO}`);
     setErrorCodigo('');
 
     setEnviando(true);
@@ -113,15 +154,25 @@ export default function Registrar() {
         apellidoPaterno: datos.paterno.trim(),
         apellidoMaterno: datos.materno.trim(),
         email: datos.email.trim(),
-        ci: datos.ci.trim(),
+        tipoDocumento: datos.ci.trim() ? datos.tipoDocumento : undefined,
+        ci: datos.ci.trim() || undefined,
         password: datos.password,
         fechaNacimiento: datos.fechaNacimiento || undefined,
         celular: datos.celular || undefined,
+        sexo: datos.sexo || undefined,
+        pais: datos.pais || undefined,
+        codigoVerificacion: codigo,
       });
       avisos.exito('Ya podés iniciar sesión con tu correo y contraseña.', { titulo: '¡Cuenta creada!' });
       navigate('/login');
     } catch (err) {
-      setError(err.message === 'El email ya está registrado' ? 'Ese correo ya tiene una cuenta registrada.' : err.message);
+      if (err.message === 'El email ya está registrado') {
+        setError('Ese correo ya tiene una cuenta registrada.');
+      } else if (err.message?.includes('Código de verificación')) {
+        setErrorCodigo(err.message);
+      } else {
+        setError(err.message);
+      }
     } finally {
       setEnviando(false);
     }
@@ -146,18 +197,28 @@ export default function Registrar() {
               <p className="pi-auth__subtitle">Empecemos por tus datos personales.</p>
 
               <form onSubmit={avanzar(1, validarPaso1)} className="pi-auth__form" noValidate>
-                <Campo id="reg-nombre" etiqueta="Nombre(s)" icono={FaUser} autoComplete="given-name"
+                <Campo id="reg-nombre" etiqueta="Nombre(s)" icono={FaUser} autoComplete="given-name" maxLength={80}
                   placeholder="Ej. Juan Carlos" value={datos.nombre} onChange={cambiar('nombre')} error={errores['reg-nombre']} />
 
                 <div className="pi-register-grid">
-                  <Campo id="reg-paterno" etiqueta="Apellido paterno" icono={FaUser} autoComplete="family-name"
+                  <Campo id="reg-paterno" etiqueta="Apellido paterno" icono={FaUser} autoComplete="family-name" maxLength={80}
                     placeholder="Pérez" value={datos.paterno} onChange={cambiar('paterno')} error={errores['reg-paterno']} />
-                  <Campo id="reg-materno" etiqueta="Apellido materno" icono={FaUser} autoComplete="additional-name"
+                  <Campo id="reg-materno" etiqueta="Apellido materno" icono={FaUser} autoComplete="additional-name" maxLength={80}
                     placeholder="Gómez" value={datos.materno} onChange={cambiar('materno')} error={errores['reg-materno']} />
                 </div>
 
-                <Campo id="reg-ci" etiqueta="Documento de identidad (C.I.)" icono={FaIdCard} inputMode="numeric"
-                  placeholder="Ej. 1234567" value={datos.ci} onChange={cambiar('ci')} error={errores['reg-ci']} />
+                <div className="pi-register-grid">
+                  <Campo id="reg-tipo-doc" etiqueta="Tipo de documento">
+                    <select id="reg-tipo-doc" value={datos.tipoDocumento} onChange={cambiar('tipoDocumento')}>
+                      {OPCIONES_TIPO_DOCUMENTO.map((o) => (
+                        <option key={o.valor} value={o.valor}>{o.texto}</option>
+                      ))}
+                    </select>
+                  </Campo>
+                  <Campo id="reg-ci" etiqueta="Número de documento" icono={FaIdCard} maxLength={30}
+                    ayuda="Opcional — podés dejarlo vacío si todavía no lo tenés a mano."
+                    placeholder="Ej. 1234567" value={datos.ci} onChange={cambiar('ci')} error={errores['reg-ci']} />
+                </div>
 
                 <Boton type="submit" tamano="lg" pildora anchoCompleto iconoDerecha={FaArrowRight}>Continuar</Boton>
               </form>
@@ -171,12 +232,12 @@ export default function Registrar() {
               <p className="pi-auth__subtitle">Con esto vas a entrar a QPass.</p>
 
               <form onSubmit={avanzar(2, validarPaso2)} className="pi-auth__form" noValidate>
-                <Campo id="reg-email" etiqueta="Correo electrónico" icono={FaEnvelope} type="email" autoComplete="email"
+                <Campo id="reg-email" etiqueta="Correo electrónico" icono={FaEnvelope} type="email" autoComplete="email" maxLength={180}
                   placeholder="correo@ejemplo.com" value={datos.email} onChange={cambiar('email')} error={errores['reg-email']} />
-                <Campo id="reg-password" etiqueta="Contraseña" contrasena autoComplete="new-password"
+                <Campo id="reg-password" etiqueta="Contraseña" contrasena autoComplete="new-password" maxLength={72}
                   placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`} value={datos.password} onChange={cambiar('password')}
                   error={errores['reg-password']} />
-                <Campo id="reg-password-2" etiqueta="Confirmar contraseña" contrasena autoComplete="new-password"
+                <Campo id="reg-password-2" etiqueta="Confirmar contraseña" contrasena autoComplete="new-password" maxLength={72}
                   placeholder="Repetí tu contraseña" value={datos.confirmPassword} onChange={cambiar('confirmPassword')}
                   error={errores['reg-password-2']} />
 
@@ -187,9 +248,29 @@ export default function Registrar() {
                   onChange={(e) => setDatos((d) => ({ ...d, celular: soloDigitos(e.target.value) }))}
                   error={errores['reg-celular']} />
                 <Campo id="reg-nacimiento" etiqueta="Fecha de nacimiento" icono={FaBirthdayCake} type="date" autoComplete="bday"
-                  max={fechaHoyStr} value={datos.fechaNacimiento} onChange={cambiar('fechaNacimiento')} />
+                  max={fechaHoyStr} value={datos.fechaNacimiento} onChange={cambiar('fechaNacimiento')}
+                  error={errores['reg-nacimiento']} />
 
-                <Boton type="submit" tamano="lg" pildora anchoCompleto iconoDerecha={FaArrowRight}>Verificar correo</Boton>
+                <div className="pi-register-grid">
+                  <Campo id="reg-sexo" etiqueta={<><FaVenusMars aria-hidden="true" /> Sexo</>}>
+                    <select id="reg-sexo" value={datos.sexo} onChange={cambiar('sexo')}>
+                      <option value="">Prefiero no decir</option>
+                      {OPCIONES_SEXO.map((o) => (
+                        <option key={o.valor} value={o.valor}>{o.texto}</option>
+                      ))}
+                    </select>
+                  </Campo>
+                  <Campo id="reg-pais" etiqueta={<><FaGlobeAmericas aria-hidden="true" /> País</>}>
+                    <select id="reg-pais" value={datos.pais} onChange={cambiar('pais')}>
+                      <option value="">Sin especificar</option>
+                      {PAISES.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </select>
+                  </Campo>
+                </div>
+
+                <Boton type="submit" tamano="lg" pildora anchoCompleto iconoDerecha={FaArrowRight} cargando={verificandoEmail}>
+                  Verificar correo
+                </Boton>
               </form>
             </div>
           )}
@@ -203,6 +284,11 @@ export default function Registrar() {
                 Enviamos un código de 6 dígitos a <strong>{datos.email}</strong>.
                 <br />Ingresálo para crear tu cuenta.
               </p>
+              {codigoDemo && (
+                <AvisoFijo tono="info" titulo="Modo desarrollo (sin correo real)">
+                  Tu código es <strong>{codigoDemo}</strong>
+                </AvisoFijo>
+              )}
 
               <form onSubmit={handleVerifyAndRegister} className="pi-auth__form pi-auth__form--codigo" noValidate>
                 <InputCodigo

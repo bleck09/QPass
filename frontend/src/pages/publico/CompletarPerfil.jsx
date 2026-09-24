@@ -2,8 +2,10 @@ import { useRef, useState, useEffect } from 'react';
 import { forzarTemaClaro } from '../../utils/tema.js';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useNavigate } from 'react-router-dom';
-import { FaIdCard, FaBirthdayCake, FaMapMarkerAlt, FaCamera, FaLock, FaUserCheck, FaArrowRight, FaCheck } from 'react-icons/fa';
+import { FaIdCard, FaBirthdayCake, FaMapMarkerAlt, FaCamera, FaLock, FaUserCheck, FaArrowRight, FaCheck, FaGlobeAmericas, FaVenusMars } from 'react-icons/fa';
 import { ROLE_HOME_PATH } from '../../constants/roles.js';
+import { PAISES } from '../../constants/paises.js';
+import { OPCIONES_SEXO, OPCIONES_TIPO_DOCUMENTO } from '../../constants/perfil.js';
 import { leerSesion, guardarSesion } from '../../api/client.js';
 import { EVENTO_USUARIO_ACTUALIZADO } from '../../layout/MenuLateral.jsx';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
@@ -13,7 +15,7 @@ import Campo from '../../components/Campo.jsx';
 import { AvisoFijo } from '../../components/Avisos.jsx';
 import {
   errorObligatorio, errorContrasenaNueva, errorConfirmacion, errorCelular,
-  soloDigitos, limpiarErrores, enfocarPrimero, MIN_CONTRASENA,
+  errorFechaNacimiento, soloDigitos, limpiarErrores, enfocarPrimero, MIN_CONTRASENA,
 } from '../../utils/validacion.js';
 import './auth.css';
 import './Registrar.css';
@@ -52,9 +54,12 @@ export default function CompletarPerfil() {
   const [passwordNueva, setPasswordNueva] = useState('');
   const [confirmarPassword, setConfirmarPassword] = useState('');
 
+  const [tipoDocumento, setTipoDocumento] = useState('ci');
   const [ci, setCi] = useState('');
   const [celular, setCelular] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [sexo, setSexo] = useState('');
+  const [pais, setPais] = useState('');
   const [ciudad, setCiudad] = useState('');
   const [foto, setFoto] = useState('');
 
@@ -77,6 +82,7 @@ export default function CompletarPerfil() {
   const validarPaso2 = () => limpiarErrores({
     'cp-ci': errorObligatorio(ci, 'El número de carnet es obligatorio.'),
     'cp-celular': errorCelular(celular),
+    'cp-nacimiento': errorFechaNacimiento(fechaNacimiento),
   });
   const errores = step === 1 && intentos[1] ? validarPaso1() : step === 2 && intentos[2] ? validarPaso2() : {};
 
@@ -117,14 +123,17 @@ export default function CompletarPerfil() {
     setError('');
     setIntentos((i) => ({ ...i, 2: true }));
     const errs = validarPaso2();
-    if (Object.keys(errs).length) return enfocarPrimero(errs, ['cp-ci', 'cp-celular']);
+    if (Object.keys(errs).length) return enfocarPrimero(errs, ['cp-ci', 'cp-celular', 'cp-nacimiento']);
 
     setEnviando(true);
     try {
       const actualizado = await api.usuarios.actualizar(sesion.id, {
+        tipoDocumento,
         ci: ci.trim(),
         celular: celular || undefined,
         fechaNacimiento: fechaNacimiento || undefined,
+        sexo: sexo || undefined,
+        pais: pais || undefined,
         ciudad: ciudad || undefined,
         foto: foto || undefined,
       });
@@ -158,7 +167,7 @@ export default function CompletarPerfil() {
 
                 <form onSubmit={handlePaso1} className="pi-auth__form" noValidate>
                   <Campo
-                    id="cp-password-actual" etiqueta="Contraseña actual (la temporal)" contrasena
+                    id="cp-password-actual" etiqueta="Contraseña actual (la temporal)" contrasena maxLength={72}
                     autoComplete="current-password" placeholder="La que te llegó por correo"
                     value={passwordActual} onChange={(e) => setPasswordActual(e.target.value)}
                     error={errores['cp-password-actual']}
@@ -166,13 +175,13 @@ export default function CompletarPerfil() {
 
                   <div className="pi-register-grid">
                     <Campo
-                      id="cp-password-nueva" etiqueta="Contraseña nueva" contrasena autoComplete="new-password"
+                      id="cp-password-nueva" etiqueta="Contraseña nueva" contrasena maxLength={72} autoComplete="new-password"
                       placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`}
                       value={passwordNueva} onChange={(e) => setPasswordNueva(e.target.value)}
                       error={errores['cp-password-nueva']}
                     />
                     <Campo
-                      id="cp-password-confirmar" etiqueta="Confirmar contraseña nueva" contrasena autoComplete="new-password"
+                      id="cp-password-confirmar" etiqueta="Confirmar contraseña nueva" contrasena maxLength={72} autoComplete="new-password"
                       placeholder="Repetila"
                       value={confirmarPassword} onChange={(e) => setConfirmarPassword(e.target.value)}
                       error={errores['cp-password-confirmar']}
@@ -199,11 +208,20 @@ export default function CompletarPerfil() {
                 </p>
 
                 <form onSubmit={handlePaso2} className="pi-auth__form" noValidate>
-                  <Campo
-                    id="cp-ci" etiqueta="Número de carnet (C.I.)" icono={FaIdCard} inputMode="numeric"
-                    placeholder="Ej. 1234567" value={ci} onChange={(e) => setCi(e.target.value)}
-                    error={errores['cp-ci']}
-                  />
+                  <div className="pi-register-grid">
+                    <Campo id="cp-tipo-doc" etiqueta="Tipo de documento">
+                      <select id="cp-tipo-doc" value={tipoDocumento} onChange={(e) => setTipoDocumento(e.target.value)}>
+                        {OPCIONES_TIPO_DOCUMENTO.map((o) => (
+                          <option key={o.valor} value={o.valor}>{o.texto}</option>
+                        ))}
+                      </select>
+                    </Campo>
+                    <Campo
+                      id="cp-ci" etiqueta="Número de documento" icono={FaIdCard}
+                      placeholder="Ej. 1234567" value={ci} onChange={(e) => setCi(e.target.value)}
+                      error={errores['cp-ci']}
+                    />
+                  </div>
 
                   <div className="pi-auth__separador"><span>Opcional</span></div>
 
@@ -218,7 +236,25 @@ export default function CompletarPerfil() {
                       id="cp-nacimiento" etiqueta="Fecha de nacimiento" icono={FaBirthdayCake} type="date" autoComplete="bday"
                       max={new Date().toISOString().split('T')[0]}
                       value={fechaNacimiento} onChange={(e) => setFechaNacimiento(e.target.value)}
+                      error={errores['cp-nacimiento']}
                     />
+                  </div>
+
+                  <div className="pi-register-grid">
+                    <Campo id="cp-sexo" etiqueta={<><FaVenusMars aria-hidden="true" /> Sexo</>}>
+                      <select id="cp-sexo" value={sexo} onChange={(e) => setSexo(e.target.value)}>
+                        <option value="">Prefiero no decir</option>
+                        {OPCIONES_SEXO.map((o) => (
+                          <option key={o.valor} value={o.valor}>{o.texto}</option>
+                        ))}
+                      </select>
+                    </Campo>
+                    <Campo id="cp-pais" etiqueta={<><FaGlobeAmericas aria-hidden="true" /> País</>}>
+                      <select id="cp-pais" value={pais} onChange={(e) => setPais(e.target.value)}>
+                        <option value="">Sin especificar</option>
+                        {PAISES.map((p) => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </Campo>
                   </div>
 
                   <Campo

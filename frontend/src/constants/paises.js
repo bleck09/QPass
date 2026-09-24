@@ -1,0 +1,40 @@
+// Espejo de backend/src/common/dto/paises.constantes.ts — agregar un país
+// acá exige agregarlo también ahí (y viceversa), o el backend rechaza el
+// valor que este selector ofrece.
+export const PAIS_DEFAULT = 'Bolivia';
+
+export const PAISES = [
+  'Bolivia',
+  'Argentina',
+  'Brasil',
+  'Chile',
+  'Colombia',
+  'Costa Rica',
+  'Cuba',
+  'Ecuador',
+  'El Salvador',
+  'España',
+  'Estados Unidos',
+  'Francia',
+  'Alemania',
+  'Guatemala',
+  'Honduras',
+  'Italia',
+  'México',
+  'Nicaragua',
+  'Panamá',
+  'Paraguay',
+  'Perú',
+  'Portugal',
+  'Puerto Rico',
+  'Reino Unido',
+  'República Dominicana',
+  'Uruguay',
+  'Venezuela',
+  'Canadá',
+  'China',
+  'Corea del Sur',
+  'Japón',
+  'India',
+  'Otro',
+];

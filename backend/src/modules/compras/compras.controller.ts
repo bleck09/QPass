@@ -10,9 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
-import {
-  UsuarioActual,
-} from '../../common/decorators/usuario-actual.decorator';
+import { UsuarioActual } from '../../common/decorators/usuario-actual.decorator';
 import { ComprasService } from './compras.service';
 import {
   CorregirEntradasDto,
@@ -48,6 +46,13 @@ export class ComprasController {
     @UsuarioActual('id') actorId: number,
   ) {
     return this.comprasService.corregirEntradas(id, dto, actorId);
+  }
+
+  /** Regenera el link de pago de Libélula si registrarDeuda falló al crear la compra. */
+  @Post(':id/reintentar-pago')
+  @HttpCode(HttpStatus.OK)
+  reintentarPago(@Param('id') id: string, @UsuarioActual('id') compradorId: number) {
+    return this.comprasService.reintentarPagoLibelula(id, compradorId);
   }
 
   @Post(':id/aprobar')

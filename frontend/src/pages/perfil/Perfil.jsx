@@ -5,10 +5,13 @@ import {
   FaCamera, FaSave, FaCheckCircle, FaUserShield, FaCalendarAlt, FaIdBadge, FaPhone,
   FaMapMarkerAlt, FaUserEdit, FaIdCard, FaBirthdayCake, FaEdit, FaTimes, FaCheck,
   FaEnvelope, FaQuoteLeft, FaUser, FaQrcode, FaTicketAlt, FaMoon, FaChevronDown, FaLock, FaHistory,
+  FaVenusMars, FaGlobeAmericas,
 } from 'react-icons/fa';
 import { EVENTO_USUARIO_ACTUALIZADO } from '../../layout/MenuLateral';
 import { leerSesion, guardarSesion } from '../../api/client.js';
 import { ROLE_LABELS } from '../../constants/roles.js';
+import { PAISES } from '../../constants/paises.js';
+import { OPCIONES_SEXO } from '../../constants/perfil.js';
 import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
 import EscanerQr from '../../components/EscanerQr.jsx';
@@ -22,7 +25,7 @@ import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { formatearFecha, nombreJornada } from '../../utils/eventos.js';
 import {
   errorObligatorio, errorContrasenaNueva, errorConfirmacion, errorCelular,
-  soloDigitos, limpiarErrores, enfocarPrimero, MIN_CONTRASENA,
+  errorFechaNacimiento, soloDigitos, limpiarErrores, enfocarPrimero, MIN_CONTRASENA,
 } from '../../utils/validacion.js';
 import './Perfil.css';
 
@@ -58,6 +61,8 @@ export default function Perfil() {
   const [ciudad, setCiudad] = useState('');
   const [biografia, setBiografia] = useState('');
   const [fechaNacimiento, setFechaNacimiento] = useState('');
+  const [sexo, setSexo] = useState('');
+  const [pais, setPais] = useState('');
 
   // Datos NO editables
   const nombre = usuario?.nombre || '';
@@ -121,6 +126,8 @@ export default function Perfil() {
       setCiudad(completo.ciudad || '');
       setBiografia(completo.biografia || '');
       setFechaNacimiento(soloFecha(completo.fechaNacimiento));
+      setSexo(completo.sexo || '');
+      setPais(completo.pais || '');
       return api.usuarios.historialPassword(idSesion);
     })
     .then(setHistorialPassword)
@@ -163,7 +170,7 @@ export default function Perfil() {
   // --- Validación (reglas únicas: utils/validacion.js) ---
   const validarCuenta = () => limpiarErrores({
     'perfil-celular': errorCelular(celular),
-    'perfil-nacimiento': fechaNacimiento && fechaNacimiento > fechaHoyStr ? 'La fecha no puede estar en el futuro.' : null,
+    'perfil-nacimiento': errorFechaNacimiento(fechaNacimiento),
   });
   const validarSeguridad = () => limpiarErrores({
     'perfil-clave-actual': errorObligatorio(contraseñaActual, 'Escribí tu contraseña actual.'),
@@ -190,6 +197,8 @@ export default function Perfil() {
     setCiudad(usuario?.ciudad || '');
     setBiografia(usuario?.biografia || '');
     setFechaNacimiento(soloFecha(usuario?.fechaNacimiento));
+    setSexo(usuario?.sexo || '');
+    setPais(usuario?.pais || '');
     setIntentos((i) => ({ ...i, cuenta: false }));
     setErrorServidor((e) => ({ ...e, cuenta: '' }));
     setIsEditing(false);
@@ -209,6 +218,8 @@ export default function Perfil() {
         celular: celular.trim(),
         ciudad: ciudad.trim(),
         biografia: biografia.trim(),
+        sexo: sexo || undefined,
+        pais: pais || undefined,
       });
 
       setUsuarioState(actualizado);
@@ -391,6 +402,20 @@ export default function Perfil() {
                         placeholder="Ej. Cochabamba, Bolivia"
                         value={ciudad} onChange={(e) => setCiudad(e.target.value)}
                       />
+                      <Campo id="perfil-sexo" etiqueta={<><FaVenusMars aria-hidden="true" /> Sexo</>}>
+                        <select id="perfil-sexo" value={sexo} onChange={(e) => setSexo(e.target.value)}>
+                          <option value="">Prefiero no decir</option>
+                          {OPCIONES_SEXO.map((o) => (
+                            <option key={o.valor} value={o.valor}>{o.texto}</option>
+                          ))}
+                        </select>
+                      </Campo>
+                      <Campo id="perfil-pais" etiqueta={<><FaGlobeAmericas aria-hidden="true" /> País</>}>
+                        <select id="perfil-pais" value={pais} onChange={(e) => setPais(e.target.value)}>
+                          <option value="">Sin especificar</option>
+                          {PAISES.map((p) => <option key={p} value={p}>{p}</option>)}
+                        </select>
+                      </Campo>
                       <Campo id="perfil-bio" etiqueta={<><FaQuoteLeft aria-hidden="true" /> Biografía</>} className="pi-perfil-dato--ancho">
                         <textarea
                           id="perfil-bio" rows={3} placeholder="Escribí algo sobre vos…"
@@ -403,6 +428,8 @@ export default function Perfil() {
                       <Dato icono={FaPhone} etiqueta="Teléfono celular" valor={celular && `🇧🇴 +591 ${celular}`} vacio="No registrado" />
                       <Dato icono={FaBirthdayCake} etiqueta="Fecha de nacimiento" valor={fechaNacimiento && fechaNacimiento.split('-').reverse().join('/')} vacio="No registrada" />
                       <Dato icono={FaMapMarkerAlt} etiqueta="Ubicación / ciudad" valor={ciudad} vacio="No registrada" />
+                      <Dato icono={FaVenusMars} etiqueta="Sexo" valor={OPCIONES_SEXO.find((o) => o.valor === sexo)?.texto} vacio="No registrado" />
+                      <Dato icono={FaGlobeAmericas} etiqueta="País" valor={pais} vacio="No registrado" />
                       <Dato icono={FaQuoteLeft} etiqueta="Biografía" valor={biografia} vacio='Sin biografía todavía. Tocá "Editar" para agregar una.' ancho />
                     </>
                   )}
@@ -421,19 +448,19 @@ export default function Perfil() {
 
                 <form className="pi-perfil-grilla" onSubmit={guardarSeguridad} noValidate>
                   <Campo
-                    id="perfil-clave-actual" etiqueta="Contraseña actual" contrasena autoComplete="current-password"
+                    id="perfil-clave-actual" etiqueta="Contraseña actual" contrasena autoComplete="current-password" maxLength={72}
                     placeholder="••••••••" className="pi-perfil-dato--ancho"
                     value={contraseñaActual} onChange={(e) => setContraseñaActual(e.target.value)}
                     error={erroresSeguridad['perfil-clave-actual']}
                   />
                   <Campo
-                    id="perfil-clave-nueva" etiqueta="Nueva contraseña" contrasena autoComplete="new-password"
+                    id="perfil-clave-nueva" etiqueta="Nueva contraseña" contrasena autoComplete="new-password" maxLength={72}
                     placeholder={`Mínimo ${MIN_CONTRASENA} caracteres`}
                     value={contraseñaNueva} onChange={(e) => setContraseñaNueva(e.target.value)}
                     error={erroresSeguridad['perfil-clave-nueva']}
                   />
                   <Campo
-                    id="perfil-clave-confirmar" etiqueta="Confirmar contraseña" contrasena autoComplete="new-password"
+                    id="perfil-clave-confirmar" etiqueta="Confirmar contraseña" contrasena autoComplete="new-password" maxLength={72}
                     placeholder="Repetí la contraseña"
                     value={contraseñaConfirmar} onChange={(e) => setContraseñaConfirmar(e.target.value)}
                     error={erroresSeguridad['perfil-clave-confirmar']}
