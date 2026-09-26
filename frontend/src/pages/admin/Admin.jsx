@@ -285,7 +285,8 @@ export default function Admin({
       api.ventas.listar({ eventoId }),
       api.puestos.listar({ eventoId }),
       api.asignaciones.listar({ eventoId }),
-      api.usuarios.listar(),
+      // Solo hacen falta los nombres de los negocios, no todos los usuarios.
+      api.usuarios.listar({ roles: 'UsuarioNegocio' }),
     ]);
     const usuariosPorId = new Map(usuariosR.map(u => [u.id, u]));
     const staffDe = (rol) => asignacionesR.filter(a => a.rol === rol).map(a => a.usuario);

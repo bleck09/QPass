@@ -27,8 +27,22 @@ export class UsuariosController {
 
   @Get()
   @Roles('Admin', 'Cliente', 'Devolucion')
-  listar(@Query('rol') rol?: Rol) {
-    return this.usuariosService.listar(rol);
+  listar(
+    @Query('rol') rol?: Rol,
+    @Query('roles') roles?: string,
+    @Query('buscar') buscar?: string,
+    @Query('pagina') pagina?: string,
+  ) {
+    // `roles` va separado por comas (?roles=Cliente,Supervisor); `rol` suelto
+    // se mantiene por compatibilidad.
+    const listaRoles = [rol, ...(roles?.split(',') ?? [])]
+      .map((r) => r?.trim())
+      .filter(Boolean) as string[];
+    return this.usuariosService.listar({
+      roles: listaRoles,
+      buscar,
+      pagina: pagina != null && pagina !== '' ? Number(pagina) : undefined,
+    });
   }
 
   @Get(':id')

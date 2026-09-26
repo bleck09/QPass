@@ -20,6 +20,8 @@ import { aFecha } from '../../common/utils/fechas.utils';
 import { ActualizarUsuarioDto } from './dto/actualizar-usuario.dto';
 import { CambiarPasswordDto } from './dto/cambiar-password.dto';
 
+const PAGINA_TAM = 50;
+
 const SELECT_PUBLICO = {
   id: true,
   nombre: true,
@@ -45,11 +47,53 @@ const SELECT_PUBLICO = {
 export class UsuariosService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listar(rol?: Rol) {
-    return this.prisma.usuario.findMany({
-      where: rol ? { rol } : undefined,
-      select: SELECT_PUBLICO,
-    });
+  /**
+   * Sin `pagina` devuelve la lista entera (pantallas que solo piden roles
+   * operativos, que son pocos). Con `pagina` devuelve una página de
+   * PAGINA_TAM + el total + el conteo por rol: es el modo para la gestión
+   * global, porque los UsuarioNormal (compradores) crecen sin techo.
+   */
+  async listar(filtros: { roles?: string[]; buscar?: string; pagina?: number }) {
+    // Roles desconocidos se descartan en vez de reventar Prisma con un 500.
+    const roles = (filtros.roles ?? []).filter((r): r is Rol =>
+      Object.values(Rol).includes(r as Rol),
+    );
+    const termino = filtros.buscar?.trim();
+    const where: Prisma.UsuarioWhereInput = {
+      rol: roles.length ? { in: roles } : undefined,
+      OR: termino
+        ? [
+            { nombre: { contains: termino, mode: 'insensitive' } },
+            { email: { contains: termino, mode: 'insensitive' } },
+          ]
+        : undefined,
+    };
+
+    if (filtros.pagina == null || Number.isNaN(filtros.pagina)) {
+      return this.prisma.usuario.findMany({ where, select: SELECT_PUBLICO });
+    }
+
+    const pagina = Math.max(0, Math.floor(filtros.pagina));
+    const [total, usuarios, porRol] = await Promise.all([
+      this.prisma.usuario.count({ where }),
+      this.prisma.usuario.findMany({
+        where,
+        select: SELECT_PUBLICO,
+        orderBy: { createdAt: 'desc' },
+        skip: pagina * PAGINA_TAM,
+        take: PAGINA_TAM,
+      }),
+      // Conteo por rol para las pastillas del filtro: respeta la búsqueda pero
+      // no el rol elegido (si no, todas las demás pastillas darían 0).
+      this.prisma.usuario.groupBy({
+        by: ['rol'],
+        where: { OR: where.OR },
+        _count: { _all: true },
+      }),
+    ]);
+    const conteoPorRol = Object.fromEntries(porRol.map((g) => [g.rol, g._count._all]));
+
+    return { total, pagina, porPagina: PAGINA_TAM, usuarios, conteoPorRol };
   }
 
   async obtenerPorId(id: number) {

@@ -107,7 +107,9 @@ export default function AdminGestionEventos() {
   const cargarTodo = useCallback(async () => {
     const [eventos, usuarios, asignaciones, solicitudes] = await Promise.all([
       api.eventos.listarTodos(),
-      api.usuarios.listar(),
+      // Solo roles operativos (incluye Cliente): los compradores no se asignan
+      // a eventos y son los que crecen sin techo.
+      api.usuarios.listar({ roles: ROLES_ASIGNABLES.join(',') }),
       api.asignaciones.listar(),
       api.solicitudesEvento.listar({ estado: 'pendiente' }),
     ]);

@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Tabla from '../../components/Tabla.jsx';
+import Paginador from '../../components/Paginador.jsx';
 import Boton from '../../components/Boton.jsx';
 import Campo from '../../components/Campo.jsx';
 import Insignia from '../../components/Insignia.jsx';
@@ -42,20 +43,42 @@ export default function AdCreaUsuarioNegocio() {
   useTituloPagina('Gestión de Usuarios');
   const avisos = useAvisos();
 
-  // Lista de usuarios con estados cargando/error/reintentar (Manual 8.9).
-  const cargarUsuarios = useCallback(() => api.usuarios.listar(), []);
-  const {
-    data: usuarios,
-    setData: setUsuarios,
-    cargando: cargandoUsuarios,
-    error: errorUsuarios,
-    recargar: recargarUsuarios,
-  } = useApi(cargarUsuarios, { inicial: [] });
-
   const [showModal, setShowModal] = useState(false);
   const [confirmar, DialogoConfirmar] = useConfirmar();
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroRol, setFiltroRol] = useState('Todos');
+  const [pagina, setPagina] = useState(0);
+
+  // La búsqueda va al servidor: se espera a que el usuario deje de escribir
+  // para no disparar una request por tecla.
+  const [busqueda, setBusqueda] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setBusqueda(searchTerm.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  // Paginado del servidor: los compradores (UsuarioNormal) crecen sin techo,
+  // así que ya no se descarga la lista entera para filtrarla en el navegador.
+  const cargarUsuarios = useCallback(
+    () => api.usuarios.listar({
+      roles: filtroRol === 'Todos' ? undefined : filtroRol,
+      buscar: busqueda || undefined,
+      pagina,
+    }),
+    [filtroRol, busqueda, pagina],
+  );
+  const {
+    data,
+    cargando: cargandoUsuarios,
+    error: errorUsuarios,
+    recargar: recargarUsuarios,
+  } = useApi(cargarUsuarios, { inicial: null });
+  const usuarios = data?.usuarios ?? [];
+  const totalPaginas = data ? Math.max(1, Math.ceil(data.total / data.porPagina)) : 1;
+
+  // Cambiar el filtro o la búsqueda vuelve a la primera página.
+  const cambiarFiltroRol = (rol) => { setFiltroRol(rol); setPagina(0); };
+  const cambiarBusqueda = (texto) => { setSearchTerm(texto); setPagina(0); };
 
   const [formData, setFormData] = useState(FORM_VACIO);
   const [intento, setIntento] = useState(false);
@@ -105,7 +128,9 @@ export default function AdCreaUsuarioNegocio() {
     if (!ok) return;
     try {
       await api.usuarios.eliminar(user.id);
-      setUsuarios(prev => prev.filter(u => u.id !== user.id));
+      // Si era el único de la última página, se retrocede una.
+      if (usuarios.length === 1 && pagina > 0) setPagina(p => p - 1);
+      else await recargarUsuarios();
       avisos.exito(`La cuenta de ${user.nombre} se eliminó.`);
     } catch (err) {
       avisos.error(err?.message || 'No se pudo eliminar la cuenta.', { titulo: 'No se pudo eliminar' });
@@ -113,26 +138,16 @@ export default function AdCreaUsuarioNegocio() {
   };
 
   // Opciones del filtro por rol, con su conteo (para las pastillas del <Buscador>).
+  // El conteo viene del servidor (respeta la búsqueda, no el rol elegido).
+  const conteoPorRol = data?.conteoPorRol;
   const filtrosRol = useMemo(() => {
-    const m = {};
-    usuarios.forEach(u => { m[u.rol] = (m[u.rol] || 0) + 1; });
+    const m = conteoPorRol || {};
+    const todos = Object.values(m).reduce((a, n) => a + n, 0);
     return [
-      { valor: 'Todos', texto: 'Todos', conteo: usuarios.length },
+      { valor: 'Todos', texto: 'Todos', conteo: todos },
       ...ROLES.map(rol => ({ valor: rol, texto: ROLE_LABELS[rol] || rol, conteo: m[rol] || 0 })),
     ];
-  }, [usuarios]);
-
-  // Filtrado: rol + texto (nombre / correo).
-  const usuariosFiltrados = useMemo(() => {
-    const termino = searchTerm.trim().toLowerCase();
-    return usuarios
-      .filter(u => filtroRol === 'Todos' || u.rol === filtroRol)
-      .filter(u =>
-        !termino ||
-        u.nombre.toLowerCase().includes(termino) ||
-        u.email.toLowerCase().includes(termino)
-      );
-  }, [usuarios, filtroRol, searchTerm]);
+  }, [conteoPorRol]);
 
   const hayFiltro = searchTerm.trim() !== '' || filtroRol !== 'Todos';
 
@@ -146,32 +161,34 @@ export default function AdCreaUsuarioNegocio() {
 
       <Buscador
         valor={searchTerm}
-        onCambio={setSearchTerm}
+        onCambio={cambiarBusqueda}
         placeholder="Buscar usuario por nombre o correo…"
         etiqueta="Buscar usuario por nombre o correo"
         filtros={filtrosRol}
         filtroActivo={filtroRol}
-        onFiltro={setFiltroRol}
+        onFiltro={cambiarFiltroRol}
         etiquetaFiltros="Filtrar por rol"
         acciones={<Boton icono={FaPlus} onClick={abrirModal}>Nuevo usuario</Boton>}
       />
 
-      {hayFiltro && (
+      {hayFiltro && data && (
         <p className="texto-ayuda">
-          {usuariosFiltrados.length} usuario{usuariosFiltrados.length === 1 ? '' : 's'} encontrado{usuariosFiltrados.length === 1 ? '' : 's'}
+          {data.total} usuario{data.total === 1 ? '' : 's'} encontrado{data.total === 1 ? '' : 's'}
           {filtroRol !== 'Todos' && ` · rol: ${ROLE_LABELS[filtroRol] || filtroRol}`}
         </p>
       )}
 
       {errorUsuarios ? (
         <EstadoError onReintentar={recargarUsuarios} />
-      ) : cargandoUsuarios ? (
+      ) : cargandoUsuarios || !data ? (
         <EstadoCarga filas={5} />
       ) : (
+        <>
         <Tabla
           card
+          porPagina={0}
           columnas={['Usuario', 'Contacto', 'Rol / Tipo', 'CI / Celular', { texto: 'Acción', srOnly: true }]}
-          datos={usuariosFiltrados}
+          datos={usuarios}
           vacio="No se encontraron usuarios en esta categoría o búsqueda."
           renderFila={user => (
             <tr key={user.id}>
@@ -204,6 +221,9 @@ export default function AdCreaUsuarioNegocio() {
             </tr>
           )}
         />
+        {/* Paginado del servidor: mismo Paginador global que usa Tabla. */}
+        <Paginador pagina={pagina} totalPaginas={totalPaginas} onCambio={setPagina} total={data.total} unidad="usuarios" />
+        </>
       )}
 
       {showModal && (
