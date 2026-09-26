@@ -16,12 +16,15 @@ import ContactoSection from './ContactoSection.jsx';
 import PiePagina from './PiePagina.jsx';
 import { CONTACTO, MOTIVOS_CONTACTO } from '../../constants/contacto.js';
 import api from '../../api/index.js';
-import { esVigente, formatearFecha } from '../../utils/eventos.js';
+import { esVigente, formatearFecha, imagenEvento } from '../../utils/eventos.js';
 import { useApi } from '../../utils/useApi.js';
 import { useRevelar } from '../../utils/useRevelar.js';
 import { useSeccionActiva } from '../../utils/useSeccionActiva.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
 import Boton from '../../components/Boton.jsx';
+import Buscador from '../../components/Buscador.jsx';
+import GrillaEventos from '../../components/GrillaEventos.jsx';
+import EventoCard from '../../components/EventoCard.jsx';
 
 const LINKS_NAV = [
   { id: 'servicios', texto: 'Características' },
@@ -45,6 +48,16 @@ export default function PaginaPrincipal() {
   const cargarEventos = useCallback(() => api.eventos.listar(), []);
   const { data: eventos, cargando, error, recargar } = useApi(cargarEventos, { inicial: [] });
   const proximosEventos = eventos.filter(esVigente);
+  // El carrusel lleva solo los 3 más cercanos; con más eventos se volvía
+  // largo e incómodo. El resto va en una grilla con buscador debajo.
+  const porFecha = [...proximosEventos].sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  const destacados = porFecha.slice(0, 3);
+  const restoCartelera = porFecha.slice(3);
+  const [busqueda, setBusqueda] = useState('');
+  const termino = busqueda.trim().toLowerCase();
+  const restoFiltrado = termino
+    ? restoCartelera.filter((ev) => `${ev.nombre} ${ev.lugar ?? ''}`.toLowerCase().includes(termino))
+    : restoCartelera;
   const todosPasados = eventos.filter(ev => !esVigente(ev));
   // Solo los 6 mas recientes: la lista completa crece sin techo y termina
   // ocupando mas pantalla que la cartelera. Se ordena por fecha de fin
@@ -176,7 +189,28 @@ export default function PaginaPrincipal() {
           <EstadoCarga filas={3} etiqueta="Cargando cartelera…" />
         </section>
       ) : (
-        <EventosDestacados eventos={proximosEventos.slice(0, 6)} onVerEvento={verEvento} />
+        <EventosDestacados eventos={destacados} onVerEvento={verEvento} />
+      )}
+
+      {!cargando && !error && restoCartelera.length > 0 && (
+        <section id="mas-eventos" className="pi-home-qpass-home-section">
+          <div className="pi-home-section-header">
+            <span className="qp-info__eyebrow">Cartelera completa</span>
+            <h2>Más eventos que se vienen</h2>
+            <p>Busca por nombre o lugar y entra a su página para comprar tus entradas.</p>
+          </div>
+          <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar evento o lugar…" />
+          <GrillaEventos eventos={restoFiltrado} porPagina={6}>
+            {(ev) => (
+              <EventoCard
+                key={ev.id}
+                evento={{ ...ev, imagen: imagenEvento(ev) }}
+                cta="Ver evento"
+                onClick={() => verEvento(ev)}
+              />
+            )}
+          </GrillaEventos>
+        </section>
       )}
 
       <section

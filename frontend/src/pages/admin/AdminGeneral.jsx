@@ -203,7 +203,7 @@ export default function AdminGeneral() {
                         <button
                           type="button"
                           className={`pi-adg-alerta pi-adg-alerta--${a.nivel} pi-adg-alerta--click`}
-                          onClick={() => navigate('/admin', { state: { eventoId: a.eventoId } })}
+                          onClick={() => navigate('/admin/eventos', { state: { eventoId: a.eventoId } })}
                         >
                           {contenido}
                         </button>

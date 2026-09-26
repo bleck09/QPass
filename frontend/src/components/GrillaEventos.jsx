@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react';
 import Paginador from './Paginador.jsx';
 import { usePaginacion } from '../utils/usePaginacion.js';
 import './GrillaEventos.css';
@@ -20,7 +21,28 @@ export default function GrillaEventos({
   vacio = 'Ningún evento coincide con la búsqueda.',
   gridClassName = 'qp-grilla-eventos__grid',
 }) {
-  const { paginaActual, setPagina, totalPaginas, slice, total } = usePaginacion(eventos, porPagina);
+  // Las columnas dependen del ancho (auto-fill): con 9 por página y 4
+  // columnas quedaba una última fila con una sola tarjeta. Se mide la grilla y
+  // se redondea `porPagina` a filas completas (9 → 8 con 4 columnas).
+  const refGrid = useRef(null);
+  const [columnas, setColumnas] = useState(1);
+  useEffect(() => {
+    const nodo = refGrid.current;
+    if (!nodo || typeof ResizeObserver === 'undefined') return;
+    const medir = () => {
+      const n = getComputedStyle(nodo).gridTemplateColumns.split(' ').filter(Boolean).length;
+      setColumnas(Math.max(1, n));
+    };
+    medir();
+    const obs = new ResizeObserver(medir);
+    obs.observe(nodo);
+    return () => obs.disconnect();
+  });
+  const porPaginaFilas = porPagina > 0
+    ? Math.max(columnas, Math.round(porPagina / columnas) * columnas)
+    : porPagina;
+
+  const { paginaActual, setPagina, totalPaginas, slice, total } = usePaginacion(eventos, porPaginaFilas);
 
   if (total === 0) {
     return <p className="qp-grilla-eventos qp-grilla-eventos__vacio">{vacio}</p>;
@@ -28,7 +50,7 @@ export default function GrillaEventos({
 
   return (
     <div className="qp-grilla-eventos">
-      <div className={gridClassName}>
+      <div ref={refGrid} className={gridClassName}>
         {slice.map((ev) => children(ev))}
       </div>
       <Paginador

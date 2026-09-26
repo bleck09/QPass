@@ -6,8 +6,9 @@
    supervisor/GestionEntrega.css y usada por 9 pantallas). */
 .qp-grilla-eventos__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18.75rem, 21.25rem));
-  justify-content: start;
+  /* Columnas elásticas: llenan todo el ancho en cualquier pantalla (con un
+     máximo fijo quedaba una franja vacía a la derecha). */
+  grid-template-columns: repeat(auto-fill, minmax(min(18.75rem, 100%), 1fr));
   gap: var(--space-5);
 }
 

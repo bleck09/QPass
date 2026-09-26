@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { FaCoins, FaHandPaper, FaUserSecret, FaCheckCircle, FaSearch } from 'react-icons/fa';
+import { FaCoins, FaHandPaper, FaUserSecret, FaCheckCircle, FaSearch, FaMapMarkerAlt, FaTicketAlt, FaUser, FaQrcode, FaClock } from 'react-icons/fa';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useApi } from '../../utils/useApi.js';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
@@ -10,7 +10,7 @@ import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
 import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import Card from '../../components/Card.jsx';
-import FotoZoom from '../../components/FotoZoom.jsx';
+import FotosDuplicado from '../../components/FotosDuplicado.jsx';
 import Modal from '../../components/Modal.jsx';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
@@ -116,44 +116,36 @@ export default function PersonasPorEncontrar() {
         <div className="qp-duplicados__grilla">
           {visibles.map((c) => (
             <Card key={c.id} className="qp-duplicados__caso">
-              <div className="qp-duplicados__fotos">
-                <figure>
-                  {c.fotoSospechoso
-                    ? <FotoZoom width={140} height={140} src={c.fotoSospechoso} alt="Persona que entró con la copia" />
-                    : <span className="qp-duplicados__sin-foto">Sin foto</span>}
-                  <figcaption>Quien tiene la copia</figcaption>
-                </figure>
-                {c.registroVerificacion?.foto && (
-                  <figure className="qp-duplicados__foto-dueno">
-                    <FotoZoom width={64} height={64} src={c.registroVerificacion.foto} alt="Dueño real verificado" />
-                    <figcaption>Dueño real</figcaption>
-                  </figure>
-                )}
+              <FotosDuplicado foto={c.fotoSospechoso} fotoDueno={c.registroVerificacion?.foto} />
+
+              <div className="qp-duplicados__cuerpo">
+                <header className="qp-duplicados__cabecera">
+                  <h3>{c.evento.nombre}</h3>
+                  <span className="qp-duplicados__manilla"><FaQrcode aria-hidden="true" /> Manilla N.º {c.codigoCopia.numero}</span>
+                </header>
+
+                <div className={`qp-duplicados__visto${c.ultimaAlerta ? '' : ' es-vacio'}`}>
+                  <FaMapMarkerAlt aria-hidden="true" />
+                  <div>
+                    <span className="qp-duplicados__visto-tit">Última vez vista</span>
+                    {c.ultimaAlerta ? (
+                      <>
+                        <strong>{ubicacionAlerta(c.ultimaAlerta)}</strong>
+                        <span>{formatearFecha(c.ultimaAlerta.createdAt)} · {c.totalAlertas} {c.totalAlertas === 1 ? 'escaneo' : 'escaneos'} de la copia</span>
+                      </>
+                    ) : <strong>Todavía no se volvió a escanear</strong>}
+                  </div>
+                </div>
               </div>
 
               <dl className="qp-duplicados__datos">
-                <dt>Evento</dt>
-                <dd>{c.evento.nombre}</dd>
-                <dt>Manilla copiada</dt>
-                <dd>N.º {c.codigoCopia.numero}</dd>
-                <dt>Entrada de</dt>
-                <dd>{c.entrada.nombre}</dd>
-                <dt>Detectado</dt>
-                <dd>{formatearFecha(c.createdAt)} · verificó {c.abiertoPor.nombre}</dd>
-                <dt>Última vez vista</dt>
-                <dd>
-                  {c.ultimaAlerta
-                    ? <>{ubicacionAlerta(c.ultimaAlerta)} · {formatearFecha(c.ultimaAlerta.createdAt)}</>
-                    : 'Todavía no se volvió a escanear'}
-                </dd>
-                <dt>Escaneos de la copia</dt>
-                <dd>{c.totalAlertas}</dd>
+                <div><dt><FaTicketAlt aria-hidden="true" /> Entrada de</dt><dd>{c.entrada.nombre}</dd></div>
+                <div><dt><FaClock aria-hidden="true" /> Detectado</dt><dd>{formatearFecha(c.createdAt)}</dd></div>
+                <div><dt><FaUser aria-hidden="true" /> Verificó</dt><dd>{c.abiertoPor.nombre}</dd></div>
                 {c.estado === 'resuelto' && (
                   <>
-                    <dt>Recuperada</dt>
-                    <dd>{formatearFecha(c.recuperadoEn)} · {c.recuperadoPor?.nombre}</dd>
-                    <dt>Sanción</dt>
-                    <dd>{c.sancion || '—'}</dd>
+                    <div><dt>Recuperada</dt><dd>{formatearFecha(c.recuperadoEn)} · {c.recuperadoPor?.nombre}</dd></div>
+                    <div><dt>Sanción</dt><dd>{c.sancion || '—'}</dd></div>
                   </>
                 )}
               </dl>
@@ -166,7 +158,7 @@ export default function PersonasPorEncontrar() {
                     </Boton>
                   )}
                   {esAdmin && (
-                    <Boton variante="secundario" tamano="sm" icono={FaCoins} onClick={() => setReponiendo(c)}>
+                    <Boton variante="secundario" icono={FaCoins} onClick={() => setReponiendo(c)}>
                       Reponer saldo al dueño
                     </Boton>
                   )}

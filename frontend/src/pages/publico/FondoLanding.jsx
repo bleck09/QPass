@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { FONDOS_LANDING } from '../../constants/imagenesLanding.js';
 import { useSeccionActiva } from '../../utils/useSeccionActiva.js';
 import './FondoLanding.css';
@@ -12,6 +12,10 @@ const CAPA_DE = { cartelera: 'inicio' };
 // misma capa y no hay fundido entre ellas.
 const CAPAS = [...new Set(Object.values(FONDOS_LANDING))];
 
+// Espera antes de cambiar de fondo: al scrollear rápido se cruzan varias
+// secciones y cada una disparaba su fundido, y el fondo parpadeaba.
+const ESPERA_CAMBIO_MS = 250;
+
 /**
  * Fondo fijo de la landing que cambia con un fundido según la sección que se
  * está leyendo. Antes era una sola foto para toda la página.
@@ -23,7 +27,12 @@ const CAPAS = [...new Set(Object.values(FONDOS_LANDING))];
  * terminar de cargar).
  */
 export default function FondoLanding({ version }) {
-  const activa = useSeccionActiva(SECCIONES, version);
+  const seccion = useSeccionActiva(SECCIONES, version);
+  const [activa, setActiva] = useState(seccion);
+  useEffect(() => {
+    const t = setTimeout(() => setActiva(seccion), ESPERA_CAMBIO_MS);
+    return () => clearTimeout(t);
+  }, [seccion]);
   const clave = CAPA_DE[activa] ?? activa ?? 'inicio';
   const fondoActivo = clave in FONDOS_LANDING ? FONDOS_LANDING[clave] : FONDOS_LANDING.inicio;
 

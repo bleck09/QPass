@@ -1,13 +1,20 @@
 /* =========================================================================
    FONDO DINÁMICO DE LA LANDING
    Capas fijas a pantalla completa; solo la activa es visible y el cambio es
-   un fundido lento. La foto activa además se acerca muy despacio (Ken Burns)
-   para que el fondo no se sienta una imagen congelada.
+   un fundido lento. Sin zoom (Ken Burns): al reiniciarse en cada cambio de
+   sección hacía que el fondo "bailara" al scrollear.
    ========================================================================= */
 
 .qp-fondo {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  width: 100%;
+  /* lvh: alto con la barra del navegador móvil escondida; con inset:0 la capa
+     se redimensionaba (y la foto saltaba) cada vez que esa barra aparecía. */
+  height: 100vh;
+  height: 100lvh;
+  contain: strict;
   z-index: 0;
   overflow: hidden;
   pointer-events: none;
@@ -18,21 +25,22 @@
   inset: 0;
   opacity: 0;
   transition: opacity 1.4s ease-in-out;
+  /* Capa propia en la GPU: el scroll no la repinta. */
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: opacity;
 }
 
 /* ---------- Fotos ---------- */
 .qp-fondo__foto {
   background-size: cover;
   background-position: center;
-  transform: scale(1.08);
-  transition: opacity 1.4s ease-in-out, transform 20s linear;
 }
 
 /* Algo más visible que el 0.2 original para que el cambio entre secciones
    se note, sin competir con las tarjetas de encima. */
 .qp-fondo__foto.es-activa {
   opacity: 0.26;
-  transform: scale(1);
 }
 
 /* ---------- Aurora de marca (fondo sin foto) ----------
@@ -52,6 +60,7 @@
   border-radius: 50%;
   filter: blur(90px);
   opacity: 0.32;
+  will-change: transform;
   animation: qpFondoDerivar 22s ease-in-out infinite alternate;
 }
 
@@ -66,7 +75,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .qp-fondo__capa,
-  .qp-fondo__foto { transition: none; transform: none; }
-  .qp-fondo__foto.es-activa { transform: none; }
+  .qp-fondo__capa { transition: none; }
   .qp-fondo__aurora span { animation: none; }
 }

@@ -6,71 +6,115 @@
   gap: var(--space-4);
 }
 
+/* Fichas horizontales: foto a la izquierda, datos a la derecha. */
 .qp-duplicados__grilla {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(34rem, 100%), 1fr));
   gap: var(--space-4);
 }
 
+/* Foto | datos arriba; los botones en una fila a lo ancho de toda la ficha
+   (dentro de la columna de datos se apilaban y dejaban huecos a los lados). */
 .qp-duplicados__caso {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4) var(--space-5);
+  align-items: start;
 }
 
-.qp-duplicados__fotos {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: var(--space-4);
-}
-
-.qp-duplicados__fotos figure {
+.qp-duplicados__cuerpo {
   display: flex;
   flex-direction: column;
+  gap: var(--space-3);
+  flex: 1;
+  min-width: 0;
+}
+
+.qp-duplicados__cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.qp-duplicados__cabecera h3 {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-bold);
+}
+
+.qp-duplicados__manilla {
+  display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  margin: 0;
-}
-
-.qp-duplicados__fotos figcaption {
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--rojo-error) 12%, transparent);
+  color: var(--rojo-error);
   font-size: var(--text-xs);
   font-weight: var(--weight-semibold);
-  color: var(--text-secondary);
 }
 
-.qp-duplicados__fotos img {
-  border-radius: var(--radius-md);
-  object-fit: cover;
-  border: 3px solid var(--rojo-error);
-}
-
-.qp-duplicados__foto-dueno img {
-  border-color: var(--ok);
-}
-
-.qp-duplicados__sin-foto {
+/* Lo más útil para encontrarla: dónde se la vio por última vez. */
+.qp-duplicados__visto {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 140px;
-  height: 140px;
+  gap: var(--space-3);
+  padding: var(--space-3);
   border-radius: var(--radius-md);
-  border: 2px dashed var(--border-strong);
-  color: var(--text-muted);
+  background: color-mix(in srgb, var(--rojo-error) 8%, transparent);
+  border-left: 3px solid var(--rojo-error);
+}
+
+.qp-duplicados__visto > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--rojo-error);
+}
+
+.qp-duplicados__visto > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
   font-size: var(--text-sm);
 }
 
+.qp-duplicados__visto span {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+.qp-duplicados__visto-tit {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: var(--weight-semibold);
+}
+
+.qp-duplicados__visto.es-vacio {
+  background: transparent;
+  border: 1px dashed var(--border-strong);
+}
+
+.qp-duplicados__visto.es-vacio > svg { color: var(--text-muted); }
+
+/* A lo ancho de la ficha, bajo la foto: en la columna derecha la hacían más
+   alta que la foto y quedaba un hueco debajo de esta. */
 .qp-duplicados__datos {
+  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: var(--space-1) var(--space-3);
+  grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr));
+  gap: var(--space-2) var(--space-3);
   margin: 0;
   font-size: var(--text-sm);
 }
 
 .qp-duplicados__datos dt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
   color: var(--text-secondary);
+  font-size: var(--text-xs);
 }
 
 .qp-duplicados__datos dd {
@@ -80,10 +124,17 @@
 }
 
 .qp-duplicados__acciones {
+  grid-column: 1 / -1;
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2);
-  margin-top: auto;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.qp-duplicados__acciones > * {
+  flex: 1 1 12rem;
+  justify-content: center;
 }
 
 .qp-duplicados__consumos {
@@ -109,18 +160,14 @@
 }
 
 /* =======================================================
-   MÓVIL: el título ocupaba dos líneas con el ícono enorme y las fotos dejaban
-   la tarjeta muy alta.
+   MÓVIL: la foto va arriba, centrada, y los datos debajo.
 ======================================================= */
 @media (max-width: 560px) {
   .qp-duplicados { gap: var(--space-3); }
-  .qp-duplicados__grilla { grid-template-columns: 1fr; gap: var(--space-3); }
-  .qp-duplicados__caso { gap: var(--space-3); }
-  /* Las medidas vienen del atributo width/height de <FotoZoom>; acá se achican. */
-  .qp-duplicados__fotos img { width: 110px; height: 110px; }
-  .qp-duplicados__foto-dueno img { width: 56px; height: 56px; }
-  .qp-duplicados__sin-foto { width: 110px; height: 110px; }
-  .qp-duplicados__datos { font-size: var(--text-xs); gap: 2px var(--space-2); }
+  .qp-duplicados__grilla { gap: var(--space-3); }
+  .qp-duplicados__caso { grid-template-columns: 1fr; }
+  .qp-duplicados__caso .qp-foto-dup { justify-self: center; }
   .qp-duplicados__acciones { flex-direction: column; }
-  .qp-duplicados__acciones button { width: 100%; justify-content: center; }
+  /* En columna el flex-basis (12rem) pasaba a ser el ALTO del botón. */
+  .qp-duplicados__acciones > * { flex: none; width: 100%; }
 }

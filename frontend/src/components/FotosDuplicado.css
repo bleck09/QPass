@@ -1,0 +1,77 @@
+/* Fotos de un caso de manilla duplicada (components/FotosDuplicado.jsx). Solo tokens. */
+
+.qp-foto-dup {
+  position: relative;
+  flex-shrink: 0;
+  align-self: flex-start;
+  width: fit-content;
+}
+
+.qp-foto-dup figure {
+  position: relative;
+  margin: 0;
+}
+
+.qp-foto-dup__copia img,
+.qp-foto-dup__sin-foto {
+  display: block;
+  width: 11.25rem;
+  height: 11.25rem;
+  border-radius: var(--radius-lg);
+  object-fit: cover;
+}
+
+.qp-foto-dup__copia img {
+  border: 3px solid var(--rojo-error);
+}
+
+.qp-foto-dup__sin-foto {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px dashed var(--border-strong);
+  color: var(--text-muted);
+  font-size: var(--text-sm);
+}
+
+/* Etiqueta en pastilla sobre el borde inferior de la foto. */
+.qp-foto-dup figcaption {
+  position: absolute;
+  left: var(--space-2);
+  bottom: var(--space-2);
+  padding: 2px var(--space-2);
+  border-radius: 999px;
+  background: var(--rojo-error);
+  color: var(--blanco);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+/* Dueño real: miniatura en la esquina superior derecha de la foto grande. */
+.qp-foto-dup__dueno {
+  position: absolute !important;
+  top: calc(-1 * var(--space-2));
+  right: calc(-1 * var(--space-2));
+}
+
+.qp-foto-dup__dueno img {
+  display: block;
+  width: 4rem;
+  height: 4rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  border: 3px solid var(--ok);
+  box-shadow: var(--shadow-md);
+}
+
+.qp-foto-dup__dueno figcaption {
+  left: 50%;
+  bottom: calc(-1 * var(--space-2));
+  transform: translateX(-50%);
+  background: var(--ok);
+}
+
+@media (max-width: 560px) {
+  .qp-foto-dup__copia img,
+  .qp-foto-dup__sin-foto { width: 8.75rem; height: 8.75rem; }
+}

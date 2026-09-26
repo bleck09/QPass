@@ -101,9 +101,10 @@
 /* --- GRID DE EVENTOS --- */
 .pi-ges-eventos-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 340px));
-  justify-content: start;
-  gap: 20px;
+  /* Columnas elásticas: llenan todo el ancho en cualquier pantalla (con un
+     máximo fijo quedaba una franja vacía a la derecha). */
+  grid-template-columns: repeat(auto-fill, minmax(min(18.75rem, 100%), 1fr));
+  gap: var(--space-5);
 }
 
 /* --- NAVEGACIÓN DE DETALLE --- */

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { FaCheckCircle, FaUserSecret } from 'react-icons/fa';
+import { FaCheckCircle, FaUserSecret, FaCalendarAlt, FaTicketAlt, FaClock, FaHandPaper } from 'react-icons/fa';
 import Modal from './Modal.jsx';
-import FotoZoom from './FotoZoom.jsx';
+import FotosDuplicado from './FotosDuplicado.jsx';
+import Boton from './Boton.jsx';
 import api from '../api/index.js';
 import { leerSesion } from '../api/client.js';
 import { formatearFecha } from '../utils/eventos.js';
@@ -51,25 +52,17 @@ export default function ManillaFalsaModal({ detalle, onCerrar }) {
       </p>
 
       <div className="qp-manilla-falsa__foto">
-        {detalle.fotoSospechoso ? (
-          <FotoZoom width={180} height={180} src={detalle.fotoSospechoso} alt="Foto de la persona que entró con la copia" />
-        ) : (
-          <span className="qp-manilla-falsa__sin-foto">Sin foto registrada</span>
-        )}
-        <span className="qp-manilla-falsa__foto-label">Persona que entró con la copia</span>
+        <FotosDuplicado foto={detalle.fotoSospechoso} />
       </div>
 
       <dl className="qp-manilla-falsa__datos">
-        <dt>Evento</dt>
-        <dd>{detalle.eventoNombre}</dd>
-        <dt>Entrada original de</dt>
-        <dd>{detalle.titularNombre}</dd>
-        <dt>Duplicado detectado</dt>
-        <dd>{formatearFecha(detalle.detectadoEn)}</dd>
+        <div><dt><FaCalendarAlt aria-hidden="true" /> Evento</dt><dd>{detalle.eventoNombre}</dd></div>
+        <div><dt><FaTicketAlt aria-hidden="true" /> Entrada de</dt><dd>{detalle.titularNombre}</dd></div>
+        <div><dt><FaClock aria-hidden="true" /> Detectado</dt><dd>{formatearFecha(detalle.detectadoEn)}</dd></div>
       </dl>
 
       <p className="qp-manilla-falsa__instruccion">
-        Retené a la persona y avisá a seguridad. El aviso ya les llegó con tu ubicación.
+        Retén a la persona y avisa a seguridad. El aviso ya les llegó con tu ubicación.
       </p>
 
       {recuperada ? (
@@ -89,14 +82,14 @@ export default function ManillaFalsaModal({ detalle, onCerrar }) {
             />
           </div>
           {error && <p className="form-nota form-nota--error">{error}</p>}
-          <button type="button" className="btn-primario" onClick={recuperar} disabled={guardando}>
-            {guardando ? 'Guardando…' : 'Ya le quitamos la manilla'}
-          </button>
+          <Boton icono={FaHandPaper} onClick={recuperar} cargando={guardando}>
+            Ya le quitamos la manilla
+          </Boton>
         </div>
       )}
 
       <div className="modal-actions">
-        <button type="button" className="btn-cancelar" onClick={onCerrar}>Cerrar</button>
+        <Boton variante="secundario" onClick={onCerrar}>Cerrar</Boton>
       </div>
     </Modal>
   );
