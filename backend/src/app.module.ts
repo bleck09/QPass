@@ -6,6 +6,7 @@
 
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerModule } from '@nestjs/throttler';
 
 import { HealthController } from './health.controller';
 import { ConfigModule } from './config/config.module';
@@ -17,6 +18,7 @@ import { JobsModule } from './jobs/jobs.module';
 
 import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { RolesGuard } from './common/guards/roles.guard';
+import { LimitePeticionesGuard } from './common/guards/limite-peticiones.guard';
 import { ExcepcionHttpFilter } from './common/filters/excepcion-http.filter';
 import { IdempotenciaInterceptor } from './common/interceptors/idempotencia.interceptor';
 import { FirmarImagenesInterceptor } from './common/interceptors/firmar-imagenes.interceptor';
@@ -58,6 +60,14 @@ import { CasosDuplicadoModule } from './modules/casos-duplicado/casos-duplicado.
     AuditoriaModule,
     MailModule,
     JobsModule,
+    // Límite por defecto para TODA la API: 600 requests/minuto por usuario (o
+    // por IP si es anónimo) — holgado para uso normal y escáneres de puerta,
+    // corta scripts que martillan. Las rutas sensibles (auth, compras) bajan
+    // su propio límite con @Throttle. Ver LimitePeticionesGuard.
+    ThrottlerModule.forRoot({
+      throttlers: [{ ttl: 60_000, limit: 600 }],
+      errorMessage: 'Demasiados intentos. Esperá un momento y volvé a probar.',
+    }),
 
     AuthModule,
     UsuariosModule,
@@ -90,9 +100,11 @@ import { CasosDuplicadoModule } from './modules/casos-duplicado/casos-duplicado.
   ],
   controllers: [HealthController],
   providers: [
-    // El orden importa: JwtAuthGuard corre antes que RolesGuard.
+    // El orden importa: JwtAuthGuard corre antes que RolesGuard, y el límite de
+    // peticiones al final (necesita req.user para contar por usuario).
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
+    { provide: APP_GUARD, useClass: LimitePeticionesGuard },
     { provide: APP_FILTER, useClass: ExcepcionHttpFilter },
     // FirmarImagenesInterceptor va ANTES que IdempotenciaInterceptor a propósito:
     // los interceptores se anidan en el orden del array (el primero es el más

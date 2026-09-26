@@ -8,6 +8,7 @@
  * ========================================================================= */
 
 import { Controller, Get, Logger, Query } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { Publico } from '../../common/decorators/publico.decorator';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ComprasService } from '../compras/compras.service';
@@ -25,6 +26,8 @@ export class PagosController {
 
   @Get('callback')
   @Publico()
+  // Libélula llama siempre desde las mismas IPs: no se le corta nunca un aviso de pago.
+  @SkipThrottle()
   async callback(@Query('transaction_id') transactionId?: string) {
     if (!transactionId) {
       this.logger.warn('Callback de Libélula sin transaction_id');

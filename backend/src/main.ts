@@ -7,6 +7,8 @@
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import helmet from 'helmet';
 import { GetObjectCommand } from '@aws-sdk/client-s3';
 import { json, Request, Response, NextFunction } from 'express';
 import type { Readable } from 'stream';
@@ -16,12 +18,24 @@ import { BUCKET_UPLOADS, clienteS3, keyDesdeRuta } from './modules/uploads/s3.cl
 import { verificarFirmaUpload } from './modules/uploads/firma-uploads';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: false });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: false,
+  });
   const config = app.get<ConfigService<VariablesEntorno, true>>(ConfigService);
 
   // Las imágenes ahora se suben como archivo real a POST /uploads (multipart) y
   // solo su URL viaja en el body normal — ya no base64. 2mb sigue siendo generoso
   // para el resto de los payloads (listas, configuración de la landing, etc).
+  // Delante hay dos proxies (Traefik de Dokploy -> nginx del frontend): se
+  // confía en esos 2 saltos para que req.ip sea la IP real del cliente (la usa
+  // el rate limiting, ver LimitePeticionesGuard) y no la del nginx.
+  app.set('trust proxy', 2);
+
+  // Cabeceras de seguridad estándar. CORP en same-site y no en el default
+  // same-origin: en desarrollo el front (otro puerto de localhost) carga las
+  // imágenes de /uploads directo del backend.
+  app.use(helmet({ crossOriginResourcePolicy: { policy: 'same-site' } }));
+
   app.use(json({ limit: '2mb' }));
 
   // Sirve los archivos subidos (fotos, comprobantes, logos...). Los objetos viven

@@ -9,6 +9,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UsuarioActual } from '../../common/decorators/usuario-actual.decorator';
 import { ComprasService } from './compras.service';
@@ -22,7 +23,9 @@ import {
 export class ComprasController {
   constructor(private readonly comprasService: ComprasService) {}
 
+  // Nadie compra entradas 10 veces por minuto; más que eso es un script.
   @Post()
+  @Throttle({ default: { ttl: 60_000, limit: 10 } })
   crear(@Body() dto: CrearCompraDto, @UsuarioActual('id') compradorId: number) {
     return this.comprasService.crear(dto, compradorId);
   }
