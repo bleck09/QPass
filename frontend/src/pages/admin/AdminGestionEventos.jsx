@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTituloPagina } from '../../utils/tituloPagina.js';
-import Modal from '../../components/Modal.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
 import GrillaEventos from '../../components/GrillaEventos.jsx';
@@ -9,11 +8,11 @@ import Tabla from '../../components/Tabla.jsx';
 import { useConfirmar } from '../../components/ConfirmarModal.jsx';
 import { useApi } from '../../utils/useApi.js';
 import { EstadoCarga, EstadoError } from '../../components/EstadosAsync.jsx';
-import { useLocation, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   FaPlus, FaArrowLeft, FaArrowRight, FaMapMarkerAlt,
   FaUsers, FaTrash, FaUserPlus, FaTicketAlt, FaCog, FaMapMarkedAlt, FaQrcode,
-  FaCheckCircle, FaBan, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen,
+  FaCheckCircle, FaFileAlt, FaClipboardList, FaArchive, FaUndo, FaExclamationTriangle, FaPen,
   FaRegCircle, FaRocket, FaEyeSlash, FaCalendarAlt, FaListUl
 } from 'react-icons/fa';
 import { ROLE_LABELS } from '../../constants/roles.js';
@@ -102,6 +101,7 @@ export default function AdminGestionEventos() {
   const avisos = useAvisos();
   useTituloPagina('Gestión de eventos');
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Carga primaria (4 listas en paralelo) con cargando/error/reintentar (Manual 8.9).
   const cargarTodo = useCallback(async () => {
@@ -125,7 +125,6 @@ export default function AdminGestionEventos() {
   // Helpers para conservar las actualizaciones optimistas que había con setState.
   const setEventos = (fn) => setDatos(d => ({ ...d, eventos: typeof fn === 'function' ? fn(d.eventos) : fn }));
   const setAsignaciones = (fn) => setDatos(d => ({ ...d, asignaciones: typeof fn === 'function' ? fn(d.asignaciones) : fn }));
-  const setSolicitudes = (fn) => setDatos(d => ({ ...d, solicitudes: typeof fn === 'function' ? fn(d.solicitudes) : fn }));
 
   const [busqueda, setBusqueda] = useState('');
   const [filtroEstadoEvento, setFiltroEstadoEvento] = useState('todos');
@@ -161,7 +160,6 @@ export default function AdminGestionEventos() {
     setPestana('auto');
     abrirEventoUrl(id);
   };
-  const [modalSolicitudesAbierto, setModalSolicitudesAbierto] = useState(false);
   // Acción del evento en curso ('archivar', 'publicar'...): ninguna de estas
   // tenía guarda, así que el doble clic mandaba dos veces la misma operación.
   const [accionEvento, setAccionEvento] = useState(null);
@@ -227,48 +225,6 @@ export default function AdminGestionEventos() {
       setComprasPendientes(lista.filter(c => c.estado === 'pendiente').length)
     );
   }, [eventoIdDetalle]);
-
-  const [errorSolicitudes, setErrorSolicitudes] = useState('');
-
-  const aprobarSolicitud = async (s) => {
-    const ok = await confirmar({
-      titulo: '¿Aprobar la solicitud?',
-      mensaje: `Se creará el evento real "${s.nombreEvento}" a partir de esta solicitud.`,
-      textoConfirmar: 'Aprobar y crear',
-    });
-    if (!ok) return;
-    setErrorSolicitudes('');
-    try {
-      const nuevo = await api.solicitudesEvento.aprobar(s.id);
-      setEventos(prev => [nuevo, ...prev]);
-      setSolicitudes(prev => prev.filter(x => x.id !== s.id));
-      abrirDetalle(nuevo.id);
-      avisos.exito(`El evento "${nuevo.nombre}" se creó a partir de la solicitud.`);
-    } catch (err) {
-      // Ej.: las fechas propuestas se cruzan con otro evento activo ("un
-      // evento a la vez") — hay que editar la solicitud o rechazarla.
-      setErrorSolicitudes(err.message);
-    }
-  };
-
-  const rechazarSolicitud = async (s) => {
-    const motivo = await confirmar({
-      titulo: '¿Rechazar la solicitud?',
-      mensaje: `Se rechazará "${s.nombreEvento}". El cliente verá el motivo que escribas.`,
-      campoNota: { etiqueta: 'Motivo del rechazo', placeholder: 'Ej. faltan datos del lugar y la fecha', requerido: true },
-      textoConfirmar: 'Rechazar solicitud',
-      peligroso: true,
-    });
-    if (motivo === null) return;
-    setErrorSolicitudes('');
-    try {
-      await api.solicitudesEvento.rechazar(s.id, motivo);
-      setSolicitudes(prev => prev.filter(x => x.id !== s.id));
-      avisos.exito(`La solicitud "${s.nombreEvento}" quedó rechazada.`);
-    } catch (err) {
-      setErrorSolicitudes(err.message || 'No se pudo rechazar la solicitud.');
-    }
-  };
 
   const eventosFiltrados = useMemo(
     () => filtrarEventos(eventos, busqueda, filtroEstadoEvento),
@@ -907,7 +863,7 @@ export default function AdminGestionEventos() {
                 <button
                   type="button"
                   className="pi-ges-btn-solicitudes"
-                  onClick={() => { setErrorSolicitudes(''); setModalSolicitudesAbierto(true); }}
+                  onClick={() => navigate('/admin/solicitudes-eventos')}
                 >
                   <FaFileAlt /> Solicitudes de clientes
                   <span className="pi-ges-solicitudes-contador">{solicitudes.length}</span>
@@ -967,47 +923,6 @@ export default function AdminGestionEventos() {
             </GrillaEventos>
           )}
         </>
-      )}
-
-      {modalSolicitudesAbierto && (
-        <Modal
-          titulo={<><FaFileAlt aria-hidden="true" /> Solicitudes de clientes pendientes</>}
-          onCerrar={() => setModalSolicitudesAbierto(false)}
-          tamano="lg"
-        >
-          {errorSolicitudes && (
-            <AvisoFijo tono="error">{errorSolicitudes}</AvisoFijo>
-          )}
-          {solicitudes.length === 0 ? (
-            <p className="pi-ges-modal-vacio">No hay solicitudes pendientes.</p>
-          ) : (
-            <Tabla
-              columnas={['Evento propuesto', 'Cliente', 'Lugar', 'Fecha', { texto: 'Acciones', srOnly: true }]}
-              datos={solicitudes}
-              porPagina={8}
-              renderFila={s => (
-                <tr key={s.id}>
-                  <td>{s.nombreEvento}</td>
-                  <td>{s.cliente?.nombre} ({s.cliente?.email})</td>
-                  <td>{s.lugar}</td>
-                  <td>{formatearFecha(s.fecha)}</td>
-                  <td>
-                    <div className="btn-acciones">
-                      <Boton variante="exito" tamano="sm" icono={FaCheckCircle} onClick={() => aprobarSolicitud(s)}>
-                        Aprobar
-                      </Boton>
-                      <Boton
-                        variante="peligro-suave" tamano="sm" icono={FaBan}
-                        onClick={() => rechazarSolicitud(s)}
-                        aria-label={`Rechazar la solicitud "${s.nombreEvento}"`}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              )}
-            />
-          )}
-        </Modal>
       )}
 
       {DialogoConfirmar}

@@ -9,11 +9,10 @@ import {
   FaPlus, FaTrash, FaSave, FaEye, FaImage, FaUpload, FaPalette, FaTextHeight,
   FaListUl, FaRegCalendarAlt, FaUndo, FaTimes, FaDesktop,
   FaMobileAlt, FaArrowUp, FaArrowDown, FaSortAmountDown, FaCheckCircle,
-  FaExclamationTriangle, FaMagic, FaExpand,
+  FaMagic, FaExpand,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { subirImagenDeInput } from '../../utils/imagenes.js';
-import { contraste } from '../../utils/contraste.js';
 import {
   ICONOS_ACTIVIDAD, ACTIVIDADES_POR_DEFECTO, PALETAS_LANDING, iconoActividad, esAjusteDefecto,
 } from '../../constants/landingEvento.js';
@@ -24,34 +23,11 @@ import Modal from '../../components/Modal.jsx';
 import Card from '../../components/Card.jsx';
 import Pestanas from '../../components/Pestanas.jsx';
 import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
-import { AvisoFijo, useAvisos } from '../../components/Avisos.jsx';
+import { useAvisos } from '../../components/Avisos.jsx';
 import AjusteImagen from './AjusteImagen.jsx';
+import EditorColores from '../../components/EditorColores.jsx';
 import './AdminConfigurarPagina.css';
 import './ConfigurarPaginaEditor.css';
-
-// Selector de color: un cuadrado grande clickeable (el <input type="color">
-// nativo va invisible encima, mismo truco que .upload-input-hidden) + un
-// campo de texto para tipear/pegar el código hex directo.
-function ColorField({ id, label, value, onChange }) {
-  return (
-    <div className="pi-admin-form-group">
-      <label htmlFor={id}>{label}</label>
-      <div className="pi-admin-color-picker">
-        <span className="pi-admin-color-swatch" style={{ backgroundColor: value }}>
-          <input id={id} type="color" value={value} onChange={(e) => onChange(e.target.value)} />
-        </span>
-        <input
-          type="text"
-          className="pi-admin-color-hex"
-          value={value.toUpperCase()}
-          onChange={(e) => onChange(e.target.value)}
-          maxLength={7}
-          aria-label={`${label} (código hex)`}
-        />
-      </div>
-    </div>
-  );
-}
 
 // Base para un evento sin config propia y para "Restablecer": sin texto ni
 // imagen de relleno (el título es el nombre del evento y sin imagen propia se
@@ -74,7 +50,6 @@ const defaultLandingConfig = {
   ],
 };
 
-const CLAVES_COLOR = ['colorPrimario', 'colorBoton', 'colorFondo', 'colorTextoTitulo', 'colorTextoP'];
 const DESCRIPCION_IDEAL = 220; // caracteres: más largo se corta mal en el hero
 
 const normalizarConfig = (config) => ({
@@ -85,9 +60,6 @@ const normalizarConfig = (config) => ({
   cronograma: config.cronograma ?? [],
   imagenAjuste: config.imagenAjuste ?? null,
 });
-
-const mismaPaleta = (config, paleta) =>
-  CLAVES_COLOR.every((k) => String(config[k]).toUpperCase() === paleta[k].toUpperCase());
 
 // Hora siguiente sugerida para una fila nueva del cronograma: +1 h de la última.
 const horaSiguiente = (cronograma) => {
@@ -246,14 +218,6 @@ export default function AdminConfigurarPagina({
     setEventoId(nuevoId);
   };
 
-  // Contraste de lo que se va a leer (WCAG: 4.5:1 para texto normal).
-  const chequeos = [
-    { etiqueta: 'Títulos sobre el fondo', valor: contraste(config.colorTextoTitulo, config.colorFondo) },
-    { etiqueta: 'Textos sobre el fondo', valor: contraste(config.colorTextoP, config.colorFondo) },
-    { etiqueta: 'Texto del botón', valor: contraste(config.colorFondo, config.colorBoton) },
-  ];
-  const problemasContraste = chequeos.filter(c => c.valor != null && c.valor < 4.5).length;
-
   // Props para que cada sección del editor resalte su zona en la vista previa.
   const zona = (id) => ({
     onPointerEnter: () => setResaltar(id),
@@ -315,53 +279,7 @@ export default function AdminConfigurarPagina({
           <Card as="section" className="pi-cfg-seccion" {...zona('colores')}>
             <h3><span className="pi-cfg-num">1</span><FaPalette aria-hidden="true" /> Colores</h3>
 
-            <p className="texto-ayuda"><FaMagic aria-hidden="true" /> Elegí una paleta lista o ajustá cada color a mano.</p>
-            <div className="pi-cfg-paletas">
-              {PALETAS_LANDING.map((p) => (
-                <button
-                  key={p.nombre}
-                  type="button"
-                  className={`pi-cfg-paleta${mismaPaleta(config, p) ? ' activa' : ''}`}
-                  onClick={() => setConfig(c => ({ ...c, ...Object.fromEntries(CLAVES_COLOR.map(k => [k, p[k]])) }))}
-                  aria-pressed={mismaPaleta(config, p)}
-                >
-                  <span className="pi-cfg-paleta-muestra" style={{ background: p.colorFondo }} aria-hidden="true">
-                    <i style={{ background: p.colorTextoTitulo }} />
-                    <i style={{ background: p.colorPrimario }} />
-                    <i style={{ background: p.colorBoton }} />
-                  </span>
-                  {p.nombre}
-                </button>
-              ))}
-            </div>
-
-            <div className="pi-admin-colors-grid">
-              <ColorField id="cfg-colorFondo" label="Fondo de la página" value={config.colorFondo} onChange={(v) => cambiar('colorFondo', v)} />
-              <ColorField id="cfg-colorTextoTitulo" label="Títulos" value={config.colorTextoTitulo} onChange={(v) => cambiar('colorTextoTitulo', v)} />
-              <ColorField id="cfg-colorTextoP" label="Textos generales" value={config.colorTextoP} onChange={(v) => cambiar('colorTextoP', v)} />
-              <ColorField id="cfg-colorPrimario" label="Acento (íconos, detalles)" value={config.colorPrimario} onChange={(v) => cambiar('colorPrimario', v)} />
-              <ColorField id="cfg-colorBoton" label="Botón principal" value={config.colorBoton} onChange={(v) => cambiar('colorBoton', v)} />
-            </div>
-
-            <ul className="pi-cfg-contraste" aria-label="Legibilidad de los colores">
-              {chequeos.map(({ etiqueta, valor }) => {
-                const ok = valor == null || valor >= 4.5;
-                return (
-                  <li key={etiqueta} className={ok ? 'ok' : 'mal'}>
-                    {ok ? <FaCheckCircle aria-hidden="true" /> : <FaExclamationTriangle aria-hidden="true" />}
-                    <span>{etiqueta}</span>
-                    <b>{valor ? `${valor.toFixed(1)}:1` : '—'}</b>
-                    <em>{ok ? 'Se lee bien' : 'Poco contraste'}</em>
-                  </li>
-                );
-              })}
-            </ul>
-            {problemasContraste > 0 && (
-              <AvisoFijo tono="aviso">
-                Algunos textos pueden costar leerse. Probá un fondo más oscuro o textos más claros
-                (mínimo recomendado 4.5:1).
-              </AvisoFijo>
-            )}
+            <EditorColores valores={config} onCambio={(parcial) => setConfig((c) => ({ ...c, ...parcial }))} idBase="cfg" />
           </Card>
 
           {/* ===== 2. TEXTOS E IMAGEN ===== */}

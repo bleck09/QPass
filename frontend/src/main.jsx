@@ -18,6 +18,7 @@ import Admin from './pages/admin/Admin.jsx'
 import AdminGeneral from './pages/admin/AdminGeneral.jsx'
 import AdminAuditoria from './pages/admin/AdminAuditoria.jsx'
 import AdminGestionEventos from './pages/admin/AdminGestionEventos.jsx'
+import AdminSolicitudesEvento from './pages/admin/AdminSolicitudesEvento.jsx'
 import AdminConfigurarPagina from './pages/admin/AdminConfigurarPagina.jsx'
 import UsuNegoDasboar from './pages/usuario-negocio/UsuNegoDasboar.jsx'
 import AdCreaUsuarioNegocio from './pages/admin/AdCreaUsuarioNegocio.jsx'
@@ -80,6 +81,10 @@ const router = createBrowserRouter([
   {
     path: "/admin/eventos",
     element: <MenuLateral><AdminGestionEventos /></MenuLateral>,
+  },
+  {
+    path: "/admin/solicitudes-eventos",
+    element: <MenuLateral><AdminSolicitudesEvento /></MenuLateral>,
   },
   // 2. AGREGAMOS LA NUEVA RUTA AQUÍ (Debe coincidir con la ruta de tu MenuLateral.jsx)
   {

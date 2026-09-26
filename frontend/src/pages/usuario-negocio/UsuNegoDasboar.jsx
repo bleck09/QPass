@@ -11,7 +11,10 @@ import { useApi } from '../../utils/useApi.js';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
 import { filtrarEventos, FILTROS_ESTADO_EVENTO } from '../../utils/eventos.js';
-import StatCard from '../../components/StatCard.jsx';
+import {
+  Tablero, FilaKpis, TileKpi, Panel, BarrasDestacadas, DonaLeyenda, ListaRanking, BarraMeta,
+} from '../../components/Tablero.jsx';
+import { variacionDe } from '../../utils/graficos.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import Buscador from '../../components/Buscador.jsx';
 import EventoCard from '../../components/EventoCard.jsx';
@@ -33,24 +36,11 @@ const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFract
 const fmtHoraNum = (h) => `${String(h).padStart(2, '0')}:00`;
 const fmtHora = (iso) => new Date(iso).toLocaleTimeString('es-BO', { hour: '2-digit', minute: '2-digit' });
 
-// Chip "▲ 12.3% vs. periodo anterior" (W6, comparación §1.2 #1). `par` es
-// { actual, anterior, variacion? } del payload; sin `par` no renderiza nada.
-function ChipVar({ par }) {
+// Variación de un par { actual, anterior, variacion? } del payload (W6,
+// comparación §1.2 #1). Sin par o sin base previa -> null (no hay chip).
+function varDe(par) {
   if (!par) return null;
-  const varia = par.variacion != null
-    ? par.variacion
-    : par.anterior === 0 ? null : (par.actual - par.anterior) / par.anterior;
-  if (varia == null) return null;
-  const pct = varia * 100;
-  const plano = Math.abs(pct) < 0.05;
-  return (
-    <span
-      className={`pi-ngd-nota pi-ngd-variacion ${plano ? 'plano' : pct >= 0 ? 'sube' : 'baja'}`}
-      title="vs. periodo anterior"
-    >
-      {plano ? '=' : pct >= 0 ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
-    </span>
-  );
+  return par.variacion != null ? par.variacion : variacionDe(par.actual, par.anterior);
 }
 
 // QR del código de retiro, renderizado localmente.
@@ -111,16 +101,6 @@ export default function UsuNegoDasboar() {
     [eventoId],
   );
   const { data: codigoRetiro } = useApi(cargarCodigoRetiro, { inicial: null, activo: !!eventoId });
-
-  // Anima las barras: cada vez que cambia el evento, vuelven a crecer desde 0.
-  const [animar, setAnimar] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setAnimar(true), 100);
-    return () => {
-      clearTimeout(t);
-      setAnimar(false);
-    };
-  }, [eventoId]);
 
   const volverALista = () => setEventoSeleccionado(null);
 
@@ -200,6 +180,15 @@ export default function UsuNegoDasboar() {
   }
 
   // ---------- DASHBOARD ----------
+  // Ventas por hora: solo el tramo con actividad (24 barras no entran).
+  const conVentas = data ? data.ventasPorHora.filter((h) => h.ventas > 0) : [];
+  const horasActivas = conVentas.length
+    ? data.ventasPorHora.slice(conVentas[0].hora, conVentas[conVentas.length - 1].hora + 1)
+    : [];
+  const horaPico = conVentas.reduce((m, h) => (!m || h.ingresos > m.ingresos ? h : m), null);
+  const hayCategorias = data?.ventasPorCategoria?.length > 1 ||
+    (data?.ventasPorCategoria?.length === 1 && data.ventasPorCategoria[0].categoria !== 'Sin categoría');
+
   return (
     <div className="pi-ngd-container">
       <div className="qp-nav">
@@ -228,205 +217,179 @@ export default function UsuNegoDasboar() {
         <>
           <AvisosStockPanel />
 
-          {/* --- RESUMEN (§3.1) --- */}
-          <section className="pi-ngd-seccion">
-            <h3 className="pi-ngd-seccion-titulo">Resumen del evento</h3>
-            <div className="pi-ngd-grid">
-              <StatCard
+          <Tablero>
+            {/* --- KPIs (§3.1) --- */}
+            <FilaKpis>
+              <TileKpi
                 icon={<FaDollarSign />}
                 tono="ok"
-                valor={fmtBs(data.resumen.ingresoTotal)}
                 label="Ventas del evento"
+                valor={fmtBs(data.resumen.ingresoTotal)}
+                variacion={varDe(data.resumen.comparativa?.ingresoTotal)}
                 nota={data.resumen.anuladas?.cantidad > 0
                   ? `${data.resumen.anuladas.cantidad} anuladas (${fmtBs(data.resumen.anuladas.monto)})`
                   : undefined}
-                extra={<ChipVar par={data.resumen.comparativa?.ingresoTotal} />}
+                serie={horasActivas}
+                serieKey="ingresos"
               />
-              <StatCard
+              <TileKpi
                 icon={<FaShoppingCart />}
                 tono="total"
-                valor={data.resumen.totalVentas}
                 label="N.º de ventas"
-                extra={<ChipVar par={data.resumen.comparativa?.totalVentas} />}
+                valor={data.resumen.totalVentas}
+                variacion={varDe(data.resumen.comparativa?.totalVentas)}
+                serie={horasActivas}
+                serieKey="ventas"
               />
-              <StatCard
-                icon={<FaBoxes />}
-                tono="info"
-                valor={data.resumen.unidadesTotales ?? 0}
-                label="Unidades vendidas"
-                nota={data.topProductos[0] ? `más vendido: ${data.topProductos[0].nombre}` : undefined}
-              />
-              <StatCard
-                icon={<FaUserFriends />}
-                valor={data.resumen.clientesUnicos ?? 0}
-                label="Clientes que compraron"
-              />
-              <StatCard
+              <TileKpi
                 icon={<FaReceipt />}
-                valor={fmtBs(data.resumen.ticketPromedio)}
-                label="Ticket promedio"
-                extra={<ChipVar par={data.resumen.comparativa?.ticketPromedio} />}
-              />
-              <StatCard
-                icon={<FaWallet />}
                 tono="info"
-                valor={fmtBs(data.resumen.acreditadoBilletera)}
-                label="Acreditado a mi billetera"
-                nota="debe coincidir con ventas"
+                label="Ticket promedio"
+                valor={fmtBs(data.resumen.ticketPromedio)}
+                variacion={varDe(data.resumen.comparativa?.ticketPromedio)}
               />
-              <StatCard
-                icon={<FaWallet />}
-                valor={fmtBs(data.resumen.saldoBilletera)}
-                label="Saldo en mi billetera (este evento)"
-                nota="lo que aún no retiraste"
+              <TileKpi
+                icon={<FaUserFriends />}
+                label="Clientes que compraron"
+                valor={data.resumen.clientesUnicos ?? 0}
+                nota={`${data.resumen.unidadesTotales ?? 0} unidades vendidas`}
               />
-            </div>
-          </section>
+            </FilaKpis>
 
-          {/* --- CÓDIGO DE RETIRO --- */}
-          {codigoRetiro?.codigo && (
-            <section className="pi-ngd-seccion pi-ngd-retiro">
-              <h3 className="pi-ngd-seccion-titulo"><FaWallet aria-hidden="true" /> Código de retiro</h3>
-              <div className="pi-ngd-retiro-cuerpo">
-                <QrRetiro codigo={codigoRetiro.codigo} />
-                <div>
-                  <p className="pi-ngd-retiro-codigo">{codigoRetiro.codigo}</p>
-                  {data.resumen.saldoBilletera > 0 ? (
-                    <p>
-                      Presentá este código en el puesto de <strong>Devoluciones</strong> para
-                      retirar tus ganancias de este evento
-                      {' '}(<strong>{fmtBs(data.resumen.saldoBilletera)}</strong> disponibles).
-                    </p>
-                  ) : (
-                    <p>Todavía no tenés saldo para retirar en este evento.</p>
-                  )}
-                  <p className="pi-ngd-nota">
-                    En Devoluciones te van a pedir tu carnet y una foto de tu cara: nadie más
-                    puede cobrar con este código.
-                  </p>
-                </div>
-              </div>
-            </section>
-          )}
-
-          {/* --- VENTAS POR HORA (W1) --- */}
-          <section className="pi-ngd-seccion">
-            <h3 className="pi-ngd-seccion-titulo"><FaClock aria-hidden="true" /> Ventas por hora</h3>
-            <VentasPorHora data={data.ventasPorHora} animar={animar} />
-          </section>
-
-          {/* --- TOP PRODUCTOS (W2) --- */}
-          <section className="pi-ngd-seccion">
-            <h3 className="pi-ngd-seccion-titulo"><FaTrophy aria-hidden="true" /> Productos más vendidos</h3>
-            <Tabla
-              columnas={['#', 'Producto', 'Unidades vendidas', { texto: '% de unidades', align: 'center' }, 'Ingresos']}
-              datos={data.topProductos}
-              vacio="Todavía no hay ventas con productos."
-              renderFila={(p, i) => {
-                const max = data.topProductos[0]?.unidades || 1;
-                return (
-                  <tr key={p.nombre}>
-                    <td><span className={`pi-ngd-rank${i < 3 ? ` pi-ngd-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
-                    <td><strong>{p.nombre}</strong></td>
-                    <td>
-                      <div className="pi-ngd-bar" aria-hidden="true">
-                        <div className="pi-ngd-bar-fill" style={{ width: `${Math.round((p.unidades / max) * 100)}%` }} />
-                      </div>
-                      <span className="pi-ngd-bar-txt">{p.unidades} u.</span>
-                    </td>
-                    <td className="td-centro">{((p.pctUnidades ?? 0) * 100).toFixed(1)}%</td>
-                    <td>{fmtBs(p.ingresos)}</td>
+            {/* --- VENTAS POR HORA (W1) --- */}
+            <Panel
+              span={8}
+              icono={FaClock}
+              titulo="Ventas por hora"
+              subtitulo={horaPico ? `Hora pico: ${fmtHoraNum(horaPico.hora)} · ${fmtBs(horaPico.ingresos)}` : undefined}
+              vacio="Todavía no hay ventas registradas."
+              tabla={{
+                columnas: ['Hora', { texto: 'Ventas', align: 'center' }, 'Ingresos'],
+                datos: horasActivas,
+                renderFila: (h) => (
+                  <tr key={h.hora}>
+                    <td>{fmtHoraNum(h.hora)}</td>
+                    <td className="td-centro">{h.ventas}</td>
+                    <td>{fmtBs(h.ingresos)}</td>
                   </tr>
-                );
+                ),
               }}
-            />
-          </section>
-
-          {/* --- POR CATEGORÍA DE PRODUCTO (§5.11) — solo si hay categorías cargadas --- */}
-          {(data.ventasPorCategoria?.length > 1 ||
-            (data.ventasPorCategoria?.length === 1 && data.ventasPorCategoria[0].categoria !== 'Sin categoría')) && (
-            <section className="pi-ngd-seccion">
-              <h3 className="pi-ngd-seccion-titulo"><FaTrophy aria-hidden="true" /> Ventas por categoría</h3>
-              <Tabla
-                columnas={['Categoría', { texto: 'Unidades', align: 'center' }, 'Ingresos']}
-                datos={data.ventasPorCategoria}
-                vacio="Sin datos."
-                renderFila={(c) => (
-                  <tr key={c.categoria}>
-                    <td>{c.categoria}</td>
-                    <td className="td-centro">{c.unidades}</td>
-                    <td>{fmtBs(c.ingresos)}</td>
-                  </tr>
-                )}
+            >
+              <BarrasDestacadas
+                datos={horasActivas}
+                xKey="hora"
+                yKey="ingresos"
+                nombre="Ingresos"
+                fmtX={fmtHoraNum}
+                fmtValor={fmtBs}
               />
-            </section>
-          )}
+            </Panel>
 
-          {/* --- POR PUESTO (W3) — solo si hay más de uno --- */}
-          {data.porPuesto.length > 1 && (
-            <section className="pi-ngd-seccion">
-              <h3 className="pi-ngd-seccion-titulo"><FaStore aria-hidden="true" /> Ventas por puesto</h3>
-              <Tabla
-                columnas={['Puesto', { texto: 'Ventas', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Producto estrella', 'Ingresos']}
-                datos={data.porPuesto}
-                vacio="Sin datos."
-                renderFila={(p) => (
-                  <tr key={p.id}>
-                    <td>{p.nombre}</td>
-                    <td className="td-centro">{p.ventas}</td>
-                    <td className="td-centro">{p.unidades ?? 0}</td>
-                    <td>{p.productoTop ? `${p.productoTop} (${p.productoTopUnidades} u.)` : '—'}</td>
-                    <td>{fmtBs(p.ingresos)}</td>
-                  </tr>
-                )}
+            {/* --- BILLETERA + CÓDIGO DE RETIRO --- */}
+            <Panel span={4} icono={FaWallet} titulo="Mi billetera" subtitulo="Solo lo de este evento.">
+              <div className="qp-tablero-panel__hero">
+                <strong>{fmtBs(data.resumen.saldoBilletera)}</strong>
+                <span>por retirar</span>
+              </div>
+              <BarraMeta
+                tono="info"
+                label="Acreditado vs. ventas"
+                detalle={`${fmtBs(data.resumen.acreditadoBilletera)} / ${fmtBs(data.resumen.ingresoTotal)}`}
+                pct={data.resumen.ingresoTotal > 0 ? (data.resumen.acreditadoBilletera / data.resumen.ingresoTotal) * 100 : 0}
               />
-            </section>
-          )}
-
-          {/* --- POR AYUDANTE (W4) --- */}
-          <section className="pi-ngd-seccion">
-            <h3 className="pi-ngd-seccion-titulo"><FaUsers aria-hidden="true" /> Ventas por ayudante</h3>
-            <Tabla
-              columnas={['#', 'Ayudante', { texto: 'Ventas', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Lo que más vende', 'Ingresos', 'Ticket promedio']}
-              datos={data.porAyudante}
-              vacio="Todavía no hay ventas."
-              renderFila={(a, i) => (
-                <tr key={a.id}>
-                  <td><span className={`pi-ngd-rank${i < 3 ? ` pi-ngd-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
-                  <td><strong>{a.nombre}</strong></td>
-                  <td className="td-centro">{a.ventas}</td>
-                  <td className="td-centro">{a.unidades ?? 0}</td>
-                  <td>{a.productoTop ? `${a.productoTop} (${a.productoTopUnidades} u.)` : '—'}</td>
-                  <td>{fmtBs(a.ingresos)}</td>
-                  <td>{fmtBs(a.ticketPromedio)}</td>
-                </tr>
+              {codigoRetiro?.codigo && (
+                <div className="pi-ngd-retiro-cuerpo">
+                  <QrRetiro codigo={codigoRetiro.codigo} />
+                  <div>
+                    <p className="pi-ngd-retiro-codigo">{codigoRetiro.codigo}</p>
+                    <p className="pi-ngd-nota">
+                      {data.resumen.saldoBilletera > 0
+                        ? 'Presentá este código en Devoluciones para retirar tus ganancias. Te van a pedir tu carnet y una foto de tu cara.'
+                        : 'Todavía no tenés saldo para retirar en este evento.'}
+                    </p>
+                  </div>
+                </div>
               )}
-            />
-          </section>
+            </Panel>
 
-          {/* --- MEJORES CLIENTES --- */}
-          <section className="pi-ngd-seccion">
-            <h3 className="pi-ngd-seccion-titulo"><FaUserFriends aria-hidden="true" /> Clientes que más compran</h3>
-            <Tabla
-              columnas={['#', 'Cliente', { texto: 'N.º entrada', align: 'center' }, { texto: 'Compras', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Gastado']}
-              datos={data.topClientes ?? []}
-              vacio="Todavía no hay ventas."
-              renderFila={(c, i) => (
-                <tr key={c.id}>
-                  <td><span className={`pi-ngd-rank${i < 3 ? ` pi-ngd-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
-                  <td>{c.nombre}</td>
-                  <td className="td-centro">{c.numero ?? '—'}</td>
-                  <td className="td-centro">{c.compras}</td>
-                  <td className="td-centro">{c.unidades}</td>
-                  <td>{fmtBs(c.gastado)}</td>
-                </tr>
-              )}
-            />
-          </section>
+            {/* --- TOP PRODUCTOS (W2) --- */}
+            <Panel span={4} icono={FaTrophy} titulo="Productos más vendidos">
+              <ListaRanking
+                ranking
+                vacio="Todavía no hay ventas con productos."
+                items={data.topProductos.map((p) => ({
+                  id: p.nombre,
+                  titulo: p.nombre,
+                  sub: `${((p.pctUnidades ?? 0) * 100).toFixed(1)}% de las unidades`,
+                  valor: `${p.unidades} u.`,
+                  valorSub: fmtBs(p.ingresos),
+                }))}
+              />
+            </Panel>
 
-          {/* --- ÚLTIMAS VENTAS (W5) --- */}
-          <section className="pi-ngd-seccion">
-            <h3 className="pi-ngd-seccion-titulo"><FaShoppingCart aria-hidden="true" /> Últimas ventas</h3>
+            {/* --- POR AYUDANTE (W4) --- */}
+            <Panel span={4} icono={FaUsers} titulo="Ventas por ayudante">
+              <ListaRanking
+                ranking
+                vacio="Todavía no hay ventas."
+                items={data.porAyudante.map((a) => ({
+                  id: a.id,
+                  titulo: a.nombre,
+                  sub: `${a.ventas} ventas · ${a.productoTop ? `más vende ${a.productoTop}` : 'sin productos'}`,
+                  valor: fmtBs(a.ingresos),
+                  valorSub: `ticket ${fmtBs(a.ticketPromedio)}`,
+                }))}
+              />
+            </Panel>
+
+            {/* --- MEJORES CLIENTES --- */}
+            <Panel span={4} icono={FaUserFriends} titulo="Clientes que más compran">
+              <ListaRanking
+                ranking
+                vacio="Todavía no hay ventas."
+                items={(data.topClientes ?? []).map((c) => ({
+                  id: c.id,
+                  titulo: c.nombre,
+                  sub: `Entrada N.º ${c.numero ?? '—'} · ${c.compras} compras`,
+                  valor: fmtBs(c.gastado),
+                  valorSub: `${c.unidades} u.`,
+                }))}
+              />
+            </Panel>
+
+            {/* --- POR CATEGORÍA DE PRODUCTO (§5.11) — solo si hay categorías cargadas --- */}
+            {hayCategorias && (
+              <Panel span={data.porPuesto.length > 1 ? 5 : 12} icono={FaBoxes} titulo="Ventas por categoría">
+                <DonaLeyenda
+                  datos={data.ventasPorCategoria.map((c) => ({ nombre: c.categoria, valor: c.ingresos }))}
+                  fmt={fmtBs}
+                  centroLabel="vendido"
+                />
+              </Panel>
+            )}
+
+            {/* --- POR PUESTO (W3) — solo si hay más de uno --- */}
+            {data.porPuesto.length > 1 && (
+              <Panel span={hayCategorias ? 7 : 12} icono={FaStore} titulo="Ventas por puesto">
+                <Tabla
+                  columnas={['Puesto', { texto: 'Ventas', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Producto estrella', 'Ingresos']}
+                  datos={data.porPuesto}
+                  porPagina={0}
+                  vacio="Sin datos."
+                  renderFila={(p) => (
+                    <tr key={p.id}>
+                      <td>{p.nombre}</td>
+                      <td className="td-centro">{p.ventas}</td>
+                      <td className="td-centro">{p.unidades ?? 0}</td>
+                      <td>{p.productoTop ? `${p.productoTop} (${p.productoTopUnidades} u.)` : '—'}</td>
+                      <td>{fmtBs(p.ingresos)}</td>
+                    </tr>
+                  )}
+                />
+              </Panel>
+            )}
+            {/* --- ÚLTIMAS VENTAS (W5) --- */}
+            <Panel span={12} icono={FaShoppingCart} titulo="Últimas ventas" subtitulo="Tocá una fila para ver el detalle o anularla.">
             <Tabla
               columnas={['Hora', 'Puesto', 'Ayudante', { texto: 'N.º entrada', align: 'center' }, 'Productos', 'Monto', { texto: 'Acciones', srOnly: true }]}
               datos={data.ultimasVentas}
@@ -460,7 +423,8 @@ export default function UsuNegoDasboar() {
                 </tr>
               )}
             />
-          </section>
+            </Panel>
+          </Tablero>
         </>
       )}
 
@@ -521,36 +485,6 @@ export default function UsuNegoDasboar() {
           </form>
         </Modal>
       )}
-    </div>
-  );
-}
-
-// Bar chart CSS: solo muestra el rango de horas con actividad para no apretar 24 barras.
-function VentasPorHora({ data, animar }) {
-  const conVentas = data.filter((h) => h.ventas > 0);
-  if (conVentas.length === 0) {
-    return <p className="pi-ngd-nota">Todavía no hay ventas registradas.</p>;
-  }
-  const desde = conVentas[0].hora;
-  const hasta = conVentas[conVentas.length - 1].hora;
-  const rango = data.slice(desde, hasta + 1);
-  const max = Math.max(...rango.map((h) => h.ingresos), 1);
-
-  return (
-    <div className="pi-ngd-chart">
-      {rango.map((h) => (
-        <div key={h.hora} className="pi-ngd-bar-col">
-          <span className="pi-ngd-bar-val">{h.ventas || ''}</span>
-          <div className="pi-ngd-bar-track">
-            <div
-              className="pi-ngd-bar-grow"
-              style={{ height: animar ? `${(h.ingresos / max) * 100}%` : 0 }}
-              title={`${fmtHoraNum(h.hora)} — ${fmtBs(h.ingresos)} · ${h.ventas} ventas`}
-            />
-          </div>
-          <span className="pi-ngd-bar-lbl">{fmtHoraNum(h.hora)}</span>
-        </div>
-      ))}
     </div>
   );
 }

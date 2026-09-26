@@ -139,6 +139,9 @@
      los tokens de estado (--ok/--warn/--danger). */
   --viz-serie-1:    #2a78d6;
   --viz-serie-2:    #eb6834;
+  --viz-serie-3:    #1baf7a;   /* aqua    — ranuras 3-5: donas y rankings */
+  --viz-serie-4:    #eda100;   /* amarillo */
+  --viz-serie-5:    #e87ba4;   /* magenta; lo que sobra va a "Otros" (--text-muted) */
 
   /* Estados semánticos (color base + texto AA + fondo suave) */
   --ok:        var(--verde-recarga);
@@ -265,6 +268,9 @@
 
     --viz-serie-1:   #3987e5;
     --viz-serie-2:   #d95926;
+    --viz-serie-3:   #199e70;
+    --viz-serie-4:   #c98500;
+    --viz-serie-5:   #d55181;
 
     /* Cian y no el índigo #4A5FA8: sobre el fondo oscuro ese índigo daba 2.77:1,
        por debajo del mínimo hasta para íconos (3:1). El cian da 6.77:1. */
@@ -322,6 +328,9 @@
 
   --viz-serie-1:   #3987e5;
   --viz-serie-2:   #d95926;
+  --viz-serie-3:   #199e70;
+  --viz-serie-4:   #c98500;
+  --viz-serie-5:   #d55181;
 
   /* Cian y no el índigo #4A5FA8: sobre el fondo oscuro ese índigo daba 2.77:1,
      por debajo del mínimo hasta para íconos (3:1). El cian da 6.77:1. */

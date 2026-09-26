@@ -92,12 +92,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.pi-ges-modal-vacio {
-  color: var(--text-secondary);
-  text-align: center;
-  padding: 24px 0;
-}
-
 /* --- GRID DE EVENTOS --- */
 .pi-ges-eventos-grid {
   display: grid;

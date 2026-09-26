@@ -10,6 +10,10 @@ import { useTituloPagina } from '../../utils/tituloPagina.js';
 import { useApi } from '../../utils/useApi.js';
 import api from '../../api/index.js';
 import StatCard from '../../components/StatCard.jsx';
+import {
+  Tablero, FilaKpis, TileKpi, Panel, ListaRanking,
+} from '../../components/Tablero.jsx';
+import { variacionDe } from '../../utils/graficos.jsx';
 import Tabla from '../../components/Tabla.jsx';
 import BadgeEstadoEvento from '../../components/BadgeEstadoEvento.jsx';
 import SelectorRango from '../../components/SelectorRango.jsx';
@@ -19,7 +23,7 @@ import Insignia from '../../components/Insignia.jsx';
 import Boton from '../../components/Boton.jsx';
 import EncabezadoPagina from '../../components/EncabezadoPagina.jsx';
 import {
-  GraficoRecaudacionDiaria, GraficoPorEvento,
+  GraficoRecaudacionDiaria,
   GraficoComprasDiarias, GraficoIncidenciasRecargador,
 } from './GraficosAdmin.jsx';
 import './AdminGeneral.css';
@@ -49,23 +53,6 @@ const fmtPts = (n) => `${Number(n || 0).toLocaleString('es-BO', { maximumFractio
 const fmtBs = (n) => `Bs ${Number(n || 0).toLocaleString('es-BO', { maximumFractionDigits: 2 })}`;
 const fmtPct = (frac) => `${(Number(frac || 0) * 100).toFixed(1)}%`;
 const fmtFecha = (iso) => new Date(iso).toLocaleDateString('es-BO');
-
-// Chip compacto "▲ 12.3%" para las comparaciones §1.2 #1 (el detalle va en el
-// title). `variacion` null -> no hay base previa, no se muestra nada.
-function ChipVariacion({ variacion, anteriorTexto, invertirColor = false }) {
-  if (variacion == null) return null;
-  const pct = variacion * 100;
-  const plano = Math.abs(pct) < 0.05;
-  const sube = pct >= 0;
-  const bueno = invertirColor ? !sube : sube;
-  return (
-    <span title={`vs. periodo anterior${anteriorTexto ? ` — ${anteriorTexto}` : ''}`}>
-      <Insignia tono={plano ? 'neutro' : bueno ? 'ok' : 'danger'}>
-        {plano ? '=' : sube ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}%
-      </Insignia>
-    </span>
-  );
-}
 
 // segundos -> "3 h 20 min" / "45 min" / "2 d 4 h" / "—"
 function fmtDuracion(seg) {
@@ -128,10 +115,12 @@ export default function AdminGeneral() {
         <EstadoCarga filas={8} />
       ) : (
         <>
-          {/* --- BANDEJA DE TRABAJO (spec 1.1) --- */}
-          <section className="pi-adg-seccion">
-            <h3 className="pi-adg-seccion-titulo">Bandeja de trabajo</h3>
-            <div className="qp-stats">
+          <Tablero>
+            {/* --- BANDEJA DE TRABAJO (spec 1.1) --- */}
+            <div className="qp-span-12 qp-tablero__cab">
+              <h3>Bandeja de trabajo</h3>
+            </div>
+            <FilaKpis>
               {[
                 {
                   clave: 'comprobantes',
@@ -143,7 +132,7 @@ export default function AdminGeneral() {
                   clave: 'solicitudesEvento',
                   label: 'Solicitudes de evento',
                   icono: <FaCalendarPlus />,
-                  ir: () => navigate('/admin/eventos'),
+                  ir: () => navigate('/admin/solicitudes-eventos'),
                 },
                 {
                   clave: 'incidenciasRecarga',
@@ -160,109 +149,64 @@ export default function AdminGeneral() {
               ].map(({ clave, label, icono, ir }) => {
                 const caso = data.pendientes[clave] || { total: 0, masAntiguo: null };
                 return (
-                  <StatCard
+                  <TileKpi
                     key={clave}
                     icon={icono}
                     tono={tonoAntiguedad(caso.masAntiguo, caso.total)}
                     valor={caso.total}
                     label={label}
-                    extra={
-                      caso.total > 0 && caso.masAntiguo ? (
-                        <Insignia tono={tonoAntiguedad(caso.masAntiguo, caso.total) === 'danger' ? 'danger' : 'warn'}>{antiguedad(caso.masAntiguo)}</Insignia>
-                      ) : null
-                    }
+                    nota={caso.total > 0 && caso.masAntiguo ? `el más viejo, ${antiguedad(caso.masAntiguo)}` : 'al día'}
                     onClick={ir}
                   />
                 );
               })}
-            </div>
-          </section>
+            </FilaKpis>
 
-          {/* --- ALERTAS (spec W7) --- */}
-          <section className="pi-adg-seccion">
-            <h3 className="pi-adg-seccion-titulo">
-              Alertas {data.alertas.length > 0 && <Insignia tono="danger" solida>{data.alertas.length}</Insignia>}
-            </h3>
-            {data.alertas.length === 0 ? (
-              <EstadoVacio compacto icono={FaCheckCircle} titulo="Sin alertas. Todo en orden." />
-            ) : (
-              <ul className="pi-adg-alertas">
-                {data.alertas.map((a, i) => {
-                  const clickable = !!a.eventoId;
-                  const contenido = (
-                    <>
-                      <FaExclamationCircle className="pi-adg-alerta-icono" aria-hidden="true" />
-                      <span className="pi-adg-alerta-msg">{a.mensaje}</span>
-                      {clickable && <FaChevronRight className="pi-adg-alerta-flecha" aria-hidden="true" />}
-                    </>
-                  );
-                  // Clicable = <button> (antes <li onClick>: no se podía abrir con el teclado).
-                  return (
-                    <li key={`${a.tipo}-${a.eventoId || i}`}>
-                      {clickable ? (
-                        <button
-                          type="button"
-                          className={`pi-adg-alerta pi-adg-alerta--${a.nivel} pi-adg-alerta--click`}
-                          onClick={() => navigate('/admin/eventos', { state: { eventoId: a.eventoId } })}
-                        >
-                          {contenido}
-                        </button>
-                      ) : (
-                        <div className={`pi-adg-alerta pi-adg-alerta--${a.nivel}`}>{contenido}</div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-
-          {/* --- INDICADORES (spec 1.2) --- */}
-          <section className="pi-adg-seccion">
-            <div className="pi-adg-seccion-cab">
-              <h3 className="pi-adg-seccion-titulo">Indicadores</h3>
+            {/* --- INDICADORES (spec 1.2) --- */}
+            <div className="qp-span-12 qp-tablero__cab">
+              <div>
+                <h3>Indicadores</h3>
+                {data.kpis.rango && (
+                  <p>
+                    Recaudado, rechazo y gráficos del {fmtFecha(data.kpis.rango.desde)} al {fmtFecha(data.kpis.rango.hasta)}.
+                  </p>
+                )}
+              </div>
               <SelectorRango valor={rango} onCambio={setRango} />
             </div>
-            {data.kpis.rango && (
-              <p className="pi-adg-nota-rango">
-                Recaudado y tasa de rechazo del {fmtFecha(data.kpis.rango.desde)} al {fmtFecha(data.kpis.rango.hasta)}.
-              </p>
-            )}
-            <div className="qp-stats">
-              <StatCard
+            <FilaKpis>
+              <TileKpi
                 icon={<FaCoins />}
                 tono="ok"
-                valor={fmtBs(data.kpis.recaudadoEntradas)}
                 label="Recaudado por entradas"
-                extra={
-                  data.kpis.comparativa && (
-                    <ChipVariacion
-                      variacion={data.kpis.comparativa.recaudadoEntradas.variacion}
-                      anteriorTexto={fmtBs(data.kpis.comparativa.recaudadoEntradas.anterior)}
-                    />
-                  )
-                }
+                valor={fmtBs(data.kpis.recaudadoEntradas)}
+                variacion={data.kpis.comparativa?.recaudadoEntradas.variacion}
+                textoVariacion={data.kpis.comparativa ? `vs. ${fmtBs(data.kpis.comparativa.recaudadoEntradas.anterior)}` : undefined}
+                serie={data.recaudDiaria?.puntos}
+                serieKey="monto"
               />
-              <StatCard
+              <TileKpi
                 icon={<FaLayerGroup />}
                 tono="total"
-                valor={data.kpis.eventos.total}
                 label="Eventos en el sistema"
-                extra={<Insignia tono="neutro">{data.kpis.eventos.publicados} pub · {data.kpis.eventos.borradores} borr</Insignia>}
+                valor={data.kpis.eventos.total}
+                nota={`${data.kpis.eventos.publicados} publicados · ${data.kpis.eventos.borradores} borradores`}
               />
-              <StatCard
+              <TileKpi
                 icon={<FaWallet />}
                 tono="info"
+                label="Saldo cashless en circulación"
                 valor={fmtPts(data.kpis.saldoCashlessCirculacion)}
-                label="Saldo cashless en circulación (pasivo, no es ganancia)"
+                nota="pasivo, no es ganancia"
               />
-              <StatCard
+              <TileKpi
                 icon={<FaWallet />}
                 tono={data.kpis.saldoCaducadoNoReclamado > 0 ? 'warn' : 'neutral'}
+                label="Saldo caducado sin reclamar"
                 valor={fmtPts(data.kpis.saldoCaducadoNoReclamado)}
-                label="Saldo caducado sin reclamar (venció el plazo de retiro)"
+                nota="venció el plazo de retiro"
               />
-              <StatCard
+              <TileKpi
                 icon={<FaTimesCircle />}
                 tono={
                   data.kpis.tasaRechazoComprobantes > 0.2
@@ -271,161 +215,199 @@ export default function AdminGeneral() {
                       ? 'warn'
                       : 'neutral'
                 }
-                valor={fmtPct(data.kpis.tasaRechazoComprobantes)}
                 label="Rechazo de comprobantes"
-                extra={
-                  <span className="pi-adg-extra">
-                    <Insignia tono="neutro">{data.kpis.comprobantes.confirmadas} ok · {data.kpis.comprobantes.rechazadas} rech</Insignia>
-                    {data.kpis.comparativa && (
-                      <ChipVariacion
-                        variacion={
-                          data.kpis.comparativa.tasaRechazoComprobantes.anterior === 0
-                            ? null
-                            : (data.kpis.comparativa.tasaRechazoComprobantes.actual -
-                                data.kpis.comparativa.tasaRechazoComprobantes.anterior) /
-                              data.kpis.comparativa.tasaRechazoComprobantes.anterior
-                        }
-                        anteriorTexto={`antes ${fmtPct(data.kpis.comparativa.tasaRechazoComprobantes.anterior)}`}
-                        invertirColor
-                      />
-                    )}
-                  </span>
-                }
+                valor={fmtPct(data.kpis.tasaRechazoComprobantes)}
+                variacion={data.kpis.comparativa && variacionDe(
+                  data.kpis.comparativa.tasaRechazoComprobantes.actual,
+                  data.kpis.comparativa.tasaRechazoComprobantes.anterior,
+                )}
+                textoVariacion={data.kpis.comparativa ? `antes ${fmtPct(data.kpis.comparativa.tasaRechazoComprobantes.anterior)}` : undefined}
+                invertir
+                nota={`${data.kpis.comprobantes.confirmadas} ok · ${data.kpis.comprobantes.rechazadas} rechazados`}
               />
-              <StatCard
+              <TileKpi
                 icon={<FaCheckCircle />}
+                label="Tiempo mediano de aprobación"
                 valor={fmtDuracion(data.kpis.tiempoAprobacion?.medianaSegundos)}
-                label="Tiempo mediano de aprobación de comprobante"
-                extra={
-                  data.kpis.tiempoAprobacion?.p90Segundos != null
-                    ? <Insignia tono="neutro">p90: {fmtDuracion(data.kpis.tiempoAprobacion.p90Segundos)}</Insignia>
-                    : null
-                }
+                nota={data.kpis.tiempoAprobacion?.p90Segundos != null
+                  ? `p90: ${fmtDuracion(data.kpis.tiempoAprobacion.p90Segundos)}`
+                  : undefined}
               />
-            </div>
-          </section>
+            </FilaKpis>
 
-          {/* --- ANÁLISIS HISTÓRICO (spec W1/W2/W4/W5) --- */}
-          <section className="pi-adg-seccion">
-            <h3 className="pi-adg-seccion-titulo">Análisis histórico</h3>
-            <p className="pi-adg-nota-rango">Usa el rango de "Indicadores". Incidencias por recargador es sobre todo el histórico.</p>
-            <div className="pi-adg-graficos-grid">
+            {/* --- ANÁLISIS (spec W1/W2/W4/W5) + ALERTAS (spec W7) --- */}
+            <Panel span={8}>
               <GraficoRecaudacionDiaria data={data.recaudDiaria} />
-              <GraficoPorEvento data={data.porEvento} />
-              <GraficoComprasDiarias data={data.comprasDiarias} />
-              <GraficoIncidenciasRecargador data={data.incidRecargador} />
-            </div>
-          </section>
+            </Panel>
 
-          {/* --- TODOS LOS EVENTOS (spec W6) --- */}
-          <section className="pi-adg-seccion">
-            <h3 className="pi-adg-seccion-titulo">Todos los eventos</h3>
-            <Tabla
-              card
-              columnas={[
-                'Evento', 'Fecha', 'Estado', 'Vendidas / Cupo', 'Ocupación',
-                'Recaudado', 'Recargado', 'Consumido', 'Saldo remanente', 'Pendientes',
-              ]}
-              datos={data.eventos}
-              vacio="Todavía no hay eventos en el sistema."
-              renderFila={(ev) => (
-                <tr
-                  key={ev.id}
-                  className="pi-adg-fila"
-                  onClick={() => navigate('/admin', { state: { eventoId: ev.id } })}
-                >
-                  <td>
-                    {/* El nombre es el botón (teclado); la fila entera sigue respondiendo al mouse. */}
-                    <Boton
-                      variante="fantasma"
-                      tamano="sm"
-                      className="pi-adg-ev-nombre"
-                      onClick={(e) => { e.stopPropagation(); navigate('/admin', { state: { eventoId: ev.id } }); }}
-                    >
-                      {ev.nombre}
-                    </Boton>
-                    {!ev.publicado && <Insignia tono="warn">Borrador</Insignia>}
-                  </td>
-                  <td>{fmtFecha(ev.fecha)}</td>
-                  <td>
-                    <BadgeEstadoEvento evento={ev} />
-                    {ev.congelado && <FaLock className="pi-adg-lock" title="Cifras de cierre congeladas" aria-hidden="true" />}
-                  </td>
-                  <td>{ev.vendidas} / {ev.cupo || '—'}</td>
-                  <td>
-                    <div className="pi-adg-bar" aria-hidden="true">
-                      <div className="pi-adg-bar-fill" style={{ width: `${Math.min(100, Math.round(ev.ocupacion * 100))}%` }} />
-                    </div>
-                    <span className="pi-adg-bar-txt">{Math.round(ev.ocupacion * 100)}%</span>
-                  </td>
-                  <td>{fmtBs(ev.recaudado)}</td>
-                  <td>{fmtPts(ev.recargado)}</td>
-                  <td>{fmtPts(ev.consumido)}</td>
-                  <td>{fmtPts(ev.saldoRemanente)}</td>
-                  <td>
-                    {ev.pendientes > 0
-                      ? <Insignia tono="warn" solida>{ev.pendientes}</Insignia>
-                      : <Insignia tono="ok">0</Insignia>}
-                  </td>
-                </tr>
+            <Panel
+              span={4}
+              icono={FaExclamationCircle}
+              titulo="Alertas"
+              acciones={data.alertas.length > 0 && <Insignia tono="danger" solida>{data.alertas.length}</Insignia>}
+            >
+              {data.alertas.length === 0 ? (
+                <EstadoVacio compacto icono={FaCheckCircle} titulo="Sin alertas. Todo en orden." />
+              ) : (
+                <ul className="pi-adg-alertas">
+                  {data.alertas.map((a, i) => {
+                    const clickable = !!a.eventoId;
+                    const contenido = (
+                      <>
+                        <FaExclamationCircle className="pi-adg-alerta-icono" aria-hidden="true" />
+                        <span className="pi-adg-alerta-msg">{a.mensaje}</span>
+                        {clickable && <FaChevronRight className="pi-adg-alerta-flecha" aria-hidden="true" />}
+                      </>
+                    );
+                    // Clicable = <button> (antes <li onClick>: no se podía abrir con el teclado).
+                    return (
+                      <li key={`${a.tipo}-${a.eventoId || i}`}>
+                        {clickable ? (
+                          <button
+                            type="button"
+                            className={`pi-adg-alerta pi-adg-alerta--${a.nivel} pi-adg-alerta--click`}
+                            onClick={() => navigate('/admin/eventos', { state: { eventoId: a.eventoId } })}
+                          >
+                            {contenido}
+                          </button>
+                        ) : (
+                          <div className={`pi-adg-alerta pi-adg-alerta--${a.nivel}`}>{contenido}</div>
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
               )}
-            />
-          </section>
+            </Panel>
 
-          {/* --- EMBUDO — CICLO DE VIDA (spec W3) --- */}
-          <section className="pi-adg-seccion">
-            <h3 className="pi-adg-seccion-titulo">Ciclo de vida de eventos</h3>
-            <Embudo etapas={data.embudo.etapas} />
-            {data.embudo.eventosDirectos > 0 && (
-              <p className="pi-adg-nota-rango">
-                {data.embudo.eventosDirectos} evento(s) creados directo por Admin no entran en el embudo.
-              </p>
-            )}
-          </section>
-
-          {/* --- ARQUEO DE CAJA (spec 5.2) --- */}
-          <section className="pi-adg-seccion">
-            <h3 className="pi-adg-seccion-titulo">
-              Arqueo de caja
-              {data.cortesCaja.resumen.conDescuadre > 0 && (
-                <Insignia tono="danger" solida>{data.cortesCaja.resumen.conDescuadre}</Insignia>
-              )}
-            </h3>
-            <div className="qp-stats">
-              <StatCard icon={<FaCashRegister />} valor={data.cortesCaja.resumen.abiertas} label="Cajas abiertas ahora" />
-              <StatCard
-                icon={<FaExclamationTriangle />}
-                tono={data.cortesCaja.resumen.conDescuadre > 0 ? 'danger' : 'ok'}
-                valor={data.cortesCaja.resumen.conDescuadre}
-                label="Cierres con descuadre"
+            <Panel span={4} icono={FaCoins} titulo="Recaudación por evento" subtitulo="Top 10 del periodo.">
+              <ListaRanking
+                ranking
+                vacio="Sin recaudación en el periodo."
+                items={(data.porEvento ?? []).map((f) => ({
+                  id: f.eventoId,
+                  titulo: f.nombre,
+                  valor: fmtBs(f.recaudado),
+                  onClick: () => navigate('/admin', { state: { eventoId: f.eventoId } }),
+                }))}
               />
-              <StatCard icon={<FaCoins />} tono="warn" valor={fmtBs(data.cortesCaja.resumen.descuadreTotal)} label="Descuadre acumulado" />
-            </div>
-            <Tabla
-              card
-              columnas={['Evento', 'Operador', 'Rol', 'Estado', 'Sistema', 'Esperado', 'Declarado', 'Diferencia']}
-              datos={data.cortesCaja.cortes}
-              vacio="Todavía no hay arqueos de caja."
-              renderFila={(c) => (
-                <tr key={c.id} className={c.diferencia != null && c.diferencia !== 0 ? 'pi-adg-fila-descuadre' : ''}>
-                  <td>{c.evento}</td>
-                  <td>{c.operador}</td>
-                  <td>{c.rol}</td>
-                  <td>{c.estado === 'cerrada' ? <Insignia tono="neutro">Cerrada</Insignia> : <Insignia tono="ok" punto latido>Abierta</Insignia>}</td>
-                  <td>{c.montoSistema == null ? '—' : fmtBs(c.montoSistema)}</td>
-                  <td>{c.montoEsperado == null ? '—' : fmtBs(c.montoEsperado)}</td>
-                  <td>{c.montoDeclarado == null ? '—' : fmtBs(c.montoDeclarado)}</td>
-                  <td>
-                    {c.diferencia == null ? '—' : (
-                      <Insignia tono={c.diferencia === 0 ? 'ok' : 'danger'}>
-                        {c.diferencia > 0 ? '+' : ''}{fmtBs(c.diferencia)}
-                      </Insignia>
-                    )}
-                  </td>
-                </tr>
+            </Panel>
+
+            <Panel span={8}>
+              <GraficoComprasDiarias data={data.comprasDiarias} />
+            </Panel>
+
+            <Panel span={6}>
+              <GraficoIncidenciasRecargador data={data.incidRecargador} />
+            </Panel>
+
+            {/* --- EMBUDO — CICLO DE VIDA (spec W3) --- */}
+            <Panel span={6} icono={FaLayerGroup} titulo="Ciclo de vida de eventos">
+              <Embudo etapas={data.embudo.etapas} />
+              {data.embudo.eventosDirectos > 0 && (
+                <p className="pi-adg-nota-rango">
+                  {data.embudo.eventosDirectos} evento(s) creados directo por Admin no entran en el embudo.
+                </p>
               )}
-            />
-          </section>
+            </Panel>
+
+            {/* --- TODOS LOS EVENTOS (spec W6) --- */}
+            <Panel span={12} icono={FaLayerGroup} titulo="Todos los eventos" subtitulo="Tocá un evento para abrir su panel.">
+              <Tabla
+                columnas={[
+                  'Evento', 'Fecha', 'Estado', 'Vendidas / Cupo', 'Ocupación',
+                  'Recaudado', 'Recargado', 'Consumido', 'Saldo remanente', 'Pendientes',
+                ]}
+                datos={data.eventos}
+                vacio="Todavía no hay eventos en el sistema."
+                renderFila={(ev) => (
+                  <tr
+                    key={ev.id}
+                    className="pi-adg-fila"
+                    onClick={() => navigate('/admin', { state: { eventoId: ev.id } })}
+                  >
+                    <td>
+                      {/* El nombre es el botón (teclado); la fila entera sigue respondiendo al mouse. */}
+                      <Boton
+                        variante="fantasma"
+                        tamano="sm"
+                        className="pi-adg-ev-nombre"
+                        onClick={(e) => { e.stopPropagation(); navigate('/admin', { state: { eventoId: ev.id } }); }}
+                      >
+                        {ev.nombre}
+                      </Boton>
+                      {!ev.publicado && <Insignia tono="warn">Borrador</Insignia>}
+                    </td>
+                    <td>{fmtFecha(ev.fecha)}</td>
+                    <td>
+                      <BadgeEstadoEvento evento={ev} />
+                      {ev.congelado && <FaLock className="pi-adg-lock" title="Cifras de cierre congeladas" aria-hidden="true" />}
+                    </td>
+                    <td>{ev.vendidas} / {ev.cupo || '—'}</td>
+                    <td>
+                      <div className="pi-adg-bar" aria-hidden="true">
+                        <div className="pi-adg-bar-fill" style={{ width: `${Math.min(100, Math.round(ev.ocupacion * 100))}%` }} />
+                      </div>
+                      <span className="pi-adg-bar-txt">{Math.round(ev.ocupacion * 100)}%</span>
+                    </td>
+                    <td>{fmtBs(ev.recaudado)}</td>
+                    <td>{fmtPts(ev.recargado)}</td>
+                    <td>{fmtPts(ev.consumido)}</td>
+                    <td>{fmtPts(ev.saldoRemanente)}</td>
+                    <td>
+                      {ev.pendientes > 0
+                        ? <Insignia tono="warn" solida>{ev.pendientes}</Insignia>
+                        : <Insignia tono="ok">0</Insignia>}
+                    </td>
+                  </tr>
+                )}
+              />
+            </Panel>
+
+            {/* --- ARQUEO DE CAJA (spec 5.2) --- */}
+            <Panel
+              span={12}
+              icono={FaCashRegister}
+              titulo="Arqueo de caja"
+              acciones={data.cortesCaja.resumen.conDescuadre > 0 && (
+                <Insignia tono="danger" solida>{data.cortesCaja.resumen.conDescuadre} con descuadre</Insignia>
+              )}
+            >
+              <div className="qp-stats">
+                <StatCard icon={<FaCashRegister />} valor={data.cortesCaja.resumen.abiertas} label="Cajas abiertas ahora" />
+                <StatCard
+                  icon={<FaExclamationTriangle />}
+                  tono={data.cortesCaja.resumen.conDescuadre > 0 ? 'danger' : 'ok'}
+                  valor={data.cortesCaja.resumen.conDescuadre}
+                  label="Cierres con descuadre"
+                />
+                <StatCard icon={<FaCoins />} tono="warn" valor={fmtBs(data.cortesCaja.resumen.descuadreTotal)} label="Descuadre acumulado" />
+              </div>
+              <Tabla
+                columnas={['Evento', 'Operador', 'Rol', 'Estado', 'Sistema', 'Esperado', 'Declarado', 'Diferencia']}
+                datos={data.cortesCaja.cortes}
+                vacio="Todavía no hay arqueos de caja."
+                renderFila={(c) => (
+                  <tr key={c.id} className={c.diferencia != null && c.diferencia !== 0 ? 'pi-adg-fila-descuadre' : ''}>
+                    <td>{c.evento}</td>
+                    <td>{c.operador}</td>
+                    <td>{c.rol}</td>
+                    <td>{c.estado === 'cerrada' ? <Insignia tono="neutro">Cerrada</Insignia> : <Insignia tono="ok" punto latido>Abierta</Insignia>}</td>
+                    <td>{c.montoSistema == null ? '—' : fmtBs(c.montoSistema)}</td>
+                    <td>{c.montoEsperado == null ? '—' : fmtBs(c.montoEsperado)}</td>
+                    <td>{c.montoDeclarado == null ? '—' : fmtBs(c.montoDeclarado)}</td>
+                    <td>
+                      {c.diferencia == null ? '—' : (
+                        <Insignia tono={c.diferencia === 0 ? 'ok' : 'danger'}>
+                          {c.diferencia > 0 ? '+' : ''}{fmtBs(c.diferencia)}
+                        </Insignia>
+                      )}
+                    </td>
+                  </tr>
+                )}
+              />
+            </Panel>
+          </Tablero>
         </>
       )}
     </div>

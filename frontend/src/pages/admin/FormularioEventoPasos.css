@@ -125,7 +125,7 @@
               transform var(--duration-normal) var(--ease-out), box-shadow var(--duration-normal);
 }
 
-.pi-fev__opcion:hover { border-color: var(--border-strong); transform: translateY(-2px); }
+.pi-fev__opcion:hover { border-color: var(--border-strong); }
 
 .pi-fev__opcion.es-elegida {
   border-color: var(--accent);
@@ -402,5 +402,4 @@
   .pi-fev__contenido, .pi-fev__elegido, .pi-fev__opcion.es-elegida::after,
   .pi-fev__tarjeta-img img { animation: none; }
   .pi-fev__opcion, .pi-fev__avance-barra span { transition: none; }
-  .pi-fev__opcion:hover { transform: none; }
 }

@@ -24,17 +24,34 @@ import { Prisma } from '@prisma/client';
 // exponen `.evento.findFirst`, pero son tipos distintos de Prisma.
 type ClientePrisma = PrismaService | Prisma.TransactionClient;
 
+type RangoFechas = { inicio: Date; fin: Date; excluirEventoId?: string };
+
+// Mismo criterio que verificarSinChoqueDeFechas, pero devuelve TODOS los
+// eventos que se cruzan en vez de tirar error. Lo usa la revisión de una
+// solicitud de evento para avisarle al Admin ANTES de que toque "Aprobar".
+export async function buscarChoquesDeFechas(prisma: ClientePrisma, params: RangoFechas) {
+  return prisma.evento.findMany({
+    where: whereChoque(params),
+    select: { id: true, nombre: true, lugar: true, fecha: true, fechaFin: true },
+    orderBy: { fecha: 'asc' },
+  });
+}
+
+function whereChoque(params: RangoFechas): Prisma.EventoWhereInput {
+  return {
+    id: params.excluirEventoId ? { not: params.excluirEventoId } : undefined,
+    archivadoEn: null, // un evento archivado ya no cuenta: quedó de solo lectura
+    fecha: { lt: params.fin },
+    fechaFin: { gt: params.inicio },
+  };
+}
+
 export async function verificarSinChoqueDeFechas(
   prisma: ClientePrisma,
-  params: { inicio: Date; fin: Date; excluirEventoId?: string },
+  params: RangoFechas,
 ): Promise<void> {
   const choque = await prisma.evento.findFirst({
-    where: {
-      id: params.excluirEventoId ? { not: params.excluirEventoId } : undefined,
-      archivadoEn: null, // un evento archivado ya no cuenta: quedó de solo lectura
-      fecha: { lt: params.fin },
-      fechaFin: { gt: params.inicio },
-    },
+    where: whereChoque(params),
     select: { id: true, nombre: true, fecha: true, fechaFin: true },
   });
   if (choque) {

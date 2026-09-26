@@ -83,6 +83,7 @@ enum MetodoPago {
 // Usado por SolicitudEvento: aprobación de la solicitud inicial de evento.
 enum EstadoSolicitudEvento {
   pendiente
+  cambios_solicitados // Admin la devolvió al cliente con un comentario; al reenviarla vuelve a pendiente
   aprobado
   rechazado
 }
@@ -560,31 +561,37 @@ model Asignacion {
 // LandingConfig (copiando estos datos) y el admin arma las CategoriaTicket + el pool de CodigoQr.
 // Si se rechaza, el cliente puede editar y reenviar esta misma solicitud, o crear otras nuevas.
 model SolicitudEvento {
-  id               String                @id @default(cuid())
-  clienteId        Int
-  nombreEvento     String
-  lugar            String
-  fecha            DateTime
-  fechaFin         DateTime
-  descripcion      String
-  aforoEstimado    Int? // §5.11 — asistentes que el cliente estima; al aprobar se copia a
+  id                String                @id @default(cuid())
+  clienteId         Int
+  nombreEvento      String
+  lugar             String
+  fecha             DateTime
+  fechaFin          DateTime
+  descripcion       String
+  aforoEstimado     Int? // §5.11 — asistentes que el cliente estima; al aprobar se copia a
   // DiaEvento.aforoMaximo de la jornada creada (ver solicitudes-evento.service.aprobar).
-  colorPrimario    String
-  colorBoton       String
-  colorFondo       String
-  colorTextoTitulo String
-  colorTextoP      String
-  imagenPortada    String?
-  mapaLugar        String? // boceto/mapa del lugar, opcional
-  actividades      Json // [{ titulo, descripcion }]
-  cronograma       Json // [{ hora, actividad }] — describe qué se hará a esa hora
-  estado           EstadoSolicitudEvento @default(pendiente)
-  motivoRechazo    String?
-  eventoId         String?               @unique // se llena cuando admin aprueba y crea el Evento
-  resueltoPorId    Int?
-  resueltoEn       DateTime?
-  createdAt        DateTime              @default(now())
-  updatedAt        DateTime              @updatedAt
+  colorPrimario     String
+  colorBoton        String
+  colorFondo        String
+  colorTextoTitulo  String
+  colorTextoP       String
+  imagenPortada     String?
+  imagenAjuste      Json? // encuadre/zoom/oscurecer/desenfoque de la portada; se copia a LandingConfig al aprobar
+  mapaLugar         String? // boceto/mapa del lugar, opcional
+  actividades       Json // [{ titulo, descripcion }]
+  cronograma        Json // [{ hora, actividad }] — describe qué se hará a esa hora
+  estado            EstadoSolicitudEvento @default(pendiente)
+  motivoRechazo     String?
+  // Último pedido de cambios del Admin. Se conserva al reenviar, así el Admin ve
+  // qué había pedido cuando la solicitud vuelve a pendiente.
+  comentarioCambios String?
+  cambiosPedidosEn  DateTime?
+  reenviadaEn       DateTime? // última vez que el cliente la reenvió tras un pedido de cambios
+  eventoId          String?               @unique // se llena cuando admin aprueba y crea el Evento
+  resueltoPorId     Int?
+  resueltoEn        DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
   cliente     Usuario  @relation("ClienteQueSolicita", fields: [clienteId], references: [id])
   resueltoPor Usuario? @relation("AdminQueResuelveSolicitud", fields: [resueltoPorId], references: [id])

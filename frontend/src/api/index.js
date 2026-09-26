@@ -243,6 +243,9 @@ export const solicitudesEvento = {
   actualizar: (id, datos) => apiPatch(`/solicitudes-evento/${id}`, datos),
   aprobar: (id) => apiPost(`/solicitudes-evento/${id}/aprobar`),
   rechazar: (id, motivoRechazo) => apiPost(`/solicitudes-evento/${id}/rechazar`, { motivoRechazo }),
+  pedirCambios: (id, comentario) => apiPost(`/solicitudes-evento/${id}/pedir-cambios`, { comentario }),
+  // Chequeos antes de decidir: choques de fechas, solicitudes cruzadas, historial del cliente.
+  revision: (id) => apiGet(`/solicitudes-evento/${id}/revision`),
 };
 
 // Arqueo de caja de un operador con efectivo (Recargador / Devolucion), §5.2.

@@ -19,6 +19,7 @@ import { SolicitudesEventoService } from './solicitudes-evento.service';
 import {
   ActualizarSolicitudEventoDto,
   CrearSolicitudEventoDto,
+  PedirCambiosDto,
   RechazarDto,
 } from './dto/solicitudes-evento.dto';
 
@@ -41,6 +42,13 @@ export class SolicitudesEventoController {
   @Roles('Admin', 'Cliente')
   obtenerPorId(@Param('id') id: string, @UsuarioActual() actor: UsuarioJwt) {
     return this.solicitudesEventoService.obtenerPorId(id, actor);
+  }
+
+  // Chequeos previos a decidir (choque de fechas, historial del cliente).
+  @Get(':id/revision')
+  @Roles('Admin')
+  revision(@Param('id') id: string) {
+    return this.solicitudesEventoService.revision(id);
   }
 
   @Post()
@@ -78,5 +86,16 @@ export class SolicitudesEventoController {
     @UsuarioActual('id') adminId: number,
   ) {
     return this.solicitudesEventoService.rechazar(id, dto.motivoRechazo, adminId);
+  }
+
+  @Post(':id/pedir-cambios')
+  @Roles('Admin')
+  @HttpCode(HttpStatus.OK)
+  pedirCambios(
+    @Param('id') id: string,
+    @Body() dto: PedirCambiosDto,
+    @UsuarioActual('id') adminId: number,
+  ) {
+    return this.solicitudesEventoService.pedirCambios(id, dto.comentario, adminId);
   }
 }

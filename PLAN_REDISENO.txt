@@ -1143,6 +1143,76 @@ FASE 10 — LIMPIEZA Y QA GLOBAL
 --------------------------------------------------------------------------------
 7. BITÁCORA (lo más nuevo arriba)
 --------------------------------------------------------------------------------
+2026-09-25  DASHBOARD DEL ORGANIZADOR ampliado (más cerca del de Admin por
+            evento, pero solo AGREGADOS — spec §2: sin nombres de asistentes
+            ni rankings de personal).
+            - Backend (dashboard-cliente.service): finanzas cashless
+              (recargado/consumido/devuelto/saldo, misma fórmula que Admin por
+              evento), recargas vs consumos por hora, venta de entradas por
+              día, compras por estado, entradas (dentro/salieron/faltan),
+              totales de ventas de puestos, equipo en CANTIDADES por rol.
+            - Frontend: 4 bloques (venta de entradas / el evento / consumo
+              cashless / equipo). La venta se ve siempre (antes solo antes del
+              evento). Consumo y puestos ahora en pts (antes decía Bs).
+2026-09-25  EDITOR DE COLORES y AJUSTE DE PORTADA también para el cliente.
+            - Nuevo components/EditorColores.jsx/.css (paletas + 5 colores con
+              hex + contraste), sacado de AdminConfigurarPagina; lo usan Admin
+              (Configurar página) y el formulario de propuesta del cliente.
+            - Cliente: AjusteImagen (de admin) bajo la portada; la solicitud
+              guarda imagenAjuste (migración) y al aprobar pasa a LandingConfig.
+            - Backend: normalizarAjusteImagen movido a common/utils.
+            - Borrado el CSS duplicado de colores (pi-cfg-paleta*, pi-admin-color*,
+              pi-cliente-color*).
+2026-09-25  CLIENTE "MIS PROPUESTAS" separado en 3 vistas (?propuesta=,
+            &editar=1): lista en tarjetas con seguimiento compacto + KPIs,
+            detalle (seguimiento grande + "qué sigue" + paneles de la
+            propuesta + vista previa), formulario con panel de progreso.
+            - Nuevo components/SolicitudEvento.jsx/.css: SeguimientoSolicitud
+              (Enviada -> En revisión/Cambios -> Aprobada/Rechazada ->
+              Publicado) y paneles de la propuesta, compartidos con la
+              revisión de Admin (pi-sol-* movido a qp-sol-*).
+            - Vista previa del formulario = VistaPreviaPagina (la real).
+            - Quitadas las pestañas duplicadas del menú; menú Cliente:
+              "Mis propuestas" / "Dashboard de mis eventos".
+            - Backend: listar/obtener incluyen evento.publicadoEn.
+            - Tarjetas sin movimiento al pasar el mouse (preferencia).
+            Pendiente (V): verificar en navegador.
+2026-09-25  SOLICITUDES DE EVENTOS: bandeja propia en Admin (antes un modal
+            con 4 columnas y aprobar/rechazar a ciegas).
+            - Nuevo: pages/admin/AdminSolicitudesEvento.jsx/.css, ruta
+              /admin/solicitudes-eventos, opción de menú con contador de
+              pendientes (MenuLateral). Lista con filtros por estado +
+              revisión (?solicitud=id): propuesta completa, portada/mapa,
+              cronograma, actividades, organizador, vista previa de la
+              página y chequeos (choque de fechas bloquea aprobar).
+            - Acciones: Aprobar / Pedir cambios (nuevo) / Rechazar.
+            - Backend: estado cambios_solicitados + comentarioCambios,
+              cambiosPedidosEn, reenviadaEn (migración); POST pedir-cambios,
+              GET revision; el cliente reenvía al guardar; correo al cliente
+              al aprobar/rechazar/pedir cambios.
+            - constants/solicitudesEvento.js: estados compartidos con Cliente.
+            - Quitado: modal de AdminGestionEventos (el botón lleva a la bandeja).
+            Pendiente (V): verificar en navegador.
+2026-09-25  DASHBOARDS EN FORMATO "TABLERO" (pedido del usuario, con
+            imágenes de referencia; se conservan los colores de QPass).
+            - Nuevo: components/Tablero.jsx/.css — Tablero (grilla de 12
+              col.), FilaKpis + TileKpi (KPI con ícono, variación y mini
+              curva), Panel (card con cabecera/acciones y "Ver tabla"),
+              GraficoArea, BarrasDestacadas (pico resaltado), DonaLeyenda
+              (máx. 5 + "Otros"), ListaRanking (medallas coral/índigo/cian,
+              "Ver todos"), BarraMeta (progreso hacia una meta).
+            - index.css: --viz-serie-3..5 (ranuras 3-5 de la paleta ya
+              validada, claro y oscuro). Los colores de marca no pasan como
+              paleta categórica (se confunden entre sí) -> no se usan en series.
+            - Rearmados: AdminGeneral (general), Admin.jsx vista general
+              (por evento), ClienteDashboard (organizador), UsuNegoDasboar
+              (negocio). Mismos datos y acciones; tablas largas -> rankings.
+            - Borrados: GraficosEvento.jsx (reemplazado), GraficoPorEvento
+              (ahora ranking), CSS muerto de los 4 dashboards (cruce en los
+              dos sentidos hecho).
+            Pendiente (V): verificar en navegador, claro y oscuro, y móvil.
+            Admin.jsx ya tenía 3 errores de lint (react-hooks/refs en migas)
+            antes de este cambio; no se tocaron.
 2026-09-22  TEMA OSCURO ACOTADO AL PANEL (pedido del usuario): la landing,
             la página del evento y las pantallas de cuenta van siempre en
             claro. Ver §2.4-bis. Antes de eso, el cambio de acento dejó la

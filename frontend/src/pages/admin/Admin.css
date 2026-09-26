@@ -70,12 +70,6 @@
 }
 
 /* --- STATS DE ENTRADAS --- */
-.pi-dash-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  margin-bottom: 16px;
-}
 
 .pi-dash-porcentaje {
   font-size: var(--text-xs);
@@ -83,22 +77,6 @@
   padding: 4px 8px;
   border-radius: var(--radius-xl);
   white-space: nowrap;
-}
-
-.pi-dash-progreso-barra {
-  width: 100%;
-  height: 10px;
-  background-color: var(--border);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  margin-bottom: 16px;
-}
-
-.pi-dash-progreso-relleno {
-  height: 100%;
-  background: linear-gradient(90deg, var(--cian-digital), var(--indigo-profundo));
-  border-radius: var(--radius-xl);
-  transition: width 0.5s ease;
 }
 
 /* Antes usaba --coral-compra (el color de "comprar"/CTA de venta): acá es solo
@@ -127,7 +105,6 @@
 .pi-dash-rol-card:hover {
   background-color: var(--indigo-profundo-suave);
   border-color: var(--indigo-profundo);
-  transform: translateY(-2px);
 }
 
 .pi-dash-rol-icon {
@@ -339,11 +316,10 @@
   cursor: pointer;
   text-align: left;
   font: inherit;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: box-shadow 0.2s;
 }
 
 .pi-dash-alerta-card:hover {
-  transform: translateY(-2px);
   box-shadow: 0 6px 16px rgba(10, 14, 39, 0.08);
 }
 
@@ -511,21 +487,6 @@
 .pi-dash-form-anular textarea:focus { border-color: var(--cian-digital); }
 
 /* --- Estadísticas de ventas: ranking, productos por venta, compras de cliente --- */
-.pi-dash-rank {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 26px;
-  height: 26px;
-  border-radius: var(--radius-full);
-  background: var(--bg-sunken);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-bold);
-}
-.pi-dash-rank--1 { background: var(--coral-compra); color: var(--texto-sobre-vivo); }
-.pi-dash-rank--2 { background: var(--indigo-profundo); color: var(--texto-sobre-oscuro); }
-.pi-dash-rank--3 { background: var(--cian-digital); color: var(--texto-sobre-vivo); }
 
 .pi-dash-items-lista {
   list-style: none;

@@ -1,0 +1,128 @@
+/* Editor de colores de la página del evento (components/EditorColores.jsx).
+   Antes vivía dentro de Configurar página (pi-cfg-paleta*, pi-admin-color*).
+   Solo tokens para la interfaz; los colores de las muestras son DATOS del evento. */
+
+.qp-colores { display: flex; flex-direction: column; gap: var(--space-5); }
+.qp-colores__ayuda { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
+
+/* ---------- Paletas ---------- */
+.qp-colores__paletas {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
+  gap: var(--space-2);
+}
+
+.qp-colores__paleta {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--duration-fast);
+}
+.qp-colores__paleta:hover { border-color: var(--border-strong); }
+.qp-colores__paleta.activa { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
+.qp-colores__paleta:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.qp-colores__paleta-muestra {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 2rem;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+}
+.qp-colores__paleta-muestra i { width: 0.85rem; height: 0.85rem; border-radius: 50%; }
+.qp-colores__paleta-muestra i:first-child { width: 1.6rem; height: 0.35rem; border-radius: var(--radius-full); }
+
+/* ---------- Cada color a mano ---------- */
+.qp-colores__grilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: var(--space-3);
+}
+.qp-colores__campo { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; }
+.qp-colores__campo label { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--text-primary); }
+.qp-colores__picker { display: flex; align-items: center; gap: var(--space-3); }
+
+/* Cuadrado grande clickeable — el <input type="color"> real va invisible
+   encima, así se ve igual en todos los navegadores. */
+.qp-colores__muestra {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  border: 2px solid var(--border-strong);
+  overflow: hidden;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: border-color 0.2s;
+}
+.qp-colores__muestra:hover { border-color: var(--accent); }
+.qp-colores__muestra input[type="color"] {
+  position: absolute;
+  inset: -4px;
+  width: calc(100% + 8px);
+  height: calc(100% + 8px);
+  padding: 0;
+  border: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.qp-colores__hex {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  outline: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-bold);
+  text-transform: uppercase;
+  color: var(--text-primary);
+  background-color: var(--bg-surface);
+  transition: border-color 0.2s;
+}
+.qp-colores__hex:focus { border-color: var(--border-focus); }
+
+/* ---------- Contraste ---------- */
+.qp-colores__contraste {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.qp-colores__contraste li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--text-primary);
+}
+.qp-colores__contraste li.ok { background: var(--ok-bg); }
+.qp-colores__contraste li.ok svg { color: var(--ok-text); }
+.qp-colores__contraste li.mal { background: var(--warn-bg); }
+.qp-colores__contraste li.mal svg { color: var(--warn-text); }
+.qp-colores__contraste b { font-variant-numeric: tabular-nums; }
+.qp-colores__contraste em { font-style: normal; font-weight: var(--weight-semibold); color: var(--text-secondary); }
+
+@media (max-width: 36rem) {
+  .qp-colores__contraste li { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .qp-colores__contraste em { display: none; }
+}

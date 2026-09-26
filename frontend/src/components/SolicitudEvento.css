@@ -1,0 +1,200 @@
+/* Piezas para mostrar una solicitud de evento (components/SolicitudEvento.jsx).
+   Solo tokens. Nada se mueve al pasar el mouse (preferencia del usuario). */
+
+/* ---------- Seguimiento de la aprobación ---------- */
+.qp-seguimiento {
+  --seg-marca: 2.75rem;
+  display: grid;
+  grid-auto-columns: minmax(0, 1fr);
+  grid-auto-flow: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.qp-seguimiento__paso {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  text-align: center;
+  min-width: 0;
+}
+/* Línea que une con el paso anterior (de centro a centro). */
+.qp-seguimiento__paso:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--seg-marca) / 2 - 1.5px);
+  right: 50%;
+  width: 100%;
+  height: 3px;
+  background: var(--border);
+  z-index: 0;
+}
+.qp-seguimiento__paso--hecho::before,
+.qp-seguimiento__paso--actual::before,
+.qp-seguimiento__paso--atencion::before,
+.qp-seguimiento__paso--error::before { background: var(--ok) !important; }
+
+.qp-seguimiento__marca {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--seg-marca);
+  height: var(--seg-marca);
+  border-radius: var(--radius-full);
+  font-size: var(--text-base);
+  background: var(--bg-sunken);
+  color: var(--text-muted);
+  border: 2px dashed var(--border-strong);
+}
+.qp-seguimiento__paso--hecho .qp-seguimiento__marca    { background: var(--ok);       color: var(--text-on-vivid); border: 2px solid var(--ok); }
+.qp-seguimiento__paso--actual .qp-seguimiento__marca   { background: var(--info-bg);  color: var(--info-text);    border: 2px solid var(--accent); box-shadow: 0 0 0 4px var(--info-bg); }
+.qp-seguimiento__paso--atencion .qp-seguimiento__marca { background: var(--warn-bg);  color: var(--warn-text);    border: 2px solid var(--warn); box-shadow: 0 0 0 4px var(--warn-bg); }
+.qp-seguimiento__paso--error .qp-seguimiento__marca    { background: var(--danger);   color: var(--text-on-vivid); border: 2px solid var(--danger); }
+
+.qp-seguimiento__txt { display: flex; flex-direction: column; gap: 2px; padding: 0 var(--space-1); }
+.qp-seguimiento__txt strong { font-size: var(--text-sm); color: var(--text-primary); }
+.qp-seguimiento__txt span { font-size: var(--text-xs); color: var(--text-secondary); }
+.qp-seguimiento__paso--pendiente .qp-seguimiento__txt strong { color: var(--text-secondary); font-weight: var(--weight-medium); }
+.qp-seguimiento__paso--atencion .qp-seguimiento__txt strong { color: var(--warn-text); }
+.qp-seguimiento__paso--error .qp-seguimiento__txt strong { color: var(--danger-text); }
+
+/* Compacto (tarjetas de la lista): marcas chicas, solo el título. */
+.qp-seguimiento--compacto { --seg-marca: 1.75rem; }
+.qp-seguimiento--compacto .qp-seguimiento__marca { font-size: 0.7rem; }
+.qp-seguimiento--compacto .qp-seguimiento__paso--actual .qp-seguimiento__marca,
+.qp-seguimiento--compacto .qp-seguimiento__paso--atencion .qp-seguimiento__marca { box-shadow: 0 0 0 3px var(--info-bg); }
+.qp-seguimiento--compacto .qp-seguimiento__txt strong { font-size: var(--text-xs); font-weight: var(--weight-semibold); }
+
+/* Celular: el seguimiento completo pasa a vertical (el compacto sigue en fila). */
+@media (max-width: 600px) {
+  .qp-seguimiento:not(.qp-seguimiento--compacto) { grid-auto-flow: row; gap: var(--space-4); }
+  .qp-seguimiento:not(.qp-seguimiento--compacto) .qp-seguimiento__paso { flex-direction: row; text-align: left; }
+  .qp-seguimiento:not(.qp-seguimiento--compacto) .qp-seguimiento__paso:not(:first-child)::before {
+    top: auto;
+    bottom: 50%;
+    right: auto;
+    left: calc(var(--seg-marca) / 2 - 1.5px);
+    width: 3px;
+    height: calc(100% + var(--space-4));
+  }
+  .qp-seguimiento--compacto .qp-seguimiento__txt strong { font-size: 0.65rem; }
+}
+
+/* ---------- Datos de la propuesta ---------- */
+.qp-sol-datos {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.qp-sol-datos > div {
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-lg);
+}
+.qp-sol-datos dt {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.qp-sol-datos dd {
+  margin: var(--space-1) 0 0;
+  font-weight: var(--weight-semibold);
+  color: var(--text-primary);
+}
+.qp-sol-datos dd.qp-sol-datos__extra, .qp-sol-datos__extra {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+  color: var(--text-secondary);
+}
+
+.qp-sol-bloque h4 { margin: 0 0 var(--space-2); font-size: var(--text-sm); color: var(--text-primary); }
+.qp-sol-descripcion {
+  margin: 0;
+  white-space: pre-line; /* respeta los saltos de línea que escribió el cliente */
+  color: var(--text-primary);
+  line-height: var(--leading-normal);
+}
+
+.qp-sol-imagenes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(14rem, 100%), 1fr));
+  gap: var(--space-4);
+}
+.qp-sol-imagenes figure { margin: 0; display: flex; flex-direction: column; gap: var(--space-2); }
+.qp-sol-imagenes figcaption {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+.qp-sol-img {
+  width: 100%;
+  max-height: 14rem;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--bg-sunken);
+}
+.qp-sol-img--vacia {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  max-height: 8rem;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+  border-style: dashed;
+}
+
+/* ---------- Cronograma / actividades ---------- */
+.qp-sol-cronograma, .qp-sol-actividades { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.qp-sol-cronograma li {
+  display: flex;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+}
+.qp-sol-cronograma time {
+  flex: none;
+  min-width: 3.25rem;
+  font-weight: var(--weight-bold);
+  font-variant-numeric: tabular-nums;
+  color: var(--indigo-profundo);
+}
+.qp-sol-actividades li { padding: var(--space-2) 0; border-bottom: 1px solid var(--border); }
+.qp-sol-cronograma li:last-child, .qp-sol-actividades li:last-child { border-bottom: 0; }
+.qp-sol-actividades strong { font-size: var(--text-sm); color: var(--text-primary); }
+.qp-sol-actividades p { margin: 2px 0 0; font-size: var(--text-xs); color: var(--text-secondary); line-height: var(--leading-snug); }
+
+/* ---------- Colores ---------- */
+.qp-sol-colores { display: flex; flex-direction: column; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.qp-sol-colores li { display: flex; align-items: center; gap: var(--space-3); font-size: var(--text-sm); color: var(--text-primary); }
+.qp-sol-colores code { margin-left: auto; font-size: var(--text-xs); color: var(--text-secondary); }
+.qp-sol-colores__muestra {
+  flex: none;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+}
+
+/* ---------- Vista previa ---------- */
+.qp-sol-previa {
+  max-width: 60rem;
+  width: 100%;
+  margin: 0 auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}

@@ -87,75 +87,6 @@
 
 .pi-cfg-seccion .texto-ayuda { display: flex; align-items: center; gap: var(--space-2); }
 
-/* ---------- Paletas ---------- */
-.pi-cfg-paletas {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr));
-  gap: var(--space-2);
-  margin-bottom: var(--space-5);
-}
-
-.pi-cfg-paleta {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding: var(--space-2);
-  border-radius: var(--radius-md);
-  border: 2px solid var(--border);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  text-align: left;
-  cursor: pointer;
-  transition: border-color var(--duration-fast), transform var(--duration-fast) var(--ease-out);
-}
-
-.pi-cfg-paleta:hover { border-color: var(--border-strong); transform: translateY(-2px); }
-.pi-cfg-paleta.activa { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent); }
-.pi-cfg-paleta:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
-
-.pi-cfg-paleta-muestra {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  height: 2rem;
-  padding: 0 var(--space-2);
-  border-radius: var(--radius-sm);
-}
-
-.pi-cfg-paleta-muestra i { width: 0.85rem; height: 0.85rem; border-radius: 50%; }
-.pi-cfg-paleta-muestra i:first-child { width: 1.6rem; height: 0.35rem; border-radius: var(--radius-full); }
-
-/* ---------- Contraste ---------- */
-.pi-cfg-contraste {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  margin: var(--space-5) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.pi-cfg-contraste li {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto auto;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--radius-md);
-  font-size: var(--text-xs);
-  color: var(--text-primary);
-}
-
-.pi-cfg-contraste li.ok { background: var(--ok-bg); }
-.pi-cfg-contraste li.ok svg { color: var(--ok-text); }
-.pi-cfg-contraste li.mal { background: var(--warn-bg); }
-.pi-cfg-contraste li.mal svg { color: var(--warn-text); }
-.pi-cfg-contraste b { font-variant-numeric: tabular-nums; }
-.pi-cfg-contraste em { font-style: normal; font-weight: var(--weight-semibold); color: var(--text-secondary); }
-
 /* ---------- Textos e imagen ---------- */
 .pi-cfg-contador { align-self: flex-end; font-size: var(--text-xs); color: var(--text-secondary); font-variant-numeric: tabular-nums; }
 .pi-cfg-contador.largo { color: var(--warn-text); font-weight: var(--weight-semibold); }
@@ -356,7 +287,6 @@
 
 /* ---------- Vista completa (modal) ---------- */
 
-
 /* ---------- Responsive ---------- */
 @media (max-width: 75rem) {
   .pi-cfg-layout { grid-template-columns: 1fr; }
@@ -370,14 +300,14 @@
   .pi-cfg-barra-acciones { width: 100%; }
   .pi-cfg-barra-acciones button { flex: 1; justify-content: center; }
   .pi-cfg-crono .pi-cfg-fila { flex-wrap: wrap; }
-  .pi-cfg-contraste li { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .pi-cfg-contraste em { display: none; }
+  
+  
 }
 
 @media (prefers-reduced-motion: reduce) {
   .pi-cfg-punto, .pi-cfg-fila, .pi-cfg-iconos { animation: none; }
-  .pi-cfg-paleta:hover, .pi-cfg-icono-btn:hover { transform: none; }
   .pi-cfg-marco { transition: none; }
+  .pi-cfg-icono-btn:hover { transform: none; }
 }
 
 /* La vista completa vive dentro del Modal GLOBAL (tamaño xl): la preview

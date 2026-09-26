@@ -4,6 +4,7 @@
  * Agregados del tablero de evento para el Cliente organizador (spec §2).
  * SOLO agregados: sin nombres/documentos/fotos de asistentes, sin comprobantes,
  * sin rankings nominales de personal, sin transacción por transacción.
+ * (Por eso el equipo va en CANTIDADES por rol y el dinero en totales / por hora.)
  * ========================================================================= */
 
 import { ForbiddenException, Injectable } from '@nestjs/common';
@@ -14,6 +15,14 @@ import { UsuarioJwt } from '../../common/decorators/usuario-actual.decorator';
 const OFFSET_BOLIVIA_H = 4;
 const horaBolivia = (d: Date) =>
   (new Date(d).getUTCHours() + 24 - OFFSET_BOLIVIA_H) % 24;
+// "2026-11-01" en hora de Bolivia (para agrupar ventas por día).
+const diaBolivia = (d: Date) =>
+  new Date(new Date(d).getTime() - OFFSET_BOLIVIA_H * 3_600_000)
+    .toISOString()
+    .slice(0, 10);
+// Las fiestas cruzan medianoche: las horas de madrugada (00-11) se ordenan
+// como continuación de la noche anterior (mismo criterio que el panel de Admin).
+const ordenNoche = (h: number) => (h < 12 ? h + 24 : h);
 
 /** "22:30" | "9 pm" | "18h" -> 22 (hora entera 0..23) o null si no se puede. */
 function horaDeTexto(txt: unknown): number | null {
@@ -74,13 +83,19 @@ export class DashboardClienteService {
       personasDentro,
       asistieron,
       confirmadasTotal,
-      consumo,
+      txPorTipo,
       ventasPorPuesto,
       puestos,
       movimientos,
       itemsEvento,
       consumoMovs,
       entradasUlt7,
+      txRecargaConsumo,
+      comprasConfirmadas,
+      comprasPorEstado,
+      salieron,
+      asignacionesPorRol,
+      ayudantes,
     ] = await Promise.all([
       this.prisma.categoriaTicket.count({ where: { eventoId } }),
       this.prisma.codigoQr.count({ where: { eventoId } }),
@@ -115,10 +130,11 @@ export class DashboardClienteService {
       this.prisma.entrada.count({
         where: { eventoId, compra: { estado: 'confirmado' } },
       }),
+      // Totales de dinero cashless por tipo (recargas, consumos, devoluciones…).
       this.prisma.transaccion.groupBy({
         by: ['tipo'],
         _sum: { monto: true },
-        where: { eventoId, tipo: { in: ['consumo', 'reverso_consumo'] } },
+        where: { eventoId },
       }),
       this.prisma.venta.groupBy({
         by: ['puestoId'],
@@ -158,6 +174,33 @@ export class DashboardClienteService {
           },
         },
       }),
+      // Recargas vs. consumos por hora (montos, sin quién ni a quién).
+      this.prisma.transaccion.findMany({
+        where: { eventoId, tipo: { in: ['recarga', 'consumo'] } },
+        select: { tipo: true, monto: true, createdAt: true },
+      }),
+      // Venta de entradas por día.
+      this.prisma.compra.findMany({
+        where: { eventoId, estado: 'confirmado' },
+        select: {
+          createdAt: true,
+          montoTotal: true,
+          _count: { select: { entradas: true } },
+        },
+      }),
+      this.prisma.compra.groupBy({
+        by: ['estado'],
+        where: { eventoId },
+        _count: { _all: true },
+      }),
+      this.prisma.entrada.count({ where: { eventoId, estadoIngreso: 'salio' } }),
+      // Equipo: SOLO cantidades por rol (sin nombres, spec §2).
+      this.prisma.asignacion.groupBy({
+        by: ['rol'],
+        where: { eventoId },
+        _count: { _all: true },
+      }),
+      this.prisma.puestoAyudante.count({ where: { puesto: { eventoId } } }),
     ]);
 
     const confirmadasMap = new Map(
@@ -205,11 +248,64 @@ export class DashboardClienteService {
       ? Number(snap.recaudado)
       : Number(recaudado._sum.montoTotal ?? 0);
     const asistentes = snap ? snap.asistentes : asistieron;
-    const consumoTipo = (tipo: string) =>
-      Number(consumo.find((t) => t.tipo === tipo)?._sum.monto ?? 0);
+    const dinero = (tipo: string) =>
+      Number(txPorTipo.find((t) => t.tipo === tipo)?._sum.monto ?? 0);
     const consumoTotal = snap
       ? Number(snap.consumido)
-      : consumoTipo('consumo') - consumoTipo('reverso_consumo');
+      : dinero('consumo') - dinero('reverso_consumo');
+
+    // ---- Dinero cashless (pts) — mismas cuentas que el panel de Admin POR
+    // EVENTO (tabla de eventos, tablero del evento y foto de cierre) ----
+    const recargado = snap ? Number(snap.recargado) : dinero('recarga');
+    const devuelto = snap ? Number(snap.devuelto) : dinero('devolucion');
+    const saldoCirculacion = snap
+      ? Number(snap.saldoRemanente)
+      : recargado - consumoTotal - devuelto;
+
+    // ---- Recargas vs. consumos por hora del día (solo horas con movimiento) ----
+    const porHoraMap = new Map<number, { hora: number; recargas: number; consumos: number }>();
+    for (const t of txRecargaConsumo) {
+      const h = horaBolivia(t.createdAt);
+      const fila = porHoraMap.get(h) ?? { hora: h, recargas: 0, consumos: 0 };
+      if (t.tipo === 'recarga') fila.recargas += Number(t.monto);
+      else fila.consumos += Number(t.monto);
+      porHoraMap.set(h, fila);
+    }
+    const actividadPorHora = [...porHoraMap.values()]
+      .sort((a, b) => ordenNoche(a.hora) - ordenNoche(b.hora))
+      .map((f) => ({ ...f, recargas: Math.round(f.recargas), consumos: Math.round(f.consumos) }));
+
+    // ---- Venta de entradas por día (con los días sin venta en 0) ----
+    const porDiaMap = new Map<string, { entradas: number; monto: number }>();
+    for (const c of comprasConfirmadas) {
+      const dia = diaBolivia(c.createdAt);
+      const fila = porDiaMap.get(dia) ?? { entradas: 0, monto: 0 };
+      fila.entradas += c._count.entradas;
+      fila.monto += Number(c.montoTotal);
+      porDiaMap.set(dia, fila);
+    }
+    const ventasPorDia: { dia: string; entradas: number; monto: number }[] = [];
+    const diasConVenta = [...porDiaMap.keys()].sort();
+    if (diasConVenta.length) {
+      const desde = new Date(`${diasConVenta[0]}T00:00:00Z`).getTime();
+      const hasta = new Date(`${diasConVenta[diasConVenta.length - 1]}T00:00:00Z`).getTime();
+      // Tope de 120 días para no mandar una serie enorme.
+      const inicio = Math.max(desde, hasta - 119 * 86_400_000);
+      for (let t = inicio; t <= hasta; t += 86_400_000) {
+        const dia = new Date(t).toISOString().slice(0, 10);
+        ventasPorDia.push({ dia, ...(porDiaMap.get(dia) ?? { entradas: 0, monto: 0 }) });
+      }
+    }
+
+    // ---- Ventas de los puestos (totales) ----
+    const ventasTotales = ventasPorPuesto.reduce((s, v) => s + v._count._all, 0);
+    const vendidoPuestos = ventasPorPuesto.reduce((s, v) => s + Number(v._sum.montoTotal ?? 0), 0);
+    const unidadesVendidas = itemsEvento.reduce((s, it) => s + it.cantidad, 0);
+
+    const comprasEstado = (estado: string) =>
+      comprasPorEstado.find((c) => c.estado === estado)?._count._all ?? 0;
+    const enRol = (rol: string) =>
+      asignacionesPorRol.find((a) => a.rol === rol)?._count._all ?? 0;
 
     // ---- E1: aforo dentro del recinto por hora (ingresos - salidas acumulado) ----
     const netoPorHora = new Array(24).fill(0);
@@ -312,6 +408,40 @@ export class DashboardClienteService {
         recaudado: recaudadoTotal,
         porCategoria,
         proyeccion,
+        ventasPorDia,
+        compras: {
+          confirmadas: comprasEstado('confirmado'),
+          pendientes: comprasEstado('pendiente'),
+          rechazadas: comprasEstado('rechazado'),
+        },
+      },
+      // Dinero cashless dentro del evento (pts, no Bs).
+      finanzas: {
+        recargado,
+        consumido: consumoTotal,
+        devuelto,
+        saldoCirculacion,
+        actividadPorHora,
+      },
+      entradas: {
+        emitidas: confirmadas,
+        dentro: personasDentro,
+        salieron,
+        faltan: Math.max(0, confirmadas - asistentes),
+      },
+      ventasPuestos: {
+        ventas: ventasTotales,
+        total: vendidoPuestos,
+        unidades: unidadesVendidas,
+        ticketPromedio: ventasTotales ? vendidoPuestos / ventasTotales : 0,
+      },
+      equipo: {
+        puestos: mapa,
+        negocios: enRol('UsuarioNegocio'),
+        ayudantes,
+        recargadores: enRol('Recargador'),
+        supervisores: enRol('Supervisor'),
+        devoluciones: enRol('Devolucion'),
       },
       operacion: {
         personasDentro,

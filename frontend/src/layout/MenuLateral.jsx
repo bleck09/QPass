@@ -4,7 +4,7 @@ import {
   FaChartPie, FaChartBar, FaUsers, FaSignOutAlt, FaUserCircle,
   FaFileInvoiceDollar, FaBoxOpen, FaCashRegister, FaChevronDown, FaWallet, FaMoneyBillWave,
   FaExclamationTriangle, FaBars, FaCalendarAlt, FaLink, FaHistory,
-  FaSun, FaMoon, FaUserSecret
+  FaSun, FaMoon, FaUserSecret, FaInbox
 } from 'react-icons/fa';
 import { MdAccountBalance, MdKeyboardArrowLeft, MdKeyboardArrowRight } from 'react-icons/md';
 import { ROLES, ROLE_LABELS } from '../constants/roles.js';
@@ -14,6 +14,7 @@ import { leerTema, aplicarTema, restaurarTema } from '../utils/tema.js';
 import { revisarBloqueoScroll } from '../utils/bloqueoScroll.js';
 import AlertasDuplicados from '../components/AlertasDuplicados.jsx';
 import { ROLES_SEGURIDAD } from '../utils/duplicados.js';
+import { EVENTO_SOLICITUDES_CAMBIARON } from '../constants/solicitudesEvento.js';
 import './MenuLateral.css';
 
 // Configuración de menús según el rol
@@ -21,11 +22,13 @@ import './MenuLateral.css';
 // pertenecen a esta (ej. Comprar entradas es un paso de Eventos). Sin esto,
 // al entrar a una subpantalla el menú no marcaba ninguna opción como activa.
 // Un patrón que termina en '/*' abarca todo lo que cuelga de esa ruta.
+// `contador`: clave de api.dashboard.adminPendientes() -> número al lado.
 const menuConfig = {
   [ROLES.ADMIN]: [
     { titulo: 'Dashboard General', ruta: '/admin/general', icono: <FaChartPie /> },
     { titulo: 'Por Eventos', ruta: '/admin', icono: <FaChartBar />, tambien: ['/admin/solicitudes'] },
     { titulo: 'Gestión de Eventos', ruta: '/admin/eventos', icono: <FaCalendarAlt />, tambien: ['/admin/config', '/AdminCrearTickets', '/admin/qr', '/Mapa'] },
+    { titulo: 'Solicitudes de eventos', ruta: '/admin/solicitudes-eventos', icono: <FaInbox />, contador: 'solicitudesEvento' },
     { titulo: 'Gestión de Usuarios', ruta: '/AdCreaUsuarioNegocio', icono: <FaUsers /> },
     // Tickets del Evento, Generar QR, Configurar Página y Mapa se acceden desde
     // Gestión de Eventos (accesos rápidos del detalle), no desde la barra lateral.
@@ -34,8 +37,8 @@ const menuConfig = {
     { titulo: 'Auditoría', ruta: '/admin/auditoria', icono: <FaHistory /> }
   ],
   [ROLES.CLIENTE]: [
-    { titulo: 'Mi Propuesta', ruta: '/Cliente', icono: <FaCashRegister /> },
-    { titulo: 'Dashboard General', ruta: '/Cliente/dashboard', icono: <FaChartPie /> },
+    { titulo: 'Mis propuestas', ruta: '/Cliente', icono: <FaFileInvoiceDollar /> },
+    { titulo: 'Dashboard de mis eventos', ruta: '/Cliente/dashboard', icono: <FaChartPie /> },
     { titulo: 'Personas por encontrar', ruta: '/duplicados', icono: <FaUserSecret /> }
   ],
   [ROLES.RECARGADOR]: [
@@ -105,6 +108,23 @@ export default function MenuLateral({ children }) {
 
   const navigate = useNavigate();
   const location = useLocation();
+
+  // Contadores del menú (solo Admin): pendientes por revisar. Se refrescan al
+  // cambiar de pantalla y cuando una pantalla avisa que resolvió algo.
+  const [contadores, setContadores] = useState({});
+  const esAdmin = usuario?.rol === ROLES.ADMIN;
+  useEffect(() => {
+    if (!esAdmin) return undefined;
+    let vivo = true;
+    const contar = () => api.dashboard.adminPendientes()
+      .then((p) => {
+        if (vivo) setContadores(Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v?.total ?? 0])));
+      })
+      .catch(() => {}); // sin contador no se rompe nada
+    contar();
+    window.addEventListener(EVENTO_SOLICITUDES_CAMBIARON, contar);
+    return () => { vivo = false; window.removeEventListener(EVENTO_SOLICITUDES_CAMBIARON, contar); };
+  }, [esAdmin, location.pathname]);
 
   // Red de seguridad: al cambiar de pantalla, si no quedó ningún modal abierto,
   // la página nunca debe seguir sin scroll.
@@ -229,6 +249,12 @@ export default function MenuLateral({ children }) {
                 <span className="pi-layout-nav-content">
                   <span className="pi-layout-nav-icon" aria-hidden="true">{item.icono}</span>
                   {!isCollapsed && <span className="pi-layout-nav-text">{item.titulo}</span>}
+                  {item.contador && contadores[item.contador] > 0 && (
+                    <span className={`pi-layout-nav-contador${isCollapsed ? ' pi-layout-nav-contador--punto' : ''}`}>
+                      {isCollapsed ? '' : contadores[item.contador]}
+                      <span className="sr-only">{` ${contadores[item.contador]} por revisar`}</span>
+                    </span>
+                  )}
                 </span>
               </button>
             );

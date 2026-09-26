@@ -8,6 +8,7 @@ import {
   IsPositive,
   IsString,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 import { Prisma } from '@prisma/client';
 import {
@@ -20,6 +21,11 @@ import {
 } from '../../../common/dto/validacion.constantes';
 
 export class CrearSolicitudEventoDto {
+  // { x, y, zoom, oscurecer, desenfoque } de la portada — el servicio lo acota a rangos válidos.
+  @IsOptional()
+  @Allow()
+  imagenAjuste?: Record<string, unknown> | null;
+
   @IsString()
   @MaxLength(MAX_TITULO, { message: mensajeMaxLength(MAX_TITULO) })
   nombreEvento: string;
@@ -92,4 +98,15 @@ export class RechazarDto {
   @IsString()
   @MaxLength(MAX_NOTA, { message: mensajeMaxLength(MAX_NOTA) })
   motivoRechazo?: string;
+}
+
+// Admin devuelve la solicitud al cliente: el comentario es obligatorio (sin él
+// el cliente no sabe qué corregir).
+export class PedirCambiosDto {
+  @IsString()
+  @MinLength(3, {
+    message: 'Contale al cliente qué tiene que cambiar (al menos 3 letras).',
+  })
+  @MaxLength(MAX_NOTA, { message: mensajeMaxLength(MAX_NOTA) })
+  comentario: string;
 }

@@ -362,3 +362,30 @@
 @media (prefers-reduced-motion: reduce) {
   /* MENÚ DESPLEGABLE (DROPDOWN PERFIL) */ .pi-layout-dropdown { animation: none; }
 }
+
+/* --- Contador de pendientes al lado de una opción (ej. Solicitudes de eventos) --- */
+.pi-layout-nav-contador {
+  margin-left: auto;
+  min-width: 1.4rem;
+  height: 1.4rem;
+  padding: 0 0.4rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--coral-compra);
+  color: var(--texto-sobre-vivo);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-bold);
+  line-height: 1;
+}
+/* Menú colapsado: solo un punto sobre el ícono. */
+.pi-layout-nav-contador--punto {
+  position: absolute;
+  top: 0.6rem;
+  left: 2.6rem;
+  min-width: 0.6rem;
+  width: 0.6rem;
+  height: 0.6rem;
+  padding: 0;
+}

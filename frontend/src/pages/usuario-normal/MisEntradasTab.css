@@ -63,7 +63,6 @@
 }
 
 .pi-me-manilla-qr img { display: block; width: 8rem; height: 8rem; }
-.pi-me-manilla-qr:hover { transform: scale(1.05) rotate(-2deg); }
 .pi-me-manilla-qr:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 3px; }
 .pi-me-manilla-qr-ver { font-weight: var(--weight-semibold); color: var(--n-600); }
 
@@ -148,7 +147,6 @@
 @media (prefers-reduced-motion: reduce) {
   .pi-me-manilla, .pi-me-manilla-fondo, .pi-me-manilla-qr, .pi-me-manilla-qr.pendiente svg { animation: none; }
   .pi-me-manilla-qr { transition: none; }
-  .pi-me-manilla-qr:hover { transform: none; }
 }
 
 /* =========================================================================

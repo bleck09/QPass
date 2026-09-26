@@ -59,37 +59,6 @@ export function GraficoRecaudacionDiaria({ data }) {
   );
 }
 
-// W2 — recaudación por evento (top 10)
-export function GraficoPorEvento({ data }) {
-  const filas = data ?? [];
-  return (
-    <PanelGrafico
-      titulo="Recaudación por evento (top 10)"
-      vacio="Sin recaudación en el periodo."
-      tabla={{
-        columnas: ['Evento', 'Recaudado'],
-        datos: filas,
-        renderFila: (f) => (
-          <tr key={f.eventoId}>
-            <td>{f.nombre}</td>
-            <td>{fmtBs(f.recaudado)}</td>
-          </tr>
-        ),
-      }}
-    >
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={filas} layout="vertical" margin={{ top: 4, right: 16, bottom: 4, left: 8 }}>
-          {grid}
-          <XAxis type="number" tick={ejeTick} stroke="var(--border)" tickFormatter={(v) => `Bs ${v}`} />
-          <YAxis type="category" dataKey="nombre" tick={ejeTick} stroke="var(--border)" width={120} />
-          <Tooltip contentStyle={tooltipStyle} formatter={(v) => [fmtBs(v), 'Recaudado']} />
-          <Bar dataKey="recaudado" fill="var(--viz-serie-1)" radius={[0, 3, 3, 0]} />
-        </BarChart>
-      </ResponsiveContainer>
-    </PanelGrafico>
-  );
-}
-
 // W4 — estado de compras por día (barras apiladas, colores de estado)
 export function GraficoComprasDiarias({ data }) {
   const puntos = data?.puntos ?? [];

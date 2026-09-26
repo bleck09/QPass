@@ -21,9 +21,9 @@ import {
 import api from '../../api/index.js';
 import { filtrarEventos, FILTROS_ESTADO_EVENTO, ciDeEntrada } from '../../utils/eventos.js';
 import {
-  GraficoActividadPorHora, GraficoIngresosPorCategoria,
-  GraficoVentasPorNegocio, GraficoProductosMasVendidos,
-} from './GraficosEvento.jsx';
+  Tablero, FilaKpis, TileKpi, Panel, GraficoArea, DonaLeyenda, ListaRanking, BarraMeta,
+} from '../../components/Tablero.jsx';
+import { fmtBs } from '../../utils/graficos.jsx';
 import DetalleVentaModal from '../../components/DetalleVentaModal.jsx';
 import VistaEntradas from './vistas/VistaEntradas.jsx';
 import VistaOperadores from './vistas/VistaOperadores.jsx';
@@ -983,177 +983,212 @@ export default function Admin({
             </section>
           )}
 
-          {/* --- RESUMEN FINANCIERO --- */}
-          <section className="pi-dash-seccion">
-            <h3 className="pi-dash-seccion-titulo">Resumen Financiero del Evento</h3>
-            <div className="pi-dash-resumen-grid">
-              <StatCard icon={<FaCoins />} tono="ok" valor={`${totalRecargadoEvento} pts`} label="Total Recargado" />
-              <StatCard icon={<FaBoxOpen />} tono="warn" valor={`${totalDevueltoEvento} pts`} label="Total Devuelto" />
-              <StatCard icon={<FaShoppingBag />} valor={`${totalConsumoClientes} pts`} label="Consumido por Clientes (total de totales)" />
-              <StatCard icon={<FaWallet />} tono="total" valor={`${totalRecargadoEvento - totalDevueltoEvento - totalConsumoClientes} pts`} label="Saldo en Circulación" />
-            </div>
-            <div className="pi-adg-graficos-grid">
-              <GraficoActividadPorHora puntos={actividadPorHora} />
-              <GraficoIngresosPorCategoria filas={ingresosPorCategoria} />
-            </div>
-          </section>
-
-          {/* --- ESTADÍSTICAS DE VENTAS (negocios, productos, ayudantes, clientes) --- */}
-          <section className="pi-dash-seccion">
-            <h3 className="pi-dash-seccion-titulo"><FaChartPie aria-hidden="true" /> Estadísticas de ventas</h3>
-            <div className="pi-dash-resumen-grid">
-              <StatCard
-                icon={<FaTrophy />} tono="total"
-                valor={negociosOrdenados[0]?.nombre || '—'}
-                label="Negocio que más vende"
-                nota={negociosOrdenados[0] ? `${negociosOrdenados[0].ventasTotal} pts` : null}
-                onClick={() => abrirDetalle('negocios')}
+          <Tablero>
+            {/* --- RESUMEN FINANCIERO (pts = saldo cashless) --- */}
+            <FilaKpis>
+              <TileKpi
+                icon={<FaCoins />} tono="ok" label="Total recargado"
+                valor={`${totalRecargadoEvento} pts`}
+                serie={actividadPorHora} serieKey="recargas"
               />
-              <StatCard
-                icon={<FaBoxes />} tono="info"
-                valor={estadisticasVentas.productos[0]?.nombre || '—'}
-                label="Producto más vendido"
-                nota={estadisticasVentas.productos[0] ? `${estadisticasVentas.productos[0].unidades} unidades` : null}
+              <TileKpi
+                icon={<FaShoppingBag />} tono="info" label="Consumido por clientes"
+                valor={`${totalConsumoClientes} pts`}
+                nota={`${estadisticasVentas.unidadesTotales} unidades · ${estadisticasVentas.clientes.length} clientes`}
+                serie={actividadPorHora} serieKey="consumos"
               />
-              <StatCard
-                icon={<FaMedal />} tono="ok"
-                valor={estadisticasVentas.ayudantes[0]?.nombre || '—'}
-                label="Ayudante que más vende"
-                nota={estadisticasVentas.ayudantes[0]
-                  ? `${estadisticasVentas.ayudantes[0].negocio} · ${estadisticasVentas.ayudantes[0].total} pts`
-                  : null}
+              <TileKpi icon={<FaBoxOpen />} tono="warn" label="Total devuelto" valor={`${totalDevueltoEvento} pts`} />
+              <TileKpi
+                icon={<FaWallet />} tono="total" label="Saldo en circulación"
+                valor={`${totalRecargadoEvento - totalDevueltoEvento - totalConsumoClientes} pts`}
+                nota="recargado − consumido − devuelto"
               />
-              <StatCard
-                icon={<FaShoppingBag />}
-                valor={estadisticasVentas.unidadesTotales}
-                label="Unidades vendidas"
-                nota={`${estadisticasVentas.clientes.length} clientes compraron`}
+            </FilaKpis>
+
+            {/* W-evento-1 — recargas vs. consumos por hora (dos flujos de signo contrario: no se apilan). */}
+            <Panel
+              span={8}
+              icono={FaClock}
+              titulo="Recargas vs. consumos por hora"
+              subtitulo="Puntos cashless movidos en cada hora del evento."
+              vacio="Todavía no hay recargas ni consumos registrados en este evento."
+              tabla={{
+                columnas: ['Hora', 'Recargado', 'Consumido'],
+                datos: actividadPorHora,
+                renderFila: (p) => (
+                  <tr key={p.hora}>
+                    <td>{p.hora}</td>
+                    <td>{p.recargas} pts</td>
+                    <td>{p.consumos} pts</td>
+                  </tr>
+                ),
+              }}
+            >
+              <GraficoArea
+                datos={actividadPorHora}
+                xKey="hora"
+                fmtValor={(v) => `${v} pts`}
+                series={[
+                  { key: 'recargas', nombre: 'Recargado', color: 'var(--viz-serie-1)' },
+                  { key: 'consumos', nombre: 'Consumido', color: 'var(--viz-serie-2)' },
+                ]}
               />
-            </div>
+            </Panel>
 
-            <div className="pi-adg-graficos-grid">
-              <GraficoVentasPorNegocio
-                filas={negociosOrdenados.map(n => ({ nombre: n.nombre, total: n.ventasTotal, ventas: n.ventas.filter(v => !v.anulada).length }))}
+            {/* --- ENTRADAS AL EVENTO --- */}
+            <Panel
+              span={4}
+              icono={FaTicketAlt}
+              titulo="Entradas al evento"
+              acciones={<Boton variante="secundario" tamano="sm" icono={FaUserCheck} onClick={() => abrirDetalle('entradas')}>Ver todas</Boton>}
+            >
+              <div className="qp-tablero-panel__hero">
+                <strong>{statsEntradas.total}</strong>
+                <span>entradas emitidas</span>
+              </div>
+              <BarraMeta
+                tono="ok"
+                label="Ya ingresaron"
+                detalle={`${statsEntradas.ingresaron} / ${statsEntradas.total}`}
+                pct={statsEntradas.pctIngresaron}
               />
-              <GraficoProductosMasVendidos filas={estadisticasVentas.productos} />
-            </div>
-
-            <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado"><FaTrophy color="var(--coral-compra)" /> Producto estrella de cada negocio</h4>
-            <Tabla
-              columnas={['Negocio', 'Producto más consumido', { texto: 'Unidades', align: 'center' }, { texto: '% del negocio', align: 'center' }, { texto: 'Unidades totales', align: 'center' }, { texto: 'Productos distintos', align: 'center' }]}
-              datos={estadisticasVentas.estrellas}
-              vacio="Aún no hay ventas de negocios en este evento."
-              renderFila={e => (
-                <tr key={e.id}>
-                  <td><strong>{e.negocio}</strong></td>
-                  <td>{e.producto || '—'}</td>
-                  <td style={{ textAlign: 'center' }}>{e.unidades}</td>
-                  <td style={{ textAlign: 'center' }}>
-                    <span className="pi-dash-porcentaje pi-dash-badge-ok">{e.pct}%</span>
-                  </td>
-                  <td style={{ textAlign: 'center' }}>{e.unidadesNegocio}</td>
-                  <td style={{ textAlign: 'center' }}>{e.productosDistintos}</td>
-                </tr>
-              )}
-            />
-
-            <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado"><FaMedal color="var(--cian-digital)" /> Ranking de ayudantes</h4>
-            <Tabla
-              columnas={['#', 'Ayudante', 'Negocio', 'Puesto', { texto: 'Ventas', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Lo que más vende', 'Total']}
-              datos={estadisticasVentas.ayudantes}
-              vacio="Aún no hay ventas de ayudantes en este evento."
-              renderFila={(a, i) => (
-                <tr key={a.id}>
-                  <td><span className={`pi-dash-rank${i < 3 ? ` pi-dash-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
-                  <td><strong>{a.nombre}</strong></td>
-                  <td>{a.negocio}</td>
-                  <td>{a.puestos}</td>
-                  <td style={{ textAlign: 'center' }}>{a.ventas}</td>
-                  <td style={{ textAlign: 'center' }}>{a.unidades}</td>
-                  <td>{a.productoTop ? `${a.productoTop} (${a.productoTopUnidades} u.)` : '—'}</td>
-                  <td className="pi-dash-monto-celda">{a.total} pts</td>
-                </tr>
-              )}
-            />
-
-            <h4 className="pi-dash-subtitulo pi-dash-subtitulo-espaciado"><FaUserFriends color="var(--indigo-profundo)" /> Cuánto compra cada cliente</h4>
-            <Tabla
-              columnas={['#', 'Cliente', 'Documento', { texto: 'Compras', align: 'center' }, { texto: 'Unidades', align: 'center' }, 'Gastado', { texto: 'Acciones', srOnly: true }]}
-              datos={estadisticasVentas.clientes}
-              vacio="Aún no hay consumo de clientes en este evento."
-              renderFila={(c, i) => (
-                <tr key={c.id}>
-                  <td><span className={`pi-dash-rank${i < 3 ? ` pi-dash-rank--${i + 1}` : ''}`}>{i + 1}</span></td>
-                  <td>{c.nombre}</td>
-                  <td>{c.documento || '—'}</td>
-                  <td style={{ textAlign: 'center' }}>{c.compras}</td>
-                  <td style={{ textAlign: 'center' }}>{c.unidades}</td>
-                  <td className="pi-dash-monto-celda">{c.total} pts</td>
-                  <td>
-                    <Boton variante="secundario" tamano="sm" icono={FaListUl} onClick={() => setClienteAbierto(c)}>Ver compras</Boton>
-                  </td>
-                </tr>
-              )}
-            />
-          </section>
-
-          {/* --- ENTRADAS AL EVENTO --- */}
-          <section className="pi-dash-seccion">
-            <h3 className="pi-dash-seccion-titulo">Entradas al Evento</h3>
-            <div className="pi-dash-stats-grid">
-              <StatCard onClick={() => abrirDetalle('entradas')} icon={<FaTicketAlt />} tono="total" valor={statsEntradas.total} label="Total de Entradas" />
-              <StatCard
-                onClick={() => abrirDetalle('entradas', 'ingresado')}
-                icon={<FaCheckCircle />} tono="ok" valor={statsEntradas.ingresaron} label="Ya Ingresaron"
-                extra={<span className="pi-dash-porcentaje pi-dash-badge-ok">{statsEntradas.pctIngresaron}%</span>}
+              <ListaRanking
+                limite={0}
+                items={[
+                  { id: 'dentro', icono: <FaUsers />, titulo: 'Están dentro', sub: 'ahora mismo', valor: statsEntradas.dentro, onClick: () => abrirDetalle('entradas', 'dentro') },
+                  { id: 'pendiente', icono: <FaHourglassHalf />, titulo: 'Faltan por ingresar', sub: `${statsEntradas.pctFaltan}% del total`, valor: statsEntradas.faltan, onClick: () => abrirDetalle('entradas', 'pendiente') },
+                  { id: 'salio', icono: <FaSignOutAlt />, titulo: 'Ya salieron', sub: 'ingresaron y se fueron', valor: statsEntradas.salieron, onClick: () => abrirDetalle('entradas', 'salio') },
+                ]}
               />
-              <StatCard onClick={() => abrirDetalle('entradas', 'dentro')} icon={<FaUsers />} tono="info" valor={statsEntradas.dentro} label="Están Dentro" />
-              <StatCard
-                onClick={() => abrirDetalle('entradas', 'pendiente')}
-                icon={<FaHourglassHalf />} tono="warn" valor={statsEntradas.faltan} label="Faltan por Ingresar"
-                extra={<span className="pi-dash-porcentaje pi-dash-badge-pend">{statsEntradas.pctFaltan}%</span>}
+            </Panel>
+
+            {/* W-evento-2 — plata REAL (Bs), nunca junto a los pts de arriba. */}
+            <Panel span={4} icono={FaCoins} titulo="Ingresos por categoría" subtitulo="Bs pagados al comprar la entrada.">
+              <DonaLeyenda
+                datos={ingresosPorCategoria.map((c) => ({ nombre: c.nombre, valor: c.ingresos }))}
+                fmt={fmtBs}
+                centroLabel="por entradas"
               />
-              <StatCard onClick={() => abrirDetalle('entradas', 'salio')} icon={<FaSignOutAlt />} valor={statsEntradas.salieron} label="Ya Salieron" />
-            </div>
+            </Panel>
 
-            <div className="pi-dash-progreso-barra">
-              <div className="pi-dash-progreso-relleno" style={{ width: `${statsEntradas.pctIngresaron}%` }} />
-            </div>
+            <Panel
+              span={4}
+              icono={FaTrophy}
+              titulo="Ventas por negocio"
+              acciones={<Boton variante="fantasma" tamano="sm" onClick={() => abrirDetalle('negocios')}>Ver negocios</Boton>}
+            >
+              <ListaRanking
+                ranking
+                vacio="Todavía no hay ventas de negocios en este evento."
+                items={negociosOrdenados.map((n) => ({
+                  id: n.id ?? n.nombre,
+                  titulo: n.nombre,
+                  sub: `${n.ventas.filter((v) => !v.anulada).length} ventas`,
+                  valor: `${n.ventasTotal} pts`,
+                  onClick: () => abrirDetalle('negocios'),
+                }))}
+              />
+            </Panel>
 
-            <Boton variante="secundario" tamano="sm" icono={FaUserCheck} onClick={() => abrirDetalle('entradas')}>Ver detalle de participantes</Boton>
-          </section>
+            <Panel span={4} icono={FaBoxes} titulo="Productos más vendidos">
+              <ListaRanking
+                ranking
+                vacio="Todavía no se vendieron productos en este evento."
+                items={estadisticasVentas.productos.map((p) => ({
+                  id: p.nombre,
+                  titulo: p.nombre,
+                  sub: p.negocios,
+                  valor: `${p.unidades} u.`,
+                  valorSub: `${p.ingresos} pts`,
+                }))}
+              />
+            </Panel>
 
-          {/* --- PERSONAL DEL EVENTO --- */}
-          <section className="pi-dash-seccion">
-            <h3 className="pi-dash-seccion-titulo">Personal del Evento</h3>
-            <div className="pi-dash-roles-grid">
-              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('negocios')}>
-                <FaStore className="pi-dash-rol-icon" />
-                <span className="numero">{datos.negocios.length}</span>
-                <span className="label">Usuarios Negocio</span>
-              </button>
-              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('recargadores')}>
-                <FaCashRegister className="pi-dash-rol-icon" />
-                <span className="numero">{datos.recargadores.length}</span>
-                <span className="label">Recargadores</span>
-              </button>
-              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('supervisores')}>
-                <FaChartPie className="pi-dash-rol-icon" />
-                <span className="numero">{datos.supervisores.length}</span>
-                <span className="label">Supervisores</span>
-              </button>
-              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('devoluciones')}>
-                <FaBoxOpen className="pi-dash-rol-icon" />
-                <span className="numero">{datos.devoluciones.length}</span>
-                <span className="label">Devolución</span>
-              </button>
-              <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('negocios')}>
-                <FaUserFriends className="pi-dash-rol-icon" />
-                <span className="numero">{totalAyudantes}</span>
-                <span className="label">Ayudantes (total)</span>
-              </button>
-            </div>
-          </section>
+            {/* --- RANKINGS DE PERSONAS --- */}
+            <Panel span={6} icono={FaMedal} titulo="Ranking de ayudantes">
+              <ListaRanking
+                ranking
+                vacio="Aún no hay ventas de ayudantes en este evento."
+                items={estadisticasVentas.ayudantes.map((a) => ({
+                  id: a.id,
+                  titulo: a.nombre,
+                  sub: `${a.negocio} · ${a.ventas} ventas${a.productoTop ? ` · más vende ${a.productoTop}` : ''}`,
+                  valor: `${a.total} pts`,
+                  valorSub: `${a.unidades} u.`,
+                }))}
+              />
+            </Panel>
+
+            <Panel span={6} icono={FaUserFriends} titulo="Cuánto compra cada cliente">
+              <ListaRanking
+                ranking
+                vacio="Aún no hay consumo de clientes en este evento."
+                items={estadisticasVentas.clientes.map((c) => ({
+                  id: c.id,
+                  titulo: c.nombre,
+                  sub: `${c.documento || 'sin documento'} · ${c.compras} compras`,
+                  valor: `${c.total} pts`,
+                  valorSub: `${c.unidades} u.`,
+                  accion: (
+                    <Boton variante="fantasma" tamano="sm" icono={FaListUl} onClick={() => setClienteAbierto(c)} aria-label={`Ver compras de ${c.nombre}`}>
+                      Compras
+                    </Boton>
+                  ),
+                }))}
+              />
+            </Panel>
+
+            <Panel span={12} icono={FaTrophy} titulo="Producto estrella de cada negocio">
+              <Tabla
+                columnas={['Negocio', 'Producto más consumido', { texto: 'Unidades', align: 'center' }, { texto: '% del negocio', align: 'center' }, { texto: 'Unidades totales', align: 'center' }, { texto: 'Productos distintos', align: 'center' }]}
+                datos={estadisticasVentas.estrellas}
+                vacio="Aún no hay ventas de negocios en este evento."
+                renderFila={e => (
+                  <tr key={e.id}>
+                    <td><strong>{e.negocio}</strong></td>
+                    <td>{e.producto || '—'}</td>
+                    <td style={{ textAlign: 'center' }}>{e.unidades}</td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="pi-dash-porcentaje pi-dash-badge-ok">{e.pct}%</span>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>{e.unidadesNegocio}</td>
+                    <td style={{ textAlign: 'center' }}>{e.productosDistintos}</td>
+                  </tr>
+                )}
+              />
+            </Panel>
+
+            {/* --- PERSONAL DEL EVENTO --- */}
+            <Panel span={12} icono={FaUsers} titulo="Personal del evento">
+              <div className="pi-dash-roles-grid">
+                <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('negocios')}>
+                  <FaStore className="pi-dash-rol-icon" />
+                  <span className="numero">{datos.negocios.length}</span>
+                  <span className="label">Usuarios Negocio</span>
+                </button>
+                <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('recargadores')}>
+                  <FaCashRegister className="pi-dash-rol-icon" />
+                  <span className="numero">{datos.recargadores.length}</span>
+                  <span className="label">Recargadores</span>
+                </button>
+                <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('supervisores')}>
+                  <FaChartPie className="pi-dash-rol-icon" />
+                  <span className="numero">{datos.supervisores.length}</span>
+                  <span className="label">Supervisores</span>
+                </button>
+                <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('devoluciones')}>
+                  <FaBoxOpen className="pi-dash-rol-icon" />
+                  <span className="numero">{datos.devoluciones.length}</span>
+                  <span className="label">Devolución</span>
+                </button>
+                <button type="button" className="pi-dash-rol-card" onClick={() => abrirDetalle('negocios')}>
+                  <FaUserFriends className="pi-dash-rol-icon" />
+                  <span className="numero">{totalAyudantes}</span>
+                  <span className="label">Ayudantes (total)</span>
+                </button>
+              </div>
+            </Panel>
+          </Tablero>
 
           {/* --- HISTORIAL DE MANILLAS --- */}
           <section className="pi-dash-seccion">

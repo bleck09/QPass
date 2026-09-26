@@ -6,57 +6,6 @@
   gap: 28px;
 }
 
-.pi-cld-seccion {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-  box-shadow: 0 2px 10px rgba(10, 14, 39, 0.05);
-}
-
-.pi-cld-seccion-titulo {
-  font-size: var(--text-base);
-  color: var(--text-primary);
-  margin: 0;
-}
-
-.pi-cld-seccion-cab {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.pi-cld-subtitulo {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--text-primary);
-  margin: 0;
-}
-
-/* --- Barra de ocupación --- */
-.pi-cld-bar {
-  width: 100%;
-  height: 10px;
-  border-radius: var(--radius-xl);
-  background-color: var(--border);
-  overflow: hidden;
-}
-
-.pi-cld-bar-fill {
-  height: 100%;
-  border-radius: var(--radius-xl);
-  background: linear-gradient(90deg, var(--cian-digital), var(--indigo-profundo));
-  transition: width 0.5s ease;
-}
-
 /* --- Bloque E: gráfico de aforo + proyección --- */
 
 .pi-cld-proyeccion {
@@ -76,3 +25,46 @@
   gap: 8px;
   margin: 10px 0 4px;
 }
+
+/* --- Ventas de los puestos: cifras chicas en dos columnas --- */
+.pi-cld-cifras {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+}
+.pi-cld-cifras > div {
+  padding: var(--space-3);
+  background: var(--bg-sunken);
+  border-radius: var(--radius-lg);
+}
+.pi-cld-cifras dt { font-size: var(--text-xs); color: var(--text-secondary); }
+.pi-cld-cifras dd {
+  margin: 2px 0 0;
+  font-weight: var(--weight-bold);
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Equipo del evento: una ficha por rol (solo cantidades) --- */
+.pi-cld-equipo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(9rem, 100%), 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.pi-cld-equipo li {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-4) var(--space-2);
+  text-align: center;
+  background: var(--bg-sunken);
+  border-radius: var(--radius-lg);
+}
+.pi-cld-equipo svg { font-size: var(--text-lg); color: var(--indigo-profundo); }
+.pi-cld-equipo strong { font-size: var(--text-xl); color: var(--text-primary); font-variant-numeric: tabular-nums; }
+.pi-cld-equipo span { font-size: var(--text-xs); color: var(--text-secondary); }

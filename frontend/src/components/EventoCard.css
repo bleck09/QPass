@@ -22,11 +22,10 @@
   color: #fff;
   background-color: var(--n-900);
   box-shadow: 0 2px 10px rgba(10, 14, 39, 0.08);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: box-shadow 0.2s ease;
 }
 
 .qp-evento-card:hover:not(:disabled) {
-  transform: translateY(-3px);
   box-shadow: 0 18px 38px -12px rgba(10, 14, 39, 0.55);
 }
 
@@ -48,11 +47,6 @@
   background-color: var(--n-900);
   background-size: cover;
   background-position: center;
-  transition: transform 0.45s ease;
-}
-
-.qp-evento-card:hover:not(:disabled) .qp-evento-card__img {
-  transform: scale(1.09);
 }
 
 /* Scrim: más oscuro para que el título y los chips se lean siempre */
@@ -151,12 +145,6 @@
   .qp-evento-card__cta,
   .qp-evento-card__img {
     transition: none;
-  }
-  .qp-evento-card:hover:not(:disabled) {
-    transform: none;
-  }
-  .qp-evento-card:hover:not(:disabled) .qp-evento-card__img {
-    transform: none;
   }
 }
 
