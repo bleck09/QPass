@@ -25,30 +25,30 @@ const SERVICIOS = [
 // Explicación de las marcas 1-2-3 de la maqueta del panel.
 const EXPLICA_PANEL = [
   { titulo: 'Tus números clave', texto: 'Entradas vendidas contra el cupo, ingresos, recargas y consumos, actualizados al momento.' },
-  { titulo: 'Cómo avanza la venta', texto: 'Mirá semana a semana cómo se venden las entradas y decidí cuándo empujar la difusión.' },
+  { titulo: 'Cómo avanza la venta', texto: 'Mira semana a semana cómo se venden las entradas y decide cuándo empujar la difusión.' },
   { titulo: 'Qué funciona en el evento', texto: 'Ranking de puestos y productos más vendidos, más las alertas de manillas duplicadas.' },
 ];
 
 const PASOS = [
-  { titulo: 'Nos contactás', vos: 'Fecha, lugar y cuánta gente esperás.', nosotros: 'Te asesoramos sobre cómo armarlo.' },
-  { titulo: 'Armamos el evento', vos: 'Nos pasás fotos, actividades y precios.', nosotros: 'Página, entradas, QR y mapa de puestos.' },
-  { titulo: 'Publicamos y vendés', vos: 'Difundís tu evento.', nosotros: 'Lo sumamos a la cartelera y aprobamos los pagos.' },
-  { titulo: 'El día del evento', vos: 'Te enfocás en el show.', nosotros: 'Acceso con QR, recargas y cobros en puestos.' },
-  { titulo: 'Cierre', vos: 'Recibís tu informe en PDF.', nosotros: 'Cortes de caja y devolución de saldos.' },
+  { titulo: 'Nos contactas', vos: 'Fecha, lugar y cuánta gente esperas.', nosotros: 'Te asesoramos sobre cómo armarlo.' },
+  { titulo: 'Armamos el evento', vos: 'Nos pasas fotos, actividades y precios.', nosotros: 'Página, entradas, QR y mapa de puestos.' },
+  { titulo: 'Publicamos y vendes', vos: 'Difundes tu evento.', nosotros: 'Lo sumamos a la cartelera y aprobamos los pagos.' },
+  { titulo: 'El día del evento', vos: 'Te enfocas en el show.', nosotros: 'Acceso con QR, recargas y cobros en puestos.' },
+  { titulo: 'Cierre', vos: 'Recibes tu informe en PDF.', nosotros: 'Cortes de caja y devolución de saldos.' },
 ];
 
 const FLUJO_COBRO = [
   { icono: FaHandPointer, titulo: 'El cliente pide', texto: 'Elige del catálogo de tu puesto.' },
-  { icono: FaQrcode, titulo: 'Escaneás su manilla', texto: 'Vos o tu ayudante, desde el celular.' },
+  { icono: FaQrcode, titulo: 'Escaneas su manilla', texto: 'Tú o tu ayudante, desde el celular.' },
   { icono: FaCheckCircle, titulo: 'Cobro listo', texto: 'Se descuenta el saldo al instante.' },
   { icono: FaReceipt, titulo: 'Venta registrada', texto: 'Suma a tus ventas y baja tu stock.' },
 ];
 
 const BENEFICIOS_NEGOCIO = [
-  { icono: FaBoxOpen, titulo: 'Tu catálogo', texto: 'Tus productos, precios y stock, cargados por vos.' },
+  { icono: FaBoxOpen, titulo: 'Tu catálogo', texto: 'Tus productos, precios y stock, cargados por ti.' },
   { icono: FaCashRegister, titulo: 'Sin efectivo', texto: 'Nada de vuelto, billetes falsos ni cajas descuadradas.' },
   { icono: FaUserFriends, titulo: 'Tus ayudantes', texto: 'Cada ayudante con su cuenta para cobrar en el puesto.' },
-  { icono: FaChartLine, titulo: 'Tus ventas al momento', texto: 'Qué se vende, cuánto llevás y qué se está agotando.' },
+  { icono: FaChartLine, titulo: 'Tus ventas al momento', texto: 'Qué se vende, cuánto llevas y qué se está agotando.' },
 ];
 
 const PESTANAS = [
@@ -110,7 +110,7 @@ function VistaOrganizador({ onContactar }) {
           <li key={p.titulo} style={{ '--i': i }}>
             <span className="qp-info__num" aria-hidden="true">{i + 1}</span>
             <strong>{p.titulo}</strong>
-            <span className="qp-info__rol"><em>Vos</em>{p.vos}</span>
+            <span className="qp-info__rol"><em>Tú</em>{p.vos}</span>
             <span className="qp-info__rol qp-info__rol--qp"><em>QPass</em>{p.nosotros}</span>
           </li>
         ))}
@@ -118,8 +118,8 @@ function VistaOrganizador({ onContactar }) {
 
       <div className="qp-info__banda" style={{ '--foto': `url(${IMAGENES_LANDING.confeti})` }}>
         <div className="qp-info__banda-texto">
-          <h3>¿Tenés una fecha en mente?</h3>
-          <p>Contanos tu idea y te proponemos cómo armar tu evento con QPass.</p>
+          <h3>¿Tienes una fecha en mente?</h3>
+          <p>Cuéntanos tu idea y te proponemos cómo armar tu evento con QPass.</p>
         </div>
         <div className="qp-info__cta-fila">
           <Boton variante="acento" pildora iconoDerecha={FaArrowRight} onClick={() => onContactar('organizar')}>
@@ -177,8 +177,8 @@ function VistaNegocio({ onContactar }) {
 
       <div className="qp-info__banda qp-info__banda--coral" style={{ '--foto': `url(${IMAGENES_LANDING.foodTruck})` }}>
         <div className="qp-info__banda-texto">
-          <h3>¿Querés tu puesto en el próximo evento?</h3>
-          <p>Escribinos y te contamos qué eventos se vienen y cómo sumarte.</p>
+          <h3>¿Quieres tu puesto en el próximo evento?</h3>
+          <p>Escríbenos y te contamos qué eventos se vienen y cómo sumarte.</p>
         </div>
         <div className="qp-info__cta-fila">
           <Boton variante="compra" pildora iconoDerecha={FaArrowRight} onClick={() => onContactar('negocio')}>
@@ -206,10 +206,10 @@ export default function OrganizadoresSection({ onContactar }) {
       <div className="qp-info__intro qp-info__intro--invertido">
         <div className="pi-home-section-header qp-info__header">
           <span className="qp-info__eyebrow">Para organizadores y negocios</span>
-          <h2>Vos ponés el show. <span className="qp-info__resalte">Nosotros, todo lo demás.</span></h2>
+          <h2>Tú pones el show. <span className="qp-info__resalte">Nosotros, todo lo demás.</span></h2>
           <p>
             Gestionamos tu evento completo: desde la primera entrada vendida hasta
-            el informe de cierre. Y si tenés un negocio, te llevamos a vender adentro.
+            el informe de cierre. Y si tienes un negocio, te llevamos a vender adentro.
           </p>
         </div>
 
@@ -229,7 +229,7 @@ export default function OrganizadoresSection({ onContactar }) {
         items={PESTANAS}
         activo={pestana}
         onCambio={setPestana}
-        etiqueta="¿Qué buscás?"
+        etiqueta="¿Qué buscas?"
         idBase="qp-org"
         anchoCompleto
       />

@@ -277,9 +277,9 @@ export default function EventosDestacados({
           <span className="qp-dest__chip-punto" aria-hidden="true" />
           CARTELERA DESTACADA
         </p>
-        <h2 className="qp-dest__titulo">Elegí tu próximo evento</h2>
+        <h2 className="qp-dest__titulo">Elige tu próximo evento</h2>
         <p className="qp-dest__bajada">
-          Entrás con tu manilla QR y pagás sin efectivo en cualquier puesto.
+          Entras con tu manilla QR y pagas sin efectivo en cualquier puesto.
         </p>
       </div>
       )}
@@ -437,8 +437,8 @@ export default function EventosDestacados({
           <span className="qp-dest__banner-tag">POR QUÉ CONVIENE COMPRAR ANTES</span>
           <strong>Tu entrada y tu billetera, en el mismo QR</strong>
           <span>
-            Comprando con anticipación asegurás el cupo de tu jornada y llegás con la
-            manilla lista: entrás sin fila y ya podés recargar saldo para consumir adentro.
+            Comprando con anticipación aseguras el cupo de tu jornada y llegas con la
+            manilla lista: entras sin fila y ya puedes recargar saldo para consumir adentro.
           </span>
         </span>
       </aside>

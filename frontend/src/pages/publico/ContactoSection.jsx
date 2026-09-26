@@ -65,7 +65,7 @@ export default function ContactoSection({ motivo = MOTIVOS[0] }) {
     <div className="qp-contacto__grid">
       {/* --- Canales directos --- */}
       <div className="qp-contacto__canales">
-        <h3 className="qp-contacto__canales-titulo">Escribinos por donde te quede cómodo</h3>
+        <h3 className="qp-contacto__canales-titulo">Escríbenos por donde te quede cómodo</h3>
 
         <ul className="qp-contacto__lista">
           <li>
@@ -101,9 +101,9 @@ export default function ContactoSection({ motivo = MOTIVOS[0] }) {
             <FaCalendarCheck />
           </span>
           <span className="qp-contacto__destacado-txt">
-            <strong>¿Organizás un evento?</strong>
+            <strong>¿Organizas un evento?</strong>
             <span>
-              Contanos la fecha y el lugar y te armamos el cashless completo: entradas,
+              Cuéntanos la fecha y el lugar y te armamos el cashless completo: entradas,
               manillas QR, puntos de recarga y cierre de caja.
             </span>
             <em>Completá el formulario <FaArrowRight aria-hidden="true" /></em>
@@ -127,7 +127,7 @@ export default function ContactoSection({ motivo = MOTIVOS[0] }) {
           <input
             id="contacto-correo" name="correo" type="email" required
             value={form.correo} onChange={cambiar}
-            placeholder="vos@correo.com" autoComplete="email"
+            placeholder="tu@correo.com" autoComplete="email"
           />
         </div>
 
@@ -143,7 +143,7 @@ export default function ContactoSection({ motivo = MOTIVOS[0] }) {
           <textarea
             id="contacto-mensaje" name="mensaje" rows={4} required
             value={form.mensaje} onChange={cambiar}
-            placeholder="Contanos brevemente qué necesitás."
+            placeholder="Cuéntanos brevemente qué necesitas."
           />
         </div>
 
@@ -154,7 +154,7 @@ export default function ContactoSection({ motivo = MOTIVOS[0] }) {
         {/* aria-live: quien usa lector de pantalla se entera del cambio sin mover el foco. */}
         <p className="qp-contacto__aviso" role="status" aria-live="polite">
           {enviado
-            ? 'Abrimos tu correo con el mensaje listo. Si no se abrió, escribinos directo a ' + CONTACTO.correo
+            ? 'Abrimos tu correo con el mensaje listo. Si no se abrió, escríbenos directo a ' + CONTACTO.correo
             : 'Se abre tu aplicación de correo con el mensaje ya redactado.'}
         </p>
       </form>

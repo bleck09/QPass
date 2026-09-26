@@ -40,9 +40,9 @@ const CONSUMOS_CICLO = [50, 48, 45, 41, 38, 34, 31, 29, 28, 30, 33, 37, 41, 44, 
 const SALDO_CICLO = [120, 115, 115, 103, 97, 97, 85, 78, 78, 66, 54, 54, 47, 35, 35, 150, 142, 131, 131, 125];
 
 const PASOS = [
-  { icono: FaTicketAlt, titulo: 'Comprás tu entrada', detalle: 'Pagás por QR y subís el comprobante.' },
-  { icono: FaQrcode, titulo: 'Recibís tu manilla', detalle: 'Un QR único que es tu entrada y tu billetera.' },
-  { icono: FaStore, titulo: 'Consumís sin efectivo', detalle: 'El puesto escanea y descuenta de tu saldo.' },
+  { icono: FaTicketAlt, titulo: 'Compras tu entrada', detalle: 'Pagas por QR y subes el comprobante.' },
+  { icono: FaQrcode, titulo: 'Recibes tu manilla', detalle: 'Un QR único que es tu entrada y tu billetera.' },
+  { icono: FaStore, titulo: 'Consumes sin efectivo', detalle: 'El puesto escanea y descuenta de tu saldo.' },
 ];
 
 export default function HeroSection() {
@@ -200,8 +200,8 @@ export default function HeroSection() {
             </h1>
 
             <p className="qp-hero__bajada">
-              Tu entrada y tu billetera en un solo código. Entrás en segundos, recargás
-              saldo en el evento y comprás en cualquier puesto{' '}
+              Tu entrada y tu billetera en un solo código. Entras en segundos, recargas
+              saldo en el evento y compras en cualquier puesto{' '}
               <strong>sin sacar la billetera</strong>.
             </p>
 

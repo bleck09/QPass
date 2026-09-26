@@ -10,27 +10,27 @@ import './DemoCompra.css';
 const PASOS = [
   {
     icono: FaCalendarAlt,
-    titulo: 'Elegí tu evento',
-    texto: 'Buscalo en la cartelera y entrá a su página: fecha, lugar, actividades, horarios y precios.',
+    titulo: 'Elige tu evento',
+    texto: 'Búscalo en la cartelera y entra a su página: fecha, lugar, actividades, horarios y precios.',
     tip: 'Cada evento tiene su propia página con toda la información antes de comprar.',
   },
   {
     icono: FaUserPlus,
-    titulo: 'Sumá tus entradas',
-    texto: 'Elegí la categoría y cuántas querés. Podés comprar también para tus amigos.',
+    titulo: 'Suma tus entradas',
+    texto: 'Elige la categoría y cuántas quieres. Puedes comprar también para tus amigos.',
     tip: 'Cada entrada lleva el nombre y el correo de quien la va a usar.',
   },
   {
     icono: FaMobileAlt,
-    titulo: 'Pagá con QR',
-    texto: 'Escaneá el QR desde la app de tu banco y subí la foto del comprobante.',
+    titulo: 'Paga con QR',
+    texto: 'Escanea el QR desde la app de tu banco y sube la foto del comprobante.',
     tip: 'Revisamos tu comprobante y aprobamos la compra. Te avisamos por correo.',
   },
   {
     icono: FaQrcode,
-    titulo: 'Recibí tu manilla',
+    titulo: 'Recibe tu manilla',
     texto: 'Aprobado el pago, tu manilla digital con QR queda en tu cuenta. Si no tenías cuenta, te la creamos.',
-    tip: 'La mostrás en la puerta para entrar y con ella pagás todo adentro.',
+    tip: 'La muestras en la puerta para entrar y con ella pagas todo adentro.',
   },
 ];
 
@@ -51,7 +51,7 @@ function Pantalla({ paso }) {
   if (paso === 1) {
     return (
       <div className="qp-demo__pant">
-        <span className="qp-demo__rotulo">Elegí tu categoría</span>
+        <span className="qp-demo__rotulo">Elige tu categoría</span>
         {[['General', 80, 2], ['VIP', 150, 1]].map(([cat, precio, cant]) => (
           <span key={cat} className="qp-demo__fila">
             <span><b>{cat}</b><small>Bs {precio}</small></span>
@@ -61,7 +61,7 @@ function Pantalla({ paso }) {
           </span>
         ))}
         <span className="qp-demo__rotulo">Titulares</span>
-        {['Vos', 'Ana · invitada', 'Luis · invitado'].map((n) => (
+        {['Tú', 'Ana · invitada', 'Luis · invitado'].map((n) => (
           <span key={n} className="qp-demo__titular"><FaUserPlus aria-hidden="true" /> {n}</span>
         ))}
         <span className="qp-demo__total">Total <b>Bs 310</b></span>
@@ -71,7 +71,7 @@ function Pantalla({ paso }) {
   if (paso === 2) {
     return (
       <div className="qp-demo__pant qp-demo__pant--centro">
-        <span className="qp-demo__rotulo">Escaneá para pagar</span>
+        <span className="qp-demo__rotulo">Escanea para pagar</span>
         <span className="qp-demo__qr">
           <FaQrcode aria-hidden="true" />
           <span className="qp-demo__laser" />

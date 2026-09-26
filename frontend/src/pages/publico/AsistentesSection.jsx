@@ -13,8 +13,8 @@ import Boton from '../../components/Boton.jsx';
 const COMPARACION = [
   { tema: 'Entrada', antes: 'Impresa o en una foto que se puede copiar', con: 'Manilla digital con QR único y verificado' },
   { tema: 'Ingreso', antes: 'Filas largas y control a mano', con: 'Escaneo en segundos en la puerta' },
-  { tema: 'Pagos adentro', antes: 'Efectivo, vuelto y filas en cada caja', con: 'Pagás con tu manilla, sin efectivo' },
-  { tema: 'Tus gastos', antes: 'No sabés cuánto gastaste', con: 'Saldo e historial de compras y recargas' },
+  { tema: 'Pagos adentro', antes: 'Efectivo, vuelto y filas en cada caja', con: 'Pagas con tu manilla, sin efectivo' },
+  { tema: 'Tus gastos', antes: 'No sabes cuánto gastaste', con: 'Saldo e historial de compras y recargas' },
   { tema: 'Lo que sobra', antes: 'Fichas o tickets que no se devuelven', con: 'Te devolvemos el saldo que no usaste' },
   { tema: 'Si te copian', antes: 'Entra quien llegue primero', con: 'Bloqueamos la copia y verificamos al dueño' },
 ];
@@ -22,23 +22,23 @@ const COMPARACION = [
 const PREGUNTAS = [
   {
     p: '¿Necesito crear una cuenta para comprar?',
-    r: 'No es obligatorio. Si no tenés cuenta, la creamos cuando se aprueba tu compra y te enviamos el acceso por correo. La primera vez que entrás cambiás la contraseña y cargás tu CI.',
+    r: 'No es obligatorio. Si no tienes cuenta, la creamos cuando se aprueba tu compra y te enviamos el acceso por correo. La primera vez que entras cambias la contraseña y cargas tu CI.',
   },
   {
     p: '¿Cómo pago mis entradas?',
-    r: 'Con el QR de pago que aparece al comprar: lo escaneás desde la app de tu banco, hacés la transferencia y subís la foto del comprobante. Un administrador lo revisa y aprueba la compra.',
+    r: 'Con el QR de pago que aparece al comprar: lo escaneas desde la app de tu banco, haces la transferencia y subes la foto del comprobante. Un administrador lo revisa y aprueba la compra.',
   },
   {
     p: '¿Puedo comprar entradas para otras personas?',
-    r: 'Sí. En una misma compra agregás varias entradas y cargás el nombre, correo y celular de cada invitado. Cada uno recibe su propia manilla.',
+    r: 'Sí. En una misma compra agregas varias entradas y cargas el nombre, correo y celular de cada invitado. Cada uno recibe su propia manilla.',
   },
   {
     p: '¿Cómo cargo saldo para consumir adentro?',
-    r: 'En los puntos de recarga del evento. El saldo queda en tu manilla y con ella pagás en cualquier puesto. Tu saldo y tus movimientos los ves en tu cuenta.',
+    r: 'En los puntos de recarga del evento. El saldo queda en tu manilla y con ella pagas en cualquier puesto. Tu saldo y tus movimientos los ves en tu cuenta.',
   },
   {
     p: '¿Qué pasa con el saldo que no gasté?',
-    r: 'Te lo devolvemos en las cajas de devolución del evento. No perdés nada de lo que cargaste.',
+    r: 'Te lo devolvemos en las cajas de devolución del evento. No pierdes nada de lo que cargaste.',
   },
   {
     p: '¿Y si alguien copia el QR de mi manilla?',
@@ -59,10 +59,10 @@ export default function AsistentesSection() {
       <div className="qp-info__intro">
         <div className="pi-home-section-header qp-info__header">
           <span className="qp-info__eyebrow">Para asistentes</span>
-          <h2>Comprás desde el celular. <span className="qp-info__resalte">Adentro solo necesitás tu manilla.</span></h2>
+          <h2>Compras desde el celular. <span className="qp-info__resalte">Adentro solo necesitas tu manilla.</span></h2>
           <p>
             Sin entradas impresas, sin efectivo y sin filas eternas. Así funciona
-            QPass para vos, paso a paso.
+            QPass para ti, paso a paso.
           </p>
         </div>
 

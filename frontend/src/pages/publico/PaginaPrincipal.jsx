@@ -242,7 +242,7 @@ export default function PaginaPrincipal() {
         <div className="pi-home-section-header center">
           <span className="qp-info__eyebrow">Contacto</span>
           <h2>Contáctanos</h2>
-          <p>¿Tenés un evento en mente o una consulta? Te respondemos.</p>
+          <p>¿Tienes un evento en mente o una consulta? Te respondemos.</p>
         </div>
 
         <ContactoSection motivo={motivoContacto} />
@@ -257,11 +257,11 @@ export default function PaginaPrincipal() {
         target="_blank"
         rel="noreferrer"
         className={`qp-home-whatsapp${pasoHero ? ' es-visible' : ''}`}
-        aria-label="Escribinos por WhatsApp"
+        aria-label="Escríbenos por WhatsApp"
         tabIndex={pasoHero ? undefined : -1}
       >
         <FaWhatsapp aria-hidden="true" />
-        <span>¿Dudas? Escribinos</span>
+        <span>¿Dudas? Escríbenos</span>
       </a>
     </div>
   );
