@@ -23,3 +23,5 @@ lerna-debug.log*
 # Documentacion interna / reglas
 reglas/
 Qpass-Dashboards-Especificacion.txt
+# Informe de actividades (local)
+informe-actividades/
