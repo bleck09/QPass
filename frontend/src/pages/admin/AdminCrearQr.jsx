@@ -235,7 +235,7 @@ export default function AdminCrearQr({ eventoId: eventoIdProp = null, tipoManill
     }
   };
 
-  // Arma los SVG (uno por hoja) con el troquel y el QR ya vectoriales -listos
+  // Arma un .zip con un SVG por hoja (carpeta <evento>-qr/) con el troquel y el QR ya vectoriales -listos
   // para abrir directo en LightBurn, sin trazar ninguna imagen ni tipear el
   // código a mano en Tools > Create QR Code- y los descarga.
   const descargarSvg = async (lista) => {

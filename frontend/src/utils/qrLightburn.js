@@ -1,4 +1,5 @@
 import QRCode from 'qrcode';
+import { zipSync, strToU8 } from 'fflate';
 import { ETIQUETA, aNombreArchivo } from './qrPdf';
 
 /* ============================================================================
@@ -30,7 +31,8 @@ const COLOR_CORTE = '#ff0000';
 const COLOR_GRABADO = '#000000';
 const COLOR_REFERENCIA = '#999999';
 
-const HOJA_ANCHO = 210; // A4, en mm
+// Cada hoja (un .svg) mide como una plancha del material: hoy A4, en mm.
+const HOJA_ANCHO = 210;
 const HOJA_ALTO = 297;
 const MARGEN_HOJA = 10;
 
@@ -91,15 +93,18 @@ const tarjetaSvg = (x, y, codigo) => {
   return corte + qr + texto;
 };
 
-const envolverHoja = (cuerpo) => `<?xml version="1.0" encoding="UTF-8"?>\n`
+const envolverHoja = (cuerpo) => `<?xml version="1.0" encoding="UTF-8"?>
+`
   + `<svg xmlns="http://www.w3.org/2000/svg" width="${HOJA_ANCHO}mm" height="${HOJA_ALTO}mm" `
-  + `viewBox="0 0 ${HOJA_ANCHO} ${HOJA_ALTO}">\n${cuerpo}\n</svg>`;
+  + `viewBox="0 0 ${HOJA_ANCHO} ${HOJA_ALTO}">
+${cuerpo}
+</svg>`;
 
 /**
- * Arma una hoja A4 por cada tanda de etiquetas que entra, imponiéndolas en
+ * Arma una hoja por cada tanda de etiquetas que entra, imponiéndolas en
  * grilla igual que el PDF. Devuelve un array de strings SVG (una hoja = un
- * archivo, ya que SVG no tiene concepto de "páginas"). Cede el hilo cada
- * cierta cantidad para no congelar la pestaña con lotes grandes.
+ * archivo = una plancha en la láser). Cede el hilo cada cierta cantidad para
+ * no congelar la pestaña con lotes grandes.
  */
 export const construirSvgsQr = async (codigos, onProgreso) => {
   const pasoX = E.ancho + E.separacion;
@@ -111,18 +116,14 @@ export const construirSvgsQr = async (codigos, onProgreso) => {
   let x = MARGEN_HOJA;
   let y = MARGEN_HOJA;
 
-  const cerrarHoja = () => {
-    hojas.push(envolverHoja(cuerpo));
-    cuerpo = '';
-  };
-
   for (let i = 0; i < codigos.length; i++) {
     if (x + E.ancho > HOJA_ANCHO - MARGEN_HOJA) {
       x = MARGEN_HOJA;
       y += pasoY;
     }
     if (y + altoFila > HOJA_ALTO - MARGEN_HOJA) {
-      cerrarHoja();
+      hojas.push(envolverHoja(cuerpo));
+      cuerpo = '';
       x = MARGEN_HOJA;
       y = MARGEN_HOJA;
     }
@@ -133,35 +134,37 @@ export const construirSvgsQr = async (codigos, onProgreso) => {
     onProgreso?.(i + 1, codigos.length);
     if (i % 25 === 24) await new Promise((r) => setTimeout(r, 0));
   }
-  if (cuerpo) cerrarHoja();
+  if (cuerpo) hojas.push(envolverHoja(cuerpo));
 
   return hojas;
 };
 
 /**
- * Arma las hojas y las descarga (un .svg por hoja: abrir cada una en LightBurn
- * con File > Import trae el troquel, las ranuras y el QR ya vectoriales, en
- * sus capas por color — nada para generar a mano).
+ * Arma las hojas y baja UN solo `<evento>-qr.zip` que, al descomprimirlo, deja
+ * la carpeta `<evento>-qr/` con `hoja-01.svg`, `hoja-02.svg`… Cada hoja se abre
+ * en LightBurn (File > Import) con el troquel, las ranuras y el QR ya
+ * vectoriales, en sus capas por color: se corta una, se cambia la plancha y se
+ * abre la siguiente, sin mover nada a mano.
+ *
+ * Una sola descarga por clic: antes salía un .svg por hoja con varios
+ * `a.click()` seguidos, y el navegador los bloqueaba como "descargas
+ * múltiples" (y desde ahí no dejaba bajar nada más).
  */
 export const descargarSvgsQr = async (codigos, onProgreso, evento) => {
   const hojas = await construirSvgsQr(codigos, onProgreso);
-  const fecha = new Date().toISOString().slice(0, 10);
-  const base = `qr-lightburn-${aNombreArchivo(evento?.nombre)}-${fecha}`;
+  const carpeta = `${aNombreArchivo(evento?.nombre)}-qr`;
+  const archivos = Object.fromEntries(
+    hojas.map((svg, i) => [`${carpeta}/hoja-${String(i + 1).padStart(2, '0')}.svg`, strToU8(svg)]),
+  );
 
-  for (let i = 0; i < hojas.length; i++) {
-    const blob = new Blob([hojas[i]], { type: 'image/svg+xml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = hojas.length > 1 ? `${base}-hoja-${i + 1}.svg` : `${base}.svg`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 2000);
-    // Espacia las descargas: varios `a.click()` seguidos hacen que el navegador
-    // bloquee "descargas múltiples" y pida permiso.
-    if (i < hojas.length - 1) await new Promise((r) => setTimeout(r, 300));
-  }
+  const url = URL.createObjectURL(new Blob([zipSync(archivos, { level: 6 })], { type: 'application/zip' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${carpeta}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 
   return hojas.length;
 };
