@@ -168,11 +168,15 @@ export const reportesEntrada = {
 // Catálogo del negocio: puestos base + productos base, definidos una vez y
 // reutilizados entre eventos.
 export const puestosBase = {
-  listar: () => apiGet('/puestos-base'),
+  // { archivados: true } -> solo los archivados (para restaurarlos).
+  listar: (params) => apiGet(`/puestos-base${qs(params)}`),
   obtener: (id) => apiGet(`/puestos-base/${id}`),
   crear: (datos) => apiPost('/puestos-base', datos),
   actualizar: (id, datos) => apiPatch(`/puestos-base/${id}`, datos),
-  archivar: (id) => apiPost(`/puestos-base/${id}/archivar`),
+  // Borra si nunca se activó en un evento; si ya se activó, lo archiva.
+  // Responde { eliminado, archivado }.
+  eliminar: (id) => apiDelete(`/puestos-base/${id}`),
+  desarchivar: (id) => apiPost(`/puestos-base/${id}/desarchivar`),
   crearProducto: (puestoBaseId, datos) => apiPost(`/puestos-base/${puestoBaseId}/productos`, datos),
   actualizarProducto: (id, datos) => apiPatch(`/puestos-base/productos/${id}`, datos),
   eliminarProducto: (id) => apiDelete(`/puestos-base/productos/${id}`),

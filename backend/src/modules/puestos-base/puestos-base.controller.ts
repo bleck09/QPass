@@ -8,6 +8,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
 } from '@nestjs/common';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UsuarioActual } from '../../common/decorators/usuario-actual.decorator';
@@ -26,8 +27,11 @@ export class PuestosBaseController {
   constructor(private readonly service: PuestosBaseService) {}
 
   @Get()
-  listar(@UsuarioActual('id') negocioId: number) {
-    return this.service.listar(negocioId);
+  listar(
+    @UsuarioActual('id') negocioId: number,
+    @Query('archivados') archivados?: string,
+  ) {
+    return this.service.listar(negocioId, archivados === 'true');
   }
 
   @Get(':id')
@@ -56,13 +60,23 @@ export class PuestosBaseController {
     return this.service.actualizar(negocioId, id, dto);
   }
 
-  @Post(':id/archivar')
+  /** Borra si nunca se activó en un evento; si ya se activó, lo archiva. */
+  @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  archivar(
+  eliminar(
     @UsuarioActual('id') negocioId: number,
     @Param('id') id: string,
   ) {
-    return this.service.archivar(negocioId, id);
+    return this.service.eliminar(negocioId, id);
+  }
+
+  @Post(':id/desarchivar')
+  @HttpCode(HttpStatus.OK)
+  desarchivar(
+    @UsuarioActual('id') negocioId: number,
+    @Param('id') id: string,
+  ) {
+    return this.service.desarchivar(negocioId, id);
   }
 
   @Post(':id/productos')

@@ -23,10 +23,13 @@ import {
 export class PuestosBaseService {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Mi catálogo: puestos base no archivados con sus productos no archivados. */
-  async listar(negocioId: number) {
+  /**
+   * Mi catálogo: puestos base (los activos, o con `archivados` los archivados
+   * para poder restaurarlos) con sus productos no archivados.
+   */
+  async listar(negocioId: number, archivados = false) {
     return this.prisma.puestoBase.findMany({
-      where: { negocioId, archivado: false },
+      where: { negocioId, archivado: archivados },
       include: {
         productos: {
           where: { archivado: false },
@@ -82,12 +85,34 @@ export class PuestosBaseService {
     });
   }
 
-  /** Archiva el puesto base (no se borra: puede tener activaciones/ventas históricas). */
-  async archivar(negocioId: number, id: string) {
+  /**
+   * Quita un puesto base del catálogo. Si nunca se activó en ningún evento se
+   * borra de verdad (con sus productos: sin Puesto no puede tener ventas). Si
+   * ya se activó, se ARCHIVA: las activaciones, ventas y cajas lo siguen
+   * referenciando, y los eventos donde está activo siguen vendiendo igual.
+   */
+  async eliminar(negocioId: number, id: string) {
+    await this.miPuestoBase(negocioId, id);
+    const activaciones = await this.prisma.puesto.count({
+      where: { puestoBaseId: id },
+    });
+    if (activaciones > 0) {
+      await this.prisma.puestoBase.update({
+        where: { id },
+        data: { archivado: true },
+      });
+      return { archivado: true, eliminado: false };
+    }
+    await this.prisma.puestoBase.delete({ where: { id } });
+    return { archivado: false, eliminado: true };
+  }
+
+  /** Vuelve a mostrar un puesto base archivado en el catálogo. */
+  async desarchivar(negocioId: number, id: string) {
     await this.miPuestoBase(negocioId, id);
     return this.prisma.puestoBase.update({
       where: { id },
-      data: { archivado: true },
+      data: { archivado: false },
     });
   }
 

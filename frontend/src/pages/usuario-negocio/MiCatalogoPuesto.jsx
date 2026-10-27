@@ -246,7 +246,7 @@ export default function MiCatalogoPuesto() {
     }
   };
 
-  // ---------- EDITAR / ARCHIVAR PUESTO ----------
+  // ---------- EDITAR / ELIMINAR (o ARCHIVAR) / DESARCHIVAR PUESTO ----------
   const abrirEditarPuesto = () => abrirModal(() => {
     setFormPuesto({ nombre: puesto.nombre, descripcion: puesto.descripcion || '', logo: puesto.logo || '' });
     setShowEditarPuesto(true);
@@ -275,20 +275,43 @@ export default function MiCatalogoPuesto() {
     }
   };
 
-  const archivarPuesto = async () => {
-    const ok = await confirmar({
+  // Nunca activado en un evento -> se borra de verdad. Ya activado -> se
+  // archiva (el backend decide igual; acá solo cambia el texto).
+  const eliminarPuesto = async () => {
+    const usado = (puesto._count?.puestos ?? 0) > 0;
+    const ok = await confirmar(usado ? {
       titulo: `¿Archivar "${puesto.nombre}"?`,
-      mensaje: 'Dejará de aparecer en tu catálogo y no podrás activarlo en nuevos eventos. Los eventos donde ya está activado y sus ventas no se tocan.',
+      mensaje: 'Ya se usó en eventos, así que no se borra: se archiva. Deja de aparecer en tu catálogo y no podés activarlo en eventos nuevos. Los eventos donde ya está activo siguen vendiendo igual. Podés desarchivarlo cuando quieras.',
       textoConfirmar: 'Archivar',
+      peligroso: true,
+    } : {
+      titulo: `¿Eliminar "${puesto.nombre}"?`,
+      mensaje: `Nunca se activó en un evento, así que se borra para siempre junto con sus ${puesto.productos.length} producto(s). No se puede deshacer.`,
+      textoConfirmar: 'Eliminar',
       peligroso: true,
     });
     if (!ok) return;
     try {
-      await api.puestosBase.archivar(id);
-      avisos.exito(`"${puesto.nombre}" se archivó.`);
+      const r = await api.puestosBase.eliminar(id);
+      avisos.exito(r.eliminado ? `"${puesto.nombre}" se eliminó.` : `"${puesto.nombre}" se archivó.`);
       navigate('/usuarionegocio/catalogo');
     } catch (e2) {
-      avisos.error(e2.message, { titulo: 'No se pudo archivar el puesto' });
+      avisos.error(e2.message, { titulo: usado ? 'No se pudo archivar el puesto' : 'No se pudo eliminar el puesto' });
+    }
+  };
+
+  // Reversible: sin confirmación, solo aviso.
+  const [desarchivando, setDesarchivando] = useState(false);
+  const desarchivarPuesto = async () => {
+    setDesarchivando(true);
+    try {
+      await api.puestosBase.desarchivar(id);
+      setPuesto(p => ({ ...p, archivado: false }));
+      avisos.exito(`"${puesto.nombre}" volvió a tu catálogo.`);
+    } catch (e2) {
+      avisos.error(e2.message, { titulo: 'No se pudo desarchivar el puesto' });
+    } finally {
+      setDesarchivando(false);
     }
   };
 
@@ -356,9 +379,24 @@ export default function MiCatalogoPuesto() {
 
         <div className="btn-acciones">
           <Boton variante="secundario" tamano="sm" icono={FaPen} onClick={abrirEditarPuesto}>Editar puesto</Boton>
-          <Boton variante="peligro-suave" tamano="sm" icono={FaArchive} onClick={archivarPuesto}>Archivar</Boton>
+          {puesto.archivado ? (
+            <Boton variante="primario" tamano="sm" icono={FaBoxOpen} onClick={desarchivarPuesto} cargando={desarchivando}>
+              Desarchivar
+            </Boton>
+          ) : (puesto._count?.puestos ?? 0) > 0 ? (
+            <Boton variante="peligro-suave" tamano="sm" icono={FaArchive} onClick={eliminarPuesto}>Archivar</Boton>
+          ) : (
+            <Boton variante="peligro-suave" tamano="sm" icono={FaTrash} onClick={eliminarPuesto}>Eliminar</Boton>
+          )}
         </div>
       </div>
+
+      {puesto.archivado && (
+        <AvisoFijo tono="aviso" icono={FaArchive} titulo="Puesto archivado">
+          No aparece en tu catálogo ni se puede activar en eventos nuevos. Los eventos donde ya
+          estaba activo siguen vendiendo igual. Desarchivalo para volver a usarlo.
+        </AvisoFijo>
+      )}
 
       <div className="pi-mcat-prod-bar">
         <h2><FaBoxOpen aria-hidden="true" /> Productos del catálogo</h2>

@@ -25,13 +25,23 @@ import './UsuarioNegocio.css';
 import './MiCatalogo.css';
 
 const FORM_PUESTO = { nombre: '', descripcion: '', logo: '' };
+const FILTROS = [
+  { valor: 'activos', texto: 'En catálogo' },
+  { valor: 'archivados', texto: 'Archivados' },
+];
 
 export default function MiCatalogo() {
   useTituloPagina('Mi catálogo');
   const navigate = useNavigate();
   const avisos = useAvisos();
 
-  const cargar = useCallback(() => api.puestosBase.listar(), []);
+  // Activos o archivados (estos últimos, para poder desarchivarlos).
+  const [filtro, setFiltro] = useState('activos');
+  const verArchivados = filtro === 'archivados';
+  const cargar = useCallback(
+    () => api.puestosBase.listar(verArchivados ? { archivados: true } : undefined),
+    [verArchivados],
+  );
   const {
     data: puestosBase,
     cargando,
@@ -91,11 +101,19 @@ export default function MiCatalogo() {
         titulo="Mi catálogo"
         subtitulo="Definí tus puestos y sus productos una sola vez. Después los activás en cada evento sin volver a cargarlos."
         icono={FaStore}
-        acciones={<StatCard icon={<FaStore />} tono="info" valor={puestosBase.length} label="Puestos en catálogo" />}
+        acciones={!verArchivados && <StatCard icon={<FaStore />} tono="info" valor={puestosBase.length} label="Puestos en catálogo" />}
       />
 
       <div className="pi-unegocio-action-bar">
-        <Buscador valor={busqueda} onCambio={setBusqueda} placeholder="Buscar puesto por nombre…" />
+        <Buscador
+          valor={busqueda}
+          onCambio={setBusqueda}
+          placeholder="Buscar puesto por nombre…"
+          filtros={FILTROS}
+          filtroActivo={filtro}
+          onFiltro={setFiltro}
+          etiquetaFiltros="Ver puestos en catálogo o archivados"
+        />
         <Boton icono={FaPlus} onClick={abrirCrear}>Nuevo puesto base</Boton>
       </div>
 
@@ -109,7 +127,9 @@ export default function MiCatalogo() {
          
           vacio={busqueda
             ? <EstadoVacio compacto icono={FaSearch} titulo="Ningún puesto coincide con la búsqueda" />
-            : (
+            : verArchivados ? (
+              <EstadoVacio compacto icono={FaArchive} titulo="No tenés puestos archivados" />
+            ) : (
               <EstadoVacio
                 icono={FaStore}
                 titulo="Aún no tenés puestos en tu catálogo"
