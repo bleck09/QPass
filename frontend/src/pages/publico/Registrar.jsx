@@ -31,7 +31,9 @@ const PASOS = [
 const validarPaso1 = (d) => limpiarErrores({
   'reg-nombre': errorNombre(d.nombre, { mensajeObligatorio: 'Escribí tu nombre.' }),
   'reg-paterno': errorNombre(d.paterno, { mensajeObligatorio: 'Escribí tu apellido paterno.' }),
-  'reg-materno': errorNombre(d.materno, { mensajeObligatorio: 'Escribí tu apellido materno.' }),
+  // Materno opcional: no todos tienen dos apellidos. Si lo escriben, igual se
+  // valida que no tenga números ni símbolos.
+  'reg-materno': errorNombre(d.materno, { obligatorio: false }),
   // CI opcional: no todos los usuarios tienen CI boliviano (ej. extranjeros
   // con pasaporte) — si lo dejan vacío, no bloquea el registro.
 });
@@ -152,7 +154,8 @@ export default function Registrar() {
         rol: ROLES.USUARIO_NORMAL,
         nombre: datos.nombre.trim(),
         apellidoPaterno: datos.paterno.trim(),
-        apellidoMaterno: datos.materno.trim(),
+        // Vacío -> undefined: el backend valida el formato de lo que llega, y "" no pasa.
+        apellidoMaterno: datos.materno.trim() || undefined,
         email: datos.email.trim(),
         tipoDocumento: datos.ci.trim() ? datos.tipoDocumento : undefined,
         ci: datos.ci.trim() || undefined,
@@ -203,7 +206,7 @@ export default function Registrar() {
                 <div className="pi-register-grid">
                   <Campo id="reg-paterno" etiqueta="Apellido paterno" icono={FaUser} autoComplete="family-name" maxLength={80}
                     placeholder="Pérez" value={datos.paterno} onChange={cambiar('paterno')} error={errores['reg-paterno']} />
-                  <Campo id="reg-materno" etiqueta="Apellido materno" icono={FaUser} autoComplete="additional-name" maxLength={80}
+                  <Campo id="reg-materno" etiqueta="Apellido materno (opcional)" icono={FaUser} autoComplete="additional-name" maxLength={80}
                     placeholder="Gómez" value={datos.materno} onChange={cambiar('materno')} error={errores['reg-materno']} />
                 </div>
 
