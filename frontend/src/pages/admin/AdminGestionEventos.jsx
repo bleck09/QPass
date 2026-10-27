@@ -323,8 +323,11 @@ export default function AdminGestionEventos() {
       ...resto,
       // Sin hora todavía: abarca el/los día(s) completo(s) elegidos en el
       // calendario; la hora real de cada noche se define en Jornadas.
-      fecha: `${diaInicio}T00:00`,
-      fechaFin: `${diaFin}T23:59`,
+      // Con zona horaria (toISOString), igual que las jornadas: mandado como
+      // "2026-11-09T00:00" a secas, el servidor lo tomaba como UTC y en
+      // Bolivia (UTC-4) el evento arrancaba el día anterior a las 20:00.
+      fecha: new Date(`${diaInicio}T00:00`).toISOString(),
+      fechaFin: new Date(`${diaFin}T23:59`).toISOString(),
       ...(clienteId ? { clienteId: Number(clienteId) } : {}),
       ...(diasParaRetiro ? { diasParaRetiro: Number(diasParaRetiro) } : {}),
     };

@@ -56,8 +56,17 @@ const SOLICITUD_VACIA = {
   cronograma: [{ hora: '', actividad: '' }],
 };
 
-// Los inputs datetime-local necesitan "YYYY-MM-DDTHH:mm"; el backend devuelve ISO completo.
-const paraInputFecha = (iso) => (iso ? iso.slice(0, 16) : '');
+// Los inputs datetime-local necesitan "YYYY-MM-DDTHH:mm" en hora LOCAL; el
+// backend devuelve ISO en UTC. Cortar el ISO a secas mostraba la hora UTC
+// (4 h corrida en Bolivia).
+const paraInputFecha = (iso) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+};
+// Y de vuelta: "YYYY-MM-DDTHH:mm" local -> ISO con zona (sin esto el servidor
+// lo tomaba como UTC).
+const aIsoConZona = (local) => (local ? new Date(local).toISOString() : local);
 
 const validarSolicitud = (s) => limpiarErrores({
   'sol-nombreEvento': errorObligatorio(s.nombreEvento, 'Escribí el nombre del evento.'),
@@ -402,6 +411,8 @@ function FormularioPropuesta({ inicial, onVolver, onGuardada }) {
       Object.entries(resto).filter(([campo]) => !CAMPOS_SOLO_LECTURA.includes(campo)),
     );
     if (aforoEstimado !== '' && aforoEstimado != null) datosEnvio.aforoEstimado = Number(aforoEstimado);
+    if ('fecha' in datosEnvio) datosEnvio.fecha = aIsoConZona(datosEnvio.fecha);
+    if ('fechaFin' in datosEnvio) datosEnvio.fechaFin = aIsoConZona(datosEnvio.fechaFin);
 
     setEnviando(true);
     try {
