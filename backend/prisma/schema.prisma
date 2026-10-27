@@ -721,6 +721,7 @@ model Entrada {
   reportesDatos    ReporteEntrada[]
   registrosIngreso RegistroIngreso[] // historial completo de reingresos, cada uno con su foto
   casosDuplicado   CasoDuplicado[]
+  cortesias        CortesiaEntregada[]
 
   @@unique([eventoId, numero])
   @@index([eventoId, estadoIngreso])
@@ -1027,10 +1028,11 @@ model ProductoBase {
   archivado    Boolean  @default(false) // no se borra si ya tiene VentaItem
   createdAt    DateTime @default(now())
 
-  puestoBase  PuestoBase       @relation(fields: [puestoBaseId], references: [id], onDelete: Cascade)
+  puestoBase  PuestoBase          @relation(fields: [puestoBaseId], references: [id], onDelete: Cascade)
   estados     ProductoEstado[]
   ventaItems  VentaItem[]
   avisosStock AvisoStock[]
+  cortesias   CortesiaEntregada[]
 
   @@index([puestoBaseId])
   @@map("productos_base")
@@ -1042,6 +1044,8 @@ model ProductoBase {
 //   stock null   => sin control de inventario; si es número, cada venta lo
 //                   decrementa (guardado) y una anulación lo restituye.
 //   precio null  => usa ProductoBase.precio; si tiene valor, lo sobrescribe.
+//   esCortesia   => se entrega UNA sola vez por manilla (ver CortesiaEntregada),
+//                   y cuenta para el tope opcional Puesto.cortesiasPorPersona.
 model ProductoEstado {
   id             String   @id @default(cuid())
   puestoId       String
@@ -1049,6 +1053,7 @@ model ProductoEstado {
   activo         Boolean  @default(true)
   stock          Int?
   precio         Decimal? @db.Decimal(10, 2)
+  esCortesia     Boolean  @default(false)
 
   puesto       Puesto       @relation(fields: [puestoId], references: [id], onDelete: Cascade)
   productoBase ProductoBase @relation(fields: [productoBaseId], references: [id], onDelete: Cascade)
@@ -1099,29 +1104,34 @@ model AvisoStock {
 // x/y/ancho/alto los define el ADMIN (posición en el mapa del recinto).
 // nombre/logo/catálogo se leen del PuestoBase.
 model Puesto {
-  id           String   @id @default(cuid())
-  eventoId     String
-  negocioId    Int
-  puestoBaseId String
-  x            Float    @default(0)
-  y            Float    @default(0)
-  ancho        Float    @default(100)
-  alto         Float    @default(100)
-  estadoActivo Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @default(now()) @updatedAt
+  id                  String   @id @default(cuid())
+  eventoId            String
+  negocioId           Int
+  puestoBaseId        String
+  x                   Float    @default(0)
+  y                   Float    @default(0)
+  ancho               Float    @default(100)
+  alto                Float    @default(100)
+  estadoActivo        Boolean  @default(true)
+  // Tope TOTAL de cortesías distintas por manilla en este puesto. null = sin
+  // tope (cada producto de cortesía igual se entrega una sola vez); 1 = elige
+  // una sola entre todas.
+  cortesiasPorPersona Int?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @default(now()) @updatedAt
 
-  evento          Evento           @relation(fields: [eventoId], references: [id], onDelete: Cascade)
-  negocio         Usuario          @relation("NegocioDueno", fields: [negocioId], references: [id])
+  evento          Evento              @relation(fields: [eventoId], references: [id], onDelete: Cascade)
+  negocio         Usuario             @relation("NegocioDueno", fields: [negocioId], references: [id])
   // FK COMPUESTA: ata el puesto a un PuestoBase DEL MISMO negocio. Sin esto, la BD
   // aceptaba que el negocio A activara el catálogo de B y las ventas se acreditaran
   // a la billetera equivocada.
-  base            PuestoBase       @relation(fields: [puestoBaseId, negocioId], references: [id, negocioId])
+  base            PuestoBase          @relation(fields: [puestoBaseId, negocioId], references: [id, negocioId])
   productosEstado ProductoEstado[]
   ayudantes       PuestoAyudante[]
   ventas          Venta[]
   avisosStock     AvisoStock[]
   alertasManilla  AlertaManilla[]
+  cortesias       CortesiaEntregada[]
 
   @@unique([eventoId, puestoBaseId])
   @@index([eventoId])
@@ -1199,12 +1209,13 @@ model Venta {
   anuladaPorId    Int?
   motivoAnulacion String?
 
-  puesto        Puesto        @relation(fields: [puestoId], references: [id], onDelete: Restrict)
-  ayudante      Usuario       @relation("Vendedor", fields: [ayudanteId], references: [id])
-  entrada       Entrada       @relation(fields: [entradaId], references: [id])
-  anuladaPor    Usuario?      @relation("VentaAnuladaPor", fields: [anuladaPorId], references: [id])
+  puesto        Puesto              @relation(fields: [puestoId], references: [id], onDelete: Restrict)
+  ayudante      Usuario             @relation("Vendedor", fields: [ayudanteId], references: [id])
+  entrada       Entrada             @relation(fields: [entradaId], references: [id])
+  anuladaPor    Usuario?            @relation("VentaAnuladaPor", fields: [anuladaPorId], references: [id])
   items         VentaItem[]
-  transacciones Transaccion[] // 2 al crear (consumo + venta); +2 al anular (reverso_*)
+  transacciones Transaccion[] // 2 al crear (consumo + venta); +2 al anular (reverso_*). 0 si la venta es de Bs 0 (solo cortesías)
+  cortesias     CortesiaEntregada[]
 
   @@index([puestoId, createdAt])
   @@index([ayudanteId, createdAt])
@@ -1227,6 +1238,31 @@ model VentaItem {
   @@index([ventaId])
   @@index([productoBaseId])
   @@map("venta_items")
+}
+
+// Una cortesía (ProductoEstado.esCortesia) ya entregada a una manilla. El
+// @@unique impide recibir dos veces el mismo producto aunque lleguen dos
+// escaneos a la vez; el tope total (Puesto.cortesiasPorPersona) se cuenta con
+// la fila de la Entrada bloqueada (FOR UPDATE) dentro del $transaction de la
+// venta. Anular la venta borra sus filas y la cortesía queda disponible.
+model CortesiaEntregada {
+  id             String   @id @default(cuid())
+  puestoId       String
+  entradaId      String
+  productoBaseId String
+  ventaId        String
+  createdAt      DateTime @default(now())
+
+  puesto       Puesto       @relation(fields: [puestoId], references: [id], onDelete: Cascade)
+  entrada      Entrada      @relation(fields: [entradaId], references: [id], onDelete: Cascade)
+  productoBase ProductoBase @relation(fields: [productoBaseId], references: [id], onDelete: Cascade)
+  venta        Venta        @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+
+  @@unique([puestoId, entradaId, productoBaseId])
+  @@index([entradaId])
+  @@index([productoBaseId])
+  @@index([ventaId])
+  @@map("cortesias_entregadas")
 }
 
 // Configuración publicada de la landing pública de un evento (una por evento).

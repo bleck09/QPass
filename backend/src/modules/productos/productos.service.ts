@@ -51,12 +51,13 @@ export class ProductosService {
         precioSobrescrito: est?.precio != null,
         activo: est?.activo ?? true,
         stock: est?.stock ?? null,
+        esCortesia: est?.esCortesia ?? false,
       };
     });
   }
 
   /**
-   * Upsert del estado de un producto base en un puesto: activo / stock / precio
+   * Upsert del estado de un producto base en un puesto: activo / stock / precio / cortesía
    * (precio null = vuelve al del base). Guarda de dueño vía el puesto.
    */
   async actualizarEstado(dto: EstadoProductoDto, actor: UsuarioJwt) {
@@ -77,11 +78,16 @@ export class ProductosService {
       throw new BadRequestException('Ese producto no pertenece a este puesto');
     }
 
-    const set: { activo?: boolean; stock?: number | null; precio?: number | null } =
-      {};
+    const set: {
+      activo?: boolean;
+      stock?: number | null;
+      precio?: number | null;
+      esCortesia?: boolean;
+    } = {};
     if (dto.activo !== undefined) set.activo = dto.activo;
     if (dto.stock !== undefined) set.stock = dto.stock;
     if (dto.precio !== undefined) set.precio = dto.precio;
+    if (dto.esCortesia !== undefined) set.esCortesia = dto.esCortesia;
 
     return this.prisma.productoEstado.upsert({
       where: {
@@ -96,6 +102,7 @@ export class ProductosService {
         activo: set.activo ?? true,
         stock: set.stock ?? null,
         precio: set.precio ?? null,
+        esCortesia: set.esCortesia ?? false,
       },
       update: set,
     });

@@ -27,7 +27,7 @@ import {
   FaStore, FaShoppingCart, FaPlus, FaTrash, FaQrcode,
   FaIdCard, FaWallet, FaCheckCircle, FaExclamationTriangle, FaHistory,
   FaReceipt, FaHamburger, FaMapMarkerAlt, FaCalendarAlt, FaBell,
-  FaTicketAlt, FaMoon, FaHashtag, FaSearch,
+  FaTicketAlt, FaMoon, FaHashtag, FaSearch, FaGift,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
@@ -234,6 +234,26 @@ export default function Ayudante() {
   }, [ventas, busquedaVentas]);
 
   const saldoInsuficiente = tarjetaQR && totalCarrito > Number(tarjetaQR.saldo);
+  // Cortesías del carrito que esta manilla ya recibió, o que pasan el tope.
+  const problemaCortesia = (() => {
+    if (!tarjetaQR) return null;
+    const entregadas = tarjetaQR.cortesiasEntregadas || [];
+    const enCarrito = carrito.filter(i => i.esCortesia);
+    if (enCarrito.length === 0) return null;
+    const repetidas = enCarrito.filter(i => entregadas.some(e => e.productoId === i.id));
+    if (repetidas.length) {
+      const nombres = repetidas.map(i => i.nombre).join(', ');
+      return `Ya recibió su cortesía de ${nombres}. Quitala del carrito para cobrar lo demás.`;
+    }
+    const tope = puesto?.cortesiasPorPersona;
+    if (tope != null && entregadas.length + enCarrito.length > tope) {
+      const quedan = Math.max(0, tope - entregadas.length);
+      return quedan === 0
+        ? `Ya recibió ${tope === 1 ? 'su cortesía' : `sus ${tope} cortesías`} (${entregadas.map(e => e.nombre).join(', ')}).`
+        : `Le ${quedan === 1 ? 'queda 1 cortesía' : `quedan ${quedan} cortesías`}: quitá las demás del carrito.`;
+    }
+    return null;
+  })();
   // La manilla es de UN evento y su saldo solo vale ahí: si es de otro, no se
   // cobra acá (el backend lo rechaza igual, ver ventas.service.crear).
   const eventoNoCoincide = !!(
@@ -247,10 +267,28 @@ export default function Ayudante() {
     return p?.stock == null ? Infinity : p.stock;
   };
 
+  // Cortesías: cada una va 1 sola vez por persona, y entre todas no más que el
+  // tope del puesto (si tiene). El backend lo vuelve a controlar al cobrar.
+  const topeCortesias = puesto?.cortesiasPorPersona ?? Infinity;
+  const cortesiasEnCarrito = carrito.filter(i => i.esCortesia).length;
+  const avisoCortesia = (producto) => {
+    if (!producto.esCortesia) return null;
+    if (carrito.some(i => i.id === producto.id)) return 'Cortesía: 1 por persona';
+    if (cortesiasEnCarrito >= topeCortesias) {
+      return topeCortesias === 1 ? 'Solo 1 cortesía por persona' : `Máximo ${topeCortesias} cortesías por persona`;
+    }
+    return null;
+  };
+
   const agregarProducto = (producto) => {
     const enCarrito = carrito.find(i => i.id === producto.id)?.cantidad ?? 0;
     if (enCarrito >= topeStock(producto.id)) {
       setAvisoCantidad({ id: producto.id, texto: `Solo quedan ${producto.stock}` });
+      return;
+    }
+    const textoCortesia = avisoCortesia(producto);
+    if (textoCortesia) {
+      setAvisoCantidad({ id: producto.id, texto: textoCortesia });
       return;
     }
     setAvisoCantidad(null);
@@ -266,6 +304,10 @@ export default function Ayudante() {
       const actual = carrito.find(i => i.id === id)?.cantidad ?? 0;
       if (actual >= topeStock(id)) {
         setAvisoCantidad({ id, texto: `Solo quedan ${productos.find(p => p.id === id)?.stock}` });
+        return;
+      }
+      if (productos.find(p => p.id === id)?.esCortesia) {
+        setAvisoCantidad({ id, texto: 'Cortesía: 1 por persona' });
         return;
       }
     }
@@ -319,11 +361,17 @@ export default function Ayudante() {
         setErrorEscaneo('Este participante no tiene una cuenta con billetera — no se le puede cobrar.');
         return;
       }
+      // Si el carrito lleva cortesías, se mira cuáles ya recibió esta manilla
+      // en el puesto: así el ayudante lo ve antes de intentar cobrar.
+      const cortesias = carrito.some(i => i.esCortesia)
+        ? await api.ventas.cortesias(puesto.id, entrada.id).catch(() => null)
+        : null;
       setVentaExitosa(null);
       setTarjetaQR({
         ...entrada,
         saldo: Number(entrada.usuario?.saldo ?? 0), // ya viene como DISPONIBLE (sin lo retenido)
         saldoBloqueado: Number(entrada.usuario?.saldoBloqueado ?? 0),
+        cortesiasEntregadas: cortesias?.entregadas ?? [],
       });
     } catch (err) {
       if (esManillaFalsa(err)) setManillaFalsa(err.detalle);
@@ -341,7 +389,7 @@ export default function Ayudante() {
 
 
   const confirmarCobro = async () => {
-    if (cobrando || !tarjetaQR || eventoNoCoincide || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
+    if (cobrando || !tarjetaQR || eventoNoCoincide || problemaCortesia || carrito.length === 0 || totalCarrito > Number(tarjetaQR.saldo)) return;
 
     const nuevoSaldo = Number(tarjetaQR.saldo) - totalCarrito;
     setErrorCobro('');
@@ -572,6 +620,7 @@ export default function Ayudante() {
                       : <div className="pi-ayu-producto-img-placeholder"><FaHamburger /></div>}
                     <span className="pi-ayu-producto-nombre">{producto.nombre}</span>
                     <span className="pi-ayu-producto-precio">{Number(producto.precio)} pts</span>
+                    {producto.esCortesia && <Insignia tono="info" icono={FaGift}>Cortesía · 1 por persona</Insignia>}
 
                     {bloqueado ? (
                       <Insignia tono="danger" icono={FaExclamationTriangle}>{estadoStk === 'inactivo' ? 'No disponible' : 'Sin stock'}</Insignia>
@@ -788,8 +837,10 @@ export default function Ayudante() {
             {ventaExitosa ? (
               <div className="pi-ayu-exito">
                 <FaCheckCircle className="pi-ayu-exito-ic" aria-hidden="true" />
-                <h3>¡Venta cobrada!</h3>
-                <p>Se descontaron <strong>{ventaExitosa.monto} pts</strong> a {tarjetaQR.nombre}.</p>
+                <h3>{ventaExitosa.monto > 0 ? '¡Venta cobrada!' : '¡Cortesía entregada!'}</h3>
+                {ventaExitosa.monto > 0
+                  ? <p>Se descontaron <strong>{ventaExitosa.monto} pts</strong> a {tarjetaQR.nombre}.</p>
+                  : <p>No se descontó saldo a {tarjetaQR.nombre}.</p>}
                 <div className="pi-ayu-exito-saldo">
                   <FaWallet aria-hidden="true" /> Saldo restante: <strong>{ventaExitosa.saldo} pts</strong>
                 </div>
@@ -845,6 +896,10 @@ export default function Ayudante() {
                   </AvisoFijo>
                 )}
 
+                {!eventoNoCoincide && problemaCortesia && (
+                  <AvisoFijo tono="error" icono={FaGift} titulo="Cortesía ya entregada">{problemaCortesia}</AvisoFijo>
+                )}
+
                 {errorCobro && <AvisoFijo tono="error" titulo="No se pudo cobrar">{errorCobro}</AvisoFijo>}
 
                 <div className="modal-actions">
@@ -855,9 +910,9 @@ export default function Ayudante() {
                     icono={FaCheckCircle}
                     onClick={confirmarCobro}
                     cargando={cobrando}
-                    disabled={saldoInsuficiente || eventoNoCoincide}
+                    disabled={saldoInsuficiente || eventoNoCoincide || !!problemaCortesia}
                   >
-                    {cobrando ? 'Cobrando…' : `Cobrar ${totalCarrito} pts`}
+                    {cobrando ? 'Cobrando…' : totalCarrito > 0 ? `Cobrar ${totalCarrito} pts` : 'Entregar cortesía'}
                   </Boton>
                 </div>
               </>

@@ -5,6 +5,12 @@
  * Abre el $transaction, crea la Venta + items, y delega TODO el movimiento de
  * saldo a TransaccionesService.registrarVenta(tx, ...) (C7): partida doble con
  * el mismo ventaId, atómica con la creación de la Venta.
+ *
+ * Cortesías (ProductoEstado.esCortesia): cada manilla recibe cada producto de
+ * cortesía UNA sola vez por puesto, y como mucho Puesto.cortesiasPorPersona en
+ * total (si hay tope). Quedan registradas en CortesiaEntregada; anular la
+ * venta las libera. Una venta de Bs 0 (solo cortesías) no toca la billetera:
+ * la recibe también quien nunca cargó saldo.
  * ========================================================================= */
 
 import {
@@ -14,6 +20,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { EventoPolicy } from '../../common/politicas/evento-policy.service';
 import { TransaccionesService } from '../transacciones/transacciones.service';
@@ -58,6 +65,38 @@ export class VentasService {
       },
       orderBy: { createdAt: 'desc' },
     });
+  }
+
+  /**
+   * Cortesías de un puesto y cuáles ya recibió una manilla — para que el
+   * Ayudante lo vea apenas escanea, antes de intentar cobrar.
+   */
+  async cortesias(puestoId?: string, entradaId?: string) {
+    if (!puestoId || !entradaId) {
+      throw new BadRequestException('puestoId y entradaId son requeridos');
+    }
+    const puesto = await this.prisma.puesto.findUnique({
+      where: { id: puestoId },
+      select: { cortesiasPorPersona: true },
+    });
+    if (!puesto) throw new NotFoundException('Puesto no encontrado');
+    const entregadas = await this.prisma.cortesiaEntregada.findMany({
+      where: { puestoId, entradaId },
+      select: {
+        productoBaseId: true,
+        createdAt: true,
+        productoBase: { select: { nombre: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    return {
+      tope: puesto.cortesiasPorPersona,
+      entregadas: entregadas.map((c) => ({
+        productoId: c.productoBaseId,
+        nombre: c.productoBase.nombre,
+        entregadaEn: c.createdAt,
+      })),
+    };
   }
 
   async crear(dto: CrearVentaDto, actor: UsuarioJwt) {
@@ -115,6 +154,7 @@ export class VentasService {
         }),
       ]);
       const estadoDe = new Map(estados.map((e) => [e.productoBaseId, e]));
+      const cortesiasCarrito: { productoBaseId: string; nombre: string }[] = [];
       const lineas = dto.items.map((i) => {
         const base = bases.find((p) => p.id === i.productoId);
         if (!base) {
@@ -125,6 +165,17 @@ export class VentasService {
         if (estado && !estado.activo) {
           throw new ConflictException(`"${base.nombre}" no está disponible`);
         }
+        if (estado?.esCortesia) {
+          if (
+            i.cantidad > 1 ||
+            cortesiasCarrito.some((c) => c.productoBaseId === i.productoId)
+          ) {
+            throw new ConflictException(
+              `"${base.nombre}" es una cortesía: se entrega 1 sola por persona.`,
+            );
+          }
+          cortesiasCarrito.push({ productoBaseId: i.productoId, nombre: base.nombre });
+        }
         return {
           productoBaseId: i.productoId,
           nombreProducto: base.nombre,
@@ -132,6 +183,36 @@ export class VentasService {
           cantidad: i.cantidad,
         };
       });
+
+      if (cortesiasCarrito.length) {
+        // Bloquea la fila de la Entrada hasta el fin del $transaction: dos
+        // escaneos simultáneos de la misma manilla se atienden de a uno, así
+        // el conteo contra el tope no se puede colar.
+        await tx.$queryRaw(
+          Prisma.sql`SELECT id FROM "entradas" WHERE id = ${dto.entradaId} FOR UPDATE`,
+        );
+        const previas = await tx.cortesiaEntregada.findMany({
+          where: { puestoId: dto.puestoId, entradaId: dto.entradaId },
+          select: { productoBaseId: true },
+        });
+        const yaRecibida = cortesiasCarrito.find((c) =>
+          previas.some((p) => p.productoBaseId === c.productoBaseId),
+        );
+        if (yaRecibida) {
+          throw new ConflictException(
+            `Esta manilla ya recibió su cortesía de "${yaRecibida.nombre}".`,
+          );
+        }
+        const tope = puesto.cortesiasPorPersona;
+        if (tope != null && previas.length + cortesiasCarrito.length > tope) {
+          const quedan = Math.max(0, tope - previas.length);
+          throw new ConflictException(
+            quedan === 0
+              ? `Esta manilla ya recibió ${tope === 1 ? 'su cortesía' : `sus ${tope} cortesías`} en este puesto.`
+              : `A esta manilla le ${quedan === 1 ? 'queda 1 cortesía' : `quedan ${quedan} cortesías`} en este puesto: quitá las demás del carrito.`,
+          );
+        }
+      }
 
       // §5.4 — descuento de inventario (solo productos con stock controlado en
       // este puesto). Guardado: si no alcanza, count = 0 y revierte el $transaction.
@@ -168,17 +249,32 @@ export class VentasService {
         include: { items: true },
       });
 
+      if (cortesiasCarrito.length) {
+        await tx.cortesiaEntregada.createMany({
+          data: cortesiasCarrito.map((c) => ({
+            puestoId: dto.puestoId,
+            entradaId: dto.entradaId,
+            productoBaseId: c.productoBaseId,
+            ventaId: venta.id,
+          })),
+        });
+      }
+
       // Movimiento de saldo: única puerta al ledger (C7). Si el consumo no
       // alcanza, esto lanza y TODO el $transaction (incluida la Venta) revierte.
-      await this.transacciones.registrarVenta(tx, {
-        eventoId: entrada.eventoId,
-        ventaId: venta.id,
-        entradaId: dto.entradaId,
-        duenoEntradaId: entrada.usuarioId,
-        duenoNegocioId: puesto.negocioId,
-        monto: montoTotal,
-        operadorId: ayudanteId,
-      });
+      // Bs 0 (solo cortesías): no hay nada que mover, y quien nunca cargó saldo
+      // ni siquiera tiene billetera en el evento (el débito fallaba).
+      if (montoTotal > 0) {
+        await this.transacciones.registrarVenta(tx, {
+          eventoId: entrada.eventoId,
+          ventaId: venta.id,
+          entradaId: dto.entradaId,
+          duenoEntradaId: entrada.usuarioId,
+          duenoNegocioId: puesto.negocioId,
+          monto: montoTotal,
+          operadorId: ayudanteId,
+        });
+      }
 
       return venta;
     });
@@ -211,15 +307,20 @@ export class VentasService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      await this.transacciones.anularVenta(tx, {
-        eventoId: venta.entrada.eventoId,
-        ventaId: venta.id,
-        entradaId: venta.entradaId,
-        duenoEntradaId: venta.entrada.usuarioId!,
-        duenoNegocioId: venta.puesto.negocioId,
-        monto: Number(venta.montoTotal),
-        operadorId: actor.id,
-      });
+      // Una venta de Bs 0 (solo cortesías) no movió saldo: no hay qué revertir.
+      if (Number(venta.montoTotal) > 0) {
+        await this.transacciones.anularVenta(tx, {
+          eventoId: venta.entrada.eventoId,
+          ventaId: venta.id,
+          entradaId: venta.entradaId,
+          duenoEntradaId: venta.entrada.usuarioId!,
+          duenoNegocioId: venta.puesto.negocioId,
+          monto: Number(venta.montoTotal),
+          operadorId: actor.id,
+        });
+      }
+      // Las cortesías de esta venta vuelven a quedar disponibles para la manilla.
+      await tx.cortesiaEntregada.deleteMany({ where: { ventaId: id } });
       const actualizada = await tx.venta.update({
         where: { id },
         data: {

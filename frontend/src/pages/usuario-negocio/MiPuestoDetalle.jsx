@@ -23,7 +23,7 @@ import { enfocarPrimero, MIN_CONTRASENA } from '../../utils/validacion.js';
 import { erroresAyudante } from '../../utils/ayudantes.js';
 import {
   FaStore, FaBoxOpen, FaUsers, FaUserTie, FaHamburger,
-  FaBan, FaCheckCircle, FaPen, FaLock, FaPlus, FaUnlink, FaSave, FaTimes, FaSearch, FaEnvelope,
+  FaBan, FaCheckCircle, FaPen, FaLock, FaPlus, FaUnlink, FaSave, FaTimes, FaSearch, FaEnvelope, FaGift,
 } from 'react-icons/fa';
 import api from '../../api/index.js';
 import { leerSesion } from '../../api/client.js';
@@ -126,7 +126,22 @@ export default function MiPuestoDetalle() {
   }, [misAyudantes, puesto, busqAsignar]);
   const asignarPag = usePaginacion(disponiblesAsignar, 8);
 
-  // `cambios`: activo? / stock? / precio? (null = sin override para ese evento).
+  // Tope total de cortesías por manilla en este puesto (null = sin tope: cada
+  // producto de cortesía igual se entrega una sola vez por persona).
+  const cambiarTopeCortesias = async (valor) => {
+    if (!puesto || valor === (puesto.cortesiasPorPersona ?? null)) return;
+    try {
+      const actualizado = await api.puestos.actualizar(puesto.id, { cortesiasPorPersona: valor });
+      setPuestos(prev => prev.map(p => (p.id === puesto.id ? { ...p, cortesiasPorPersona: actualizado.cortesiasPorPersona } : p)));
+      avisos.exito('Cortesías por persona: cambio guardado.', { duracion: 2500 });
+    } catch (e2) {
+      avisos.error(e2.message, { titulo: 'No se pudo guardar el tope de cortesías' });
+    }
+  };
+  const hayCortesias = (puesto?.productos || []).some(p => p.esCortesia);
+  const tope = puesto?.cortesiasPorPersona ?? null;
+
+  // `cambios`: activo? / stock? / precio? / esCortesia? (null = sin override para ese evento).
   const cambiarEstadoProducto = async (producto, cambios) => {
     if (!puesto) return;
     try {
@@ -272,6 +287,42 @@ export default function MiPuestoDetalle() {
             </AvisoFijo>
           )}
 
+          {(hayCortesias || editandoMenu) && (
+            <AvisoFijo tono="info" icono={FaGift} titulo="Cortesías">
+              <p>
+                Los productos marcados como <strong>cortesía</strong> se entregan una sola vez por
+                persona: si la manilla vuelve a escanearse, el ayudante ve que ya lo recibió.
+                {!hayCortesias && ' Marcá los productos en la columna «Cortesía».'}
+              </p>
+              {editandoMenu ? (
+                <label className="pi-unegocio-num-edit" htmlFor="pd-tope-cortesias">
+                  Máximo de cortesías por persona:
+                  <input
+                    id="pd-tope-cortesias"
+                    type="number" min="1" max="50" step="1"
+                    className="pi-unegocio-num-input"
+                    placeholder="todas"
+                    defaultValue={tope ?? ''}
+                    onBlur={(e) => {
+                      const raw = e.target.value.trim();
+                      const n = raw === '' ? null : Number(raw);
+                      if (raw !== '' && (!Number.isInteger(n) || n < 1 || n > 50)) return;
+                      cambiarTopeCortesias(n);
+                    }}
+                  />
+                </label>
+              ) : hayCortesias && (
+                <p>
+                  {tope == null
+                    ? 'Cada persona puede recibir todas las cortesías, una vez cada una.'
+                    : tope === 1
+                      ? 'Cada persona elige una sola cortesía entre todas.'
+                      : `Cada persona puede recibir hasta ${tope} cortesías distintas.`}
+                </p>
+              )}
+            </AvisoFijo>
+          )}
+
           <div className="pi-unegocio-buscador">
             <Buscador
               valor={busqMenu}
@@ -299,7 +350,7 @@ export default function MiPuestoDetalle() {
           ) : (
             <Tabla
               card
-              columnas={['Producto', 'Categoría', { texto: 'Precio evento', align: 'right' }, { texto: 'Stock', align: 'center' }, { texto: 'Estado', align: 'center' }]}
+              columnas={['Producto', 'Categoría', { texto: 'Precio evento', align: 'right' }, { texto: 'Stock', align: 'center' }, { texto: 'Cortesía', align: 'center' }, { texto: 'Estado', align: 'center' }]}
               datos={productosMenu}
               porPagina={10}
               renderFila={producto => (
@@ -361,6 +412,25 @@ export default function MiPuestoDetalle() {
                           </Insignia>
                         )}
                       </span>
+                    )}
+                  </td>
+                  <td className="td-centro">
+                    {editandoMenu ? (
+                      <Boton
+                        variante={producto.esCortesia ? 'primario' : 'secundario'}
+                        tamano="sm"
+                        pildora
+                        icono={FaGift}
+                        onClick={() => cambiarEstadoProducto(producto, { esCortesia: !producto.esCortesia })}
+                        title={producto.esCortesia ? 'Quitar cortesía' : 'Marcar como cortesía (1 por persona)'}
+                        aria-pressed={!!producto.esCortesia}
+                      >
+                        {producto.esCortesia ? 'Cortesía' : 'No'}
+                      </Boton>
+                    ) : producto.esCortesia ? (
+                      <Insignia tono="info" icono={FaGift}>1 por persona</Insignia>
+                    ) : (
+                      <span className="celda-secundaria">—</span>
                     )}
                   </td>
                   <td className="td-centro">

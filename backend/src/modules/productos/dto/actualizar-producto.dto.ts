@@ -37,4 +37,10 @@ export class EstadoProductoDto {
   @IsNumber()
   @Min(0)
   precio?: number | null;
+
+  // Cortesía: cada manilla lo recibe una sola vez en este puesto (ver
+  // CortesiaEntregada y Puesto.cortesiasPorPersona).
+  @IsOptional()
+  @IsBoolean()
+  esCortesia?: boolean;
 }

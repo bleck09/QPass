@@ -217,6 +217,8 @@ export const ventas = {
   listar: (params) => apiGet(`/ventas${qs(params)}`),
   crear: (datos) => apiPost('/ventas', datos),
   anular: (id, motivo) => apiPost(`/ventas/${id}/anular`, { motivo }),
+  // { tope, entregadas: [{ productoId, nombre, entregadaEn }] } de una manilla en un puesto.
+  cortesias: (puestoId, entradaId) => apiGet(`/ventas/cortesias${qs({ puestoId, entradaId })}`),
 };
 
 // Aviso de un Ayudante al Usuario Negocio: producto sin stock / por agotarse.

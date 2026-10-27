@@ -47,6 +47,7 @@ function mapearPuesto(p: PuestoConCatalogo) {
         precioSobrescrito: est?.precio != null,
         activo: est?.activo ?? true,
         stock: est?.stock ?? null,
+        esCortesia: est?.esCortesia ?? false,
       };
     });
   return {
@@ -63,6 +64,7 @@ function mapearPuesto(p: PuestoConCatalogo) {
     ancho: p.ancho,
     alto: p.alto,
     estadoActivo: p.estadoActivo,
+    cortesiasPorPersona: p.cortesiasPorPersona,
     base: {
       id: p.base.id,
       nombre: p.base.nombre,
@@ -162,7 +164,7 @@ export class PuestosService {
     }
   }
 
-  /** Solo la posición en el mapa (x/y/ancho/alto/estadoActivo). */
+  /** Posición en el mapa (x/y/ancho/alto/estadoActivo) y tope de cortesías. */
   async actualizar(id: string, dto: ActualizarPuestoDto, actor: UsuarioJwt) {
     await this.eventoPolicy.porPuesto(id);
     const puesto = await this.prisma.puesto.findUnique({ where: { id } });
@@ -178,6 +180,7 @@ export class PuestosService {
         ancho: dto.ancho,
         alto: dto.alto,
         estadoActivo: dto.estadoActivo,
+        cortesiasPorPersona: dto.cortesiasPorPersona,
       },
     });
     const actualizado = await this.prisma.puesto.findUniqueOrThrow({

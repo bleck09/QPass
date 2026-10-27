@@ -31,6 +31,16 @@ export class VentasController {
     return this.ventasService.listar({ puestoId, entradaId, eventoId });
   }
 
+  /** Cortesías del puesto ya entregadas a una manilla (lo consulta el Ayudante al escanear). */
+  @Get('cortesias')
+  @Roles('Ayudante', 'UsuarioNegocio', 'Admin')
+  cortesias(
+    @Query('puestoId') puestoId?: string,
+    @Query('entradaId') entradaId?: string,
+  ) {
+    return this.ventasService.cortesias(puestoId, entradaId);
+  }
+
   @Post()
   @Roles('Ayudante')
   @Idempotente()
